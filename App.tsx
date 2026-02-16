@@ -5,12 +5,8 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ChapterView from './components/ChapterView';
 import LessonView from './components/LessonView';
-import AISolver from './pages/AISolver';
-import SmartCrop from './pages/SmartCrop';
 import Toast, { ToastType } from './components/Toast';
 import { Menu, FileText, ChevronRight, FolderOpen } from 'lucide-react';
-
-type PageView = 'dashboard' | 'ai-solver' | 'smart-crop';
 
 const STORAGE_FILES_KEY = 'physivault_files';
 const STORAGE_LESSONS_KEY = 'physivault_lessons';
@@ -22,7 +18,6 @@ interface ToastMessage {
 }
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<PageView>('dashboard');
   const [currentGrade, setCurrentGrade] = useState<GradeLevel | null>(null);
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
@@ -55,11 +50,12 @@ function App() {
     }
   }, []);
 
-  // Save data to localStorage
+  // Save files to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem(STORAGE_FILES_KEY, JSON.stringify(storedFiles));
   }, [storedFiles]);
 
+  // Save lessons to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem(STORAGE_LESSONS_KEY, JSON.stringify(lessons));
   }, [lessons]);
@@ -78,97 +74,100 @@ function App() {
     [lessons, currentChapterId]);
 
   // Lesson Actions
-  const handleCreateLesson = (name: string) => {
-    if (!currentChapterId) return;
+  const handleCreateLesson = (name: string, chapterId: string) => {
     const newLesson: Lesson = {
-      id: Math.random().toString(36).substring(7),
-      chapterId: currentChapterId,
-      name: name,
+      id: Date.now().toString(),
+      name,
+      chapterId,
       createdAt: Date.now()
     };
-    setLessons(prev => [newLesson, ...prev]);
-    showToast(`Đã tạo bài học "${name}"`, 'success');
+    setLessons(prev => [...prev, newLesson]);
+    showToast(`Đã tạo bài học: ${name}`, 'success');
   };
 
   const handleDeleteLesson = (lessonId: string) => {
-    const lesson = lessons.find(l => l.id === lessonId);
-    if (window.confirm(`Bạn có chắc chắn muốn xóa bài học "${lesson?.name}" và toàn bộ tài liệu bên trong?`)) {
+    const lessonToDelete = lessons.find(l => l.id === lessonId);
+    if (!lessonToDelete) return;
+
+    if (window.confirm(`Bạn có chắc chắn muốn xóa bài học "${lessonToDelete.name}" và tất cả tài liệu bên trong không?`)) {
       setLessons(prev => prev.filter(l => l.id !== lessonId));
-      // Optionally clean up files associated with this lesson
-      setStoredFiles(prev => {
-        const copy = { ...prev };
-        delete copy[lessonId];
-        return copy;
-      });
-      showToast(`Đã xóa bài học "${lesson?.name}"`, 'success');
+
+      // Clean up files associated with this lesson
+      const newStoredFiles = { ...storedFiles };
+      delete newStoredFiles[lessonId];
+      setStoredFiles(newStoredFiles);
+
+      showToast(`Đã xóa bài học: ${lessonToDelete.name}`, 'success');
+
+      if (currentLesson?.id === lessonId) {
+        setCurrentLesson(null);
+      }
     }
   };
 
   // File Actions
-  const handleUpload = (files: File[]) => {
+  const handleUpload = (file: File) => {
     if (!currentLesson) return;
 
-    const newFiles: StoredFile[] = files.map(file => ({
-      id: Math.random().toString(36).substring(7),
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      uploadDate: Date.now(),
-      url: URL.createObjectURL(file)
-    }));
-
-    setStoredFiles(prev => {
-      const currentLessonFiles = prev[currentLesson.id] || [];
-      return {
-        ...prev,
-        [currentLesson.id]: [...newFiles, ...currentLessonFiles]
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      const newFile: StoredFile = {
+        id: Date.now().toString(),
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: result,
+        uploadDate: Date.now(),
       };
-    });
 
-    showToast(`Đã tải lên ${files.length} tài liệu`, 'success');
+      setStoredFiles((prev) => ({
+        ...prev,
+        [currentLesson.id]: [...(prev[currentLesson.id] || []), newFile],
+      }));
+
+      showToast(`Đã tải lên: ${file.name}`, 'success');
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleDeleteFile = (fileId: string) => {
     if (!currentLesson) return;
-    const file = storedFiles[currentLesson.id]?.find(f => f.id === fileId);
-    setStoredFiles(prev => ({
-      ...prev,
-      [currentLesson.id]: prev[currentLesson.id].filter(f => f.id !== fileId)
-    }));
-    showToast(`Đã xóa "${file?.name}"`, 'success');
+
+    const fileToDelete = storedFiles[currentLesson.id]?.find(f => f.id === fileId);
+    if (!fileToDelete) return;
+
+    if (window.confirm(`Bạn có chắc chắn muốn xóa tài liệu "${fileToDelete.name}" không?`)) {
+      setStoredFiles((prev) => ({
+        ...prev,
+        [currentLesson.id]: prev[currentLesson.id].filter((f) => f.id !== fileId),
+      }));
+      showToast(`Đã xóa tài liệu: ${fileToDelete.name}`, 'success');
+    }
   };
 
   const getFileCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
+    const counts = {
+      [GradeLevel.Grade10]: 0,
+      [GradeLevel.Grade11]: 0,
+      [GradeLevel.Grade12]: 0,
+    };
+
     CURRICULUM.forEach(grade => {
       let count = 0;
-      // Get all chapter IDs for this grade
-      const gradeChapterIds = grade.chapters.map(c => c.id);
-      // Get all lesson IDs belonging to these chapters
-      const gradeLessonIds = lessons
-        .filter(l => gradeChapterIds.includes(l.chapterId))
-        .map(l => l.id);
-
-      // Sum files in these lessons
-      gradeLessonIds.forEach(lId => {
-        count += (storedFiles[lId] || []).length;
+      grade.chapters.forEach(chapter => {
+        const chapterLessons = lessons.filter(l => l.chapterId === chapter.id);
+        chapterLessons.forEach(lesson => {
+          count += (storedFiles[lesson.id]?.length || 0);
+        });
       });
       counts[grade.level] = count;
     });
+
     return counts;
   }, [storedFiles, lessons]);
 
   const renderContent = () => {
-    // AI Tools Pages
-    if (currentPage === 'ai-solver') {
-      return <AISolver />;
-    }
-
-    if (currentPage === 'smart-crop') {
-      return <SmartCrop />;
-    }
-
-    // Storage Pages (existing logic)
     const activeGradeData = currentGrade ? CURRICULUM.find((g) => g.level === currentGrade) : null;
 
     // 1. Lesson View (Deepest level)
@@ -195,7 +194,7 @@ function App() {
           chapter={chapter!}
           lessons={chapterLessons}
           onBack={() => setCurrentChapterId(null)}
-          onCreateLesson={handleCreateLesson}
+          onCreateLesson={(name) => handleCreateLesson(name, currentChapterId)}
           onSelectLesson={setCurrentLesson}
           onDeleteLesson={handleDeleteLesson}
         />
@@ -279,15 +278,10 @@ function App() {
       <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white transform transition-transform duration-300 ease-in-out md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <Sidebar
           currentGrade={currentGrade}
-          currentPage={currentPage}
           onSelectGrade={(g) => {
             setCurrentGrade(g);
             setCurrentChapterId(null);
             setCurrentLesson(null);
-            setIsMobileMenuOpen(false);
-          }}
-          onSelectPage={(page) => {
-            setCurrentPage(page as PageView);
             setIsMobileMenuOpen(false);
           }}
         />
@@ -296,22 +290,21 @@ function App() {
       {/* Desktop Sidebar */}
       <Sidebar
         currentGrade={currentGrade}
-        currentPage={currentPage}
         onSelectGrade={(g) => {
           setCurrentGrade(g);
           setCurrentChapterId(null);
           setCurrentLesson(null);
         }}
-        onSelectPage={(page) => setCurrentPage(page as PageView)}
       />
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 transition-all duration-300">
-        <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-gray-200 px-6 py-4 flex items-center justify-between md:hidden">
+      <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+        {/* Mobile Header */}
+        <header className="bg-white border-b border-gray-200 p-4 flex items-center justify-between md:hidden sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+              className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -319,12 +312,12 @@ function App() {
           </div>
         </header>
 
-        <div className="p-6 md:p-10 max-w-6xl mx-auto min-h-[calc(100vh-80px)]">
+        <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
           {renderContent()}
-        </div>
-      </main>
+        </main>
+      </div>
 
-      {/* Toast Notifications */}
+      {/* Toast Container */}
       <div className="fixed bottom-0 right-0 p-4 space-y-2 z-50">
         {toasts.map(toast => (
           <Toast

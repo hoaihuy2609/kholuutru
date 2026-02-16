@@ -1,20 +1,13 @@
 import React from 'react';
-import { BookOpen, FolderOpen, Home, Settings, Sparkles, Scissors } from 'lucide-react';
+import { BookOpen, FolderOpen, Home, Settings } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
   currentGrade: GradeLevel | null;
-  currentPage: string;
   onSelectGrade: (grade: GradeLevel | null) => void;
-  onSelectPage: (page: string) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, currentPage, onSelectGrade, onSelectPage }) => {
-  const handlePageSelect = (page: string) => {
-    onSelectPage(page);
-    onSelectGrade(null); // Reset grade when switching pages
-  };
-
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade }) => {
   return (
     <div className="w-64 bg-white h-screen border-r border-gray-200 flex flex-col hidden md:flex fixed left-0 top-0 z-10">
       <div className="p-6 flex items-center gap-3 border-b border-gray-100">
@@ -29,8 +22,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, currentPage, onSelectGr
 
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         <button
-          onClick={() => handlePageSelect('dashboard')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${currentPage === 'dashboard'
+          onClick={() => onSelectGrade(null)}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${currentGrade === null
               ? 'bg-indigo-50 text-indigo-700 font-semibold shadow-sm'
               : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             }`}
@@ -44,11 +37,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, currentPage, onSelectGr
         </div>
 
         <button
-          onClick={() => {
-            onSelectPage('dashboard');
-            onSelectGrade(GradeLevel.Grade12);
-          }}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${currentGrade === GradeLevel.Grade12 && currentPage === 'dashboard'
+          onClick={() => onSelectGrade(GradeLevel.Grade12)}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${currentGrade === GradeLevel.Grade12
               ? 'bg-indigo-50 text-indigo-700 font-semibold shadow-sm'
               : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             }`}
@@ -58,11 +48,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, currentPage, onSelectGr
         </button>
 
         <button
-          onClick={() => {
-            onSelectPage('dashboard');
-            onSelectGrade(GradeLevel.Grade11);
-          }}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${currentGrade === GradeLevel.Grade11 && currentPage === 'dashboard'
+          onClick={() => onSelectGrade(GradeLevel.Grade11)}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${currentGrade === GradeLevel.Grade11
               ? 'bg-indigo-50 text-indigo-700 font-semibold shadow-sm'
               : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             }`}
@@ -72,43 +59,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, currentPage, onSelectGr
         </button>
 
         <button
-          onClick={() => {
-            onSelectPage('dashboard');
-            onSelectGrade(GradeLevel.Grade10);
-          }}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${currentGrade === GradeLevel.Grade10 && currentPage === 'dashboard'
+          onClick={() => onSelectGrade(GradeLevel.Grade10)}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${currentGrade === GradeLevel.Grade10
               ? 'bg-indigo-50 text-indigo-700 font-semibold shadow-sm'
               : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             }`}
         >
           <FolderOpen className="w-5 h-5" />
           Lớp 10
-        </button>
-
-        <div className="pt-4 pb-2">
-          <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Công cụ AI</p>
-        </div>
-
-        <button
-          onClick={() => handlePageSelect('ai-solver')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${currentPage === 'ai-solver'
-              ? 'bg-purple-50 text-purple-700 font-semibold shadow-sm'
-              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            }`}
-        >
-          <Sparkles className="w-5 h-5" />
-          AI Solver
-        </button>
-
-        <button
-          onClick={() => handlePageSelect('smart-crop')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${currentPage === 'smart-crop'
-              ? 'bg-green-50 text-green-700 font-semibold shadow-sm'
-              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            }`}
-        >
-          <Scissors className="w-5 h-5" />
-          SmartCrop AI
         </button>
       </nav>
 

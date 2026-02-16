@@ -15,12 +15,6 @@
 - ✅ Tạo bài học tùy chỉnh
 - ✅ Upload và quản lý file PDF
 
-### 🤖 Công cụ AI (Mới!)
-- ✅ **AI Solver**: Giải toán & vật lý tự động, xuất LaTeX
-- ✅ **SmartCrop AI**: Cắt ảnh thông minh với AI
-- ✅ Hỗ trợ đa ảnh và PDF
-- ✅ Tích hợp Gemini AI
-
 ### 🔍 Tìm kiếm & Sắp xếp
 - ✅ Tìm kiếm tài liệu nhanh chóng
 - ✅ Sắp xếp theo tên, ngày, kích thước
@@ -60,10 +54,6 @@ cd physivault
 # Cài đặt dependencies
 npm install
 
-# Cấu hình API key (cho tính năng AI)
-# Tạo file .env.local và thêm Gemini API key
-echo "VITE_GEMINI_API_KEY=your_api_key_here" > .env.local
-
 # Chạy ứng dụng ở chế độ development
 npm run dev
 
@@ -73,20 +63,6 @@ npm run build
 # Preview bản build
 npm run preview
 ```
-
-### Cấu hình API Key (Tùy chọn)
-
-Để sử dụng tính năng **AI Solver** và **SmartCrop AI**, bạn cần cấu hình Gemini API key:
-
-1. Truy cập [Google AI Studio](https://aistudio.google.com/app/apikey)
-2. Tạo API key mới (miễn phí)
-3. Tạo file `.env.local` trong thư mục gốc:
-   ```bash
-   VITE_GEMINI_API_KEY=your_actual_api_key_here
-   ```
-4. Khởi động lại dev server
-
-**Lưu ý**: Nếu không cấu hình API key, các tính năng AI sẽ không hoạt động nhưng tính năng quản lý tài liệu vẫn sử dụng bình thường.
 
 ### Sử dụng
 
