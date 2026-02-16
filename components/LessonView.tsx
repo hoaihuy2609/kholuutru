@@ -1,9 +1,8 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { ArrowLeft, FileText, Trash2, UploadCloud, Download, Eye, ArrowUpDown, Sparkles } from 'lucide-react';
+import { ArrowLeft, FileText, Trash2, UploadCloud, Download, Eye, ArrowUpDown } from 'lucide-react';
 import { Lesson, StoredFile } from '../types';
 import SearchBar from './SearchBar';
 import Modal from './Modal';
-import QuizGenerator from './QuizGenerator';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -21,7 +20,6 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
-  const [showQuizGenerator, setShowQuizGenerator] = useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -124,14 +122,6 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
             {lesson.name}
           </h2>
         </div>
-
-        <button
-          onClick={() => setShowQuizGenerator(true)}
-          className="ml-auto flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all text-sm"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>Tạo bài kiểm tra</span>
-        </button>
       </div>
 
       {/* Upload Area */}
@@ -289,15 +279,6 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
           </div>
         )}
       </Modal>
-
-      {/* Quiz Generator Modal */}
-      {showQuizGenerator && (
-        <QuizGenerator
-          lessonName={lesson.name}
-          files={files}
-          onClose={() => setShowQuizGenerator(false)}
-        />
-      )}
     </div>
   );
 };
