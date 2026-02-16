@@ -2,7 +2,7 @@ import React, { useRef, useState, useMemo } from 'react';
 import { ArrowLeft, FileText, Trash2, UploadCloud, Download, Eye, ArrowUpDown } from 'lucide-react';
 import { Lesson, StoredFile } from '../types';
 import SearchBar from './SearchBar';
-import FloatingWindow from './FloatingWindow';
+import Modal from './Modal';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -260,17 +260,16 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
         )}
       </div>
 
-      {/* PDF Preview Floating Window */}
-      <FloatingWindow
+      {/* PDF Preview Modal */}
+      <Modal
         isOpen={!!previewFile}
         onClose={() => setPreviewFile(null)}
         title={previewFile?.name || ''}
-        defaultWidth={1200}
-        defaultHeight={800}
+        maxWidth="1400px"
       >
         {previewFile && (
-          <div className="p-4 h-full">
-            <div className="w-full h-full bg-white rounded-lg overflow-hidden shadow-lg border border-slate-200">
+          <div className="p-3 bg-slate-50/50 h-full">
+            <div className="w-full h-[85vh] bg-white rounded-lg overflow-hidden shadow-lg border border-slate-200">
               <iframe
                 src={previewFile.url}
                 className="w-full h-full border-0"
@@ -279,7 +278,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
             </div>
           </div>
         )}
-      </FloatingWindow>
+      </Modal>
     </div>
   );
 };
