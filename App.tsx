@@ -81,28 +81,36 @@ function App() {
   };
 
   // File Actions
-  const handleUpload = async (files: File[]) => {
+  const handleUpload = async (files: File[], category?: string) => {
     if (!currentLesson) return;
 
     try {
-      showToast('Đang tải lên...', 'warning'); // Using 'warning' here for ongoing process
-      await uploadFiles(files, currentLesson.id);
+      showToast('Đang tải lên...', 'warning');
+      await uploadFiles(files, currentLesson.id, category);
       showToast(`Đã tải lên ${files.length} tài liệu`, 'success');
     } catch (e) {
       showToast('Lỗi tải lên', 'error');
     }
   };
 
-  const handleDeleteFile = async (fileId: string) => {
-    if (!currentLesson) return;
+  const handleChapterUpload = async (files: File[], category: string) => {
+    if (!currentChapterId) return;
 
-    const fileToDelete = storedFiles[currentLesson.id]?.find(f => f.id === fileId);
+    try {
+      showToast('Đang tải lên...', 'warning');
+      await uploadFiles(files, currentChapterId, category);
+      showToast(`Đã tải lên ${files.length} tài liệu`, 'success');
+    } catch (e) {
+      showToast('Lỗi tải lên', 'error');
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string, targetId: string) => {
+    const fileToDelete = storedFiles[targetId]?.find(f => f.id === fileId);
 
     if (window.confirm(`Bạn có chắc chắn muốn xóa tài liệu "${fileToDelete?.name || 'này'}" không?`)) {
       try {
-        // Pass name if possible to help delete from storage, though hook might need logic update
-        // Hook signature: deleteFile(fileId, lessonId, fileName?)
-        await deleteFile(fileId, currentLesson.id, fileToDelete?.name);
+        await deleteFile(fileId, targetId);
         showToast(`Đã xóa tài liệu`, 'success');
       } catch (e) {
         showToast('Lỗi xóa file', 'error');
@@ -143,7 +151,7 @@ function App() {
           files={lessonFiles}
           onBack={() => setCurrentLesson(null)}
           onUpload={handleUpload}
-          onDelete={handleDeleteFile}
+          onDelete={(fileId) => handleDeleteFile(fileId, currentLesson.id)}
         />
       );
     }
@@ -152,15 +160,19 @@ function App() {
     if (currentChapterId && activeGradeData) {
       const chapter = activeGradeData.chapters.find((c) => c.id === currentChapterId);
       const chapterLessons = lessons.filter((l) => l.chapterId === currentChapterId);
+      const chapterFiles = storedFiles[currentChapterId] || [];
 
       return (
         <ChapterView
           chapter={chapter!}
           lessons={chapterLessons}
+          chapterFiles={chapterFiles}
           onBack={() => setCurrentChapterId(null)}
           onCreateLesson={(name) => handleCreateLesson(name, currentChapterId)}
           onSelectLesson={setCurrentLesson}
           onDeleteLesson={handleDeleteLesson}
+          onUploadChapterFile={handleChapterUpload}
+          onDeleteChapterFile={(fileId) => handleDeleteFile(fileId, currentChapterId)}
         />
       );
     }

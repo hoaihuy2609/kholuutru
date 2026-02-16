@@ -1,29 +1,39 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, BookOpen, ArrowUpDown } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye } from 'lucide-react';
 import SearchBar from './SearchBar';
-import { Chapter, Lesson } from '../types';
+import Modal from './Modal';
+import { Chapter, Lesson, StoredFile } from '../types';
 
 interface ChapterViewProps {
   chapter: Chapter;
   lessons: Lesson[];
+  chapterFiles: StoredFile[];
   onBack: () => void;
   onCreateLesson: (name: string) => void;
   onSelectLesson: (lesson: Lesson) => void;
   onDeleteLesson: (lessonId: string) => void;
+  onUploadChapterFile: (files: File[], category: string) => void;
+  onDeleteChapterFile: (fileId: string) => void;
 }
 
 const ChapterView: React.FC<ChapterViewProps> = ({
   chapter,
   lessons,
+  chapterFiles,
   onBack,
   onCreateLesson,
   onSelectLesson,
-  onDeleteLesson
+  onDeleteLesson,
+  onUploadChapterFile,
+  onDeleteChapterFile
 }) => {
   const [newLessonName, setNewLessonName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'az' | 'za'>('newest');
+  const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredLessons = lessons
     .filter(lesson =>
@@ -53,150 +63,238 @@ const ChapterView: React.FC<ChapterViewProps> = ({
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      onUploadChapterFile(Array.from(e.target.files), "Bài tập Tính toán Nâng cao");
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-8 animate-fade-in pb-10">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <button
           onClick={onBack}
-          className="p-2 hover:bg-white hover:shadow-md rounded-full transition-all text-gray-500"
+          className="p-3 bg-white border border-slate-100 shadow-sm rounded-xl text-slate-500 hover:text-indigo-600 hover:shadow-md hover:border-indigo-100 transition-all active:scale-95"
         >
-          <ArrowLeft className="w-6 h-6" />
+          <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">{chapter.name}</h2>
-          <p className="text-gray-500">{chapter.description}</p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 text-indigo-700 uppercase tracking-wider">
+              Chương học
+            </span>
+          </div>
+          <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight leading-tight">{chapter.name}</h2>
+          <p className="text-slate-500">{chapter.description}</p>
+        </div>
+      </div>
+
+      {/* Chapter Special Category: Advanced Calculation Quiz */}
+      <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+        <div className="relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="max-w-xl">
+              <h3 className="text-2xl font-bold mb-2 flex items-center gap-3">
+                <span className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
+                  <Plus className="w-6 h-6" />
+                </span>
+                Bài tập Tính toán Nâng cao
+              </h3>
+              <p className="text-purple-100 text-sm leading-relaxed">
+                Khu vực dành riêng cho các bài tập vận dụng cao, tính toán phức tạp của cả chương.
+                Tải lên PDF để hệ thống tự động nhận diện và phân loại.
+              </p>
+            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center justify-center gap-2 bg-white text-indigo-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
+            >
+              <UploadCloud className="w-5 h-5" />
+              Tải tài liệu nâng cao
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept=".pdf"
+              multiple
+              onChange={handleFileChange}
+            />
+          </div>
+
+          {/* Advanced Files List */}
+          {chapterFiles.length > 0 && (
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {chapterFiles.map(file => (
+                <div key={file.id} className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex items-center justify-between group/file hover:bg-white/20 transition-all">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <FileText className="w-5 h-5 text-purple-200 shrink-0" />
+                    <div className="overflow-hidden">
+                      <p className="text-sm font-bold truncate pr-2">{file.name}</p>
+                      <p className="text-[10px] text-purple-200 uppercase">{formatSize(file.size)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 opacity-0 group-hover/file:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => setPreviewFile(file)}
+                      className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteChapterFile(file.id)}
+                      className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Create Lesson Section */}
-      <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-indigo-900 flex items-center gap-2">
-            <BookOpen className="w-5 h-5" />
-            Quản lý bài học
+      <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
+            <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
+            Bài học trong chương
           </h3>
           {!isCreating && (
             <button
               onClick={() => setIsCreating(true)}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm text-sm font-medium"
+              className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-all text-sm font-bold"
             >
               <Plus className="w-4 h-4" />
-              Thêm bài mới
+              Tạo bài mới
             </button>
           )}
         </div>
 
         {isCreating && (
-          <form onSubmit={handleSubmit} className="flex gap-3 items-center animate-fade-in">
+          <form onSubmit={handleSubmit} className="flex gap-3 items-center animate-fade-in bg-slate-50 p-4 rounded-2xl mb-6">
             <input
               type="text"
               value={newLessonName}
               onChange={(e) => setNewLessonName(e.target.value)}
               placeholder="Nhập tên bài học (VD: Bài 1: Động lượng)"
-              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+              className="flex-1 px-4 py-2.5 rounded-xl border border-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm"
               autoFocus
             />
             <button
               type="submit"
               disabled={!newLessonName.trim()}
-              className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:shadow-none shadow-lg shadow-indigo-100 font-bold transition-all"
             >
-              Lưu
+              Lưu bài
             </button>
             <button
               type="button"
               onClick={() => setIsCreating(false)}
-              className="bg-white text-gray-600 px-5 py-2.5 rounded-lg hover:bg-gray-50 border border-gray-200 font-medium"
+              className="bg-white text-slate-600 px-6 py-2.5 rounded-xl hover:bg-slate-50 border border-slate-200 font-bold transition-all"
             >
               Hủy
             </button>
           </form>
         )}
-      </div>
-
-      {/* Lessons List */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-sm">{filteredLessons.length}</span>
-          Danh sách bài học
-        </h3>
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex-1">
-            <SearchBar onSearch={setSearchTerm} placeholder="Tìm kiếm bài học..." />
+            <SearchBar onSearch={setSearchTerm} placeholder="Tìm bài học..." />
           </div>
-          <div className="relative">
+          <div className="relative shrink-0">
             <select
               value={sortOption}
               onChange={(e) => setSortOption(e.target.value as any)}
-              className="appearance-none bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 pr-8 outline-none shadow-sm cursor-pointer"
+              className="appearance-none bg-slate-50 border border-transparent text-slate-700 text-sm font-bold rounded-xl focus:ring-4 focus:ring-indigo-100 block w-full p-2.5 pr-10 outline-none transition-all cursor-pointer"
             >
               <option value="newest">Mới nhất</option>
               <option value="oldest">Cũ nhất</option>
-              <option value="az">A-Z</option>
-              <option value="za">Z-A</option>
+              <option value="az">Tên A-Z</option>
+              <option value="za">Tên Z-A</option>
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
               <ArrowUpDown className="h-4 w-4" />
             </div>
           </div>
         </div>
 
         {filteredLessons.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-xl border border-gray-100 border-dashed">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-50 mb-4">
-              <Folder className="w-8 h-8 text-gray-300" />
-            </div>
-            <p className="text-gray-500 font-medium">
-              {searchTerm ? 'Không tìm thấy bài học nào phù hợp.' : 'Chưa có bài học nào được tạo.'}
+          <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-3xl">
+            <Folder className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+            <p className="text-slate-400 font-medium">
+              {searchTerm ? 'Không tìm thấy bài học phù hợp.' : 'Chưa có bài học nào.'}
             </p>
-            {!searchTerm && (
-              <button
-                onClick={() => setIsCreating(true)}
-                className="mt-4 text-indigo-600 font-medium hover:underline"
-              >
-                Tạo bài học đầu tiên
-              </button>
-            )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filteredLessons.map((lesson) => (
               <div
                 key={lesson.id}
                 onClick={() => onSelectLesson(lesson)}
-                className="group bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center justify-between"
+                className="group bg-slate-50 p-5 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5 border border-transparent hover:border-indigo-100 transition-all cursor-pointer flex items-center justify-between"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                    <Folder className="w-5 h-5" />
+                <div className="flex items-center gap-4 overflow-hidden">
+                  <div className="w-12 h-12 rounded-xl bg-white shadow-sm text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <Folder className="w-6 h-6" />
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-800 group-hover:text-indigo-700 transition-colors">
+                  <div className="overflow-hidden">
+                    <h4 className="font-bold text-slate-800 group-hover:text-indigo-700 transition-colors truncate">
                       {lesson.name}
                     </h4>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Tạo ngày {new Date(lesson.createdAt).toLocaleDateString('vi-VN')}
+                    <p className="text-[10px] text-slate-400 font-medium uppercase mt-1">
+                      {new Date(lesson.createdAt).toLocaleDateString('vi-VN')}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={(e) => { e.stopPropagation(); onDeleteLesson(lesson.id); }}
-                    className="p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                    title="Xóa bài học"
+                    className="p-2 text-slate-300 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                  <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-indigo-500" />
+                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* PDF Preview Modal */}
+      <Modal
+        isOpen={!!previewFile}
+        onClose={() => setPreviewFile(null)}
+        title={previewFile?.name || ''}
+        maxWidth="1000px"
+      >
+        {previewFile && (
+          <div className="p-5">
+            <div className="w-full h-[80vh] bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
+              <iframe
+                src={previewFile.url}
+                className="w-full h-full border-0"
+                title="PDF Preview"
+              />
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

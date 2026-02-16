@@ -74,7 +74,7 @@ export const useCloudStorage = () => {
         return Promise.resolve();
     };
 
-    const uploadFiles = async (files: File[], lessonId: string) => {
+    const uploadFiles = async (files: File[], targetId: string, category?: string) => {
         // Convert files to Base64 to store in LocalStorage
         const filePromises = files.map(file => {
             return new Promise<StoredFile>((resolve, reject) => {
@@ -88,6 +88,7 @@ export const useCloudStorage = () => {
                         size: file.size,
                         url: result, // Base64 Data URL
                         uploadDate: Date.now(),
+                        category: category,
                     });
                 };
                 reader.onerror = reject;
@@ -99,7 +100,7 @@ export const useCloudStorage = () => {
 
         setStoredFiles(prev => ({
             ...prev,
-            [lessonId]: [...(prev[lessonId] || []), ...newStoredFiles]
+            [targetId]: [...(prev[targetId] || []), ...newStoredFiles]
         }));
     };
 

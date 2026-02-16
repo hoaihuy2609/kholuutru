@@ -8,11 +8,17 @@ interface LessonViewProps {
   lesson: Lesson;
   files: StoredFile[];
   onBack: () => void;
-  onUpload: (files: File[]) => void;
+  onUpload: (files: File[], category?: string) => void;
   onDelete: (fileId: string) => void;
 }
 
 type SortOption = 'name-asc' | 'name-desc' | 'date-asc' | 'date-desc' | 'size-asc' | 'size-desc';
+
+const LESSON_CATEGORIES = [
+  "Trắc nghiệm Lý thuyết (ABCD)",
+  "Trắc nghiệm Lý thuyết (Đúng/Sai)",
+  "Bài tập Tính toán Cơ bản"
+];
 
 const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload, onDelete }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -20,6 +26,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -34,13 +41,13 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      onUpload(Array.from(e.dataTransfer.files));
+      onUpload(Array.from(e.dataTransfer.files), selectedCategory || undefined);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      onUpload(Array.from(e.target.files));
+      onUpload(Array.from(e.target.files), selectedCategory || undefined);
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -66,6 +73,14 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
   // Filter and sort files
   const filteredAndSortedFiles = useMemo(() => {
     let result = [...files];
+
+    // Filter by category
+    if (selectedCategory) {
+      result = result.filter(file => file.category === selectedCategory);
+    } else {
+      // If no category selected, show uncategorized or all? 
+      // User wants 3 predefined categories. Let's show all if null, but provide tabs.
+    }
 
     // Filter by search query
     if (searchQuery) {
@@ -95,7 +110,20 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
     });
 
     return result;
-  }, [files, searchQuery, sortBy]);
+  }, [files, searchQuery, sortBy, selectedCategory]);
+
+  const categoriesWithCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    LESSON_CATEGORIES.forEach(cat => counts[cat] = 0);
+    files.forEach(file => {
+      if (file.category && LESSON_CATEGORIES.includes(file.category)) {
+        counts[file.category]++;
+      } else {
+        counts['Khác'] = (counts['Khác'] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [files]);
 
   return (
     <div className="space-y-8 animate-fade-in relative z-0 pb-10">
@@ -124,6 +152,33 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
         </div>
       </div>
 
+      {/* Category Tabs */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <button
+          onClick={() => setSelectedCategory(null)}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${!selectedCategory ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}`}
+        >
+          Tất cả ({files.length})
+        </button>
+        {LESSON_CATEGORIES.map(cat => (
+          <button
+            key={cat}
+            onClick={() => setSelectedCategory(cat)}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${selectedCategory === cat ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}`}
+          >
+            {cat} ({categoriesWithCounts[cat] || 0})
+          </button>
+        ))}
+        {categoriesWithCounts['Khác'] > 0 && (
+          <button
+            onClick={() => setSelectedCategory('Khác')}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${selectedCategory === 'Khác' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}`}
+          >
+            Tài liệu khác ({categoriesWithCounts['Khác']})
+          </button>
+        )}
+      </div>
+
       {/* Upload Area */}
       <div
         className={`relative border-2 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer overflow-hidden group
@@ -139,10 +194,10 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
           <UploadCloud className={`w-10 h-10 text-indigo-600 transition-colors ${isDragging ? 'text-indigo-700' : ''}`} />
         </div>
         <h3 className="text-xl font-bold text-slate-800 mb-2">
-          {isDragging ? 'Thả file vào đây ngay!' : 'Tải tài liệu lên'}
+          {isDragging ? 'Thả file vào đây ngay!' : `Tải tài liệu lên ${selectedCategory ? `vào "${selectedCategory}"` : ''}`}
         </h3>
         <p className="text-slate-500 text-sm max-w-sm leading-relaxed">
-          Kéo thả file PDF vào đây hoặc click để chọn từ máy tính. Hỗ trợ upload nhiều file cùng lúc.
+          Kéo thả file PDF vào đây hoặc click để chọn từ máy tính. {selectedCategory ? `File sẽ được tự động lưu vào mục "${selectedCategory}".` : 'Hãy chọn danh mục trước nếu muốn phân loại.'}
         </p>
         <input
           type="file"
@@ -165,8 +220,10 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
               <FileText className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-800">Tài liệu đã lưu</h3>
-              <p className="text-xs text-slate-400 font-medium">{files.length} trên tổng số file</p>
+              <h3 className="text-lg font-bold text-slate-800">
+                {selectedCategory || 'Tất cả tài liệu'}
+              </h3>
+              <p className="text-xs text-slate-400 font-medium">{filteredAndSortedFiles.length} file hiển thị</p>
             </div>
           </div>
 
@@ -199,13 +256,22 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
             </div>
             <h4 className="text-lg font-semibold text-slate-700 mb-1">Chưa có tài liệu nào</h4>
             <p className="text-slate-500 text-sm">
-              {searchQuery ? 'Không tìm thấy kết quả phù hợp.' : 'Hãy tải lên tài liệu đầu tiên của bạn.'}
+              {searchQuery ? 'Không tìm thấy kết quả phù hợp.' : (selectedCategory ? `Chưa có tài liệu nào trong mục "${selectedCategory}".` : 'Hãy tải lên tài liệu đầu tiên của bạn.')}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredAndSortedFiles.map((file) => (
-              <div key={file.id} className="group bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-200 transition-all duration-300 relative overflow-hidden flex flex-col h-[280px]">
+              <div key={file.id} className="group bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-200 transition-all duration-300 relative overflow-hidden flex flex-col h-[300px]">
+                {/* Category Badge */}
+                {file.category && (
+                  <div className="absolute top-3 left-3 z-10">
+                    <span className="px-2 py-1 bg-white/90 backdrop-blur-sm border border-slate-100 rounded-lg text-[10px] font-bold text-indigo-600 shadow-sm">
+                      {file.category}
+                    </span>
+                  </div>
+                )}
+
                 {/* PDF Preview / Icon Placeholder */}
                 <div className="h-36 bg-slate-50 group-hover:bg-indigo-50/30 transition-colors flex items-center justify-center relative border-b border-slate-100">
                   <div className="w-16 h-20 bg-white shadow-md border border-slate-100 rounded flex items-center justify-center transform group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300">

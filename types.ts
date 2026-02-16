@@ -24,6 +24,7 @@ export interface StoredFile {
   type: string;
   uploadDate: number; // Timestamp
   url?: string; // In a real app, this is the download link. In demo, likely a blob URL.
+  category?: string; // Optional category for organization
 }
 
 export interface GradeData {
@@ -32,4 +33,4 @@ export interface GradeData {
   chapters: Chapter[];
 }
 
-export type FileStorage = Record<string, StoredFile[]>; // Key is "lessonId" (previously chapterId)
+export type FileStorage = Record<string, StoredFile[]>; // Key is "lessonId" or "chapterId"
