@@ -106,29 +106,31 @@ function App() {
   };
 
   // File Actions
-  const handleUpload = (file: File) => {
+  const handleUpload = (files: File[]) => {
     if (!currentLesson) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      const newFile: StoredFile = {
-        id: Date.now().toString(),
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        url: result,
-        uploadDate: Date.now(),
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        const newFile: StoredFile = {
+          id: Date.now().toString() + Math.random().toString(36).substring(7),
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          url: result,
+          uploadDate: Date.now(),
+        };
+
+        setStoredFiles((prev) => ({
+          ...prev,
+          [currentLesson.id]: [...(prev[currentLesson.id] || []), newFile],
+        }));
       };
+      reader.readAsDataURL(file);
+    });
 
-      setStoredFiles((prev) => ({
-        ...prev,
-        [currentLesson.id]: [...(prev[currentLesson.id] || []), newFile],
-      }));
-
-      showToast(`Đã tải lên: ${file.name}`, 'success');
-    };
-    reader.readAsDataURL(file);
+    showToast(`Đã tải lên ${files.length} tài liệu`, 'success');
   };
 
   const handleDeleteFile = (fileId: string) => {
