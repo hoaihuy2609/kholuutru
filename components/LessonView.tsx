@@ -268,12 +268,14 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
         maxWidth="1400px"
       >
         {previewFile && (
-          <div className="w-full h-[75vh] bg-slate-100 rounded-xl overflow-hidden shadow-inner">
-            <iframe
-              src={previewFile.url}
-              className="w-full h-full border-0"
-              title="PDF Preview"
-            />
+          <div className="p-4 bg-slate-100/50">
+            <div className="w-full h-[78vh] bg-white rounded-xl overflow-hidden shadow-2xl border border-slate-200">
+              <iframe
+                src={previewFile.url}
+                className="w-full h-full border-0"
+                title="PDF Preview"
+              />
+            </div>
           </div>
         )}
       </Modal>

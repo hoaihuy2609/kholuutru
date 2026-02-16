@@ -43,17 +43,24 @@ const Modal: React.FC<ModalProps> = ({
         <>
             <div className="modal-overlay" onClick={onClose} />
             <div className="modal-content" style={{ maxWidth }}>
-                <div className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-bold text-gray-800">{title}</h3>
+                <div className="flex flex-col h-full max-h-[85vh]">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+                        <h3 className="text-lg font-bold text-slate-800 truncate pr-4" title={title}>
+                            {title}
+                        </h3>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-600 active:scale-90"
                         >
-                            <X className="w-5 h-5 text-gray-500" />
+                            <X className="w-5 h-5" />
                         </button>
                     </div>
-                    <div>{children}</div>
+
+                    {/* Content */}
+                    <div className="flex-1 overflow-auto bg-slate-50/50">
+                        {children}
+                    </div>
                 </div>
             </div>
         </>

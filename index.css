@@ -333,10 +333,10 @@ body {
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(8px);
     z-index: 50;
-    animation: fadeIn var(--transition-fast) ease-out;
+    animation: fadeIn 0.3s ease-out;
 }
 
 .modal-content {
@@ -345,14 +345,15 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     background: white;
-    border-radius: 1rem;
-    box-shadow: var(--shadow-xl);
+    border-radius: 1.5rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     z-index: 51;
-    animation: scaleIn var(--transition-base) ease-out;
-    max-width: 95vw;
-    max-height: 90vh;
-    overflow: auto;
-    width: 100%;
+    animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow: hidden;
+    width: 95%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* ==================== File Upload Drag & Drop ==================== */
