@@ -23,10 +23,12 @@ const FloatingWindow: React.FC<FloatingWindowProps> = ({
     const [isDragging, setIsDragging] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
     const [isMaximized, setIsMaximized] = useState(false);
+    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
     const [resizeDirection, setResizeDirection] = useState<string>('');
     const windowRef = useRef<HTMLDivElement>(null);
+    const headerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Center window on mount
     useEffect(() => {
@@ -36,6 +38,36 @@ const FloatingWindow: React.FC<FloatingWindowProps> = ({
             setPosition({ x: Math.max(0, centerX), y: Math.max(0, centerY) });
         }
     }, [isOpen]);
+
+    // Auto-hide header when maximized
+    useEffect(() => {
+        if (isMaximized) {
+            // Hide header after 2 seconds when maximized
+            const timeout = setTimeout(() => {
+                setIsHeaderVisible(false);
+            }, 2000);
+            return () => clearTimeout(timeout);
+        } else {
+            setIsHeaderVisible(true);
+        }
+    }, [isMaximized]);
+
+    // Show header on mouse move when maximized
+    const handleMouseMoveInWindow = () => {
+        if (isMaximized && !isHeaderVisible) {
+            setIsHeaderVisible(true);
+
+            // Clear existing timeout
+            if (headerTimeoutRef.current) {
+                clearTimeout(headerTimeoutRef.current);
+            }
+
+            // Hide again after 3 seconds
+            headerTimeoutRef.current = setTimeout(() => {
+                setIsHeaderVisible(false);
+            }, 3000);
+        }
+    };
 
     // Lock body scroll when open
     useEffect(() => {
@@ -171,12 +203,13 @@ const FloatingWindow: React.FC<FloatingWindowProps> = ({
                     width: `${size.width}px`,
                     height: `${size.height}px`
                 }}
+                onMouseMove={handleMouseMoveInWindow}
             >
                 {/* Header */}
                 <div
-                    className="floating-window-header"
+                    className={`floating-window-header ${!isHeaderVisible && isMaximized ? 'header-hidden' : ''}`}
                     onMouseDown={handleMouseDown}
-                    style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                    style={{ cursor: isDragging ? 'grabbing' : (isMaximized ? 'default' : 'grab') }}
                 >
                     <h3 className="text-lg font-bold text-slate-800 truncate pr-4" title={title}>
                         {title}
