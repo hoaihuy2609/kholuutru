@@ -350,9 +350,9 @@ body {
     z-index: 51;
     animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     max-width: 90vw;
-    max-height: 85vh;
+    max-height: 92vh;
     overflow: hidden;
-    width: 95%;
+    width: 90%;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 

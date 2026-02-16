@@ -43,7 +43,7 @@ const Modal: React.FC<ModalProps> = ({
         <>
             <div className="modal-overlay" onClick={onClose} />
             <div className="modal-content" style={{ maxWidth }}>
-                <div className="flex flex-col h-full max-h-[85vh]">
+                <div className="flex flex-col h-full max-h-[92vh]">
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
                         <h3 className="text-lg font-bold text-slate-800 truncate pr-4" title={title}>

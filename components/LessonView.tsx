@@ -265,11 +265,11 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
         isOpen={!!previewFile}
         onClose={() => setPreviewFile(null)}
         title={previewFile?.name || ''}
-        maxWidth="1400px"
+        maxWidth="1000px"
       >
         {previewFile && (
-          <div className="p-4 bg-slate-100/50">
-            <div className="w-full h-[78vh] bg-white rounded-xl overflow-hidden shadow-2xl border border-slate-200">
+          <div className="p-0 bg-slate-100/50">
+            <div className="w-full h-[82vh] bg-white overflow-hidden shadow-inner">
               <iframe
                 src={previewFile.url}
                 className="w-full h-full border-0"
