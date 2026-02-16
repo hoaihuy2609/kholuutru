@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { FileStorage, GradeLevel, StoredFile, Lesson } from './types';
+import React, { useState, useMemo } from 'react';
+import { GradeLevel, Lesson } from './types';
 import { CURRICULUM } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ChapterView from './components/ChapterView';
 import LessonView from './components/LessonView';
 import Toast, { ToastType } from './components/Toast';
-import { Menu, FileText, ChevronRight, FolderOpen } from 'lucide-react';
+import { useCloudStorage } from './src/hooks/useCloudStorage';
+import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings } from 'lucide-react';
 
-const STORAGE_FILES_KEY = 'physivault_files';
-const STORAGE_LESSONS_KEY = 'physivault_lessons';
+import SettingsModal from './components/SettingsModal';
 
 interface ToastMessage {
   id: string;
@@ -22,9 +22,11 @@ function App() {
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
 
-  const [storedFiles, setStoredFiles] = useState<FileStorage>({});
-  const [lessons, setLessons] = useState<Lesson[]>([]);
+  // Replace local state with Cloud Storage hook
+  const { lessons, storedFiles, loading, addLesson, deleteLesson, uploadFiles, deleteFile } = useCloudStorage();
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // Toast helper
@@ -36,29 +38,6 @@ function App() {
   const removeToast = (id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
-
-  // Load data from localStorage
-  useEffect(() => {
-    try {
-      const savedFiles = localStorage.getItem(STORAGE_FILES_KEY);
-      const savedLessons = localStorage.getItem(STORAGE_LESSONS_KEY);
-
-      if (savedFiles) setStoredFiles(JSON.parse(savedFiles));
-      if (savedLessons) setLessons(JSON.parse(savedLessons));
-    } catch (error) {
-      console.error("Failed to load data from local storage", error);
-    }
-  }, []);
-
-  // Save files to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem(STORAGE_FILES_KEY, JSON.stringify(storedFiles));
-  }, [storedFiles]);
-
-  // Save lessons to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem(STORAGE_LESSONS_KEY, JSON.stringify(lessons));
-  }, [lessons]);
 
   // Derived state
   const activeGradeData = useMemo(() =>
@@ -74,77 +53,60 @@ function App() {
     [lessons, currentChapterId]);
 
   // Lesson Actions
-  const handleCreateLesson = (name: string, chapterId: string) => {
-    const newLesson: Lesson = {
-      id: Date.now().toString(),
-      name,
-      chapterId,
-      createdAt: Date.now()
-    };
-    setLessons(prev => [...prev, newLesson]);
-    showToast(`Đã tạo bài học: ${name}`, 'success');
+  const handleCreateLesson = async (name: string, chapterId: string) => {
+    try {
+      await addLesson(name, chapterId);
+      showToast(`Đã tạo bài học: ${name}`, 'success');
+    } catch (error) {
+      showToast('Lỗi khi tạo bài học', 'error');
+    }
   };
 
-  const handleDeleteLesson = (lessonId: string) => {
+  const handleDeleteLesson = async (lessonId: string) => {
     const lessonToDelete = lessons.find(l => l.id === lessonId);
     if (!lessonToDelete) return;
 
     if (window.confirm(`Bạn có chắc chắn muốn xóa bài học "${lessonToDelete.name}" và tất cả tài liệu bên trong không?`)) {
-      setLessons(prev => prev.filter(l => l.id !== lessonId));
+      try {
+        await deleteLesson(lessonId);
+        showToast(`Đã xóa bài học: ${lessonToDelete.name}`, 'success');
 
-      // Clean up files associated with this lesson
-      const newStoredFiles = { ...storedFiles };
-      delete newStoredFiles[lessonId];
-      setStoredFiles(newStoredFiles);
-
-      showToast(`Đã xóa bài học: ${lessonToDelete.name}`, 'success');
-
-      if (currentLesson?.id === lessonId) {
-        setCurrentLesson(null);
+        if (currentLesson?.id === lessonId) {
+          setCurrentLesson(null);
+        }
+      } catch (e) {
+        showToast('Lỗi khi xóa bài học', 'error');
       }
     }
   };
 
   // File Actions
-  const handleUpload = (files: File[]) => {
+  const handleUpload = async (files: File[]) => {
     if (!currentLesson) return;
 
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        const newFile: StoredFile = {
-          id: Date.now().toString() + Math.random().toString(36).substring(7),
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          url: result,
-          uploadDate: Date.now(),
-        };
-
-        setStoredFiles((prev) => ({
-          ...prev,
-          [currentLesson.id]: [...(prev[currentLesson.id] || []), newFile],
-        }));
-      };
-      reader.readAsDataURL(file);
-    });
-
-    showToast(`Đã tải lên ${files.length} tài liệu`, 'success');
+    try {
+      showToast('Đang tải lên...', 'warning'); // Using 'warning' here for ongoing process
+      await uploadFiles(files, currentLesson.id);
+      showToast(`Đã tải lên ${files.length} tài liệu`, 'success');
+    } catch (e) {
+      showToast('Lỗi tải lên', 'error');
+    }
   };
 
-  const handleDeleteFile = (fileId: string) => {
+  const handleDeleteFile = async (fileId: string) => {
     if (!currentLesson) return;
 
     const fileToDelete = storedFiles[currentLesson.id]?.find(f => f.id === fileId);
-    if (!fileToDelete) return;
 
-    if (window.confirm(`Bạn có chắc chắn muốn xóa tài liệu "${fileToDelete.name}" không?`)) {
-      setStoredFiles((prev) => ({
-        ...prev,
-        [currentLesson.id]: prev[currentLesson.id].filter((f) => f.id !== fileId),
-      }));
-      showToast(`Đã xóa tài liệu: ${fileToDelete.name}`, 'success');
+    if (window.confirm(`Bạn có chắc chắn muốn xóa tài liệu "${fileToDelete?.name || 'này'}" không?`)) {
+      try {
+        // Pass name if possible to help delete from storage, though hook might need logic update
+        // Hook signature: deleteFile(fileId, lessonId, fileName?)
+        await deleteFile(fileId, currentLesson.id, fileToDelete?.name);
+        showToast(`Đã xóa tài liệu`, 'success');
+      } catch (e) {
+        showToast('Lỗi xóa file', 'error');
+      }
     }
   };
 
@@ -270,6 +232,15 @@ function App() {
     }
 
     // 4. Dashboard (Default)
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center h-[50vh]">
+          <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+          <span className="ml-3 text-lg font-medium text-indigo-600">từ từ nó đang load...</span>
+        </div>
+      );
+    }
+
     return <Dashboard onSelectGrade={setCurrentGrade} fileCounts={getFileCounts} />;
   };
 
@@ -310,10 +281,19 @@ function App() {
           setCurrentChapterId(null);
           setCurrentLesson(null);
         }}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onShowToast={showToast}
       />
 
       {/* Main Content */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen transition-all duration-300">
+
         {/* Mobile Header */}
         <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 p-4 flex items-center justify-between md:hidden sticky top-0 z-30 shadow-sm">
           <div className="flex items-center gap-3">
@@ -325,6 +305,12 @@ function App() {
             </button>
             <span className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">PhysiVault</span>
           </div>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-2 hover:bg-slate-100 rounded-xl text-slate-600 active:scale-95 transition-transform"
+          >
+            <Settings className="w-6 h-6" />
+          </button>
         </header>
 
         <main className="flex-1 p-4 md:p-8 lg:p-10 max-w-7xl mx-auto w-full">

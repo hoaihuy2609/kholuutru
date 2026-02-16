@@ -5,9 +5,10 @@ import { GradeLevel } from '../types';
 interface SidebarProps {
   currentGrade: GradeLevel | null;
   onSelectGrade: (grade: GradeLevel | null) => void;
+  onOpenSettings?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings }) => {
   return (
     <div className="w-64 h-full flex flex-col hidden md:flex fixed left-0 top-0 z-10 glass border-r border-white/20 shadow-xl backdrop-blur-xl bg-white/80">
       <div className="p-6 flex items-center gap-3 border-b border-gray-100/50">
@@ -58,9 +59,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade }) => {
       </nav>
 
       <div className="p-4 border-t border-gray-100/50 bg-gray-50/50">
-        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-md transition-all duration-300 border border-transparent hover:border-gray-100">
+        <button
+          onClick={onOpenSettings}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-md transition-all duration-300 border border-transparent hover:border-gray-100"
+        >
           <Settings className="w-5 h-5 transition-transform group-hover:rotate-90" />
-          <span className="font-medium">Cài đặt</span>
+          <span className="font-medium">Cài đặt & Đồng bộ</span>
         </button>
       </div>
     </div>
