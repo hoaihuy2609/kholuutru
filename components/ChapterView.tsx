@@ -99,73 +99,6 @@ const ChapterView: React.FC<ChapterViewProps> = ({
         </div>
       </div>
 
-      {/* Chapter Special Category: Advanced Calculation Quiz */}
-      <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
-        <div className="relative z-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="max-w-xl">
-              <h3 className="text-2xl font-bold mb-2 flex items-center gap-3">
-                <span className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
-                  <Plus className="w-6 h-6" />
-                </span>
-                Bài tập Tính toán Nâng cao
-              </h3>
-              <p className="text-purple-100 text-sm leading-relaxed">
-                Khu vực dành riêng cho các bài tập vận dụng cao, tính toán phức tạp của cả chương.
-                Tải lên PDF để hệ thống tự động nhận diện và phân loại.
-              </p>
-            </div>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 bg-white text-indigo-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
-            >
-              <UploadCloud className="w-5 h-5" />
-              Tải tài liệu nâng cao
-            </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept=".pdf"
-              multiple
-              onChange={handleFileChange}
-            />
-          </div>
-
-          {/* Advanced Files List */}
-          {chapterFiles.length > 0 && (
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {chapterFiles.map(file => (
-                <div key={file.id} className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex items-center justify-between group/file hover:bg-white/20 transition-all">
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <FileText className="w-5 h-5 text-purple-200 shrink-0" />
-                    <div className="overflow-hidden">
-                      <p className="text-sm font-bold truncate pr-2">{file.name}</p>
-                      <p className="text-[10px] text-purple-200 uppercase">{formatSize(file.size)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover/file:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => setPreviewFile(file)}
-                      className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => onDeleteChapterFile(file.id)}
-                      className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Create Lesson Section */}
       <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
         <div className="flex items-center justify-between mb-6">
@@ -274,6 +207,73 @@ const ChapterView: React.FC<ChapterViewProps> = ({
             ))}
           </div>
         )}
+      </div>
+
+      {/* Chapter Special Category: Advanced Calculation Quiz */}
+      <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+        <div className="relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="max-w-xl">
+              <h3 className="text-2xl font-bold mb-2 flex items-center gap-3">
+                <span className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
+                  <Plus className="w-6 h-6" />
+                </span>
+                Bài tập Tính toán Nâng cao
+              </h3>
+              <p className="text-purple-100 text-sm leading-relaxed">
+                Khu vực dành riêng cho các bài tập vận dụng cao, tính toán phức tạp của cả chương.
+                Tải lên PDF để hệ thống tự động nhận diện và phân loại.
+              </p>
+            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center justify-center gap-2 bg-white text-indigo-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
+            >
+              <UploadCloud className="w-5 h-5" />
+              Tải tài liệu nâng cao
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept=".pdf"
+              multiple
+              onChange={handleFileChange}
+            />
+          </div>
+
+          {/* Advanced Files List */}
+          {chapterFiles.length > 0 && (
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {chapterFiles.map(file => (
+                <div key={file.id} className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex items-center justify-between group/file hover:bg-white/20 transition-all">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <FileText className="w-5 h-5 text-purple-200 shrink-0" />
+                    <div className="overflow-hidden">
+                      <p className="text-sm font-bold truncate pr-2">{file.name}</p>
+                      <p className="text-[10px] text-purple-200 uppercase">{formatSize(file.size)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 opacity-0 group-hover/file:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => setPreviewFile(file)}
+                      className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteChapterFile(file.id)}
+                      className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* PDF Preview Modal */}

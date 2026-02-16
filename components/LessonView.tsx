@@ -26,7 +26,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(LESSON_CATEGORIES[0]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -154,29 +154,15 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
 
       {/* Category Tabs */}
       <div className="flex flex-wrap gap-2 mb-6">
-        <button
-          onClick={() => setSelectedCategory(null)}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${!selectedCategory ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}`}
-        >
-          Tất cả ({files.length})
-        </button>
         {LESSON_CATEGORIES.map(cat => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${selectedCategory === cat ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}`}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all uppercase ${selectedCategory === cat ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}`}
           >
             {cat} ({categoriesWithCounts[cat] || 0})
           </button>
         ))}
-        {categoriesWithCounts['Khác'] > 0 && (
-          <button
-            onClick={() => setSelectedCategory('Khác')}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${selectedCategory === 'Khác' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}`}
-          >
-            Tài liệu khác ({categoriesWithCounts['Khác']})
-          </button>
-        )}
       </div>
 
       {/* Upload Area */}
