@@ -349,10 +349,10 @@ body {
     box-shadow: var(--shadow-xl);
     z-index: 51;
     animation: scaleIn var(--transition-base) ease-out;
-    max-width: 90vw;
+    max-width: 95vw;
     max-height: 90vh;
     overflow: auto;
-    width: 95vw;
+    width: 100%;
 }
 
 /* ==================== File Upload Drag & Drop ==================== */
