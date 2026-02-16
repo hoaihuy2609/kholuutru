@@ -352,6 +352,7 @@ body {
     max-width: 90vw;
     max-height: 90vh;
     overflow: auto;
+    width: 95vw;
 }
 
 /* ==================== File Upload Drag & Drop ==================== */
