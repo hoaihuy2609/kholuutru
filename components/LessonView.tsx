@@ -166,7 +166,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
             </div>
             <div>
               <h3 className="text-lg font-bold text-slate-800">Tài liệu đã lưu</h3>
-              <p className="text-xs text-slate-400 font-medium">{files.length} trờn tổng số file</p>
+              <p className="text-xs text-slate-400 font-medium">{files.length} trên tổng số file</p>
             </div>
           </div>
 
