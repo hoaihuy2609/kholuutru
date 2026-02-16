@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, FolderOpen, Home, Settings, Crop } from 'lucide-react';
+import { BookOpen, FolderOpen, Home, Settings } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
@@ -54,19 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade }) => {
         ))}
 
 
-        <div className="pt-6 pb-2">
-          <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Tiện ích</p>
-        </div>
 
-        <a
-          href="https://crop-seven-chi.vercel.app/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group text-slate-600 hover:bg-white hover:text-indigo-600 hover:shadow-md hover:border-slate-100 border border-transparent"
-        >
-          <Crop className="w-5 h-5 transition-colors text-slate-400 group-hover:text-indigo-500" />
-          <span className="font-medium">Smart Crop</span>
-        </a>
       </nav>
 
       <div className="p-4 border-t border-gray-100/50 bg-gray-50/50">
