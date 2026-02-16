@@ -265,7 +265,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
         isOpen={!!previewFile}
         onClose={() => setPreviewFile(null)}
         title={previewFile?.name || ''}
-        maxWidth="1150px"
+        maxWidth="1000px"
       >
         {previewFile && (
           <div className="p-5 bg-gradient-to-b from-slate-50/50 to-slate-100/30">
