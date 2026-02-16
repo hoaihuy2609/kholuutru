@@ -5,8 +5,12 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ChapterView from './components/ChapterView';
 import LessonView from './components/LessonView';
+import AISolver from './pages/AISolver';
+import SmartCrop from './pages/SmartCrop';
 import Toast, { ToastType } from './components/Toast';
 import { Menu, FileText, ChevronRight, FolderOpen } from 'lucide-react';
+
+type PageView = 'dashboard' | 'ai-solver' | 'smart-crop';
 
 const STORAGE_FILES_KEY = 'physivault_files';
 const STORAGE_LESSONS_KEY = 'physivault_lessons';
@@ -18,6 +22,7 @@ interface ToastMessage {
 }
 
 function App() {
+  const [currentPage, setCurrentPage] = useState<PageView>('dashboard');
   const [currentGrade, setCurrentGrade] = useState<GradeLevel | null>(null);
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
@@ -154,12 +159,25 @@ function App() {
   }, [storedFiles, lessons]);
 
   const renderContent = () => {
+    // AI Tools Pages
+    if (currentPage === 'ai-solver') {
+      return <AISolver />;
+    }
+
+    if (currentPage === 'smart-crop') {
+      return <SmartCrop />;
+    }
+
+    // Storage Pages (existing logic)
+    const activeGradeData = currentGrade ? CURRICULUM.find((g) => g.level === currentGrade) : null;
+
     // 1. Lesson View (Deepest level)
     if (currentLesson) {
+      const lessonFiles = storedFiles[currentLesson.id] || [];
       return (
         <LessonView
           lesson={currentLesson}
-          files={storedFiles[currentLesson.id] || []}
+          files={lessonFiles}
           onBack={() => setCurrentLesson(null)}
           onUpload={handleUpload}
           onDelete={handleDeleteFile}
@@ -168,10 +186,13 @@ function App() {
     }
 
     // 2. Chapter View (List of Lessons)
-    if (activeChapterData && currentChapterId) {
+    if (currentChapterId && activeGradeData) {
+      const chapter = activeGradeData.chapters.find((c) => c.id === currentChapterId);
+      const chapterLessons = lessons.filter((l) => l.chapterId === currentChapterId);
+
       return (
         <ChapterView
-          chapter={activeChapterData}
+          chapter={chapter!}
           lessons={chapterLessons}
           onBack={() => setCurrentChapterId(null)}
           onCreateLesson={handleCreateLesson}
@@ -193,41 +214,44 @@ function App() {
 
           <div className="flex items-end justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">{activeGradeData.title}</h1>
-              <p className="text-gray-500 mt-2">Chọn chương để xem danh sách bài học.</p>
-            </div>
-            <div className="hidden md:block text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-              {activeGradeData.chapters.length} chương học
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">{activeGradeData.title}</h1>
+              <p className="text-gray-500">Chọn chương để bắt đầu quản lý tài liệu</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
-            {activeGradeData.chapters.map((chapter, index) => {
-              const chapterLessonCount = lessons.filter(l => l.chapterId === chapter.id).length;
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            {activeGradeData.chapters.map((chapter) => {
+              const chapterLessons = lessons.filter((l) => l.chapterId === chapter.id);
+              const chapterFileCount = chapterLessons.reduce((sum, lesson) => {
+                return sum + (storedFiles[lesson.id]?.length || 0);
+              }, 0);
+
               return (
                 <div
                   key={chapter.id}
                   onClick={() => setCurrentChapterId(chapter.id)}
-                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex items-center justify-between group"
+                  className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-400 hover:shadow-xl transition-all duration-300 cursor-pointer group"
                 >
-                  <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 rounded-lg bg-gray-50 text-gray-400 font-bold flex items-center justify-center text-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                      {index + 1}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 bg-indigo-50 rounded-xl group-hover:bg-indigo-100 transition-colors">
+                      <FolderOpen className="w-6 h-6 text-indigo-600" />
                     </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-800 group-hover:text-indigo-700 transition-colors">
-                        {chapter.name}
-                      </h3>
-                      <p className="text-sm text-gray-500 mt-1">{chapter.description}</p>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-xs font-semibold text-gray-400 uppercase">Bài học</span>
+                      <span className="text-2xl font-bold text-indigo-600">{chapterLessons.length}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full">
-                      <FolderOpen className="w-4 h-4" />
-                      <span>{chapterLessonCount} bài</span>
+                  <h3 className="font-bold text-lg text-gray-800 mb-2 group-hover:text-indigo-600 transition-colors">
+                    {chapter.name}
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-4 line-clamp-2">{chapter.description}</p>
+
+                  <div className="flex items-center gap-4 text-xs text-gray-400 pt-4 border-t border-gray-100">
+                    <div className="flex items-center gap-1">
+                      <FileText className="w-4 h-4" />
+                      <span>{chapterFileCount} tài liệu</span>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>
               );
@@ -255,10 +279,15 @@ function App() {
       <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white transform transition-transform duration-300 ease-in-out md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <Sidebar
           currentGrade={currentGrade}
+          currentPage={currentPage}
           onSelectGrade={(g) => {
             setCurrentGrade(g);
             setCurrentChapterId(null);
             setCurrentLesson(null);
+            setIsMobileMenuOpen(false);
+          }}
+          onSelectPage={(page) => {
+            setCurrentPage(page as PageView);
             setIsMobileMenuOpen(false);
           }}
         />
@@ -267,11 +296,13 @@ function App() {
       {/* Desktop Sidebar */}
       <Sidebar
         currentGrade={currentGrade}
+        currentPage={currentPage}
         onSelectGrade={(g) => {
           setCurrentGrade(g);
           setCurrentChapterId(null);
           setCurrentLesson(null);
         }}
+        onSelectPage={(page) => setCurrentPage(page as PageView)}
       />
 
       {/* Main Content */}
