@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, FolderOpen, Home, Settings } from 'lucide-react';
+import { BookOpen, FolderOpen, Home, Settings, Crop } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
@@ -24,8 +24,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade }) => {
         <button
           onClick={() => onSelectGrade(null)}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${currentGrade === null
-              ? 'bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-700 font-semibold shadow-sm border border-indigo-100/50'
-              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1'
+            ? 'bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-700 font-semibold shadow-sm border border-indigo-100/50'
+            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1'
             }`}
         >
           <Home className={`w-5 h-5 transition-colors ${currentGrade === null ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
@@ -41,8 +41,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade }) => {
             key={grade}
             onClick={() => onSelectGrade(grade)}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${currentGrade === grade
-                ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30 transform scale-[1.02]'
-                : 'text-slate-600 hover:bg-white hover:shadow-md hover:border-slate-100 border border-transparent'
+              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30 transform scale-[1.02]'
+              : 'text-slate-600 hover:bg-white hover:shadow-md hover:border-slate-100 border border-transparent'
               }`}
           >
             <FolderOpen className={`w-5 h-5 transition-colors ${currentGrade === grade ? 'text-white' : 'text-slate-400 group-hover:text-indigo-500'}`} />
@@ -52,6 +52,21 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade }) => {
             )}
           </button>
         ))}
+
+
+        <div className="pt-6 pb-2">
+          <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Tiện ích</p>
+        </div>
+
+        <a
+          href="https://crop-seven-chi.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group text-slate-600 hover:bg-white hover:text-indigo-600 hover:shadow-md hover:border-slate-100 border border-transparent"
+        >
+          <Crop className="w-5 h-5 transition-colors text-slate-400 group-hover:text-indigo-500" />
+          <span className="font-medium">Smart Crop</span>
+        </a>
       </nav>
 
       <div className="p-4 border-t border-gray-100/50 bg-gray-50/50">
