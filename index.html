@@ -1,72 +1,91 @@
 <!DOCTYPE html>
 <html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- SEO Meta Tags -->
-    <title>PhysiVault - Kho Lưu Trữ Vật Lý Thông Minh</title>
-    <meta name="description" content="Quản lý và lưu trữ tài liệu Vật Lý một cách dễ dàng, hiệu quả. Hỗ trợ lớp 10, 11, 12 với giao diện thân thiện và tính năng tìm kiếm mạnh mẽ." />
-    <meta name="keywords" content="vật lý, tài liệu vật lý, học vật lý, lớp 10, lớp 11, lớp 12, physivault" />
-    <meta name="author" content="PhysiVault" />
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="PhysiVault - Kho Lưu Trữ Vật Lý Thông Minh" />
-    <meta property="og:description" content="Quản lý và lưu trữ tài liệu Vật Lý một cách dễ dàng, hiệu quả" />
-    
-    <!-- Theme Color -->
-    <meta name="theme-color" content="#4f46e5" />
-    
-    <!-- Preconnect for Performance -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://cdn.tailwindcss.com" />
-    <link rel="preconnect" href="https://esm.sh" />
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Custom Styles -->
-    <style>
-      body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background-color: #f3f4f6;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- SEO Meta Tags -->
+  <title>PhysiVault - Kho Lưu Trữ Vật Lý Thông Minh</title>
+  <meta name="description"
+    content="Quản lý và lưu trữ tài liệu Vật Lý một cách dễ dàng, hiệu quả. Hỗ trợ lớp 10, 11, 12 với giao diện thân thiện và tính năng tìm kiếm mạnh mẽ." />
+  <meta name="keywords" content="vật lý, tài liệu vật lý, học vật lý, lớp 10, lớp 11, lớp 12, physivault" />
+  <meta name="author" content="PhysiVault" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="PhysiVault - Kho Lưu Trữ Vật Lý Thông Minh" />
+  <meta property="og:description" content="Quản lý và lưu trữ tài liệu Vật Lý một cách dễ dàng, hiệu quả" />
+
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#4f46e5" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="PhysiVault" />
+
+
+  <!-- Preconnect for Performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://cdn.tailwindcss.com" />
+  <link rel="preconnect" href="https://esm.sh" />
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Custom Styles -->
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background-color: #f3f4f6;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Loading State */
+    .loading-skeleton {
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s ease-in-out infinite;
+    }
+
+    @keyframes loading {
+      0% {
+        background-position: 200% 0;
       }
-      
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+
+      100% {
+        background-position: -200% 0;
       }
-      ::-webkit-scrollbar-track {
-        background: transparent; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #cbd5e1; 
-        border-radius: 4px;
-        transition: background 0.2s;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8; 
-      }
-      
-      /* Loading State */
-      .loading-skeleton {
-        background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
-        background-size: 200% 100%;
-        animation: loading 1.5s ease-in-out infinite;
-      }
-      
-      @keyframes loading {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
-      }
-    </style>
-    
+    }
+  </style>
+
   <script type="importmap">
 {
   "imports": {
@@ -77,15 +96,32 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
-    <noscript>
-      <div style="padding: 2rem; text-align: center; background: #fef3c7; color: #92400e;">
-        Bạn cần bật JavaScript để sử dụng PhysiVault.
-      </div>
-    </noscript>
-    <div id="root"></div>
+
+<body>
+  <noscript>
+    <div style="padding: 2rem; text-align: center; background: #fef3c7; color: #92400e;">
+      Bạn cần bật JavaScript để sử dụng PhysiVault.
+    </div>
+  </noscript>
+  <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('ServiceWorker registered: ', registration);
+          })
+          .catch((error) => {
+            console.log('ServiceWorker registration failed: ', error);
+          });
+      });
+    }
+  </script>
 </body>
+
 </html>
