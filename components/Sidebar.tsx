@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, FolderOpen, Home, Settings } from 'lucide-react';
+import { Atom, FolderOpen, Home, Settings } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
@@ -12,8 +12,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
   return (
     <div className="w-64 h-full flex flex-col hidden md:flex fixed left-0 top-0 z-10 glass border-r border-white/20 shadow-xl backdrop-blur-xl bg-white/80">
       <div className="p-6 flex items-center gap-3 border-b border-gray-100/50">
-        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white transform hover:scale-105 transition-transform duration-300">
-          <BookOpen className="w-6 h-6" />
+        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white transform hover:scale-110 hover:rotate-12 transition-all duration-500">
+          <Atom className="w-6 h-6 animate-pulse" />
         </div>
         <div>
           <h1 className="font-bold text-xl text-gray-800 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">PhysiVault</h1>

@@ -147,7 +147,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
 
                     <div className="relative z-10 flex justify-between items-start">
                       <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 text-white shadow-lg">
-                        <Icon className="w-8 h-8" />
+                        <Atom className="w-8 h-8 animate-pulse" />
                       </div>
                       <span className="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-white text-xs font-bold shadow-sm">
                         {fileCounts[grade.level] || 0} FILE
