@@ -300,15 +300,17 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
 
                   <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-50">
                     <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">{formatDate(file.uploadDate)}</span>
-                    <a
-                      href={file.url}
-                      download={file.name}
-                      className="text-indigo-600 hover:text-indigo-700 p-1.5 hover:bg-indigo-50 rounded-lg transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                      title="Tải xuống"
-                    >
-                      <Download className="w-4 h-4" />
-                    </a>
+                    {isAdmin && (
+                      <a
+                        href={file.url}
+                        download={file.name}
+                        className="text-indigo-600 hover:text-indigo-700 p-1.5 hover:bg-indigo-50 rounded-lg transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                        title="Tải xuống"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
@@ -328,7 +330,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
           <div className="p-5 bg-gradient-to-b from-slate-50/50 to-slate-100/30">
             <div className="w-full h-[82vh] bg-white rounded-xl overflow-hidden shadow-2xl border border-slate-200/70">
               <iframe
-                src={previewFile.url}
+                src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`}
                 className="w-full h-full border-0"
                 title="PDF Preview"
               />

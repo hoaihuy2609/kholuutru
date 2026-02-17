@@ -436,7 +436,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
             <div className="w-full h-[80vh] bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
               {previewFile.type.includes('pdf') ? (
                 <iframe
-                  src={previewFile.url}
+                  src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`}
                   className="w-full h-full border-0"
                   title="PDF Preview"
                 />
