@@ -74,12 +74,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
                   <Users className="w-4 h-4" />
                 </div>
                 <span className="text-slate-700 font-semibold tracking-tight">
-                  Tài liệu: <span className="text-indigo-600">Group Vật Lý Physics</span>
+                  Tài liệu: <a
+                    href="https://www.facebook.com/groups/1657860147904528"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-600 hover:text-indigo-700 hover:underline decoration-2 underline-offset-4 transition-all"
+                  >
+                    Group Vật Lý Physics
+                  </a>
                 </span>
               </div>
               <div className="hidden sm:block w-px h-4 bg-indigo-200 mx-1"></div>
               <div className="text-slate-600 font-medium text-sm sm:text-base">
-                Tác giả: <span className="text-slate-900 font-bold">Thái Văn Thành</span>
+                Tác giả: <a
+                  href="https://www.facebook.com/groups/1657860147904528/user/100079937809863"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-900 font-bold hover:text-indigo-700 hover:underline decoration-2 underline-offset-4 transition-all"
+                >
+                  Thái Văn Thành
+                </a>
               </div>
             </div>
 
