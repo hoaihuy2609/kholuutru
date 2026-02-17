@@ -68,13 +68,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
             <p className="text-slate-500 text-lg mb-4 max-w-lg leading-relaxed">
               Nền tảng lưu trữ và quản lý tài liệu Vật Lý toàn diện. Truy cập bài giảng, đề thi và tài liệu tham khảo mọi lúc, mọi nơi.
             </p>
-            <div className="flex items-center gap-3 mb-10 px-4 py-2 bg-indigo-50/50 border border-indigo-100/50 rounded-2xl w-fit shadow-sm hover:shadow-md transition-shadow">
-              <div className="p-1.5 bg-indigo-600 rounded-lg text-white">
-                <Users className="w-4 h-4" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-10 px-4 py-2.5 bg-indigo-50/50 border border-indigo-100/50 rounded-2xl w-fit shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 bg-indigo-600 rounded-lg text-white">
+                  <Users className="w-4 h-4" />
+                </div>
+                <span className="text-slate-700 font-semibold tracking-tight">
+                  Tài liệu: <span className="text-indigo-600">Group Vật Lý Physics</span>
+                </span>
               </div>
-              <span className="text-slate-700 font-semibold tracking-tight">
-                Nguồn tài liệu từ <span className="text-indigo-600">Group Vật Lý Physics</span>
-              </span>
+              <div className="hidden sm:block w-px h-4 bg-indigo-200 mx-1"></div>
+              <div className="text-slate-600 font-medium text-sm sm:text-base">
+                Tác giả: <span className="text-slate-900 font-bold">Thái Văn Thành</span>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-4">
