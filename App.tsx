@@ -237,19 +237,7 @@ function App() {
                       <FolderOpen className="w-6 h-6 text-indigo-600 group-hover:text-white transition-colors" />
                     </div>
                     <div className="flex items-center gap-3">
-                      {isAdmin && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCurrentChapterId(chapter.id);
-                            setAutoCreateLesson(true);
-                          }}
-                          className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100"
-                          title="Tạo bài mới"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      )}
+
                       <div className="flex flex-col items-end gap-0.5">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bài học</span>
                         <span className="text-2xl font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{chapterLessons.length}</span>
