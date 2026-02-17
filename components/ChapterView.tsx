@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye, BookOpen } from 'lucide-react';
+import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye, BookOpen, Zap } from 'lucide-react';
 import SearchBar from './SearchBar';
 import Modal from './Modal';
 import { Chapter, Lesson, StoredFile } from '../types';
@@ -383,7 +383,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
             <div className="max-w-xl">
               <h3 className="text-2xl font-bold mb-2 flex items-center gap-3">
                 <span className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
-                  <Plus className="w-6 h-6" />
+                  <Zap className="w-6 h-6" />
                 </span>
                 Bài tập Tính toán Nâng cao
               </h3>
