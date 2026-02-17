@@ -7,7 +7,7 @@ import ChapterView from './components/ChapterView';
 import LessonView from './components/LessonView';
 import Toast, { ToastType } from './components/Toast';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
-import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings } from 'lucide-react';
+import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings, Plus } from 'lucide-react';
 
 import SettingsModal from './components/SettingsModal';
 
@@ -21,6 +21,7 @@ function App() {
   const [currentGrade, setCurrentGrade] = useState<GradeLevel | null>(null);
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
+  const [autoCreateLesson, setAutoCreateLesson] = useState(false);
 
   // Replace local state with Cloud Storage hook
   const { lessons, storedFiles, loading, addLesson, deleteLesson, uploadFiles, deleteFile } = useCloudStorage();
@@ -178,8 +179,15 @@ function App() {
           lessons={chapterLessons}
           chapterFiles={chapterFiles}
           isAdmin={isAdmin}
-          onBack={() => setCurrentChapterId(null)}
-          onCreateLesson={(name) => handleCreateLesson(name, currentChapterId)}
+          autoCreate={autoCreateLesson}
+          onBack={() => {
+            setCurrentChapterId(null);
+            setAutoCreateLesson(false);
+          }}
+          onCreateLesson={(name) => {
+            handleCreateLesson(name, currentChapterId);
+            setAutoCreateLesson(false);
+          }}
           onSelectLesson={setCurrentLesson}
           onDeleteLesson={handleDeleteLesson}
           onUploadChapterFile={handleChapterUpload}
@@ -228,9 +236,24 @@ function App() {
                     <div className="p-3.5 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl group-hover:from-indigo-600 group-hover:to-purple-600 transition-all duration-300 shadow-inner group-hover:shadow-lg group-hover:shadow-indigo-500/30">
                       <FolderOpen className="w-6 h-6 text-indigo-600 group-hover:text-white transition-colors" />
                     </div>
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bài học</span>
-                      <span className="text-2xl font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{chapterLessons.length}</span>
+                    <div className="flex items-center gap-3">
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCurrentChapterId(chapter.id);
+                            setAutoCreateLesson(true);
+                          }}
+                          className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100"
+                          title="Tạo bài mới"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      )}
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bài học</span>
+                        <span className="text-2xl font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{chapterLessons.length}</span>
+                      </div>
                     </div>
                   </div>
 

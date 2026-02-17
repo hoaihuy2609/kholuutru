@@ -9,6 +9,7 @@ interface ChapterViewProps {
   lessons: Lesson[];
   chapterFiles: StoredFile[];
   isAdmin: boolean;
+  autoCreate?: boolean;
   onBack: () => void;
   onCreateLesson: (name: string) => void;
   onSelectLesson: (lesson: Lesson) => void;
@@ -22,6 +23,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   lessons,
   chapterFiles,
   isAdmin,
+  autoCreate,
   onBack,
   onCreateLesson,
   onSelectLesson,
@@ -35,8 +37,13 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'az' | 'za'>('newest');
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
   const [uploadCategory, setUploadCategory] = useState<string>('');
-
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (autoCreate) {
+      setIsCreating(true);
+    }
+  }, [autoCreate]);
 
   // Filter chapter files by category
   const theoryFiles = chapterFiles.filter(f => f.category === "Lý thuyết trọng tâm (Chương)");
@@ -110,8 +117,21 @@ const ChapterView: React.FC<ChapterViewProps> = ({
               Chương học
             </span>
           </div>
-          <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight leading-tight">{chapter.name}</h2>
-          <p className="text-slate-500">{chapter.description}</p>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight leading-tight">{chapter.name}</h2>
+              <p className="text-slate-500">{chapter.description}</p>
+            </div>
+            {isAdmin && !isCreating && (
+              <button
+                onClick={() => setIsCreating(true)}
+                className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 font-bold active:scale-95 whitespace-nowrap"
+              >
+                <Plus className="w-5 h-5" />
+                Tạo bài học mới
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -187,15 +207,6 @@ const ChapterView: React.FC<ChapterViewProps> = ({
             <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
             Bài học trong chương
           </h3>
-          {isAdmin && !isCreating && (
-            <button
-              onClick={() => setIsCreating(true)}
-              className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-all text-sm font-bold"
-            >
-              <Plus className="w-4 h-4" />
-              Tạo bài mới
-            </button>
-          )}
         </div>
 
         {isCreating && (
