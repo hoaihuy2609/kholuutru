@@ -84,9 +84,11 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
 
     // Filter by search query
     if (searchQuery) {
-      result = result.filter(file =>
-        file.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      const search = searchQuery.toLowerCase().trim().normalize('NFC');
+      result = result.filter(file => {
+        const name = (file.name || '').toLowerCase().normalize('NFC');
+        return name.includes(search);
+      });
     }
 
     // Sort

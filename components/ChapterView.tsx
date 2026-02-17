@@ -41,9 +41,11 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   const trueFalseFiles = chapterFiles.filter(f => f.category === "Trắc nghiệm Đúng/Sai (Chương)");
 
   const filteredLessons = lessons
-    .filter(lesson =>
-      lesson.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(lesson => {
+      const name = (lesson.name || '').toLowerCase().normalize('NFC');
+      const search = searchTerm.toLowerCase().trim().normalize('NFC');
+      return name.includes(search);
+    })
     .sort((a, b) => {
       switch (sortOption) {
         case 'newest':
