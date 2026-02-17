@@ -65,9 +65,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
               Chào mừng đến với <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">PhysiVault</span>
             </h1>
-            <p className="text-slate-500 text-lg mb-8 max-w-lg leading-relaxed">
+            <p className="text-slate-500 text-lg mb-4 max-w-lg leading-relaxed">
               Nền tảng lưu trữ và quản lý tài liệu Vật Lý toàn diện. Truy cập bài giảng, đề thi và tài liệu tham khảo mọi lúc, mọi nơi.
             </p>
+            <div className="flex items-center gap-2 mb-8 text-slate-400 text-sm italic">
+              <Users className="w-4 h-4" />
+              <span>Nguồn tài liệu từ Group Vật Lý Physics</span>
+            </div>
 
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center gap-3 px-5 py-3 bg-white/80 rounded-2xl shadow-sm border border-white/50 backdrop-blur-sm">
