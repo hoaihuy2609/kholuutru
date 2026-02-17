@@ -68,44 +68,43 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
             <p className="text-slate-500 text-lg mb-4 max-w-lg leading-relaxed">
               Nền tảng lưu trữ và quản lý tài liệu Vật Lý toàn diện. Truy cập bài giảng, đề thi và tài liệu tham khảo mọi lúc, mọi nơi.
             </p>
-            <div className="flex flex-col gap-3 mb-10">
-              {/* Developer Badge */}
-              <div className="flex items-center gap-3 px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-2xl w-fit shadow-lg shadow-slate-200 hover:-translate-y-0.5 transition-all group">
-                <div className="p-1 bg-indigo-500 rounded-lg text-white group-hover:bg-white group-hover:text-indigo-600 transition-colors">
-                  <Activity className="w-4 h-4" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-10 px-5 py-2.5 bg-indigo-50/50 border border-indigo-100/50 rounded-2xl w-fit shadow-sm hover:shadow-md transition-all">
+              {/* System Developer */}
+              <div className="flex items-center gap-2">
+                <div className="p-1 px-2 bg-indigo-100 rounded-lg text-indigo-700 text-[10px] font-bold uppercase tracking-wider">
+                  Admin
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Thiết kế & Phát triển</span>
-                  <a
-                    href="https://www.facebook.com/hoaihuy2609"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-white font-bold text-sm hover:text-indigo-400 transition-colors"
-                  >
-                    Nguyễn Trần Hoài Huy
-                  </a>
-                </div>
+                <a
+                  href="https://www.facebook.com/hoaihuy2609"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-900 font-bold text-sm hover:text-indigo-600 transition-colors"
+                >
+                  Hoài Huy
+                </a>
               </div>
 
-              {/* Source & Author Badge */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-2.5 bg-white/60 border border-slate-100 rounded-2xl w-fit backdrop-blur-sm shadow-sm hover:shadow-md transition-all">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-indigo-50 rounded-lg text-indigo-600">
-                    <Users className="w-4 h-4" />
-                  </div>
-                  <span className="text-slate-600 font-semibold tracking-tight text-sm">
-                    Tài liệu: <a
-                      href="https://www.facebook.com/groups/1657860147904528"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-indigo-600 hover:text-indigo-700 hover:underline transition-all"
-                    >
-                      Group Vật Lý Physics
-                    </a>
-                  </span>
-                </div>
-                <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-slate-200"></div>
-                <div className="text-slate-500 font-medium text-sm">
+              <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-indigo-200"></div>
+
+              {/* Source Credit */}
+              <div className="flex items-center gap-2">
+                <span className="text-slate-600 font-medium text-sm">
+                  Tài liệu: <a
+                    href="https://www.facebook.com/groups/1657860147904528"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-600 hover:text-indigo-700 hover:underline transition-all"
+                  >
+                    Group Vật Lý Physics
+                  </a>
+                </span>
+              </div>
+
+              <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-indigo-200"></div>
+
+              {/* Author Credit */}
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500 font-medium text-sm">
                   Tác giả: <a
                     href="https://www.facebook.com/groups/1657860147904528/user/100079937809863"
                     target="_blank"
@@ -114,7 +113,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
                   >
                     Thái Văn Thành
                   </a>
-                </div>
+                </span>
               </div>
             </div>
 
