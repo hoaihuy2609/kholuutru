@@ -34,7 +34,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   const [newLessonName, setNewLessonName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'az' | 'za'>('newest');
+  const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'az' | 'za'>('az');
   const [trueFalseSort, setTrueFalseSort] = useState<'newest' | 'oldest' | 'az' | 'za'>('az');
   const [advancedSort, setAdvancedSort] = useState<'newest' | 'oldest' | 'az' | 'za'>('az');
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
@@ -78,9 +78,9 @@ const ChapterView: React.FC<ChapterViewProps> = ({
         case 'oldest':
           return a.createdAt - b.createdAt;
         case 'az':
-          return a.name.localeCompare(b.name);
+          return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
         case 'za':
-          return b.name.localeCompare(a.name);
+          return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
         default:
           return 0;
       }
