@@ -35,6 +35,8 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'az' | 'za'>('newest');
+  const [trueFalseSort, setTrueFalseSort] = useState<'newest' | 'oldest' | 'az' | 'za'>('az');
+  const [advancedSort, setAdvancedSort] = useState<'newest' | 'oldest' | 'az' | 'za'>('az');
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
   const [uploadCategory, setUploadCategory] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,10 +47,23 @@ const ChapterView: React.FC<ChapterViewProps> = ({
     }
   }, [autoCreate]);
 
-  // Filter chapter files by category
-  const theoryFiles = chapterFiles.filter(f => f.category === "Lý thuyết trọng tâm (Chương)");
-  const advancedFiles = chapterFiles.filter(f => f.category === "Bài tập Tính toán Nâng cao");
-  const trueFalseFiles = chapterFiles.filter(f => f.category === "Trắc nghiệm Đúng/Sai (Chương)");
+  // Helper to sort files
+  const sortFiles = (files: StoredFile[], option: 'newest' | 'oldest' | 'az' | 'za') => {
+    return [...files].sort((a, b) => {
+      switch (option) {
+        case 'newest': return b.uploadDate - a.uploadDate;
+        case 'oldest': return a.uploadDate - b.uploadDate;
+        case 'az': return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+        case 'za': return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
+        default: return 0;
+      }
+    });
+  };
+
+  // Filter and sort chapter files by category
+  const theoryFiles = sortFiles(chapterFiles.filter(f => f.category === "Lý thuyết trọng tâm (Chương)"), 'az');
+  const advancedFiles = sortFiles(chapterFiles.filter(f => f.category === "Bài tập Tính toán Nâng cao"), advancedSort);
+  const trueFalseFiles = sortFiles(chapterFiles.filter(f => f.category === "Trắc nghiệm Đúng/Sai (Chương)"), trueFalseSort);
 
   const filteredLessons = lessons
     .filter(lesson => {
@@ -330,15 +345,33 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                 Khu vực dành cho các câu hỏi lý thuyết dạng Đúng/Sai của cả chương học.
               </p>
             </div>
-            {isAdmin && (
-              <button
-                onClick={() => triggerUpload("Trắc nghiệm Đúng/Sai (Chương)")}
-                className="flex items-center justify-center gap-2 bg-white text-emerald-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
-              >
-                <UploadCloud className="w-5 h-5" />
-                Tải bài tập Đúng/Sai
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <select
+                  value={trueFalseSort}
+                  onChange={(e) => setTrueFalseSort(e.target.value as any)}
+                  className="appearance-none bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold rounded-xl pr-8 pl-3 py-2 outline-none cursor-pointer hover:bg-white/20 transition-all"
+                >
+                  <option value="az" className="text-slate-800">Tên 1,2,3... (A-Z)</option>
+                  <option value="za" className="text-slate-800">Tên Z-A</option>
+                  <option value="newest" className="text-slate-800">Mới nhất</option>
+                  <option value="oldest" className="text-slate-800">Cũ nhất</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/60">
+                  <ArrowUpDown className="h-3 w-3" />
+                </div>
+              </div>
+
+              {isAdmin && (
+                <button
+                  onClick={() => triggerUpload("Trắc nghiệm Đúng/Sai (Chương)")}
+                  className="flex items-center justify-center gap-2 bg-white text-emerald-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
+                >
+                  <UploadCloud className="w-5 h-5" />
+                  Tải bài tập Đúng/Sai
+                </button>
+              )}
+            </div>
           </div>
 
           {trueFalseFiles.length > 0 && (
@@ -391,15 +424,33 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                 Khu vực dành riêng cho các bài tập vận dụng cao, tính toán phức tạp của cả chương.
               </p>
             </div>
-            {isAdmin && (
-              <button
-                onClick={() => triggerUpload("Bài tập Tính toán Nâng cao")}
-                className="flex items-center justify-center gap-2 bg-white text-indigo-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
-              >
-                <UploadCloud className="w-5 h-5" />
-                Tải tài liệu nâng cao
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <select
+                  value={advancedSort}
+                  onChange={(e) => setAdvancedSort(e.target.value as any)}
+                  className="appearance-none bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold rounded-xl pr-8 pl-3 py-2 outline-none cursor-pointer hover:bg-white/20 transition-all"
+                >
+                  <option value="az" className="text-slate-800">Tên 1,2,3... (A-Z)</option>
+                  <option value="za" className="text-slate-800">Tên Z-A</option>
+                  <option value="newest" className="text-slate-800">Mới nhất</option>
+                  <option value="oldest" className="text-slate-800">Cũ nhất</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/60">
+                  <ArrowUpDown className="h-3 w-3" />
+                </div>
+              </div>
+
+              {isAdmin && (
+                <button
+                  onClick={() => triggerUpload("Bài tập Tính toán Nâng cao")}
+                  className="flex items-center justify-center gap-2 bg-white text-indigo-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
+                >
+                  <UploadCloud className="w-5 h-5" />
+                  Tải tài liệu nâng cao
+                </button>
+              )}
+            </div>
           </div>
 
           {advancedFiles.length > 0 && (
