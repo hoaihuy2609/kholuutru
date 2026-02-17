@@ -1,25 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Calendar, Edit2, Check, X } from 'lucide-react';
+import { Clock, Calendar, Edit2, Check, X, Rocket, Target } from 'lucide-react';
 
 const CountdownTimer: React.FC = () => {
     const [examDate, setExamDate] = useState<string>(() => {
         return localStorage.getItem('physivault_exam_date') || '';
     });
     const [isEditing, setIsEditing] = useState(false);
-    const [tempDate, setTempDate] = useState(examDate);
-    const [timeLeft, setTimeLeft] = useState({
-        days: 0,
-        hours: 0,
-        minutes: 0,
-        seconds: 0
-    });
+
+    // Mặc định là 8h sáng ngày mai nếu chưa có ngày
+    const getDefaultDate = () => {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        d.setHours(8, 0, 0, 0);
+        return d.toISOString().slice(0, 16);
+    };
+
+    const [tempDate, setTempDate] = useState(examDate || getDefaultDate());
+    const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
     useEffect(() => {
         if (!examDate) return;
-
         const calculateTimeLeft = () => {
             const difference = +new Date(examDate) - +new Date();
-
             if (difference > 0) {
                 setTimeLeft({
                     days: Math.floor(difference / (1000 * 60 * 60 * 24)),
@@ -31,10 +33,8 @@ const CountdownTimer: React.FC = () => {
                 setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
             }
         };
-
         calculateTimeLeft();
         const timer = setInterval(calculateTimeLeft, 1000);
-
         return () => clearInterval(timer);
     }, [examDate]);
 
@@ -44,67 +44,58 @@ const CountdownTimer: React.FC = () => {
         setIsEditing(false);
     };
 
+    const setQuickDate = (days: number) => {
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        d.setHours(8, 0, 0, 0);
+        setTempDate(d.toISOString().slice(0, 16));
+    };
+
+    const setTHPTDate = () => {
+        // Giả định kỳ thi THPT 2026 diễn ra vào 26/06/2026
+        setTempDate("2026-06-26T07:30");
+    };
+
     const hasTargetDate = !!examDate;
     const isExpired = hasTargetDate && +new Date(examDate) <= +new Date();
 
     return (
-        <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-xl shadow-indigo-500/5 relative overflow-hidden group">
-            {/* Decorative background */}
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors"></div>
+        <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-xl shadow-indigo-500/5 relative overflow-hidden group transition-all duration-500">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors"></div>
 
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-lg shadow-indigo-200 animate-pulse">
-                        <Clock className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                            Đếm ngược kỳ thi
-                            {!isEditing && (
+            {!isEditing ? (
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-lg shadow-indigo-100 animate-float">
+                            <Clock className="w-7 h-7" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-800 text-xl flex items-center gap-2">
+                                Hành trình đến kỳ thi
                                 <button
-                                    onClick={() => { setTempDate(examDate); setIsEditing(true); }}
-                                    className="p-1.5 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                    onClick={() => { setTempDate(examDate || getDefaultDate()); setIsEditing(true); }}
+                                    className="p-1.5 bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                    title="Chỉnh sửa ngày thi"
                                 >
-                                    <Edit2 className="w-3.5 h-3.5" />
+                                    <Edit2 className="w-4 h-4" />
                                 </button>
-                            )}
-                        </h3>
-                        <p className="text-slate-500 text-sm font-medium">
-                            {hasTargetDate ? (isExpired ? 'Kỳ thi đã đến!' : 'Thời gian còn lại để ôn tập') : 'Chưa đặt ngày thi'}
-                        </p>
+                            </h3>
+                            <p className="text-slate-500 font-medium">
+                                {hasTargetDate
+                                    ? (isExpired ? 'Thời gian đã điểm!' : `Mục tiêu: ${new Date(examDate).toLocaleDateString('vi-VN')} lúc ${new Date(examDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`)
+                                    : 'Hãy đặt mục tiêu cho kỳ thi sắp tới của bạn'}
+                            </p>
+                        </div>
                     </div>
-                </div>
 
-                {isEditing ? (
-                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
-                        <input
-                            type="datetime-local"
-                            value={tempDate}
-                            onChange={(e) => setTempDate(e.target.value)}
-                            className="px-4 py-2 rounded-xl border border-indigo-100 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm font-medium text-slate-700 bg-white"
-                        />
-                        <button
-                            onClick={handleSave}
-                            className="p-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-100 transition-all active:scale-95"
-                        >
-                            <Check className="w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={() => setIsEditing(false)}
-                            className="p-2.5 bg-white text-slate-400 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all active:scale-95"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-                ) : (
                     <div className="flex items-center gap-3">
                         {!hasTargetDate ? (
                             <button
                                 onClick={() => setIsEditing(true)}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-white border border-indigo-100 text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-50 hover:shadow-md transition-all active:scale-95"
+                                className="flex items-center gap-2 px-8 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all active:scale-95"
                             >
-                                <Calendar className="w-4 h-4" />
-                                Đặt ngày thi ngay
+                                <Target className="w-5 h-5" />
+                                Thiết lập ngay
                             </button>
                         ) : (
                             <div className="flex items-center gap-2">
@@ -116,23 +107,95 @@ const CountdownTimer: React.FC = () => {
                                 ].map((item, index) => (
                                     <React.Fragment key={item.label}>
                                         <div className="flex flex-col items-center">
-                                            <div className="min-w-[50px] sm:min-w-[64px] h-12 sm:h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-white/80 transition-transform hover:scale-105 duration-300">
-                                                <span className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-b from-slate-800 to-slate-500">
+                                            <div className="min-w-[55px] sm:min-w-[70px] h-14 sm:h-20 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-white/80 transition-transform hover:scale-105 duration-300">
+                                                <span className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-b from-indigo-700 to-indigo-400">
                                                     {String(item.value).padStart(2, '0')}
                                                 </span>
                                             </div>
                                             <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">{item.label}</span>
                                         </div>
                                         {index < 3 && (
-                                            <div className="text-xl font-bold text-slate-300 pb-6">:</div>
+                                            <div className="text-2xl font-bold text-indigo-200 pb-6">:</div>
                                         )}
                                     </React.Fragment>
                                 ))}
                             </div>
                         )}
                     </div>
-                )}
-            </div>
+                </div>
+            ) : (
+                <div className="relative z-10 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <Calendar className="w-6 h-6 text-indigo-600" />
+                            Cài đặt mục tiêu thi cử
+                        </h3>
+                        <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <label className="block text-sm font-bold text-slate-600 ml-1 uppercase tracking-wider">
+                                Chọn ngày & giờ thi dự kiến:
+                            </label>
+                            <input
+                                type="datetime-local"
+                                value={tempDate}
+                                onChange={(e) => setTempDate(e.target.value)}
+                                className="w-full px-5 py-4 rounded-2xl border-2 border-indigo-50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-lg font-bold text-slate-700 bg-white/80 shadow-inner"
+                            />
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={handleSave}
+                                    className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    <Check className="w-6 h-6" />
+                                    Xác nhận mục tiêu
+                                </button>
+                                <button
+                                    onClick={() => setIsEditing(false)}
+                                    className="px-6 py-4 bg-white text-slate-500 border border-slate-200 rounded-2xl font-bold hover:bg-slate-50 transition-all"
+                                >
+                                    Hủy
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <label className="block text-sm font-bold text-slate-600 ml-1 uppercase tracking-wider">
+                                Chọn nhanh:
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button onClick={() => setQuickDate(30)} className="p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-500 hover:text-indigo-600 transition-all text-left group/btn">
+                                    <div className="text-sm font-bold text-slate-400 group-hover/btn:text-indigo-400">+30 Ngày</div>
+                                    <div className="text-xs font-medium">Ôn tập cấp tốc</div>
+                                </button>
+                                <button onClick={() => setQuickDate(90)} className="p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-500 hover:text-indigo-600 transition-all text-left group/btn">
+                                    <div className="text-sm font-bold text-slate-400 group-hover/btn:text-indigo-400">+90 Ngày</div>
+                                    <div className="text-xs font-medium">Chiến lược dài hạn</div>
+                                </button>
+                                <button
+                                    onClick={setTHPTDate}
+                                    className="col-span-2 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl hover:from-indigo-100 hover:to-purple-100 transition-all text-left flex items-center justify-between group/huge"
+                                >
+                                    <div>
+                                        <div className="text-indigo-700 font-bold flex items-center gap-2">
+                                            <Rocket className="w-4 h-4" />
+                                            Kỳ thi THPT Quốc Gia 2026
+                                        </div>
+                                        <div className="text-xs text-indigo-500 font-medium mt-1">Dự kiến bắt đầu vào 26/06/2026</div>
+                                    </div>
+                                    <div className="p-2 bg-white rounded-xl shadow-sm group-hover/huge:scale-110 transition-transform">
+                                        <Calendar className="w-5 h-5 text-indigo-500" />
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
