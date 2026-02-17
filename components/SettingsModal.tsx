@@ -91,55 +91,68 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
                 <div className="p-6 space-y-6">
                     {/* Admin Access Section */}
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-bold text-slate-700 flex items-center gap-2">
-                                {isAdmin ? <Unlock className="w-4 h-4 text-green-600" /> : <Lock className="w-4 h-4 text-slate-400" />}
-                                Chế độ: {isAdmin ? 'Quản trị viên' : 'Học sinh'}
-                            </h4>
+                    <div className="bg-slate-50/80 rounded-2xl border border-slate-200/60 overflow-hidden shadow-sm">
+                        <div className="p-4 flex items-center justify-between bg-white border-b border-slate-100">
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-xl ${isAdmin ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+                                    {isAdmin ? <Unlock className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">Quyền truy cập</span>
+                                    <span className={`text-sm font-bold ${isAdmin ? 'text-green-600' : 'text-slate-700'}`}>
+                                        {isAdmin ? 'Quản trị viên' : 'Chế độ Học sinh'}
+                                    </span>
+                                </div>
+                            </div>
+
                             {!isAdmin ? (
                                 <button
                                     onClick={() => setShowPassInput(!showPassInput)}
-                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700 underline"
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-all border border-indigo-100"
                                 >
+                                    <KeyRound className="w-3.5 h-3.5" />
                                     Mở khóa Admin
                                 </button>
                             ) : (
                                 <button
                                     onClick={() => onToggleAdmin(false)}
-                                    className="text-xs font-bold text-red-600 hover:text-red-700 underline"
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-all border border-red-100"
                                 >
                                     Thoát Admin
                                 </button>
                             )}
                         </div>
 
-                        {showPassInput && !isAdmin && (
-                            <div className="mt-3 flex gap-2 animate-in slide-in-from-top-2 duration-200">
-                                <div className="relative flex-1">
-                                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                    <input
-                                        type="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="Mật khẩu Admin..."
-                                        className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-indigo-500 outline-none"
-                                        onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
-                                    />
+                        <div className="p-4">
+                            {!isAdmin && showPassInput ? (
+                                <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
+                                    <div className="relative">
+                                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <input
+                                            type="password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            placeholder="Nhập mã xác thực hệ thống..."
+                                            className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                                            onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleVerifyPassword}
+                                        className="w-full py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all active:scale-[0.98]"
+                                    >
+                                        Xác thực quyền Admin
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={handleVerifyPassword}
-                                    className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors"
-                                >
-                                    Xác nhận
-                                </button>
-                            </div>
-                        )}
-                        <p className="text-[10px] text-slate-400 mt-1">
-                            {isAdmin
-                                ? 'Bạn đang có toàn quyền chỉnh sửa và xuất dữ liệu.'
-                                : 'Học sinh chỉ có quyền xem và nhập dữ liệu từ giáo viên.'}
-                        </p>
+                            ) : (
+                                <p className="text-[11px] text-slate-500 leading-relaxed italic">
+                                    {isAdmin
+                                        ? 'Bạn đang ở chế độ Quản trị: Có toàn quyền thêm, sửa, xóa nội dung và xuất dữ liệu bài giảng.'
+                                        : 'Bạn đang ở chế độ Học sinh: Hệ thống sẽ ẩn các tính năng chỉnh sửa để tập trung vào việc học.'}
+                                </p>
+                            )}
+                        </div>
                     </div>
 
                     {isAdmin && (
