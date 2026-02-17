@@ -352,10 +352,10 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                   onChange={(e) => setTrueFalseSort(e.target.value as any)}
                   className="appearance-none bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold rounded-xl pr-8 pl-3 py-2 outline-none cursor-pointer hover:bg-white/20 transition-all"
                 >
-                  <option value="az" className="text-slate-800">Tên 1,2,3... (A-Z)</option>
-                  <option value="za" className="text-slate-800">Tên Z-A</option>
                   <option value="newest" className="text-slate-800">Mới nhất</option>
                   <option value="oldest" className="text-slate-800">Cũ nhất</option>
+                  <option value="az" className="text-slate-800">Tên A-Z</option>
+                  <option value="za" className="text-slate-800">Tên Z-A</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/60">
                   <ArrowUpDown className="h-3 w-3" />
@@ -431,10 +431,10 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                   onChange={(e) => setAdvancedSort(e.target.value as any)}
                   className="appearance-none bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold rounded-xl pr-8 pl-3 py-2 outline-none cursor-pointer hover:bg-white/20 transition-all"
                 >
-                  <option value="az" className="text-slate-800">Tên 1,2,3... (A-Z)</option>
-                  <option value="za" className="text-slate-800">Tên Z-A</option>
                   <option value="newest" className="text-slate-800">Mới nhất</option>
                   <option value="oldest" className="text-slate-800">Cũ nhất</option>
+                  <option value="az" className="text-slate-800">Tên A-Z</option>
+                  <option value="za" className="text-slate-800">Tên Z-A</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/60">
                   <ArrowUpDown className="h-3 w-3" />
