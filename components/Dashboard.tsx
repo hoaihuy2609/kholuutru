@@ -68,32 +68,53 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
             <p className="text-slate-500 text-lg mb-4 max-w-lg leading-relaxed">
               Nền tảng lưu trữ và quản lý tài liệu Vật Lý toàn diện. Truy cập bài giảng, đề thi và tài liệu tham khảo mọi lúc, mọi nơi.
             </p>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-10 px-4 py-2.5 bg-indigo-50/50 border border-indigo-100/50 rounded-2xl w-fit shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 bg-indigo-600 rounded-lg text-white">
-                  <Users className="w-4 h-4" />
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-10 px-5 py-3 bg-indigo-50/50 border border-indigo-100/50 rounded-2xl w-fit shadow-sm hover:shadow-md transition-all">
+              {/* Developer Credit */}
+              <div className="flex items-center gap-2">
+                <div className="p-1 bg-indigo-600 rounded-md text-white">
+                  <Activity className="w-3.5 h-3.5" />
                 </div>
-                <span className="text-slate-700 font-semibold tracking-tight">
-                  Tài liệu: <a
-                    href="https://www.facebook.com/groups/1657860147904528"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-indigo-600 hover:text-indigo-700 hover:underline decoration-2 underline-offset-4 transition-all"
-                  >
-                    Group Vật Lý Physics
-                  </a>
-                </span>
-              </div>
-              <div className="hidden sm:block w-px h-4 bg-indigo-200 mx-1"></div>
-              <div className="text-slate-600 font-medium text-sm sm:text-base">
-                Tác giả: <a
-                  href="https://www.facebook.com/groups/1657860147904528/user/100079937809863"
+                <span className="text-sm font-medium text-slate-600">Phát triển bởi:</span>
+                <a
+                  href="https://www.facebook.com/hoaihuy2609"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-slate-900 font-bold hover:text-indigo-700 hover:underline decoration-2 underline-offset-4 transition-all"
+                  className="text-slate-900 font-bold text-sm hover:text-indigo-600 transition-colors"
                 >
-                  Thái Văn Thành
+                  Nguyễn Trần Hoài Huy
                 </a>
+              </div>
+
+              <div className="hidden lg:block w-px h-4 bg-slate-300 mx-1"></div>
+
+              {/* Source Credit */}
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                  <span className="text-slate-700 font-semibold tracking-tight text-sm">
+                    Tài liệu: <a
+                      href="https://www.facebook.com/groups/1657860147904528"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:text-indigo-700 hover:underline transition-all"
+                    >
+                      Group Vật Lý Physics
+                    </a>
+                  </span>
+                  <div className="hidden sm:block w-1 h-1 rounded-full bg-slate-300"></div>
+                  <span className="text-slate-600 font-medium text-sm">
+                    Tác giả: <a
+                      href="https://www.facebook.com/groups/1657860147904528/user/100079937809863"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-slate-900 font-bold hover:text-indigo-700 transition-all font-bold"
+                    >
+                      Thái Văn Thành
+                    </a>
+                  </span>
+                </div>
               </div>
             </div>
 
