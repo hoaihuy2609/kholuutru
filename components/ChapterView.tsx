@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye } from 'lucide-react';
+import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye, BookOpen } from 'lucide-react';
 import SearchBar from './SearchBar';
 import Modal from './Modal';
 import { Chapter, Lesson, StoredFile } from '../types';
@@ -37,6 +37,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filter chapter files by category
+  const theoryFiles = chapterFiles.filter(f => f.category === "Lý thuyết trọng tâm (Chương)");
   const advancedFiles = chapterFiles.filter(f => f.category === "Bài tập Tính toán Nâng cao");
   const trueFalseFiles = chapterFiles.filter(f => f.category === "Trắc nghiệm Đúng/Sai (Chương)");
 
@@ -220,6 +221,63 @@ const ChapterView: React.FC<ChapterViewProps> = ({
             ))}
           </div>
         )}
+      </div>
+
+      {/* Chapter Special Category: Core Theory */}
+      <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl p-8 text-white shadow-xl shadow-orange-200 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+        <div className="relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="max-w-xl">
+              <h3 className="text-2xl font-bold mb-2 flex items-center gap-3">
+                <span className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
+                  <BookOpen className="w-6 h-6" />
+                </span>
+                Kho Lý thuyết trọng tâm
+              </h3>
+              <p className="text-amber-50 text-sm leading-relaxed">
+                Khu vực lưu trữ các bài giảng lý thuyết, sơ đồ tư duy và kiến thức cốt lõi của chương. Học sinh có thể click xem trực tiếp.
+              </p>
+            </div>
+            <button
+              onClick={() => triggerUpload("Lý thuyết trọng tâm (Chương)")}
+              className="flex items-center justify-center gap-2 bg-white text-orange-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
+            >
+              <UploadCloud className="w-5 h-5" />
+              Tải lý thuyết lên
+            </button>
+          </div>
+
+          {theoryFiles.length > 0 && (
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {theoryFiles.map(file => (
+                <div key={file.id} className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex items-center justify-between group/file hover:bg-white/20 transition-all cursor-pointer" onClick={() => setPreviewFile(file)}>
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <FileText className="w-5 h-5 text-amber-200 shrink-0" />
+                    <div className="overflow-hidden">
+                      <p className="text-sm font-bold truncate pr-2">{file.name}</p>
+                      <p className="text-[10px] text-amber-100 uppercase">{formatSize(file.size)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 opacity-0 group-hover/file:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }}
+                      className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDeleteChapterFile(file.id); }}
+                      className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Hidden File Input */}
