@@ -2,6 +2,7 @@ import React from 'react';
 import { GradeLevel } from '../types';
 import { CURRICULUM } from '../constants';
 import { BookOpen, FileText, Activity, Zap, Atom, TrendingUp, Users, Folder } from 'lucide-react';
+import CountdownTimer from './CountdownTimer';
 
 interface DashboardProps {
   onSelectGrade: (grade: GradeLevel) => void;
@@ -110,6 +111,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts }) => {
           </div>
         </div>
       </div>
+
+      {/* Countdown Timer */}
+      <CountdownTimer />
 
       {/* Grade Selection */}
       <div>
