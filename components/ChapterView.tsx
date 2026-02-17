@@ -122,15 +122,6 @@ const ChapterView: React.FC<ChapterViewProps> = ({
               <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight leading-tight">{chapter.name}</h2>
               <p className="text-slate-500">{chapter.description}</p>
             </div>
-            {isAdmin && !isCreating && (
-              <button
-                onClick={() => setIsCreating(true)}
-                className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 font-bold active:scale-95 whitespace-nowrap"
-              >
-                <Plus className="w-5 h-5" />
-                Tạo bài học mới
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -207,8 +198,16 @@ const ChapterView: React.FC<ChapterViewProps> = ({
             <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
             Bài học trong chương
           </h3>
+          {isAdmin && !isCreating && (
+            <button
+              onClick={() => setIsCreating(true)}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100 font-bold active:scale-95 text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Tạo bài học mới
+            </button>
+          )}
         </div>
-
         {isCreating && (
           <form onSubmit={handleSubmit} className="flex gap-3 items-center animate-fade-in bg-slate-50 p-4 rounded-2xl mb-6">
             <input
@@ -257,54 +256,56 @@ const ChapterView: React.FC<ChapterViewProps> = ({
           </div>
         </div>
 
-        {filteredLessons.length === 0 ? (
-          <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-3xl">
-            <Folder className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-            <p className="text-slate-400 font-medium">
-              {searchTerm ? 'Không tìm thấy bài học phù hợp.' : 'Chưa có bài học nào.'}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {filteredLessons.map((lesson) => (
-              <div
-                key={lesson.id}
-                onClick={() => onSelectLesson(lesson)}
-                className="group bg-slate-50 p-5 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5 border border-transparent hover:border-indigo-100 transition-all cursor-pointer flex items-center justify-between"
-              >
-                <div className="flex items-center gap-4 overflow-hidden">
-                  <div className="w-12 h-12 rounded-xl bg-white shadow-sm text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                    <Folder className="w-6 h-6" />
+        {
+          filteredLessons.length === 0 ? (
+            <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-3xl">
+              <Folder className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+              <p className="text-slate-400 font-medium">
+                {searchTerm ? 'Không tìm thấy bài học phù hợp.' : 'Chưa có bài học nào.'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {filteredLessons.map((lesson) => (
+                <div
+                  key={lesson.id}
+                  onClick={() => onSelectLesson(lesson)}
+                  className="group bg-slate-50 p-5 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5 border border-transparent hover:border-indigo-100 transition-all cursor-pointer flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-4 overflow-hidden">
+                    <div className="w-12 h-12 rounded-xl bg-white shadow-sm text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <Folder className="w-6 h-6" />
+                    </div>
+                    <div className="overflow-hidden">
+                      <h4 className="font-bold text-slate-800 group-hover:text-indigo-700 transition-colors truncate">
+                        {lesson.name}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 font-medium uppercase mt-1">
+                        {new Date(lesson.createdAt).toLocaleDateString('vi-VN')}
+                      </p>
+                    </div>
                   </div>
-                  <div className="overflow-hidden">
-                    <h4 className="font-bold text-slate-800 group-hover:text-indigo-700 transition-colors truncate">
-                      {lesson.name}
-                    </h4>
-                    <p className="text-[10px] text-slate-400 font-medium uppercase mt-1">
-                      {new Date(lesson.createdAt).toLocaleDateString('vi-VN')}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  {isAdmin && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onDeleteLesson(lesson.id); }}
-                      className="p-2 text-slate-300 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                  <div className="flex items-center gap-2">
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDeleteLesson(lesson.id); }}
+                        className="p-2 text-slate-300 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )
+        }
+      </div >
 
       {/* Hidden File Input */}
-      <input
+      < input
         type="file"
         ref={fileInputRef}
         className="hidden"
@@ -314,7 +315,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
       />
 
       {/* Chapter Special Category: True/False Theory */}
-      <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-8 text-white shadow-xl shadow-teal-200 relative overflow-hidden group">
+      < div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-8 text-white shadow-xl shadow-teal-200 relative overflow-hidden group" >
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
         <div className="relative z-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -372,10 +373,10 @@ const ChapterView: React.FC<ChapterViewProps> = ({
             </div>
           )}
         </div>
-      </div>
+      </div >
 
       {/* Chapter Special Category: Advanced Calculation Quiz */}
-      <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden group">
+      < div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden group" >
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
         <div className="relative z-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -433,10 +434,10 @@ const ChapterView: React.FC<ChapterViewProps> = ({
             </div>
           )}
         </div>
-      </div>
+      </div >
 
       {/* PDF Preview Modal */}
-      <Modal
+      < Modal
         isOpen={!!previewFile}
         onClose={() => setPreviewFile(null)}
         title={previewFile?.name || ''}
@@ -461,8 +462,8 @@ const ChapterView: React.FC<ChapterViewProps> = ({
             </div>
           </div>
         )}
-      </Modal>
-    </div>
+      </Modal >
+    </div >
   );
 };
 
