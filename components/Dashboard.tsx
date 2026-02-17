@@ -68,9 +68,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
             <p className="text-slate-500 text-lg mb-4 max-w-lg leading-relaxed">
               Nền tảng lưu trữ và quản lý tài liệu Vật Lý toàn diện. Truy cập bài giảng, đề thi và tài liệu tham khảo mọi lúc, mọi nơi.
             </p>
-            <div className="flex items-center gap-2 mb-8 text-slate-400 text-sm italic">
-              <Users className="w-4 h-4" />
-              <span>Nguồn tài liệu từ Group Vật Lý Physics</span>
+            <div className="flex items-center gap-3 mb-10 px-4 py-2 bg-indigo-50/50 border border-indigo-100/50 rounded-2xl w-fit shadow-sm hover:shadow-md transition-shadow">
+              <div className="p-1.5 bg-indigo-600 rounded-lg text-white">
+                <Users className="w-4 h-4" />
+              </div>
+              <span className="text-slate-700 font-semibold tracking-tight">
+                Nguồn tài liệu từ <span className="text-indigo-600">Group Vật Lý Physics</span>
+              </span>
             </div>
 
             <div className="flex flex-wrap gap-4">
