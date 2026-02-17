@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Calendar, Edit2, Check, X, Rocket, Target } from 'lucide-react';
+import { Clock, Calendar, Edit2, Check, X, Target } from 'lucide-react';
 
 const CountdownTimer: React.FC = () => {
     const [examDate, setExamDate] = useState<string>(() => {
@@ -42,18 +42,6 @@ const CountdownTimer: React.FC = () => {
         setExamDate(tempDate);
         localStorage.setItem('physivault_exam_date', tempDate);
         setIsEditing(false);
-    };
-
-    const setQuickDate = (days: number) => {
-        const d = new Date();
-        d.setDate(d.getDate() + days);
-        d.setHours(8, 0, 0, 0);
-        setTempDate(d.toISOString().slice(0, 16));
-    };
-
-    const setTHPTDate = () => {
-        // Giả định kỳ thi THPT 2026 diễn ra vào 26/06/2026
-        setTempDate("2026-06-26T07:30");
     };
 
     const hasTargetDate = !!examDate;
@@ -135,7 +123,7 @@ const CountdownTimer: React.FC = () => {
                         </button>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-8">
+                    <div className="max-w-md">
                         <div className="space-y-4">
                             <label className="block text-sm font-bold text-slate-600 ml-1 uppercase tracking-wider">
                                 Chọn ngày & giờ thi dự kiến:
@@ -156,40 +144,9 @@ const CountdownTimer: React.FC = () => {
                                 </button>
                                 <button
                                     onClick={() => setIsEditing(false)}
-                                    className="px-6 py-4 bg-white text-slate-500 border border-slate-200 rounded-2xl font-bold hover:bg-slate-50 transition-all"
+                                    className="px-6 py-4 bg-white text-slate-500 border border-slate-200 rounded-2xl font-bold hover:bg-slate-50 transition-all font-bold"
                                 >
                                     Hủy
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <label className="block text-sm font-bold text-slate-600 ml-1 uppercase tracking-wider">
-                                Chọn nhanh:
-                            </label>
-                            <div className="grid grid-cols-2 gap-3">
-                                <button onClick={() => setQuickDate(30)} className="p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-500 hover:text-indigo-600 transition-all text-left group/btn">
-                                    <div className="text-sm font-bold text-slate-400 group-hover/btn:text-indigo-400">+30 Ngày</div>
-                                    <div className="text-xs font-medium">Ôn tập cấp tốc</div>
-                                </button>
-                                <button onClick={() => setQuickDate(90)} className="p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-500 hover:text-indigo-600 transition-all text-left group/btn">
-                                    <div className="text-sm font-bold text-slate-400 group-hover/btn:text-indigo-400">+90 Ngày</div>
-                                    <div className="text-xs font-medium">Chiến lược dài hạn</div>
-                                </button>
-                                <button
-                                    onClick={setTHPTDate}
-                                    className="col-span-2 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl hover:from-indigo-100 hover:to-purple-100 transition-all text-left flex items-center justify-between group/huge"
-                                >
-                                    <div>
-                                        <div className="text-indigo-700 font-bold flex items-center gap-2">
-                                            <Rocket className="w-4 h-4" />
-                                            Kỳ thi THPT Quốc Gia 2026
-                                        </div>
-                                        <div className="text-xs text-indigo-500 font-medium mt-1">Dự kiến bắt đầu vào 26/06/2026</div>
-                                    </div>
-                                    <div className="p-2 bg-white rounded-xl shadow-sm group-hover/huge:scale-110 transition-transform">
-                                        <Calendar className="w-5 h-5 text-indigo-500" />
-                                    </div>
                                 </button>
                             </div>
                         </div>
