@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye, BookOpen } from 'lucide-react';
+import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye, BookOpen, ChevronLeft } from 'lucide-react';
 import SearchBar from './SearchBar';
 import Modal from './Modal';
 import { Chapter, Lesson, StoredFile } from '../types';
@@ -33,6 +33,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'az' | 'za'>('newest');
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
   const [uploadCategory, setUploadCategory] = useState<string>('');
+  const [currentTheoryIndex, setCurrentTheoryIndex] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -223,11 +224,11 @@ const ChapterView: React.FC<ChapterViewProps> = ({
         )}
       </div>
 
-      {/* Chapter Special Category: Core Theory */}
+      {/* Chapter Special Category: Core Theory Slideshow */}
       <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl p-8 text-white shadow-xl shadow-orange-200 relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
         <div className="relative z-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div className="max-w-xl">
               <h3 className="text-2xl font-bold mb-2 flex items-center gap-3">
                 <span className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
@@ -236,7 +237,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                 Kho Lý thuyết trọng tâm
               </h3>
               <p className="text-amber-50 text-sm leading-relaxed">
-                Khu vực lưu trữ các bài giảng lý thuyết, sơ đồ tư duy và kiến thức cốt lõi của chương. Học sinh có thể click xem trực tiếp.
+                Học sinh ôn tập trực tiếp tại đây bằng cách chuyển giữa các slide bài giảng.
               </p>
             </div>
             <button
@@ -244,37 +245,88 @@ const ChapterView: React.FC<ChapterViewProps> = ({
               className="flex items-center justify-center gap-2 bg-white text-orange-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
             >
               <UploadCloud className="w-5 h-5" />
-              Tải lý thuyết lên
+              Tải bài giảng lên
             </button>
           </div>
 
-          {theoryFiles.length > 0 && (
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {theoryFiles.map(file => (
-                <div key={file.id} className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex items-center justify-between group/file hover:bg-white/20 transition-all cursor-pointer" onClick={() => setPreviewFile(file)}>
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <FileText className="w-5 h-5 text-amber-200 shrink-0" />
-                    <div className="overflow-hidden">
-                      <p className="text-sm font-bold truncate pr-2">{file.name}</p>
-                      <p className="text-[10px] text-amber-100 uppercase">{formatSize(file.size)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover/file:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }}
-                      className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onDeleteChapterFile(file.id); }}
-                      className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+          {theoryFiles.length > 0 ? (
+            <div className="relative">
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl overflow-hidden aspect-[16/9] md:aspect-[21/9] flex items-center justify-center relative shadow-2xl group/viewer">
+                {/* Active Slide Content */}
+                {(() => {
+                  const currentFile = theoryFiles[currentTheoryIndex] || theoryFiles[0];
+                  if (currentFile.type.includes('pdf')) {
+                    return (
+                      <iframe
+                        src={currentFile.url}
+                        className="w-full h-full border-0 bg-white"
+                        title="Theory Slide"
+                      />
+                    );
+                  }
+                  return (
+                    <img
+                      src={currentFile.url}
+                      alt={currentFile.name}
+                      className="w-full h-full object-contain bg-slate-900/20"
+                    />
+                  );
+                })()}
+
+                {/* Overlays & Navigation */}
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-between p-4">
+                  {theoryFiles.length > 1 && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentTheoryIndex(prev => (prev - 1 + theoryFiles.length) % theoryFiles.length);
+                        }}
+                        className="pointer-events-auto w-12 h-12 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md text-white flex items-center justify-center transition-all active:scale-90"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentTheoryIndex(prev => (prev + 1) % theoryFiles.length);
+                        }}
+                        className="pointer-events-auto w-12 h-12 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md text-white flex items-center justify-center transition-all active:scale-90"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Slide Info Badge */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+                  <div className="px-4 py-1.5 bg-black/40 backdrop-blur-md rounded-full text-xs font-bold text-white border border-white/10">
+                    Slide {currentTheoryIndex + 1} / {theoryFiles.length} : {theoryFiles[currentTheoryIndex]?.name}
                   </div>
                 </div>
-              ))}
+
+                {/* Full Screen Action */}
+                <button
+                  onClick={() => setPreviewFile(theoryFiles[currentTheoryIndex])}
+                  className="absolute top-4 right-4 p-2.5 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-xl text-white transition-all active:scale-95"
+                >
+                  <Eye className="w-5 h-5" />
+                </button>
+
+                {/* Delete slide action (Admin only feel) */}
+                <button
+                  onClick={() => onDeleteChapterFile(theoryFiles[currentTheoryIndex].id)}
+                  className="absolute top-4 left-4 p-2.5 bg-red-500/20 hover:bg-red-500/40 backdrop-blur-md rounded-xl text-white transition-all active:scale-95 opacity-0 group-hover/viewer:opacity-100"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="py-20 bg-white/5 backdrop-blur-sm rounded-3xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center text-center">
+              <BookOpen className="w-16 h-16 text-amber-200/50 mb-4" />
+              <p className="text-amber-100 font-medium italic">Chưa có slide bài giảng nào cho chương này.</p>
             </div>
           )}
         </div>
