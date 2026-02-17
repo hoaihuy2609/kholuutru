@@ -25,9 +25,18 @@ function App() {
   // Replace local state with Cloud Storage hook
   const { lessons, storedFiles, loading, addLesson, deleteLesson, uploadFiles, deleteFile } = useCloudStorage();
 
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    return localStorage.getItem('physivault_is_admin') === 'true';
+  });
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const toggleAdmin = (status: boolean) => {
+    setIsAdmin(status);
+    localStorage.setItem('physivault_is_admin', status ? 'true' : 'false');
+  };
 
   // Toast helper
   const showToast = (message: string, type: ToastType = 'success') => {
@@ -149,6 +158,7 @@ function App() {
         <LessonView
           lesson={currentLesson}
           files={lessonFiles}
+          isAdmin={isAdmin}
           onBack={() => setCurrentLesson(null)}
           onUpload={handleUpload}
           onDelete={(fileId) => handleDeleteFile(fileId, currentLesson.id)}
@@ -167,6 +177,7 @@ function App() {
           chapter={chapter!}
           lessons={chapterLessons}
           chapterFiles={chapterFiles}
+          isAdmin={isAdmin}
           onBack={() => setCurrentChapterId(null)}
           onCreateLesson={(name) => handleCreateLesson(name, currentChapterId)}
           onSelectLesson={setCurrentLesson}
@@ -253,7 +264,7 @@ function App() {
       );
     }
 
-    return <Dashboard onSelectGrade={setCurrentGrade} fileCounts={getFileCounts} />;
+    return <Dashboard onSelectGrade={setCurrentGrade} fileCounts={getFileCounts} isAdmin={isAdmin} />;
   };
 
   return (
@@ -301,6 +312,8 @@ function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onShowToast={showToast}
+        isAdmin={isAdmin}
+        onToggleAdmin={toggleAdmin}
       />
 
       {/* Main Content */}

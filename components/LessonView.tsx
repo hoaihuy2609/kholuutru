@@ -7,6 +7,7 @@ import Modal from './Modal';
 interface LessonViewProps {
   lesson: Lesson;
   files: StoredFile[];
+  isAdmin: boolean;
   onBack: () => void;
   onUpload: (files: File[], category?: string) => void;
   onDelete: (fileId: string) => void;
@@ -20,7 +21,7 @@ const LESSON_CATEGORIES = [
   "Bài tập Tính toán Cơ bản"
 ];
 
-const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload, onDelete }) => {
+const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack, onUpload, onDelete }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -168,37 +169,37 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
       </div>
 
       {/* Upload Area */}
-      <div
-        className={`relative border-2 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer overflow-hidden group
-          ${isDragging
-            ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01] shadow-xl shadow-indigo-500/10'
-            : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50/50 hover:shadow-lg hover:shadow-indigo-500/5'}`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <div className={`w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 ${isDragging ? 'scale-110' : 'group-hover:scale-110 group-hover:rotate-3'}`}>
-          <UploadCloud className={`w-10 h-10 text-indigo-600 transition-colors ${isDragging ? 'text-indigo-700' : ''}`} />
+      {isAdmin && (
+        <div
+          className={`relative border-2 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer overflow-hidden group
+            ${isDragging
+              ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01] shadow-xl shadow-indigo-500/10'
+              : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50/50 hover:shadow-lg hover:shadow-indigo-500/5'}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <div className={`w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 ${isDragging ? 'scale-110' : 'group-hover:scale-110 group-hover:rotate-3'}`}>
+            <UploadCloud className={`w-10 h-10 text-indigo-600 transition-colors ${isDragging ? 'text-indigo-700' : ''}`} />
+          </div>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">
+            {isDragging ? 'Thả file vào đây ngay!' : `Tải tài liệu lên ${selectedCategory ? `vào "${selectedCategory}"` : ''}`}
+          </h3>
+          <p className="text-slate-500 text-sm max-w-sm leading-relaxed">
+            Kéo thả file PDF vào đây hoặc click để chọn từ máy tính. {selectedCategory ? `File sẽ được tự động lưu vào mục "${selectedCategory}".` : 'Hãy chọn danh mục trước nếu muốn phân loại.'}
+          </p>
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".pdf"
+            multiple
+            onChange={handleFileChange}
+          />
+          <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
         </div>
-        <h3 className="text-xl font-bold text-slate-800 mb-2">
-          {isDragging ? 'Thả file vào đây ngay!' : `Tải tài liệu lên ${selectedCategory ? `vào "${selectedCategory}"` : ''}`}
-        </h3>
-        <p className="text-slate-500 text-sm max-w-sm leading-relaxed">
-          Kéo thả file PDF vào đây hoặc click để chọn từ máy tính. {selectedCategory ? `File sẽ được tự động lưu vào mục "${selectedCategory}".` : 'Hãy chọn danh mục trước nếu muốn phân loại.'}
-        </p>
-        <input
-          type="file"
-          ref={fileInputRef}
-          className="hidden"
-          accept=".pdf"
-          multiple
-          onChange={handleFileChange}
-        />
-
-        {/* Decorative Grid */}
-        <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
-      </div>
+      )}
 
       {/* File List */}
       <div className="space-y-6">
@@ -273,13 +274,15 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, onBack, onUpload
                     >
                       <Eye className="w-5 h-5" />
                     </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onDelete(file.id); }}
-                      className="p-2 bg-white text-red-500 rounded-full shadow-lg hover:scale-110 transition-transform active:scale-95"
-                      title="Xóa"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDelete(file.id); }}
+                        className="p-2 bg-white text-red-500 rounded-full shadow-lg hover:scale-110 transition-transform active:scale-95"
+                        title="Xóa"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 

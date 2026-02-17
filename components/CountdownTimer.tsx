@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Calendar, Edit2, Check, X, Target } from 'lucide-react';
 
-const CountdownTimer: React.FC = () => {
+interface CountdownTimerProps {
+    isAdmin?: boolean;
+}
+
+const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin }) => {
     const [examDate, setExamDate] = useState<string>(() => {
         return localStorage.getItem('physivault_exam_date') || '';
     });
@@ -60,13 +64,15 @@ const CountdownTimer: React.FC = () => {
                         <div>
                             <h3 className="font-bold text-slate-800 text-xl flex items-center gap-2">
                                 Hành trình đến kỳ thi
-                                <button
-                                    onClick={() => { setTempDate(examDate || getDefaultDate()); setIsEditing(true); }}
-                                    className="p-1.5 bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                                    title="Chỉnh sửa ngày thi"
-                                >
-                                    <Edit2 className="w-4 h-4" />
-                                </button>
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => { setTempDate(examDate || getDefaultDate()); setIsEditing(true); }}
+                                        className="p-1.5 bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                        title="Chỉnh sửa ngày thi"
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                    </button>
+                                )}
                             </h3>
                             <p className="text-slate-500 font-medium">
                                 {hasTargetDate
@@ -78,13 +84,17 @@ const CountdownTimer: React.FC = () => {
 
                     <div className="flex items-center gap-3">
                         {!hasTargetDate ? (
-                            <button
-                                onClick={() => setIsEditing(true)}
-                                className="flex items-center gap-2 px-8 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all active:scale-95"
-                            >
-                                <Target className="w-5 h-5" />
-                                Thiết lập ngay
-                            </button>
+                            isAdmin ? (
+                                <button
+                                    onClick={() => setIsEditing(true)}
+                                    className="flex items-center gap-2 px-8 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all active:scale-95"
+                                >
+                                    <Target className="w-5 h-5" />
+                                    Thiết lập ngay
+                                </button>
+                            ) : (
+                                <div className="text-slate-400 italic text-sm">Chờ giáo viên thiết lập ngày thi...</div>
+                            )
                         ) : (
                             <div className="flex items-center gap-2">
                                 {[

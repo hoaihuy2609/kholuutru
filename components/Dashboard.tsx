@@ -7,9 +7,10 @@ import CountdownTimer from './CountdownTimer';
 interface DashboardProps {
   onSelectGrade: (grade: GradeLevel) => void;
   fileCounts: Record<string, number>;
+  isAdmin: boolean;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmin }) => {
 
   const getGradeInfo = (grade: GradeLevel) => {
     switch (grade) {
@@ -113,7 +114,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts }) => {
       </div>
 
       {/* Countdown Timer */}
-      <CountdownTimer />
+      <CountdownTimer isAdmin={isAdmin} />
 
       {/* Grade Selection */}
       <div>

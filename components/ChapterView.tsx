@@ -8,6 +8,7 @@ interface ChapterViewProps {
   chapter: Chapter;
   lessons: Lesson[];
   chapterFiles: StoredFile[];
+  isAdmin: boolean;
   onBack: () => void;
   onCreateLesson: (name: string) => void;
   onSelectLesson: (lesson: Lesson) => void;
@@ -20,6 +21,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   chapter,
   lessons,
   chapterFiles,
+  isAdmin,
   onBack,
   onCreateLesson,
   onSelectLesson,
@@ -129,13 +131,15 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                 Khu vực lưu trữ các bài giảng lý thuyết, sơ đồ tư duy và kiến thức cốt lõi của chương. Học sinh có thể click xem trực tiếp.
               </p>
             </div>
-            <button
-              onClick={() => triggerUpload("Lý thuyết trọng tâm (Chương)")}
-              className="flex items-center justify-center gap-2 bg-white text-orange-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
-            >
-              <UploadCloud className="w-5 h-5" />
-              Tải lý thuyết lên
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => triggerUpload("Lý thuyết trọng tâm (Chương)")}
+                className="flex items-center justify-center gap-2 bg-white text-orange-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
+              >
+                <UploadCloud className="w-5 h-5" />
+                Tải lý thuyết lên
+              </button>
+            )}
           </div>
 
           {theoryFiles.length > 0 && (
@@ -160,12 +164,14 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onDeleteChapterFile(file.id); }}
-                      className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDeleteChapterFile(file.id); }}
+                        className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -181,7 +187,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
             <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
             Bài học trong chương
           </h3>
-          {!isCreating && (
+          {isAdmin && !isCreating && (
             <button
               onClick={() => setIsCreating(true)}
               className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-all text-sm font-bold"
@@ -270,12 +276,14 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onDeleteLesson(lesson.id); }}
-                    className="p-2 text-slate-300 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDeleteLesson(lesson.id); }}
+                      className="p-2 text-slate-300 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                   <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
                 </div>
               </div>
@@ -310,13 +318,15 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                 Khu vực dành cho các câu hỏi lý thuyết dạng Đúng/Sai của cả chương học.
               </p>
             </div>
-            <button
-              onClick={() => triggerUpload("Trắc nghiệm Đúng/Sai (Chương)")}
-              className="flex items-center justify-center gap-2 bg-white text-emerald-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
-            >
-              <UploadCloud className="w-5 h-5" />
-              Tải bài tập Đúng/Sai
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => triggerUpload("Trắc nghiệm Đúng/Sai (Chương)")}
+                className="flex items-center justify-center gap-2 bg-white text-emerald-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
+              >
+                <UploadCloud className="w-5 h-5" />
+                Tải bài tập Đúng/Sai
+              </button>
+            )}
           </div>
 
           {trueFalseFiles.length > 0 && (
@@ -337,12 +347,14 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => onDeleteChapterFile(file.id)}
-                      className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => onDeleteChapterFile(file.id)}
+                        className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -367,13 +379,15 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                 Khu vực dành riêng cho các bài tập vận dụng cao, tính toán phức tạp của cả chương.
               </p>
             </div>
-            <button
-              onClick={() => triggerUpload("Bài tập Tính toán Nâng cao")}
-              className="flex items-center justify-center gap-2 bg-white text-indigo-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
-            >
-              <UploadCloud className="w-5 h-5" />
-              Tải tài liệu nâng cao
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => triggerUpload("Bài tập Tính toán Nâng cao")}
+                className="flex items-center justify-center gap-2 bg-white text-indigo-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
+              >
+                <UploadCloud className="w-5 h-5" />
+                Tải tài liệu nâng cao
+              </button>
+            )}
           </div>
 
           {advancedFiles.length > 0 && (
@@ -394,12 +408,14 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => onDeleteChapterFile(file.id)}
-                      className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => onDeleteChapterFile(file.id)}
+                        className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

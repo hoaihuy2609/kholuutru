@@ -1,21 +1,31 @@
 
-import React, { useRef } from 'react';
-import { Download, Upload, X, ShieldAlert } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound } from 'lucide-react';
 import { useCloudStorage, exportData, importData } from '../src/hooks/useCloudStorage';
 
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
     onShowToast: (message: string, type: 'success' | 'error' | 'warning') => void;
+    isAdmin: boolean;
+    onToggleAdmin: (status: boolean) => void;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowToast }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowToast, isAdmin, onToggleAdmin }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { lessons, storedFiles } = useCloudStorage();
+    const [password, setPassword] = useState('');
+    const [showPassInput, setShowPassInput] = useState(false);
 
     if (!isOpen) return null;
 
+    const MASTER_KEY = 'ThayHuy2026'; // Mật khẩu quản trị mặc định
+
     const handleExport = () => {
+        if (!isAdmin) {
+            onShowToast('Bạn không có quyền xuất dữ liệu!', 'error');
+            return;
+        }
         try {
             exportData(lessons, storedFiles);
             onShowToast('Đã xuất dữ liệu thành công!', 'success');
@@ -41,13 +51,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         try {
             await importData(file);
             onShowToast('Đã nhập dữ liệu thành công! Vui lòng tải lại trang.', 'success');
-            // Reload to reflect changes since we might be mixing cloud/local logic or need a refresh
             setTimeout(() => window.location.reload(), 1500);
         } catch (error) {
             console.error(error);
             onShowToast('Lỗi khi nhập dữ liệu: File không hợp lệ', 'error');
         } finally {
             if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleVerifyPassword = () => {
+        if (password === MASTER_KEY) {
+            onToggleAdmin(true);
+            onShowToast('Đã kích hoạt quyền Quản trị!', 'success');
+            setPassword('');
+            setShowPassInput(false);
+        } else {
+            onShowToast('Mật khẩu không chính xác!', 'error');
         }
     };
 
@@ -65,39 +85,92 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                 </div>
 
                 <div className="p-6 space-y-6">
-                    <div className="space-y-4">
-                        <h4 className="font-semibold text-slate-700 flex items-center gap-2">
-                            <Download className="w-5 h-5 text-indigo-600" />
-                            Sao lưu & Xuất dữ liệu
-                        </h4>
-                        <p className="text-sm text-slate-500">
-                            Tải xuống toàn bộ bài học và file PDF hiện có về máy. Bạn có thể dùng file này để nạp vào thiết bị khác.
+                    {/* Admin Access Section */}
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                                {isAdmin ? <Unlock className="w-4 h-4 text-green-600" /> : <Lock className="w-4 h-4 text-slate-400" />}
+                                Chế độ: {isAdmin ? 'Quản trị viên' : 'Học sinh'}
+                            </h4>
+                            {!isAdmin ? (
+                                <button
+                                    onClick={() => setShowPassInput(!showPassInput)}
+                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700 underline"
+                                >
+                                    Mở khóa Admin
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => onToggleAdmin(false)}
+                                    className="text-xs font-bold text-red-600 hover:text-red-700 underline"
+                                >
+                                    Thoát Admin
+                                </button>
+                            )}
+                        </div>
+
+                        {showPassInput && !isAdmin && (
+                            <div className="mt-3 flex gap-2 animate-in slide-in-from-top-2 duration-200">
+                                <div className="relative flex-1">
+                                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <input
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Mật khẩu Admin..."
+                                        className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-indigo-500 outline-none"
+                                        onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleVerifyPassword}
+                                    className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors"
+                                >
+                                    Xác nhận
+                                </button>
+                            </div>
+                        )}
+                        <p className="text-[10px] text-slate-400 mt-1">
+                            {isAdmin
+                                ? 'Bạn đang có toàn quyền chỉnh sửa và xuất dữ liệu.'
+                                : 'Học sinh chỉ có quyền xem và nhập dữ liệu từ giáo viên.'}
                         </p>
-                        <button
-                            onClick={handleExport}
-                            className="w-full py-3 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium rounded-xl transition-colors flex items-center justify-center gap-2 border border-indigo-200"
-                        >
-                            <Download className="w-5 h-5" />
-                            Xuất dữ liệu ngay (.json)
-                        </button>
                     </div>
 
-                    <div className="h-px bg-gray-100"></div>
+                    {isAdmin && (
+                        <div className="space-y-4 animate-in fade-in duration-300">
+                            <h4 className="font-semibold text-slate-700 flex items-center gap-2">
+                                <Download className="w-5 h-5 text-indigo-600" />
+                                Sao lưu & Xuất dữ liệu
+                            </h4>
+                            <p className="text-sm text-slate-500">
+                                Xuất toàn bộ kho học liệu thành file JSON để gửi cho học sinh.
+                            </p>
+                            <button
+                                onClick={handleExport}
+                                className="w-full py-3 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium rounded-xl transition-colors flex items-center justify-center gap-2 border border-indigo-200"
+                            >
+                                <Download className="w-5 h-5" />
+                                Xuất file bài giảng (.json)
+                            </button>
+                            <div className="h-px bg-gray-100"></div>
+                        </div>
+                    )}
 
                     <div className="space-y-4">
                         <h4 className="font-semibold text-slate-700 flex items-center gap-2">
                             <Upload className="w-5 h-5 text-purple-600" />
-                            Khôi phục & Nhập dữ liệu
+                            Nhập dữ liệu bài giảng
                         </h4>
                         <p className="text-sm text-slate-500">
-                            Nạp dữ liệu từ file backup (.json). Dữ liệu sẽ được đồng bộ hóa và sắp xếp tự động vào đúng bài học.
+                            Chọn file .json giáo viên gửi để cập nhật kho học liệu mới nhất.
                         </p>
                         <button
                             onClick={handleImportClick}
                             className="w-full py-3 px-4 bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium rounded-xl transition-colors flex items-center justify-center gap-2 border border-purple-200"
                         >
                             <Upload className="w-5 h-5" />
-                            Chọn file để nhập
+                            Chọn file bài giảng (.json)
                         </button>
                         <input
                             type="file"
@@ -111,7 +184,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                     <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 flex gap-3 items-start">
                         <ShieldAlert className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
                         <p className="text-xs text-orange-700 leading-relaxed">
-                            Lưu ý: Tính năng này giúp bạn chuyển dữ liệu giữa các máy tính/điện thoại mà không cần đăng nhập. Hãy giữ file backup cẩn thận.
+                            Lưu ý: Dữ liệu được lưu trữ cục bộ. Hãy dùng mã Admin để xuất file nếu bạn muốn chia sẻ bài giảng cho học sinh.
                         </p>
                     </div>
                 </div>
