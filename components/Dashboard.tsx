@@ -149,35 +149,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
             </div>
           </div>
 
-          <div className="hidden md:block relative group p-6">
-            {/* Main Illustration Circle Container */}
-            <div className="relative w-full aspect-square bg-gradient-to-br from-indigo-50/80 to-purple-50/80 rounded-[40px] flex items-center justify-center border border-white/50 shadow-inner overflow-hidden backdrop-blur-sm">
-              <div className="absolute inset-0 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:20px_20px] opacity-[0.05]"></div>
-
+          <div className="hidden md:block relative group">
+            <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/50 bg-slate-900 group-hover:scale-[1.02] transition-transform duration-700">
               <img
-                src="https://www.svgrepo.com/show/24430/albert-einstein.svg"
+                src="/einstein.png"
                 alt="Albert Einstein"
-                className="relative w-[75%] h-[75%] object-contain drop-shadow-2xl animate-float transition-transform duration-500 group-hover:scale-110"
+                className="w-full h-full object-cover filter saturate-[1.1] brightness-[1.05]"
               />
-
-              <div className="absolute top-12 right-8 text-[12px] font-mono font-black text-indigo-500/40 rotate-12 select-none animate-pulse">
-                E = mc²
-              </div>
-              <div className="absolute bottom-14 left-8 text-[12px] font-mono font-black text-purple-500/40 -rotate-12 select-none animate-pulse" style={{ animationDelay: '1s' }}>
-                F = ma
-              </div>
-              <div className="absolute top-1/2 left-6 text-[10px] font-mono font-bold text-blue-500/30 select-none">
-                λ = h/p
-              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/40 via-transparent to-transparent"></div>
             </div>
 
-            <div className="absolute -inset-6 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl transform group-hover:scale-110 transition-transform duration-1000 -z-10"></div>
+            <div className="absolute -inset-10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl -z-10 opacity-60"></div>
 
-            <div className="absolute -top-4 -right-4 animate-float text-indigo-500 opacity-60 group-hover:opacity-100 transition-all duration-500" style={{ animationDelay: '0.5s' }}>
-              <Atom className="w-14 h-14" />
+            <div className="absolute -top-6 -right-6 animate-float text-indigo-500 opacity-80" style={{ animationDelay: '0.5s' }}>
+              <Atom className="w-16 h-16 drop-shadow-lg" />
             </div>
-            <div className="absolute -bottom-4 -left-4 animate-float text-purple-500 opacity-60 group-hover:opacity-100 transition-all duration-500" style={{ animationDelay: '1.5s' }}>
-              <Zap className="w-12 h-12" />
+            <div className="absolute -bottom-6 -left-6 animate-float text-purple-500 opacity-80" style={{ animationDelay: '1.5s' }}>
+              <Zap className="w-14 h-14 drop-shadow-lg" />
             </div>
           </div>
         </div>
