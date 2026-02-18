@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History } from 'lucide-react';
+import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2 } from 'lucide-react';
 import { useCloudStorage, exportData, importData, getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
 
 interface SettingsModalProps {
@@ -35,17 +35,36 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     if (!isOpen) return null;
 
     const handleGenerateKey = () => {
-        if (!adminTargetId.trim()) {
+        const targetId = adminTargetId.trim();
+        if (!targetId) {
             onShowToast('Vui lòng nhập Mã máy của học sinh', 'warning');
             return;
         }
-        const key = generateActivationKey(adminTargetId.trim());
+        const key = generateActivationKey(targetId);
         setGeneratedKey(key);
 
-        const newHistory = [{ id: adminTargetId, key, date: Date.now() }, ...activationHistory].slice(0, 10);
+        // Tránh trùng lặp: lọc bỏ ID cũ nếu đã tồn tại và đưa ID mới lên đầu
+        const filteredHistory = activationHistory.filter(h => h.id !== targetId);
+        const newHistory = [{ id: targetId, key, date: Date.now() }, ...filteredHistory].slice(0, 20);
+
         setActivationHistory(newHistory);
         localStorage.setItem('pv_activation_history', JSON.stringify(newHistory));
         onShowToast('Đã tạo mã kích hoạt thành công!', 'success');
+    };
+
+    const handleDeleteHistory = (id: string) => {
+        const newHistory = activationHistory.filter(h => h.id !== id);
+        setActivationHistory(newHistory);
+        localStorage.setItem('pv_activation_history', JSON.stringify(newHistory));
+        onShowToast('Đã xóa khỏi lịch sử', 'success');
+    };
+
+    const handleClearAllHistory = () => {
+        if (window.confirm('Bạn có chắc muốn xóa TOÀN BỘ lịch sử cấp mã?')) {
+            setActivationHistory([]);
+            localStorage.removeItem('pv_activation_history');
+            onShowToast('Đã xóa toàn bộ lịch sử', 'success');
+        }
     };
 
     const handleActivate = () => {
@@ -283,15 +302,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
                             {activationHistory.length > 0 && (
                                 <div className="pt-2 border-t border-indigo-100">
-                                    <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase mb-2">
-                                        <History className="w-3 h-3" />
-                                        Lịch sử cấp mã (Tổng: {activationHistory.length})
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase">
+                                            <History className="w-3 h-3" />
+                                            Lịch sử cấp mã (Tổng: {activationHistory.length})
+                                        </div>
+                                        <button
+                                            onClick={handleClearAllHistory}
+                                            className="text-[9px] text-red-400 hover:text-red-600 font-bold uppercase transition-colors"
+                                        >
+                                            Xóa hết
+                                        </button>
                                     </div>
-                                    <div className="space-y-1.5 max-h-[100px] overflow-y-auto custom-scrollbar">
+                                    <div className="space-y-1.5 max-h-[150px] overflow-y-auto custom-scrollbar">
                                         {activationHistory.map((h, i) => (
-                                            <div key={i} className="flex justify-between items-center text-[10px] p-1.5 bg-white/50 rounded-lg border border-indigo-50">
-                                                <span className="font-mono text-slate-500">{h.id}</span>
-                                                <span className="font-bold text-indigo-600 select-all">{h.key}</span>
+                                            <div key={i} className="group flex justify-between items-center text-[10px] p-2 bg-white/50 rounded-lg border border-indigo-50 hover:border-indigo-200 transition-all">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="font-mono text-slate-500 leading-none">{h.id}</span>
+                                                    <span className="font-bold text-indigo-600 select-all leading-none">{h.key}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDeleteHistory(h.id)}
+                                                    className="p-1.5 hover:bg-red-50 text-slate-300 hover:text-red-500 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
                                             </div>
                                         ))}
                                     </div>
