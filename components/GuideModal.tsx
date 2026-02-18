@@ -59,26 +59,35 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
                     </div>
 
                     <div className="space-y-4 flex-1">
-                        {scenes.map((scene, idx) => (
-                            <div
-                                key={idx}
-                                onClick={() => { setActiveScene(idx); }}
-                                className={`group p-4 rounded-2xl border transition-all cursor-pointer ${activeScene === idx
-                                    ? 'bg-white border-indigo-200 shadow-md ring-2 ring-indigo-500/10'
-                                    : 'bg-transparent border-transparent hover:bg-white/50 hover:border-slate-200'
-                                    }`}
-                            >
-                                <div className="flex items-start gap-3">
-                                    <div className={`p-2 rounded-xl ${activeScene === idx ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                                        {scene.icon}
-                                    </div>
-                                    <div>
-                                        <h4 className={`text-sm font-bold ${activeScene === idx ? 'text-indigo-700' : 'text-slate-700'}`}>{scene.title}</h4>
-                                        <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{scene.desc}</p>
+                        {scenes.map((scene, idx) => {
+                            const colors = [
+                                { active: 'bg-white border-amber-200 shadow-md ring-2 ring-amber-500/10', icon: 'bg-amber-500 text-white', text: 'text-amber-700' },
+                                { active: 'bg-white border-emerald-200 shadow-md ring-2 ring-emerald-500/10', icon: 'bg-emerald-500 text-white', text: 'text-emerald-700' },
+                                { active: 'bg-white border-indigo-200 shadow-md ring-2 ring-indigo-500/10', icon: 'bg-indigo-600 text-white', text: 'text-indigo-700' }
+                            ];
+                            const theme = colors[idx];
+
+                            return (
+                                <div
+                                    key={idx}
+                                    onClick={() => { setActiveScene(idx); }}
+                                    className={`group p-4 rounded-2xl border transition-all cursor-pointer ${activeScene === idx
+                                        ? theme.active
+                                        : 'bg-transparent border-transparent hover:bg-white/50 hover:border-slate-200'
+                                        }`}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className={`p-2 rounded-xl transition-colors ${activeScene === idx ? theme.icon : 'bg-slate-200 text-slate-500'}`}>
+                                            {scene.icon}
+                                        </div>
+                                        <div>
+                                            <h4 className={`text-sm font-bold transition-colors ${activeScene === idx ? theme.text : 'text-slate-700'}`}>{scene.title}</h4>
+                                            <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{scene.desc}</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     <div className="mt-8 pt-8 border-t border-slate-200">
