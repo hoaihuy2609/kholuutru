@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Play, BookOpen, Monitor, KeyRound, Upload, CheckCircle2, MousePointer2, Settings, Atom, FolderOpen, Home, ShieldCheck } from 'lucide-react';
+import { X, BookOpen, Monitor, KeyRound, Upload, CheckCircle2, MousePointer2, Settings, Atom, FolderOpen, Home, ShieldCheck } from 'lucide-react';
 
 interface GuideModalProps {
     isOpen: boolean;
@@ -62,10 +62,10 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
                         {scenes.map((scene, idx) => (
                             <div
                                 key={idx}
-                                onClick={() => { setActiveScene(idx); setIsPlaying(false); }}
+                                onClick={() => { setActiveScene(idx); }}
                                 className={`group p-4 rounded-2xl border transition-all cursor-pointer ${activeScene === idx
-                                        ? 'bg-white border-indigo-200 shadow-md ring-2 ring-indigo-500/10'
-                                        : 'bg-transparent border-transparent hover:bg-white/50 hover:border-slate-200'
+                                    ? 'bg-white border-indigo-200 shadow-md ring-2 ring-indigo-500/10'
+                                    : 'bg-transparent border-transparent hover:bg-white/50 hover:border-slate-200'
                                     }`}
                             >
                                 <div className="flex items-start gap-3">
@@ -114,18 +114,6 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
                     <div className="relative z-10 w-full max-w-[600px] aspect-video bg-white rounded-2xl shadow-2xl border border-slate-300 overflow-hidden">
                         <SimulatedAppView scene={activeScene} />
 
-                        {/* Play/Pause Overlay Toggle */}
-                        <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                            <button
-                                onClick={() => setIsPlaying(!isPlaying)}
-                                className="p-2 bg-slate-900/10 hover:bg-slate-900/20 rounded-full backdrop-blur-md transition-all"
-                            >
-                                {isPlaying ? <X className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
-                            </button>
-                            <span className="text-[10px] font-bold text-slate-500 bg-white/50 px-2 py-0.5 rounded-full">
-                                {isPlaying ? 'Đang chiếu tự động...' : 'Đã tạm dừng'}
-                            </span>
-                        </div>
                     </div>
 
                     {/* Large floating cursor for attention */}
