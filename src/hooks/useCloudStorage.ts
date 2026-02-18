@@ -1,13 +1,18 @@
 
 import { useState, useEffect } from 'react';
+import CryptoJS from 'crypto-js';
 import { Lesson, StoredFile, FileStorage } from '../../types';
 
 // Storage Keys
 const STORAGE_FILES_KEY = 'physivault_files';
 const STORAGE_LESSONS_KEY = 'physivault_lessons';
+const STORAGE_ACTIVATION_KEY = 'physivault_activated';
 const DB_NAME = 'PhysiVaultDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'app_data';
+
+// --- System Security Salts ---
+const SYSTEM_SALT = "PHV_SECURITY_2026_BY_HUY"; // Chìa khóa hệ thống nội bộ
 
 // --- IndexedDB Helper ---
 const openDB = (): Promise<IDBDatabase> => {
@@ -53,38 +58,65 @@ interface ExportData {
     files: {
         [lessonId: string]: StoredFile[]
     };
+    isEncrypted?: boolean;
 }
+
+// --- Security Helpers ---
+
+export const getMachineId = (): string => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const txt = 'PhysiVault_Fingerprint_2026';
+    if (ctx) {
+        ctx.textBaseline = "top";
+        ctx.font = "14px 'Arial'";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = "#f60";
+        ctx.fillRect(125, 1, 62, 20);
+        ctx.fillStyle = "#069";
+        ctx.fillText(txt, 2, 15);
+        ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+        ctx.fillText(txt, 4, 17);
+    }
+    const fingerprint = canvas.toDataURL();
+    const hash = CryptoJS.SHA256(fingerprint + (navigator.userAgent || '') + (screen.height * screen.width)).toString();
+    return hash.substring(0, 12).toUpperCase().replace(/(.{4})/g, '$1-').slice(0, -1);
+};
+
+export const generateActivationKey = (machineId: string): string => {
+    // Thuật toán tạo mã kích hoạt bí mật dựa trên mã máy
+    const hash = CryptoJS.HmacSHA256(machineId, SYSTEM_SALT).toString();
+    return "PV-" + hash.substring(10, 22).toUpperCase().replace(/(.{4})/g, '$1-').slice(0, -1);
+};
+
+export const checkActivationStatus = (): boolean => {
+    const status = localStorage.getItem(STORAGE_ACTIVATION_KEY);
+    return status === 'true';
+};
 
 export const useCloudStorage = () => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [storedFiles, setStoredFiles] = useState<FileStorage>({});
     const [loading, setLoading] = useState(true);
+    const [isActivated, setIsActivated] = useState(checkActivationStatus());
 
     // Initial Load & Migration
     useEffect(() => {
         const initData = async () => {
             setLoading(true);
             try {
-                // 1. Try to get data from IndexedDB
                 let savedLessons = await dbGet(STORAGE_LESSONS_KEY);
                 let savedFiles = await dbGet(STORAGE_FILES_KEY);
 
-                // 2. Migration: If IndexedDB is empty but LocalStorage has data, move it
                 if (!savedLessons && !savedFiles) {
                     const localFiles = localStorage.getItem(STORAGE_FILES_KEY);
                     const localLessons = localStorage.getItem(STORAGE_LESSONS_KEY);
 
                     if (localFiles || localLessons) {
-                        console.log("Migrating data from LocalStorage to IndexedDB...");
                         savedLessons = localLessons ? JSON.parse(localLessons) : [];
                         savedFiles = localFiles ? JSON.parse(localFiles) : {};
-
                         await dbSet(STORAGE_LESSONS_KEY, savedLessons);
                         await dbSet(STORAGE_FILES_KEY, savedFiles);
-
-                        // Optional: Clear localStorage to save space
-                        // localStorage.removeItem(STORAGE_FILES_KEY);
-                        // localStorage.removeItem(STORAGE_LESSONS_KEY);
                     }
                 }
 
@@ -100,17 +132,13 @@ export const useCloudStorage = () => {
         initData();
     }, []);
 
-    // Sync state to IndexedDB whenever it changes
+    // Sync state to IndexedDB
     useEffect(() => {
-        if (!loading) {
-            dbSet(STORAGE_LESSONS_KEY, lessons);
-        }
+        if (!loading) dbSet(STORAGE_LESSONS_KEY, lessons);
     }, [lessons, loading]);
 
     useEffect(() => {
-        if (!loading) {
-            dbSet(STORAGE_FILES_KEY, storedFiles);
-        }
+        if (!loading) dbSet(STORAGE_FILES_KEY, storedFiles);
     }, [storedFiles, loading]);
 
     const addLesson = async (name: string, chapterId: string) => {
@@ -156,7 +184,6 @@ export const useCloudStorage = () => {
         });
 
         const newStoredFiles = await Promise.all(filePromises);
-
         setStoredFiles(prev => ({
             ...prev,
             [targetId]: [...(prev[targetId] || []), ...newStoredFiles]
@@ -171,65 +198,99 @@ export const useCloudStorage = () => {
         return Promise.resolve();
     };
 
+    const activateSystem = (key: string): boolean => {
+        const machineId = getMachineId();
+        const expectedKey = generateActivationKey(machineId);
+        if (key === expectedKey) {
+            localStorage.setItem(STORAGE_ACTIVATION_KEY, 'true');
+            setIsActivated(true);
+            return true;
+        }
+        return false;
+    };
+
     return {
         lessons,
         storedFiles,
         loading,
+        isActivated,
         addLesson,
         deleteLesson,
         uploadFiles,
-        deleteFile
+        deleteFile,
+        activateSystem
     };
 };
 
-// --- Export / Import Helpers (Updated for Async DB) ---
+// --- Export / Import Helpers ---
 
-export const exportData = (lessons: Lesson[], files: FileStorage) => {
-    const data: ExportData = {
-        version: 1,
+export const exportData = (lessons: Lesson[], files: FileStorage, password?: string) => {
+    const rawData: ExportData = {
+        version: 1.1,
         exportedAt: Date.now(),
         lessons,
-        files
+        files,
+        isEncrypted: !!password
     };
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    let finalContent = JSON.stringify(rawData);
+
+    // Nếu có mật khẩu, mã hóa toàn bộ bằng AES-256
+    if (password) {
+        finalContent = CryptoJS.AES.encrypt(finalContent, password).toString();
+    }
+
+    const blob = new Blob([finalContent], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = `physivault_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `physivault_secure_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 };
 
-export const importData = async (file: File) => {
+export const importData = async (file: File, password?: string) => {
     return new Promise<void>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
-                const content = e.target?.result as string;
-                const data: ExportData = JSON.parse(content);
+                let content = e.target?.result as string;
+                let data: ExportData;
 
-                if (!data.lessons || !data.files) {
-                    throw new Error("Invalid backup file format");
+                // Kiểm tra xem file có bị mã hóa không
+                if (!content.trim().startsWith('{')) {
+                    if (!password) {
+                        throw new Error("REQUIRED_PASSWORD");
+                    }
+                    try {
+                        const bytes = CryptoJS.AES.decrypt(content, password);
+                        const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+                        if (!decryptedStr) throw new Error("WRONG_PASSWORD");
+                        data = JSON.parse(decryptedStr);
+                    } catch (e) {
+                        throw new Error("WRONG_PASSWORD");
+                    }
+                } else {
+                    data = JSON.parse(content);
                 }
 
-                // 1. Load current data from IndexedDB
+                if (!data.lessons || !data.files) {
+                    throw new Error("INVALID_FORMAT");
+                }
+
                 const currentLessons = await dbGet(STORAGE_LESSONS_KEY) || [];
                 const currentFiles = await dbGet(STORAGE_FILES_KEY) || {};
 
-                // 2. Merge Lessons (Dedupe by ID)
                 const lessonMap = new Map();
                 currentLessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
                 data.lessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
                 const uniqueLessons = Array.from(lessonMap.values());
 
-                // 3. Merge Files
                 const mergedFiles = { ...currentFiles, ...data.files };
 
-                // 4. Save back to IndexedDB
                 await dbSet(STORAGE_LESSONS_KEY, uniqueLessons);
                 await dbSet(STORAGE_FILES_KEY, mergedFiles);
 
@@ -238,7 +299,7 @@ export const importData = async (file: File) => {
                 reject(err);
             }
         };
-        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.onerror = () => reject(new Error("READ_ERROR"));
         reader.readAsText(file);
     });
 };
