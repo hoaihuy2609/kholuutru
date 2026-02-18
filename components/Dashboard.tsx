@@ -149,12 +149,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
             </div>
           </div>
 
-          <div className="hidden md:block relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl transform"></div>
+          <div className="hidden md:block relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl transform group-hover:scale-110 transition-transform duration-700"></div>
+
+            {/* Floating Physics Icons */}
+            <div className="absolute top-0 right-10 animate-float text-indigo-400 opacity-60" style={{ animationDelay: '1s' }}>
+              <Atom className="w-10 h-10" />
+            </div>
+            <div className="absolute bottom-10 left-0 animate-float text-purple-400 opacity-60" style={{ animationDelay: '2s' }}>
+              <Zap className="w-8 h-8" />
+            </div>
+            <div className="absolute top-1/2 -left-10 animate-float text-blue-400 opacity-60" style={{ animationDelay: '0.5s' }}>
+              <Activity className="w-12 h-12" />
+            </div>
+
             <img
-              src="https://illustrations.popsy.co/amber/student-going-to-school.svg"
-              alt="Student"
-              className="relative w-full h-auto drop-shadow-2xl animate-float"
+              src="https://illustrations.popsy.co/amber/scientist.svg"
+              alt="Physicist"
+              className="relative w-full h-auto drop-shadow-2xl animate-float filter saturate-[0.8] brightness-[1.05]"
             />
           </div>
         </div>
