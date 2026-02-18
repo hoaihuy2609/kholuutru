@@ -206,20 +206,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
           </div>
 
           {/* Parallax Einstein Portrait */}
-          <div className="hidden md:block relative overflow-visible">
+          <div className="hidden md:block relative overflow-visible self-center">
             <div
               className="relative group transition-all duration-200 ease-out"
               style={{
                 transform: `perspective(1000px) rotateY(${mousePos.x * 12}deg) rotateX(${-mousePos.y * 12}deg)`,
               }}
             >
-              <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/50 bg-slate-900">
+              <div className="relative w-full aspect-[4/5] max-w-[400px] mx-auto rounded-[2rem] overflow-hidden shadow-[0_20px_50px_rgba(79,70,229,0.15)] border-4 border-white/80 bg-slate-900 group-hover:scale-[1.02] transition-transform duration-500">
                 <img
                   src="/einstein.png"
                   alt="Albert Einstein"
-                  className="w-full h-full object-cover filter saturate-[1.1] brightness-[1.05]"
+                  className="w-full h-full object-cover filter saturate-[1.1] brightness-[1.05] group-hover:scale-110 transition-transform duration-700"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/40 via-transparent to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/60 via-indigo-900/20 to-transparent opacity-60"></div>
+
+                {/* Internal Decorative Elements */}
+                <div className="absolute bottom-6 left-6 right-6">
+                  <div className="h-1 w-12 bg-indigo-400 rounded-full mb-2"></div>
+                  <div className="text-white/90 text-[10px] font-bold tracking-[0.2em] uppercase">E = mc²</div>
+                </div>
               </div>
 
               {/* Floating Atom around Einstein */}

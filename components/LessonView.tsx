@@ -129,197 +129,199 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
   }, [files]);
 
   return (
-    <div className="space-y-8 animate-fade-in relative pb-10">
-      {/* Background Decoration */}
-      <div className="absolute top-0 right-[-10%] w-[400px] h-[400px] bg-purple-100/40 rounded-full blur-[80px] -z-10 animate-float opacity-50"></div>
-      <div className="absolute top-[20%] left-[-10%] w-[300px] h-[300px] bg-blue-100/40 rounded-full blur-[80px] -z-10 animate-float opacity-50" style={{ animationDelay: '2s' }}></div>
+    <>
+      <div className="space-y-8 animate-fade-in relative pb-10">
+        {/* Background Decoration */}
+        <div className="absolute top-0 right-[-10%] w-[400px] h-[400px] bg-purple-100/40 rounded-full blur-[80px] -z-10 animate-float opacity-50"></div>
+        <div className="absolute top-[20%] left-[-10%] w-[300px] h-[300px] bg-blue-100/40 rounded-full blur-[80px] -z-10 animate-float opacity-50" style={{ animationDelay: '2s' }}></div>
 
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <button
-          onClick={onBack}
-          className="p-3 bg-white border border-slate-100 shadow-sm rounded-xl text-slate-500 hover:text-indigo-600 hover:shadow-md hover:border-indigo-100 transition-all active:scale-95"
-          title="Quay lại"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-gradient-to-r from-indigo-500 to-purple-500 text-white uppercase tracking-wider shadow-sm">
-              Bài học
-            </span>
-          </div>
-          <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight leading-tight">
-            {lesson.name}
-          </h2>
-        </div>
-      </div>
-
-      {/* Category Tabs */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {LESSON_CATEGORIES.map(cat => (
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
           <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all uppercase ${selectedCategory === cat ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}`}
+            onClick={onBack}
+            className="p-3 bg-white border border-slate-100 shadow-sm rounded-xl text-slate-500 hover:text-indigo-600 hover:shadow-md hover:border-indigo-100 transition-all active:scale-95"
+            title="Quay lại"
           >
-            {cat} ({categoriesWithCounts[cat] || 0})
+            <ArrowLeft className="w-5 h-5" />
           </button>
-        ))}
-      </div>
-
-      {/* Upload Area */}
-      {isAdmin && (
-        <div
-          className={`relative border-2 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer overflow-hidden group
-            ${isDragging
-              ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01] shadow-xl shadow-indigo-500/10'
-              : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50/50 hover:shadow-lg hover:shadow-indigo-500/5'}`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <div className={`w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 ${isDragging ? 'scale-110' : 'group-hover:scale-110 group-hover:rotate-3'}`}>
-            <UploadCloud className={`w-10 h-10 text-indigo-600 transition-colors ${isDragging ? 'text-indigo-700' : ''}`} />
-          </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">
-            {isDragging ? 'Thả file vào đây ngay!' : `Tải tài liệu lên ${selectedCategory ? `vào "${selectedCategory}"` : ''}`}
-          </h3>
-          <p className="text-slate-500 text-sm max-w-sm leading-relaxed">
-            Kéo thả file PDF vào đây hoặc click để chọn từ máy tính. {selectedCategory ? `File sẽ được tự động lưu vào mục "${selectedCategory}".` : 'Hãy chọn danh mục trước nếu muốn phân loại.'}
-          </p>
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept=".pdf"
-            multiple
-            onChange={handleFileChange}
-          />
-          <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
-        </div>
-      )}
-
-      {/* File List */}
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 bg-white/60 backdrop-blur-md p-4 rounded-2xl border border-white/50 shadow-sm sticky top-4 z-20">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <FileText className="w-5 h-5 text-indigo-600" />
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-gradient-to-r from-indigo-5050 to-purple-500 text-white uppercase tracking-wider shadow-sm">
+                Bài học
+              </span>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-800">
-                {selectedCategory || 'Tất cả tài liệu'}
-              </h3>
-              <p className="text-xs text-slate-400 font-medium">{filteredAndSortedFiles.length} file hiển thị</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-            <div className="w-full sm:w-72">
-              <SearchBar onSearch={setSearchQuery} placeholder="Tìm kiếm tài liệu..." />
-            </div>
-            <div className="relative">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="w-full appearance-none pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer hover:border-indigo-300 text-slate-600 shadow-sm"
-              >
-                <option value="date-desc">Mới nhất</option>
-                <option value="date-asc">Cũ nhất</option>
-                <option value="name-asc">Tên A-Z</option>
-                <option value="name-desc">Tên Z-A</option>
-                <option value="size-desc">Kích thước lớn nhất</option>
-                <option value="size-asc">Kích thước nhỏ nhất</option>
-              </select>
-              <ArrowUpDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
+            <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight leading-tight">
+              {lesson.name}
+            </h2>
           </div>
         </div>
 
-        {filteredAndSortedFiles.length === 0 ? (
-          <div className="text-center py-16 bg-white/50 backdrop-blur-sm rounded-3xl border border-dashed border-slate-200">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-50 mb-6 shadow-inner">
-              <FileText className="w-10 h-10 text-slate-300" />
+        {/* Category Tabs */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {LESSON_CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all uppercase ${selectedCategory === cat ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}`}
+            >
+              {cat} ({categoriesWithCounts[cat] || 0})
+            </button>
+          ))}
+        </div>
+
+        {/* Upload Area */}
+        {isAdmin && (
+          <div
+            className={`relative border-2 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer overflow-hidden group
+              ${isDragging
+                ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01] shadow-xl shadow-indigo-500/10'
+                : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50/50 hover:shadow-lg hover:shadow-indigo-500/5'}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <div className={`w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 ${isDragging ? 'scale-110' : 'group-hover:scale-110 group-hover:rotate-3'}`}>
+              <UploadCloud className={`w-10 h-10 text-indigo-600 transition-colors ${isDragging ? 'text-indigo-700' : ''}`} />
             </div>
-            <h4 className="text-lg font-semibold text-slate-700 mb-1">Chưa có tài liệu nào</h4>
-            <p className="text-slate-500 text-sm">
-              {searchQuery ? 'Không tìm thấy kết quả phù hợp.' : (selectedCategory ? `Chưa có tài liệu nào trong mục "${selectedCategory}".` : 'Hãy tải lên tài liệu đầu tiên của bạn.')}
+            <h3 className="text-xl font-bold text-slate-800 mb-2">
+              {isDragging ? 'Thả file vào đây ngay!' : `Tải tài liệu lên ${selectedCategory ? `vào "${selectedCategory}"` : ''}`}
+            </h3>
+            <p className="text-slate-500 text-sm max-w-sm leading-relaxed">
+              Kéo thả file PDF vào đây hoặc click để chọn từ máy tính. {selectedCategory ? `File sẽ được tự động lưu vào mục "${selectedCategory}".` : 'Hãy chọn danh mục trước nếu muốn phân loại.'}
             </p>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept=".pdf"
+              multiple
+              onChange={handleFileChange}
+            />
+            <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredAndSortedFiles.map((file) => (
-              <div key={file.id} className="group bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-200 transition-all duration-300 relative overflow-hidden flex flex-col h-[300px]">
-                {/* Category Badge */}
-                {file.category && (
-                  <div className="absolute top-3 left-3 z-10">
-                    <span className="px-2 py-1 bg-white/90 backdrop-blur-sm border border-slate-100 rounded-lg text-[10px] font-bold text-indigo-600 shadow-sm">
-                      {file.category}
-                    </span>
-                  </div>
-                )}
+        )}
 
-                {/* PDF Preview / Icon Placeholder */}
-                <div className="h-36 bg-slate-50 group-hover:bg-indigo-50/30 transition-colors flex items-center justify-center relative border-b border-slate-100">
-                  <div className="w-16 h-20 bg-white shadow-md border border-slate-100 rounded flex items-center justify-center transform group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300">
-                    <FileText className="w-8 h-8 text-red-500" />
-                  </div>
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 gap-3 backdrop-blur-[1px]">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }}
-                      className="p-2 bg-white text-indigo-600 rounded-full shadow-lg hover:scale-110 transition-transform active:scale-95"
-                      title="Xem trước"
-                    >
-                      <Eye className="w-5 h-5" />
-                    </button>
-                    {isAdmin && (
+        {/* File List */}
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 bg-white/60 backdrop-blur-md p-4 rounded-2xl border border-white/50 shadow-sm sticky top-4 z-20">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 rounded-lg">
+                <FileText className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">
+                  {selectedCategory || 'Tất cả tài liệu'}
+                </h3>
+                <p className="text-xs text-slate-400 font-medium">{filteredAndSortedFiles.length} file hiển thị</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <div className="w-full sm:w-72">
+                <SearchBar onSearch={setSearchQuery} placeholder="Tìm kiếm tài liệu..." />
+              </div>
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="w-full appearance-none pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer hover:border-indigo-300 text-slate-600 shadow-sm"
+                >
+                  <option value="date-desc">Mới nhất</option>
+                  <option value="date-asc">Cũ nhất</option>
+                  <option value="name-asc">Tên A-Z</option>
+                  <option value="name-desc">Tên Z-A</option>
+                  <option value="size-desc">Kích thước lớn nhất</option>
+                  <option value="size-asc">Kích thước nhỏ nhất</option>
+                </select>
+                <ArrowUpDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+
+          {filteredAndSortedFiles.length === 0 ? (
+            <div className="text-center py-16 bg-white/50 backdrop-blur-sm rounded-3xl border border-dashed border-slate-200">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-50 mb-6 shadow-inner">
+                <FileText className="w-10 h-10 text-slate-300" />
+              </div>
+              <h4 className="text-lg font-semibold text-slate-700 mb-1">Chưa có tài liệu nào</h4>
+              <p className="text-slate-500 text-sm">
+                {searchQuery ? 'Không tìm thấy kết quả phù hợp.' : (selectedCategory ? `Chưa có tài liệu nào trong mục "${selectedCategory}".` : 'Hãy tải lên tài liệu đầu tiên của bạn.')}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredAndSortedFiles.map((file) => (
+                <div key={file.id} className="group bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-200 transition-all duration-300 relative overflow-hidden flex flex-col h-[300px]">
+                  {/* Category Badge */}
+                  {file.category && (
+                    <div className="absolute top-3 left-3 z-10">
+                      <span className="px-2 py-1 bg-white/90 backdrop-blur-sm border border-slate-100 rounded-lg text-[10px] font-bold text-indigo-600 shadow-sm">
+                        {file.category}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* PDF Preview / Icon Placeholder */}
+                  <div className="h-36 bg-slate-50 group-hover:bg-indigo-50/30 transition-colors flex items-center justify-center relative border-b border-slate-100">
+                    <div className="w-16 h-20 bg-white shadow-md border border-slate-100 rounded flex items-center justify-center transform group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300">
+                      <FileText className="w-8 h-8 text-red-500" />
+                    </div>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 gap-3 backdrop-blur-[1px]">
                       <button
-                        onClick={(e) => { e.stopPropagation(); onDelete(file.id); }}
-                        className="p-2 bg-white text-red-500 rounded-full shadow-lg hover:scale-110 transition-transform active:scale-95"
-                        title="Xóa"
+                        onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }}
+                        className="p-2 bg-white text-indigo-600 rounded-full shadow-lg hover:scale-110 transition-transform active:scale-95"
+                        title="Xem trước"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <Eye className="w-5 h-5" />
                       </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h4 className="font-bold text-slate-800 line-clamp-2 leading-snug mb-2 group-hover:text-indigo-600 transition-colors" title={file.name}>
-                      {file.name}
-                    </h4>
-                    <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-                      <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">{file.type.split('/')[1].toUpperCase()}</span>
-                      <span>•</span>
-                      <span>{formatSize(file.size)}</span>
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDelete(file.id); }}
+                          className="p-2 bg-white text-red-500 rounded-full shadow-lg hover:scale-110 transition-transform active:scale-95"
+                          title="Xóa"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-50">
-                    <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">{formatDate(file.uploadDate)}</span>
-                    {isAdmin && (
-                      <a
-                        href={file.url}
-                        download={file.name}
-                        className="text-indigo-600 hover:text-indigo-700 p-1.5 hover:bg-indigo-50 rounded-lg transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                        title="Tải xuống"
-                      >
-                        <Download className="w-4 h-4" />
-                      </a>
-                    )}
+                  <div className="p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h4 className="font-bold text-slate-800 line-clamp-2 leading-snug mb-2 group-hover:text-indigo-600 transition-colors" title={file.name}>
+                        {file.name}
+                      </h4>
+                      <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+                        <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">{file.type.split('/')[1].toUpperCase()}</span>
+                        <span>•</span>
+                        <span>{formatSize(file.size)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-50">
+                      <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">{formatDate(file.uploadDate)}</span>
+                      {isAdmin && (
+                        <a
+                          href={file.url}
+                          download={file.name}
+                          className="text-indigo-600 hover:text-indigo-700 p-1.5 hover:bg-indigo-50 rounded-lg transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Tải xuống"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* PDF Preview Modal */}
+      {/* PDF Preview Modal outside the animate-fade-in div */}
       <Modal
         isOpen={!!previewFile}
         onClose={() => setPreviewFile(null)}
@@ -327,16 +329,18 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
         maxWidth="1200px"
       >
         {previewFile && (
-          <div className="w-full h-full bg-white">
-            <iframe
-              src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`}
-              className="w-full h-[85vh] md:h-[88vh] border-0 block"
-              title="PDF Preview"
-            />
+          <div className="w-full h-full bg-slate-100 flex items-center justify-center p-0 md:p-6">
+            <div className={`w-full h-[82vh] md:h-[85vh] bg-white rounded-xl overflow-hidden shadow-2xl border border-slate-200`}>
+              <iframe
+                src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`}
+                className="w-full h-full border-0 block"
+                title="PDF Preview"
+              />
+            </div>
           </div>
         )}
       </Modal>
-    </div>
+    </>
   );
 };
 
