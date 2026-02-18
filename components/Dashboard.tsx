@@ -149,25 +149,36 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
             </div>
           </div>
 
-          <div className="hidden md:block relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl transform group-hover:scale-110 transition-transform duration-700"></div>
+          <div className="hidden md:block relative group p-6">
+            {/* Main Illustration Circle Container */}
+            <div className="relative w-full aspect-square bg-gradient-to-br from-indigo-50/80 to-purple-50/80 rounded-[40px] flex items-center justify-center border border-white/50 shadow-inner overflow-hidden backdrop-blur-sm">
+              <div className="absolute inset-0 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:20px_20px] opacity-[0.05]"></div>
 
-            {/* Floating Physics Icons */}
-            <div className="absolute top-0 right-10 animate-float text-indigo-400 opacity-60" style={{ animationDelay: '1s' }}>
-              <Atom className="w-10 h-10" />
-            </div>
-            <div className="absolute bottom-10 left-0 animate-float text-purple-400 opacity-60" style={{ animationDelay: '2s' }}>
-              <Zap className="w-8 h-8" />
-            </div>
-            <div className="absolute top-1/2 -left-10 animate-float text-blue-400 opacity-60" style={{ animationDelay: '0.5s' }}>
-              <Activity className="w-12 h-12" />
+              <img
+                src="https://api.dicebear.com/7.x/notionists/svg?seed=Einstein&backgroundColor=transparent&flip=true"
+                alt="Physicist"
+                className="relative w-[90%] h-[90%] object-contain drop-shadow-2xl animate-float transition-transform duration-500 group-hover:scale-105"
+              />
+
+              <div className="absolute top-12 right-8 text-[12px] font-mono font-black text-indigo-500/40 rotate-12 select-none animate-pulse">
+                E = mc²
+              </div>
+              <div className="absolute bottom-14 left-8 text-[12px] font-mono font-black text-purple-500/40 -rotate-12 select-none animate-pulse" style={{ animationDelay: '1s' }}>
+                F = ma
+              </div>
+              <div className="absolute top-1/2 left-6 text-[10px] font-mono font-bold text-blue-500/30 select-none">
+                λ = h/p
+              </div>
             </div>
 
-            <img
-              src="https://illustrations.popsy.co/amber/scientist.svg"
-              alt="Physicist"
-              className="relative w-full h-auto drop-shadow-2xl animate-float filter saturate-[0.8] brightness-[1.05]"
-            />
+            <div className="absolute -inset-6 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl transform group-hover:scale-110 transition-transform duration-1000 -z-10"></div>
+
+            <div className="absolute -top-4 -right-4 animate-float text-indigo-500 opacity-60 group-hover:opacity-100 transition-all duration-500" style={{ animationDelay: '0.5s' }}>
+              <Atom className="w-14 h-14" />
+            </div>
+            <div className="absolute -bottom-4 -left-4 animate-float text-purple-500 opacity-60 group-hover:opacity-100 transition-all duration-500" style={{ animationDelay: '1.5s' }}>
+              <Zap className="w-12 h-12" />
+            </div>
           </div>
         </div>
       </div>
