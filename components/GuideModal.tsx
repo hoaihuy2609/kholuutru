@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, BookOpen, Monitor, KeyRound, Upload, CheckCircle2, MousePointer2, Settings, Atom, FolderOpen, Home, ShieldCheck } from 'lucide-react';
+import { X, BookOpen, Monitor, KeyRound, Upload, CheckCircle2, Settings, Atom, FolderOpen, Home, ShieldCheck } from 'lucide-react';
 
 interface GuideModalProps {
     isOpen: boolean;
@@ -116,13 +116,6 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
 
                     </div>
 
-                    {/* Large floating cursor for attention */}
-                    <div className="absolute z-50 pointer-events-none transition-all duration-1000 ease-in-out"
-                        style={getCursorStyle(activeScene)}>
-                        <MousePointer2 className="w-10 h-10 text-indigo-600 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] rotate-[-15deg] fill-white" />
-                        {/* Action feedback circles */}
-                        <div className="absolute top-0 left-0 w-10 h-10 bg-indigo-500/30 rounded-full animate-ping" />
-                    </div>
                 </div>
 
                 <button
@@ -135,15 +128,6 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
         </div>
     );
 };
-
-const getCursorStyle = (scene: number) => {
-    switch (scene) {
-        case 0: return { top: '80%', left: '15%' }; // Sidebar settings
-        case 1: return { top: '55%', left: '55%' }; // Activation input
-        case 2: return { top: '65%', left: '65%' }; // Import button
-        default: return { top: '50%', left: '50%' };
-    }
-}
 
 const SimulatedAppView: React.FC<{ scene: number }> = ({ scene }) => {
     return (
