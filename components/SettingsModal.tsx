@@ -64,6 +64,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         }
     };
 
+    const handleDeleteHistory = (id: string) => {
+        if (window.confirm('Bạn có chắc muốn xóa học sinh này khỏi danh sách?')) {
+            const newHistory = activationHistory.filter(h => h.id !== id);
+            setActivationHistory(newHistory);
+            localStorage.setItem('pv_activation_history', JSON.stringify(newHistory));
+            onShowToast('Đã xóa học sinh khỏi lịch sử', 'success');
+        }
+    };
+
     const handleExport = () => {
         if (!isAdmin) {
             onShowToast('Bạn không có quyền xuất dữ liệu!', 'error');
@@ -319,12 +328,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                                 </div>
                                                 <div className="flex items-center justify-between md:justify-end gap-3">
                                                     <span className="text-sm font-bold text-slate-700 font-mono bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 select-all">{h.key}</span>
-                                                    <button
-                                                        onClick={() => { navigator.clipboard.writeText(h.key); onShowToast('Đã copy mã!', 'success'); }}
-                                                        className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800"
-                                                    >
-                                                        COPY
-                                                    </button>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={() => { navigator.clipboard.writeText(h.key); onShowToast('Đã copy mã!', 'success'); }}
+                                                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                            title="Copy mã"
+                                                        >
+                                                            <span className="text-[10px] font-bold">COPY</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteHistory(h.id)}
+                                                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Xóa học sinh này"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
