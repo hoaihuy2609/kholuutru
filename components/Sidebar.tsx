@@ -32,7 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             }`}
         >
           <Home className={`w-5 h-5 transition-colors ${currentGrade === null ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-          Tổng quan Dashboard
+          Tổng quan
         </button>
 
         <button
