@@ -655,14 +655,3 @@ body {
     left: -4px;
     cursor: sw-resize;
 }
-
-/* ==================== Anti-Print Protection ==================== */
-@media print {
-    body {
-        display: none !important;
-    }
-}
-
-.select-none {
-    user-select: none !important;
-}

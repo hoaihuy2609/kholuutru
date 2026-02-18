@@ -10,7 +10,6 @@ import { useCloudStorage } from './src/hooks/useCloudStorage';
 import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings, Plus } from 'lucide-react';
 
 import SettingsModal from './components/SettingsModal';
-import SecurityGuard from './components/SecurityGuard';
 
 interface ToastMessage {
   id: string;
@@ -281,7 +280,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 relative overflow-hidden font-sans text-slate-900">
-      <SecurityGuard />
       {/* Background Decoration */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
         <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-200/30 rounded-full blur-[100px] animate-float opacity-60"></div>
