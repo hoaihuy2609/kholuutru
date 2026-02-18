@@ -149,7 +149,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
                 <div className="p-6 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
                     {/* Admin Access Section */}
-                    <div className="bg-slate-50/80 rounded-2xl border border-slate-200/60 overflow-hidden shadow-sm">
+                    <div id="tour-admin-section" className="bg-slate-50/80 rounded-2xl border border-slate-200/60 overflow-hidden shadow-sm">
                         <div className="p-4 flex items-center justify-between bg-white border-b border-slate-100">
                             <div className="flex items-center gap-3">
                                 <div className={`p-2 rounded-xl ${isAdmin ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
@@ -215,7 +215,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
                     {/* Activation Section (Only for Students if not activated) */}
                     {!isAdmin && !isActivated && (
-                        <div className="p-5 bg-amber-50 rounded-2xl border border-amber-200 space-y-4 animate-pulse-subtle">
+                        <div id="tour-activation-section" className="p-5 bg-amber-50 rounded-2xl border border-amber-200 space-y-4 animate-pulse-subtle">
                             <div className="flex items-center gap-2 text-amber-700 font-bold text-sm">
                                 <ShieldAlert className="w-5 h-5" />
                                 Yêu cầu kích hoạt từ giáo viên
@@ -391,7 +391,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                     )}
 
                     {!isAdmin && (
-                        <div className="space-y-4">
+                        <div id="tour-import-section" className="space-y-4">
                             <h4 className="font-bold text-slate-700 flex items-center gap-2">
                                 <Upload className="w-5 h-5 text-purple-600" />
                                 Nhập học liệu mới
