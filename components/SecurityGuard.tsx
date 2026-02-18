@@ -6,12 +6,18 @@ const SecurityGuard: React.FC = () => {
     const [isBlurred, setIsBlurred] = useState(false);
 
     useEffect(() => {
-        // --- CÁCH 1: LÀM MỜ KHI MẤT TIÊU ĐIỂM (FOCUS) ---
+        // --- CÁCH 1: LÀM MỜ KHI MẤT TIÊU ĐIỂM HOẶC CHUYỂN TAB ---
         const handleBlur = () => setIsBlurred(true);
         const handleFocus = () => setIsBlurred(false);
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                setIsBlurred(true);
+            }
+        };
 
         window.addEventListener('blur', handleBlur);
         window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         // --- CÁCH 2: CHẶN CHUỘT PHẢI & PHÍM TẮT ---
         const handleContextMenu = (e: MouseEvent) => {
@@ -47,6 +53,7 @@ const SecurityGuard: React.FC = () => {
         return () => {
             window.removeEventListener('blur', handleBlur);
             window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             document.removeEventListener('contextmenu', handleContextMenu);
             document.removeEventListener('keydown', handleKeyDown);
         };
