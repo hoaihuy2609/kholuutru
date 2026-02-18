@@ -10,6 +10,7 @@ import { useCloudStorage } from './src/hooks/useCloudStorage';
 import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings, Plus } from 'lucide-react';
 
 import SettingsModal from './components/SettingsModal';
+import GuideModal from './components/GuideModal';
 
 interface ToastMessage {
   id: string;
@@ -32,6 +33,7 @@ function App() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const toggleAdmin = (status: boolean) => {
@@ -304,6 +306,11 @@ function App() {
             setCurrentLesson(null);
             setIsMobileMenuOpen(false);
           }}
+          onOpenGuide={() => {
+            setIsGuideOpen(true);
+            setIsMobileMenuOpen(false);
+          }}
+          className="w-full"
         />
       </div>
 
@@ -316,6 +323,8 @@ function App() {
           setCurrentLesson(null);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenGuide={() => setIsGuideOpen(true)}
+        className="hidden md:flex"
       />
 
       {/* Settings Modal */}
@@ -325,6 +334,12 @@ function App() {
         onShowToast={showToast}
         isAdmin={isAdmin}
         onToggleAdmin={toggleAdmin}
+      />
+
+      {/* Guide Modal */}
+      <GuideModal
+        isOpen={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
       />
 
       {/* Main Content */}

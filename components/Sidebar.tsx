@@ -1,16 +1,18 @@
 import React from 'react';
-import { Atom, FolderOpen, Home, Settings } from 'lucide-react';
+import { Atom, FolderOpen, Home, Settings, BookOpen } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
   currentGrade: GradeLevel | null;
   onSelectGrade: (grade: GradeLevel | null) => void;
   onOpenSettings?: () => void;
+  onOpenGuide: () => void;
+  className?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, className }) => {
   return (
-    <div className="w-64 h-full flex flex-col hidden md:flex fixed left-0 top-0 z-10 glass border-r border-white/20 shadow-xl backdrop-blur-xl bg-white/80">
+    <div className={`w-64 h-full flex flex-col fixed left-0 top-0 z-10 glass border-r border-white/20 shadow-xl backdrop-blur-xl bg-white/80 ${className}`}>
       <div className="p-6 flex items-center gap-3 border-b border-gray-100/50">
         <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white transform hover:scale-110 hover:rotate-12 transition-all duration-500">
           <Atom className="w-6 h-6 animate-pulse" />
@@ -31,6 +33,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         >
           <Home className={`w-5 h-5 transition-colors ${currentGrade === null ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
           Tổng quan
+        </button>
+
+        <button
+          onClick={onOpenGuide}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 hover:translate-x-1 border border-transparent hover:border-indigo-100/50"
+        >
+          <BookOpen className="w-5 h-5 text-slate-400 group-hover:text-indigo-500 transition-colors" />
+          <span className="font-medium">Hướng dẫn sử dụng</span>
         </button>
 
         <div className="pt-6 pb-2">
