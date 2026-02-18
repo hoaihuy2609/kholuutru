@@ -1,5 +1,5 @@
 import React from 'react';
-import { Atom, FolderOpen, Home, Settings, BookOpen, Lightbulb } from 'lucide-react';
+import { Atom, FolderOpen, Home, Settings, BookOpen, Lightbulb, Zap, Activity } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
@@ -51,22 +51,49 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Khối Lớp</p>
         </div>
 
-        {[GradeLevel.Grade12, GradeLevel.Grade11, GradeLevel.Grade10].map((grade) => (
-          <button
-            key={grade}
-            onClick={() => onSelectGrade(grade)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${currentGrade === grade
-              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30 transform scale-[1.02]'
-              : 'text-slate-600 hover:bg-white hover:shadow-md hover:border-slate-100 border border-transparent'
-              }`}
-          >
-            <FolderOpen className={`w-5 h-5 transition-colors ${currentGrade === grade ? 'text-white' : 'text-slate-400 group-hover:text-indigo-500'}`} />
-            <span className="font-medium">Lớp {grade}</span>
-            {currentGrade === grade && (
-              <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            )}
-          </button>
-        ))}
+        {[GradeLevel.Grade12, GradeLevel.Grade11, GradeLevel.Grade10].map((grade) => {
+          const isSelected = currentGrade === grade;
+
+          const gradeStyles = {
+            [GradeLevel.Grade12]: {
+              gradient: 'from-violet-500 to-fuchsia-600',
+              shadow: 'shadow-fuchsia-500/30',
+              icon: Atom,
+              hover: 'group-hover:text-fuchsia-500'
+            },
+            [GradeLevel.Grade11]: {
+              gradient: 'from-blue-500 to-cyan-500',
+              shadow: 'shadow-cyan-500/30',
+              icon: Zap,
+              hover: 'group-hover:text-cyan-500'
+            },
+            [GradeLevel.Grade10]: {
+              gradient: 'from-emerald-500 to-teal-600',
+              shadow: 'shadow-teal-500/30',
+              icon: Activity,
+              hover: 'group-hover:text-teal-500'
+            }
+          };
+
+          const { gradient, shadow, icon: Icon, hover } = gradeStyles[grade];
+
+          return (
+            <button
+              key={grade}
+              onClick={() => onSelectGrade(grade)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isSelected
+                ? `bg-gradient-to-r ${gradient} text-white shadow-lg ${shadow} transform scale-[1.02]`
+                : 'text-slate-600 hover:bg-white hover:shadow-md hover:border-slate-100 border border-transparent'
+                }`}
+            >
+              <Icon className={`w-5 h-5 transition-colors ${isSelected ? 'text-white' : `text-slate-400 ${hover}`}`} />
+              <span className="font-medium">Lớp {grade}</span>
+              {isSelected && (
+                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              )}
+            </button>
+          );
+        })}
 
 
 
