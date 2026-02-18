@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Maximize2, Minimize2 } from 'lucide-react';
 
 interface ModalProps {
     isOpen: boolean;
@@ -16,8 +16,14 @@ const Modal: React.FC<ModalProps> = ({
     title,
     children,
     maxWidth = '600px',
-    fullScreen = false
+    fullScreen: initialFullScreen = false
 }) => {
+    const [isMaximized, setIsMaximized] = useState(initialFullScreen);
+
+    useEffect(() => {
+        setIsMaximized(initialFullScreen);
+    }, [initialFullScreen, isOpen]);
+
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -44,19 +50,32 @@ const Modal: React.FC<ModalProps> = ({
     return (
         <>
             <div className="modal-overlay" onClick={onClose} />
-            <div className={`modal-content ${fullScreen ? 'full-screen' : ''}`} style={{ maxWidth: fullScreen ? 'none' : maxWidth }}>
-                <div className={`flex flex-col h-full ${fullScreen ? 'max-h-screen' : 'max-h-[92vh]'}`}>
+            <div
+                className={`modal-content ${isMaximized ? 'full-screen' : ''}`}
+                style={{ maxWidth: isMaximized ? 'none' : maxWidth }}
+            >
+                <div className={`flex flex-col h-full ${isMaximized ? 'max-h-screen' : 'max-h-[92vh]'}`}>
                     {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10 font-sans">
                         <h3 className="text-lg font-bold text-slate-800 truncate pr-4" title={title}>
                             {title}
                         </h3>
-                        <button
-                            onClick={onClose}
-                            className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-600 active:scale-90"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setIsMaximized(!isMaximized)}
+                                className="p-2 hover:bg-slate-100 rounded-lg transition-all text-slate-400 hover:text-slate-600"
+                                title={isMaximized ? "Thu nhỏ" : "Phóng to"}
+                            >
+                                {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-600 active:scale-90"
+                                title="Đóng"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Content */}
