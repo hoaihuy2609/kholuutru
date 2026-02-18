@@ -155,9 +155,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
               <div className="absolute inset-0 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:20px_20px] opacity-[0.05]"></div>
 
               <img
-                src="https://api.dicebear.com/7.x/notionists/svg?seed=Einstein&backgroundColor=transparent&flip=true"
-                alt="Physicist"
-                className="relative w-[90%] h-[90%] object-contain drop-shadow-2xl animate-float transition-transform duration-500 group-hover:scale-105"
+                src="https://www.svgrepo.com/show/24430/albert-einstein.svg"
+                alt="Albert Einstein"
+                className="relative w-[75%] h-[75%] object-contain drop-shadow-2xl animate-float transition-transform duration-500 group-hover:scale-110"
               />
 
               <div className="absolute top-12 right-8 text-[12px] font-mono font-black text-indigo-500/40 rotate-12 select-none animate-pulse">
