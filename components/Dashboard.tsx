@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { GradeLevel } from '../types';
 import { CURRICULUM } from '../constants';
-import { BookOpen, FileText, Activity, Zap, Atom, TrendingUp, Users, Folder } from 'lucide-react';
+import { BookOpen, FileText, Activity, Zap, Atom, TrendingUp, Users, Folder, Quote } from 'lucide-react';
 import CountdownTimer from './CountdownTimer';
 
 interface DashboardProps {
@@ -10,7 +10,41 @@ interface DashboardProps {
   isAdmin: boolean;
 }
 
+const EinsteinQuotes = [
+  "Logic đưa ta từ A đến B, trí tưởng tượng đưa ta đến mọi nơi.",
+  "Học từ hôm qua, sống cho hôm nay, hy vọng cho ngày mai.",
+  "Thư viện là kho tàng tàng trữ mọi giá trị tinh thần của loài người.",
+  "Vật lý không chỉ là các phương trình, nó là cách ta nhìn thế giới.",
+  "Cuộc đời giống như lái một chiếc xe đạp. Để giữ thăng bằng, bạn phải tiếp tục di chuyển."
+];
+
 const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmin }) => {
+  const [quote, setQuote] = useState('');
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setQuote(EinsteinQuotes[Math.floor(Math.random() * EinsteinQuotes.length)]);
+  }, []);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setMousePos({ x, y });
+  };
+
+  // Generate random particles
+  const particles = useMemo(() => {
+    return Array.from({ length: 15 }).map((_, i) => ({
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      size: Math.random() * 6 + 2,
+      duration: Math.random() * 15 + 10,
+      delay: Math.random() * 5
+    }));
+  }, []);
 
   const getGradeInfo = (grade: GradeLevel) => {
     switch (grade) {
@@ -18,25 +52,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
         icon: Atom,
         gradient: 'from-violet-500 to-fuchsia-600',
         shadow: 'shadow-fuchsia-500/20',
-        bg: 'bg-fuchsia-50'
+        bg: 'bg-fuchsia-50',
+        neon: 'text-fuchsia-400'
       };
       case GradeLevel.Grade11: return {
         icon: Zap,
         gradient: 'from-blue-500 to-cyan-500',
         shadow: 'shadow-cyan-500/20',
-        bg: 'bg-cyan-50'
+        bg: 'bg-cyan-50',
+        neon: 'text-cyan-400'
       };
       case GradeLevel.Grade10: return {
         icon: Activity,
         gradient: 'from-emerald-500 to-teal-600',
         shadow: 'shadow-teal-500/20',
-        bg: 'bg-teal-50'
+        bg: 'bg-teal-50',
+        neon: 'text-teal-400'
       };
       default: return {
         icon: BookOpen,
         gradient: 'from-slate-500 to-slate-600',
         shadow: 'shadow-slate-500/20',
-        bg: 'bg-slate-50'
+        bg: 'bg-slate-50',
+        neon: 'text-slate-400'
       };
     }
   };
@@ -44,7 +82,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
   const totalFiles = Object.values(fileCounts).reduce((a: number, b: number) => a + b, 0);
 
   return (
-    <div className="space-y-10 animate-fade-in pb-10">
+    <div className="space-y-10 animate-fade-in pb-10" ref={containerRef} onMouseMove={handleMouseMove}>
+      {/* Background Particles Layer */}
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        {particles.map((p, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-indigo-500/10 animate-float-particle"
+            style={{
+              left: p.left,
+              top: p.top,
+              width: p.size,
+              height: p.size,
+              animationDuration: `${p.duration}s`,
+              animationDelay: `${p.delay}s`
+            }}
+          />
+        ))}
+      </div>
+
       {/* Hero Section */}
       <div className="relative rounded-3xl p-8 md:p-10 overflow-hidden shadow-2xl shadow-indigo-500/10 border border-white/40 isolate">
         {/* Background Mesh Gradient */}
@@ -65,9 +121,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
               Chào mừng đến với <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">PhysiVault</span>
             </h1>
-            <p className="text-slate-500 text-lg mb-4 max-w-lg leading-relaxed">
-              Nền tảng lưu trữ và quản lý tài liệu Vật Lý toàn diện. Truy cập bài giảng, đề thi và tài liệu tham khảo mọi lúc, mọi nơi.
-            </p>
+
+            {/* Dynamic Quote Box */}
+            <div className="bg-white/40 backdrop-blur-sm border border-white/60 rounded-2xl p-4 mb-8 max-w-lg shadow-sm group">
+              <div className="flex gap-3">
+                <Quote className="w-5 h-5 text-indigo-400 shrink-0 mt-1" />
+                <div className="relative overflow-hidden">
+                  <p className="text-slate-600 italic font-medium leading-relaxed animate-typing">
+                    {quote}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-2 mb-10">
               {/* Developer Box */}
               <div className="flex items-center gap-3 px-5 py-2.5 bg-indigo-50/50 border border-indigo-100/50 rounded-2xl w-fit shadow-sm hover:shadow-md transition-all">
@@ -117,7 +183,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
             </div>
 
             <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-3 px-5 py-3 bg-white/80 rounded-2xl shadow-sm border border-white/50 backdrop-blur-sm">
+              <div className="flex items-center gap-3 px-5 py-3 bg-white/80 rounded-2xl shadow-sm border border-white/50 backdrop-blur-sm hover:scale-105 transition-transform">
                 <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
                   <FileText className="w-5 h-5" />
                 </div>
@@ -127,17 +193,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 px-5 py-3 bg-white/80 rounded-2xl shadow-sm border border-white/50 backdrop-blur-sm">
-                <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-slate-800">3</div>
-                  <div className="text-xs text-slate-400 font-medium uppercase">Khối lớp</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 px-5 py-3 bg-white/80 rounded-2xl shadow-sm border border-white/50 backdrop-blur-sm">
+              <div className="flex items-center gap-3 px-5 py-3 bg-white/80 rounded-2xl shadow-sm border border-white/50 backdrop-blur-sm hover:scale-105 transition-transform">
                 <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
                   <Folder className="w-5 h-5" />
                 </div>
@@ -149,17 +205,33 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
             </div>
           </div>
 
-          <div className="hidden md:block relative group">
-            <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/50 bg-slate-900 group-hover:scale-[1.02] transition-transform duration-700">
-              <img
-                src="/einstein.png"
-                alt="Albert Einstein"
-                className="w-full h-full object-cover filter saturate-[1.1] brightness-[1.05]"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/40 via-transparent to-transparent"></div>
+          {/* Parallax Einstein Portrait */}
+          <div className="hidden md:block relative overflow-visible">
+            <div
+              className="relative group transition-all duration-200 ease-out"
+              style={{
+                transform: `perspective(1000px) rotateY(${mousePos.x * 12}deg) rotateX(${-mousePos.y * 12}deg)`,
+              }}
+            >
+              <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/50 bg-slate-900">
+                <img
+                  src="/einstein.png"
+                  alt="Albert Einstein"
+                  className="w-full h-full object-cover filter saturate-[1.1] brightness-[1.05]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/40 via-transparent to-transparent"></div>
+              </div>
+
+              {/* Floating Atom around Einstein */}
+              <div
+                className="absolute -top-10 -right-10 text-indigo-500 animate-neon-glow transition-transform duration-300"
+                style={{ transform: `translateX(${mousePos.x * 30}px) translateY(${mousePos.y * 30}px)` }}
+              >
+                <Atom className="w-20 h-20 drop-shadow-2xl" />
+              </div>
             </div>
 
-            <div className="absolute -inset-10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl -z-10 opacity-60"></div>
+            <div className={`absolute -inset-10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl -z-10 opacity-60`}></div>
           </div>
         </div>
       </div>
@@ -167,7 +239,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
       {/* Countdown Timer */}
       <CountdownTimer isAdmin={isAdmin} />
 
-      {/* Grade Selection */}
+      {/* Grade Selection with Neon Glow */}
       <div>
         <div className="flex items-center justify-between mb-8 px-2">
           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
@@ -178,7 +250,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {CURRICULUM.map((grade) => {
-            const { icon: Icon, gradient, shadow, bg } = getGradeInfo(grade.level);
+            const { icon: Icon, gradient, shadow, bg, neon } = getGradeInfo(grade.level);
 
             return (
               <button
@@ -192,13 +264,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
                 {/* Card Content Wrapper */}
                 <div className="relative m-[2px] bg-white rounded-[22px] flex flex-col h-full overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-500">
                   {/* Top Gradient Banner */}
-                  <div className={`h-32 bg-gradient-to-br ${gradient} p-6 relative overflow-hidden`}>
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/5 rounded-full blur-xl -ml-10 -mb-10 pointer-events-none"></div>
-
+                  <div className={`h-32 bg-gradient-to-br ${gradient} p-6 relative overflow-hidden transition-all duration-500 group-hover:h-36`}>
                     <div className="relative z-10 flex justify-between items-start">
-                      <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 text-white shadow-lg">
-                        <Atom className="w-8 h-8 animate-pulse" />
+                      <div className={`p-3 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 text-white shadow-lg animate-pulse`}>
+                        <Icon className="w-8 h-8" />
                       </div>
                       <span className="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-white text-xs font-bold shadow-sm">
                         {fileCounts[grade.level] || 0} FILE
@@ -208,17 +277,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
 
                   {/* Card Body */}
                   <div className="p-6 flex-1 flex flex-col">
-                    <h3 className="text-2xl font-bold text-slate-800 mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-600 group-hover:to-purple-600 transition-all">
+                    <h3 className={`text-2xl font-bold text-slate-800 mb-2 transition-all ${neon} group-hover:animate-neon-glow`}>
                       {grade.title}
                     </h3>
                     <p className="text-sm text-slate-500 line-clamp-3 mb-6 flex-1 leading-relaxed">
-                      Khám phá kho tàng kiến thức {grade.title.toLowerCase()}. Bao gồm các chuyên đề: {grade.chapters.slice(0, 3).map(c => c.name.split(':')[1]).join(', ')}...
+                      Khám phá kho tàng kiến thức {grade.title.toLowerCase()}.
                     </p>
 
-                    <div className={`mt-auto flex items-center justify-center p-3 rounded-xl ${bg} group-hover:bg-indigo-50 transition-colors`}>
-                      <span className={`text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r ${gradient} group-hover:text-indigo-600 transition-all`}>
-                        Truy cập ngay
-                      </span>
+                    <div className={`mt-auto flex items-center justify-center p-3 rounded-xl ${bg} group-hover:bg-indigo-600 group-hover:text-white transition-all`}>
+                      <span className="text-sm font-bold">Truy cập ngay</span>
                     </div>
                   </div>
                 </div>
