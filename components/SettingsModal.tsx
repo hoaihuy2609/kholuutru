@@ -21,8 +21,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     const [myMachineId, setMyMachineId] = useState('');
     const [studentKeyInput, setStudentKeyInput] = useState('');
     const [adminTargetId, setAdminTargetId] = useState('');
+    const [studentName, setStudentName] = useState('');
     const [generatedKey, setGeneratedKey] = useState('');
-    const [activationHistory, setActivationHistory] = useState<{ id: string, key: string, date: number }[]>([]);
+    const [activationHistory, setActivationHistory] = useState<{ id: string, name: string, key: string, date: number }[]>([]);
 
     useEffect(() => {
         if (isOpen) {
@@ -36,6 +37,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
     const handleGenerateKey = () => {
         const targetId = adminTargetId.trim();
+        const name = studentName.trim();
         if (!targetId) {
             onShowToast('Vui lòng nhập Mã máy của học sinh', 'warning');
             return;
@@ -45,26 +47,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
         // Tránh trùng lặp: lọc bỏ ID cũ nếu đã tồn tại và đưa ID mới lên đầu
         const filteredHistory = activationHistory.filter(h => h.id !== targetId);
-        const newHistory = [{ id: targetId, key, date: Date.now() }, ...filteredHistory].slice(0, 20);
+        const newHistory = [{ id: targetId, name: name || 'Học sinh mới', key, date: Date.now() }, ...filteredHistory].slice(0, 50);
 
         setActivationHistory(newHistory);
         localStorage.setItem('pv_activation_history', JSON.stringify(newHistory));
         onShowToast('Đã tạo mã kích hoạt thành công!', 'success');
-    };
-
-    const handleDeleteHistory = (id: string) => {
-        const newHistory = activationHistory.filter(h => h.id !== id);
-        setActivationHistory(newHistory);
-        localStorage.setItem('pv_activation_history', JSON.stringify(newHistory));
-        onShowToast('Đã xóa khỏi lịch sử', 'success');
-    };
-
-    const handleClearAllHistory = () => {
-        if (window.confirm('Bạn có chắc muốn xóa TOÀN BỘ lịch sử cấp mã?')) {
-            setActivationHistory([]);
-            localStorage.removeItem('pv_activation_history');
-            onShowToast('Đã xóa toàn bộ lịch sử', 'success');
-        }
+        setStudentName('');
     };
 
     const handleActivate = () => {
@@ -140,17 +128,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
             <div
-                className="bg-white rounded-3xl shadow-2xl w-full max-w-[450px] overflow-hidden animate-scale-in border border-slate-200"
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-[600px] overflow-hidden animate-scale-in border border-slate-200"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <h3 className="font-bold text-base text-slate-800">Cài đặt & Bảo mật</h3>
+                    <h3 className="font-bold text-lg text-slate-800">Cài đặt & Bảo mật Hệ thống</h3>
                     <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
 
-                <div className="p-5 space-y-5 max-h-[85vh] overflow-y-auto custom-scrollbar">
+                <div className="p-6 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
                     {/* Admin Access Section */}
                     <div className="bg-slate-50/80 rounded-2xl border border-slate-200/60 overflow-hidden shadow-sm">
                         <div className="p-4 flex items-center justify-between bg-white border-b border-slate-100">
@@ -160,7 +148,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">Quyền truy cập</span>
-                                    <span className={`text-sm font-bold ${isAdmin ? 'text-green-600' : 'text-slate-700'}`}>
+                                    <span className={`text-base font-bold ${isAdmin ? 'text-green-600' : 'text-slate-700'}`}>
                                         {isAdmin ? 'Quản trị viên' : 'Chế độ Học sinh'}
                                     </span>
                                 </div>
@@ -169,22 +157,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                             {!isAdmin ? (
                                 <button
                                     onClick={() => setShowPassInput(!showPassInput)}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-all border border-indigo-100"
+                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-all border border-indigo-100"
                                 >
-                                    <KeyRound className="w-3.5 h-3.5" />
+                                    <KeyRound className="w-4 h-4" />
                                     Mở khóa Admin
                                 </button>
                             ) : (
                                 <button
                                     onClick={() => onToggleAdmin(false)}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-all border border-red-100"
+                                    className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-all border border-red-100"
                                 >
                                     Thoát Admin
                                 </button>
                             )}
                         </div>
 
-                        <div className="p-4">
+                        <div className="p-5">
                             {!isAdmin && showPassInput ? (
                                 <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
                                     <div className="relative">
@@ -194,23 +182,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             placeholder="Nhập mã xác thực hệ thống..."
-                                            className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                                            className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
                                             onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
                                             autoFocus
                                         />
                                     </div>
                                     <button
                                         onClick={handleVerifyPassword}
-                                        className="w-full py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all active:scale-[0.98]"
+                                        className="w-full py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]"
                                     >
                                         Xác thực quyền Admin
                                     </button>
                                 </div>
                             ) : (
-                                <p className="text-[11px] text-slate-500 leading-relaxed italic">
+                                <p className="text-xs text-slate-500 leading-relaxed italic">
                                     {isAdmin
-                                        ? 'Bạn đang ở chế độ Quản trị: Có toàn quyền thêm, sửa, xóa nội dung và cấp mã kích hoạt.'
-                                        : 'Bạn đang ở chế độ Học sinh: Hệ thống sẽ hạn chế tính năng nhập dữ liệu nếu chưa được kích hoạt.'}
+                                        ? 'Bạn đang ở chế độ Quản trị: Có toàn quyền thêm, sửa, xóa nội dung và cấp mã kích hoạt cho học sinh.'
+                                        : 'Bạn đang ở chế độ Học sinh: Các tính năng nạp dữ liệu sẽ bị hạn chế cho đến khi bạn nhập mã kích hoạt.'}
                                 </p>
                             )}
                         </div>
@@ -218,37 +206,37 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
                     {/* Activation Section (Only for Students if not activated) */}
                     {!isAdmin && !isActivated && (
-                        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-3 animate-pulse-subtle">
+                        <div className="p-5 bg-amber-50 rounded-2xl border border-amber-200 space-y-4 animate-pulse-subtle">
                             <div className="flex items-center gap-2 text-amber-700 font-bold text-sm">
                                 <ShieldAlert className="w-5 h-5" />
-                                Yêu cầu kích hoạt
+                                Yêu cầu kích hoạt từ giáo viên
                             </div>
                             <div className="space-y-2">
                                 <span className="text-[10px] text-amber-800 font-bold uppercase">Mã máy của bạn:</span>
                                 <div className="flex gap-2">
-                                    <code className="flex-1 p-2 bg-white rounded-lg border border-amber-200 text-xs font-mono font-bold text-center select-all">
+                                    <code className="flex-1 p-3 bg-white rounded-lg border border-amber-200 text-sm font-mono font-bold text-center select-all">
                                         {myMachineId}
                                     </code>
                                     <button
                                         onClick={() => { navigator.clipboard.writeText(myMachineId); onShowToast('Đã copy mã máy!', 'success'); }}
-                                        className="px-2 bg-white rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-100"
+                                        className="px-4 bg-white rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-100 font-bold text-xs"
                                     >
                                         Copy
                                     </button>
                                 </div>
-                                <p className="text-[10px] text-amber-600 italic">Gửi mã này cho giáo viên để nhận Mã kích hoạt bài giảng.</p>
+                                <p className="text-xs text-amber-600 italic">Gửi mã 12 ký tự phía trên cho thầy để nhận Mã kích hoạt khóa học.</p>
                             </div>
                             <div className="pt-2 flex gap-2">
                                 <input
                                     type="text"
                                     value={studentKeyInput}
                                     onChange={(e) => setStudentKeyInput(e.target.value.toUpperCase())}
-                                    placeholder="Nhập mã kích hoạt (PV-...)"
-                                    className="flex-1 px-3 py-2 text-xs rounded-xl border border-amber-200 outline-none focus:ring-2 focus:ring-amber-500/20"
+                                    placeholder="Dán mã kích hoạt PV-... vào đây"
+                                    className="flex-1 px-4 py-3 text-sm rounded-xl border border-amber-200 outline-none focus:ring-4 focus:ring-amber-500/20"
                                 />
                                 <button
                                     onClick={handleActivate}
-                                    className="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700 transition-colors"
+                                    className="px-6 py-3 bg-amber-600 text-white text-sm font-bold rounded-xl hover:bg-amber-700 transition-colors shadow-md shadow-amber-200"
                                 >
                                     Mở khóa
                                 </button>
@@ -258,41 +246,57 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
                     {/* Admin Key Generator Section */}
                     {isAdmin && (
-                        <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-200 space-y-4">
+                        <div className="p-5 bg-indigo-50 rounded-2xl border border-indigo-200 space-y-5">
                             <div className="flex items-center gap-2 text-indigo-700 font-bold text-sm">
                                 <UserCheck className="w-5 h-5" />
                                 Trạm cấp mã học sinh
                             </div>
-                            <div className="space-y-2">
-                                <div className="relative">
-                                    <Monitor className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase ml-1">Tên học sinh (Tùy chọn)</span>
                                     <input
                                         type="text"
-                                        value={adminTargetId}
-                                        onChange={(e) => setAdminTargetId(e.target.value.toUpperCase())}
-                                        placeholder="Dán Mã máy học sinh gửi vào đây..."
-                                        className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-indigo-200 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                        value={studentName}
+                                        onChange={(e) => setStudentName(e.target.value)}
+                                        placeholder="Ví dụ: Nguyễn Văn A..."
+                                        className="w-full px-4 py-2.5 text-sm rounded-lg border border-indigo-100 outline-none focus:ring-2 focus:ring-indigo-500/20"
                                     />
                                 </div>
-                                <button
-                                    onClick={handleGenerateKey}
-                                    className="w-full py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <ShieldCheck className="w-4 h-4" />
-                                    Tạo Mã Mở Khóa
-                                </button>
+                                <div className="space-y-2">
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase ml-1">Mã máy học sinh</span>
+                                    <div className="relative">
+                                        <Monitor className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={adminTargetId}
+                                            onChange={(e) => setAdminTargetId(e.target.value.toUpperCase())}
+                                            placeholder="Dán mã máy học sinh..."
+                                            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-indigo-100 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                        />
+                                    </div>
+                                </div>
                             </div>
+                            <button
+                                onClick={handleGenerateKey}
+                                className="w-full py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
+                            >
+                                <ShieldCheck className="w-5 h-5" />
+                                Tạo & Lưu Mã Mở Khóa
+                            </button>
 
                             {generatedKey && (
-                                <div className="p-3 bg-white rounded-xl border border-indigo-100 space-y-2 animate-in zoom-in-95">
-                                    <span className="text-[10px] text-indigo-400 font-bold uppercase">Mã kích hoạt mới:</span>
+                                <div className="p-4 bg-white rounded-xl border border-indigo-100 space-y-3 animate-in zoom-in-95">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] text-indigo-400 font-bold uppercase">Mã kích hoạt vừa tạo:</span>
+                                        {studentName && <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold">{studentName}</span>}
+                                    </div>
                                     <div className="flex gap-2">
-                                        <div className="flex-1 p-2 bg-indigo-50 text-indigo-700 font-mono font-bold text-center text-sm rounded-lg border border-indigo-100">
+                                        <div className="flex-1 p-3 bg-indigo-50 text-indigo-700 font-mono font-bold text-center text-base rounded-lg border border-indigo-100">
                                             {generatedKey}
                                         </div>
                                         <button
                                             onClick={() => { navigator.clipboard.writeText(generatedKey); onShowToast('Đã copy mã kích hoạt!', 'success'); }}
-                                            className="px-3 bg-indigo-600 text-white rounded-lg text-xs hover:bg-indigo-700"
+                                            className="px-5 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700"
                                         >
                                             Copy
                                         </button>
@@ -301,32 +305,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                             )}
 
                             {activationHistory.length > 0 && (
-                                <div className="pt-2 border-t border-indigo-100">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase">
-                                            <History className="w-3 h-3" />
-                                            Lịch sử cấp mã (Tổng: {activationHistory.length})
-                                        </div>
-                                        <button
-                                            onClick={handleClearAllHistory}
-                                            className="text-[9px] text-red-400 hover:text-red-600 font-bold uppercase transition-colors"
-                                        >
-                                            Xóa hết
-                                        </button>
+                                <div className="pt-4 border-t border-indigo-100">
+                                    <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase mb-3">
+                                        <History className="w-3 h-3" />
+                                        Nhật ký cấp mã ({activationHistory.length})
                                     </div>
-                                    <div className="space-y-1.5 max-h-[150px] overflow-y-auto custom-scrollbar">
+                                    <div className="space-y-2 max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
                                         {activationHistory.map((h, i) => (
-                                            <div key={i} className="group flex justify-between items-center text-[10px] p-2 bg-white/50 rounded-lg border border-indigo-50 hover:border-indigo-200 transition-all">
-                                                <div className="flex flex-col gap-0.5">
-                                                    <span className="font-mono text-slate-500 leading-none">{h.id}</span>
-                                                    <span className="font-bold text-indigo-600 select-all leading-none">{h.key}</span>
+                                            <div key={i} className="flex flex-col md:flex-row md:items-center justify-between gap-2 p-3 bg-white border border-indigo-50 rounded-xl hover:shadow-md transition-all">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-bold text-indigo-500 uppercase leading-none mb-1">{h.name || 'Học sinh cũ'}</span>
+                                                    <span className="text-xs font-mono text-slate-400">{h.id}</span>
                                                 </div>
-                                                <button
-                                                    onClick={() => handleDeleteHistory(h.id)}
-                                                    className="p-1.5 hover:bg-red-50 text-slate-300 hover:text-red-500 rounded-md transition-colors opacity-0 group-hover:opacity-100"
-                                                >
-                                                    <Trash2 className="w-3 h-3" />
-                                                </button>
+                                                <div className="flex items-center justify-between md:justify-end gap-3">
+                                                    <span className="text-sm font-bold text-slate-700 font-mono bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 select-all">{h.key}</span>
+                                                    <button
+                                                        onClick={() => { navigator.clipboard.writeText(h.key); onShowToast('Đã copy mã!', 'success'); }}
+                                                        className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800"
+                                                    >
+                                                        COPY
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -337,79 +336,99 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
                     {isAdmin && (
                         <div className="space-y-4 animate-in fade-in duration-300 pt-2">
-                            <h4 className="font-semibold text-slate-700 flex items-center gap-2">
+                            <h4 className="font-bold text-slate-700 flex items-center gap-2">
                                 <Download className="w-5 h-5 text-indigo-600" />
-                                Xuất dữ liệu bài giảng
+                                Quản lý dữ liệu hệ thống
                             </h4>
-                            <p className="text-sm text-slate-500 text-[11px]">
-                                Tải toàn bộ dữ liệu bài giảng xuống thành file JSON để chia sẻ.
-                            </p>
-                            <button
-                                onClick={handleExport}
-                                className="w-full py-3 px-4 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 border border-indigo-500 active:scale-95"
-                            >
-                                <Download className="w-5 h-5" />
-                                Xuất file bài giảng (.json)
-                            </button>
-                            <div className="h-px bg-gray-100"></div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-between">
+                                    <div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Xuất dữ liệu</span>
+                                        <p className="text-[11px] text-slate-500 mt-1 mb-4">Tải toàn bộ bài giảng xuống máy tính (.json)</p>
+                                    </div>
+                                    <button
+                                        onClick={handleExport}
+                                        className="w-full py-2.5 bg-white border border-indigo-200 text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        Xuất File
+                                    </button>
+                                </div>
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-between">
+                                    <div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Nhập dữ liệu</span>
+                                        <p className="text-[11px] text-slate-500 mt-1 mb-4">Cập nhật nội dung mới từ file giáo viên gửi</p>
+                                    </div>
+                                    <button
+                                        onClick={handleImportClick}
+                                        className="w-full py-2.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Upload className="w-4 h-4" />
+                                        Chọn & Nhập File
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
 
-                    <div className="space-y-4">
-                        <h4 className="font-semibold text-slate-700 flex items-center gap-2">
-                            <Upload className="w-5 h-5 text-purple-600" />
-                            Nhập dữ liệu bài giảng
-                        </h4>
+                    {!isAdmin && (
+                        <div className="space-y-4">
+                            <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                                <Upload className="w-5 h-5 text-purple-600" />
+                                Nhập học liệu mới
+                            </h4>
 
-                        {(isActivated || isAdmin) ? (
-                            <>
-                                <p className="text-sm text-slate-500">
-                                    Chọn file .json giáo viên gửi để nạp học liệu.
-                                </p>
+                            {isActivated ? (
                                 <button
                                     onClick={handleImportClick}
-                                    className="w-full py-3 px-4 bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium rounded-xl transition-colors flex items-center justify-center gap-2 border border-purple-200"
+                                    className="w-full py-4 px-4 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 font-bold rounded-2xl transition-all flex items-center justify-center gap-3 border border-indigo-100 shadow-sm"
                                 >
-                                    <Upload className="w-5 h-5" />
-                                    Chọn file bài giảng (.json)
+                                    <Upload className="w-6 h-6" />
+                                    Chọn file bài giảng từ thầy (.json)
                                 </button>
-                            </>
-                        ) : (
-                            <div className="p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center gap-2 text-slate-400 grayscale">
-                                <Lock className="w-8 h-8 opacity-20" />
-                                <span className="text-xs font-bold">Chức năng đang bị khóa</span>
-                                <span className="text-[10px] text-center">Vui lòng nhập Mã kích hoạt phía trên để mở khóa chức năng này.</span>
-                            </div>
-                        )}
+                            ) : (
+                                <div className="p-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-slate-400 grayscale">
+                                    <div className="p-3 bg-white rounded-full shadow-inner">
+                                        <Lock className="w-6 h-6 opacity-40" />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-xs font-bold text-slate-500 mb-1">Chức năng đang bị khóa</p>
+                                        <p className="text-[10px] leading-relaxed">Vui lòng kích hoạt mã ở phía trên để nạp bài giảng.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept=".json"
-                            onChange={handleFileChange}
-                        />
-                    </div>
-
-                    <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 flex gap-3 items-start">
-                        <ShieldAlert className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
-                        <p className="text-xs text-orange-700 leading-relaxed italic">
+                    <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex gap-4 items-start">
+                        <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                            <ShieldAlert className="w-5 h-5 shrink-0" />
+                        </div>
+                        <p className="text-xs text-blue-700/80 leading-relaxed font-medium italic">
                             {isAdmin
-                                ? "Lưu ý: Bạn có thể cấp mã cho nhiều máy khác nhau. Mỗi mã máy chỉ ứng với một mã kích hoạt duy nhất."
-                                : "Lưu ý: Bạn cần gửi Mã máy cho giáo viên để nhận Mã kích hoạt mới có thể nạp bài giảng."}
+                                ? "Lưu ý cho Quản trị viên: Mỗi mã máy ứng với một mã kích hoạt duy nhất. Bạn có thể lưu tên học sinh để dễ quản lý nhật ký cấp mã."
+                                : "Lưu ý cho Học sinh: Hệ thống cần được kích hoạt bằng mã duy nhất cho máy này để đảm bảo quyền truy cập học liệu chính thức."}
                         </p>
                     </div>
                 </div>
 
-                <div className="p-4 bg-gray-50 text-center border-t border-gray-100">
+                <div className="p-5 bg-slate-50 text-center border-t border-slate-100 flex items-center justify-center gap-6">
                     <button
                         onClick={onClose}
-                        className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
+                        className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
                     >
-                        Đóng cài đặt
+                        Quay lại trang chủ
                     </button>
                 </div>
             </div>
+
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".json"
+                onChange={handleFileChange}
+            />
         </div>
     );
 };
