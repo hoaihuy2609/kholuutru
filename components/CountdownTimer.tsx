@@ -21,6 +21,14 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin }) => {
 
     const [tempDate, setTempDate] = useState(examDate || getDefaultDate());
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     useEffect(() => {
         if (!examDate) return;
@@ -58,8 +66,22 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin }) => {
             {!isEditing ? (
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
                     <div className="flex items-center gap-4">
-                        <div className="p-3.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-lg shadow-indigo-100 animate-float">
-                            <Clock className="w-7 h-7" />
+                        <div className="relative group/clock flex items-center justify-center">
+                            {/* Animated Outer Glow */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/40 to-purple-600/40 rounded-2xl blur-lg group-hover/clock:blur-xl transition-all duration-500 animate-pulse"></div>
+
+                            {/* Clock Container */}
+                            <div className="relative px-4 py-2.5 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl text-white shadow-xl shadow-indigo-500/20 border border-white/20 flex flex-col items-center justify-center min-w-[90px] animate-float">
+                                <div className="text-sm font-black tracking-widest flex items-center gap-0.5">
+                                    <span>{currentTime.getHours().toString().padStart(2, '0')}</span>
+                                    <span className="animate-pulse">:</span>
+                                    <span>{currentTime.getMinutes().toString().padStart(2, '0')}</span>
+                                    <span className="text-[10px] opacity-60 ml-1 font-bold">{currentTime.getSeconds().toString().padStart(2, '0')}</span>
+                                </div>
+                                <div className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-80 mt-0.5">
+                                    Real-time
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <h3 className="font-bold text-slate-800 text-xl flex items-center gap-2">
