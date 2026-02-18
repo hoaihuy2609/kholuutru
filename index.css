@@ -235,8 +235,9 @@ body {
 .animate-typing {
     display: inline-block;
     overflow: hidden;
-    white-space: nowrap;
-    animation: typing 2.5s steps(40, end);
+    white-space: normal;
+    word-break: break-word;
+    animation: typing 2.5s ease-out;
 }
 
 @keyframes float-particle {
