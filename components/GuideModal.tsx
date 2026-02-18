@@ -93,25 +93,9 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
                 </div>
 
                 {/* Right Simulation Panel ("The Clip") */}
-                <div className="flex-1 bg-slate-200 relative overflow-hidden flex items-center justify-center p-4">
-                    {/* Simulated App Background (Blurry version of real app) */}
-                    <div className="absolute inset-0 grayscale-[0.3] opacity-50 bg-slate-300">
-                        <div className="flex h-full w-full">
-                            <div className="w-20 h-full border-r border-slate-400 p-4 space-y-4">
-                                <div className="w-10 h-10 bg-slate-400 rounded-lg" />
-                                <div className="w-10 h-4 bg-slate-400 rounded" />
-                                <div className="w-10 h-4 bg-slate-400 rounded" />
-                            </div>
-                            <div className="flex-1 p-8 grid grid-cols-2 gap-4">
-                                <div className="h-32 bg-white rounded-xl" />
-                                <div className="h-32 bg-white rounded-xl" />
-                                <div className="h-32 bg-white rounded-xl" />
-                            </div>
-                        </div>
-                    </div>
-
+                <div className="flex-1 bg-slate-100 relative overflow-hidden flex items-center justify-center p-8">
                     {/* The Active Simulation Component */}
-                    <div className="relative z-10 w-full max-w-[600px] aspect-video bg-white rounded-2xl shadow-2xl border border-slate-300 overflow-hidden">
+                    <div className="relative z-10 w-full max-w-[640px] aspect-video bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
                         <SimulatedAppView scene={activeScene} />
 
                     </div>
