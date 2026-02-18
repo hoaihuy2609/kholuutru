@@ -304,10 +304,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                         <div className="space-y-4 animate-in fade-in duration-300 pt-2">
                             <h4 className="font-semibold text-slate-700 flex items-center gap-2">
                                 <Download className="w-5 h-5 text-indigo-600" />
-                                Xuất dữ liệu bảo mật
+                                Xuất dữ liệu bài giảng
                             </h4>
-                            <p className="text-sm text-slate-500 italic text-[11px]">
-                                Hệ thống sẽ mã hóa Base64 bằng AES-256. Bạn có thể đặt mật khẩu riêng cho file này.
+                            <p className="text-sm text-slate-500 text-[11px]">
+                                Tải toàn bộ dữ liệu bài giảng xuống thành file JSON để chia sẻ.
                             </p>
                             <button
                                 onClick={handleExport}
@@ -329,7 +329,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                         {(isActivated || isAdmin) ? (
                             <>
                                 <p className="text-sm text-slate-500">
-                                    Chọn file .json đã mở khóa để nạp học liệu.
+                                    Chọn file .json giáo viên gửi để nạp học liệu.
                                 </p>
                                 <button
                                     onClick={handleImportClick}
@@ -361,7 +361,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                         <p className="text-xs text-orange-700 leading-relaxed italic">
                             {isAdmin
                                 ? "Lưu ý: Bạn có thể cấp mã cho nhiều máy khác nhau. Mỗi mã máy chỉ ứng với một mã kích hoạt duy nhất."
-                                : "Lưu ý: File bài giảng được bảo mật nhiều lớp. Bạn cần có cả Mã kích hoạt và Mật khẩu file (nếu có) để xem nội dung."}
+                                : "Lưu ý: Bạn cần gửi Mã máy cho giáo viên để nhận Mã kích hoạt mới có thể nạp bài giảng."}
                         </p>
                     </div>
                 </div>
