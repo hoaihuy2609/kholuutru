@@ -62,12 +62,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
             onShowToast('Bạn không có quyền xuất dữ liệu!', 'error');
             return;
         }
-        const exportPass = window.prompt('Đặt mật khẩu để bảo mật file Base64 (Để trống nếu không muốn mã hóa):');
-        if (exportPass === null) return; // Cancelled
 
         try {
-            exportData(lessons, storedFiles, exportPass || undefined);
-            onShowToast(`Đã xuất dữ liệu ${exportPass ? 'bảo mật ' : ''}thành công!`, 'success');
+            exportData(lessons, storedFiles);
+            onShowToast('Đã xuất dữ liệu thành công!', 'success');
         } catch (error) {
             console.error(error);
             onShowToast('Lỗi khi xuất dữ liệu', 'error');
@@ -91,25 +89,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
             return;
         }
 
-        const proceedImport = async (pass?: string) => {
-            try {
-                await importData(file, pass);
-                onShowToast('Đã nhập dữ liệu thành công! Vui lòng tải lại trang.', 'success');
-                setTimeout(() => window.location.reload(), 1500);
-            } catch (error: any) {
-                if (error.message === 'REQUIRED_PASSWORD' || error.message === 'WRONG_PASSWORD') {
-                    const retryPass = window.prompt(error.message === 'WRONG_PASSWORD' ? 'Sai mật khẩu! Vui lòng nhập lại:' : 'File này đã được bảo mật. Vui lòng nhập mật khẩu để mở khóa:');
-                    if (retryPass !== null) proceedImport(retryPass);
-                } else {
-                    console.error(error);
-                    onShowToast('Lỗi khi nhập dữ liệu: File không hợp lệ', 'error');
-                }
-            } finally {
-                if (fileInputRef.current) fileInputRef.current.value = '';
-            }
-        };
-
-        await proceedImport();
+        try {
+            await importData(file);
+            onShowToast('Đã nhập dữ liệu thành công! Vui lòng tải lại trang.', 'success');
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (error: any) {
+            console.error(error);
+            onShowToast('Lỗi khi nhập dữ liệu: File không hợp lệ', 'error');
+        } finally {
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
     };
 
     const handleVerifyPassword = () => {

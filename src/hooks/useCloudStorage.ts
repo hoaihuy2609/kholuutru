@@ -224,58 +224,35 @@ export const useCloudStorage = () => {
 
 // --- Export / Import Helpers ---
 
-export const exportData = (lessons: Lesson[], files: FileStorage, password?: string) => {
+export const exportData = (lessons: Lesson[], files: FileStorage) => {
     const rawData: ExportData = {
         version: 1.1,
         exportedAt: Date.now(),
         lessons,
-        files,
-        isEncrypted: !!password
+        files
     };
 
-    let finalContent = JSON.stringify(rawData);
-
-    // Nếu có mật khẩu, mã hóa toàn bộ bằng AES-256
-    if (password) {
-        finalContent = CryptoJS.AES.encrypt(finalContent, password).toString();
-    }
+    const finalContent = JSON.stringify(rawData);
 
     const blob = new Blob([finalContent], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = `physivault_secure_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `physivault_data_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 };
 
-export const importData = async (file: File, password?: string) => {
+export const importData = async (file: File) => {
     return new Promise<void>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
                 let content = e.target?.result as string;
-                let data: ExportData;
-
-                // Kiểm tra xem file có bị mã hóa không
-                if (!content.trim().startsWith('{')) {
-                    if (!password) {
-                        throw new Error("REQUIRED_PASSWORD");
-                    }
-                    try {
-                        const bytes = CryptoJS.AES.decrypt(content, password);
-                        const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
-                        if (!decryptedStr) throw new Error("WRONG_PASSWORD");
-                        data = JSON.parse(decryptedStr);
-                    } catch (e) {
-                        throw new Error("WRONG_PASSWORD");
-                    }
-                } else {
-                    data = JSON.parse(content);
-                }
+                let data: ExportData = JSON.parse(content);
 
                 if (!data.lessons || !data.files) {
                     throw new Error("INVALID_FORMAT");
