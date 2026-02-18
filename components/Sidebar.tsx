@@ -13,8 +13,12 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, className }) => {
   return (
     <div className={`w-64 h-full flex flex-col fixed left-0 top-0 z-10 glass border-r border-white/20 shadow-xl backdrop-blur-xl bg-white/80 ${className}`}>
-      <div className="p-6 flex items-center gap-3 border-b border-gray-100/50">
-        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white transform hover:scale-110 hover:rotate-12 transition-all duration-500">
+      <div
+        onClick={() => onSelectGrade(null)}
+        className="p-6 flex items-center gap-3 border-b border-gray-100/50 cursor-pointer group/logo hover:bg-slate-50/80 transition-all active:scale-95"
+        title="Quay về Trang tổng quan"
+      >
+        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white transform group-hover/logo:scale-110 group-hover/logo:rotate-12 transition-all duration-500">
           <Atom className="w-6 h-6 animate-pulse" />
         </div>
         <div>
