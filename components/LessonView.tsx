@@ -324,17 +324,15 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
         isOpen={!!previewFile}
         onClose={() => setPreviewFile(null)}
         title={previewFile?.name || ''}
-        maxWidth="1000px"
+        maxWidth="1200px"
       >
         {previewFile && (
-          <div className="h-[82vh] md:h-[85vh] p-2 md:p-5 bg-gradient-to-b from-slate-50/50 to-slate-100/30">
-            <div className="w-full h-full bg-white rounded-xl overflow-hidden shadow-2xl border border-slate-200/70">
-              <iframe
-                src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`}
-                className="w-full h-full border-0"
-                title="PDF Preview"
-              />
-            </div>
+          <div className="w-full h-full bg-white">
+            <iframe
+              src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`}
+              className="w-full h-[85vh] md:h-[88vh] border-0 block"
+              title="PDF Preview"
+            />
           </div>
         )}
       </Modal>
