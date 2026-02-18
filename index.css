@@ -655,3 +655,12 @@ body {
     left: -4px;
     cursor: sw-resize;
 }
+
+/* Hide sidebar when modal is in fullscreen mode */
+body.modal-fullscreen-active .md\:flex.fixed.left-0 {
+    display: none !important;
+}
+
+body.modal-fullscreen-active .md\:ml-64 {
+    margin-left: 0 !important;
+}

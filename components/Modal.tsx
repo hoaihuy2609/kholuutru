@@ -26,11 +26,21 @@ const Modal: React.FC<ModalProps> = ({
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
+            document.body.classList.remove('modal-fullscreen-active');
         }
         return () => {
             document.body.style.overflow = 'unset';
+            document.body.classList.remove('modal-fullscreen-active');
         };
     }, [initialFullScreen, isOpen]);
+
+    useEffect(() => {
+        if (isMaximized && isOpen) {
+            document.body.classList.add('modal-fullscreen-active');
+        } else {
+            document.body.classList.remove('modal-fullscreen-active');
+        }
+    }, [isMaximized, isOpen]);
 
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {

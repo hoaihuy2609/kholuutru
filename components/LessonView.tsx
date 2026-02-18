@@ -129,7 +129,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
   }, [files]);
 
   return (
-    <div className="space-y-8 animate-fade-in relative z-0 pb-10">
+    <div className="space-y-8 animate-fade-in relative pb-10">
       {/* Background Decoration */}
       <div className="absolute top-0 right-[-10%] w-[400px] h-[400px] bg-purple-100/40 rounded-full blur-[80px] -z-10 animate-float opacity-50"></div>
       <div className="absolute top-[20%] left-[-10%] w-[300px] h-[300px] bg-blue-100/40 rounded-full blur-[80px] -z-10 animate-float opacity-50" style={{ animationDelay: '2s' }}></div>
