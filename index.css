@@ -222,6 +222,23 @@ body {
     }
 }
 
+@keyframes typing {
+    from {
+        width: 0
+    }
+
+    to {
+        width: 100%
+    }
+}
+
+.animate-typing {
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    animation: typing 2s steps(20, end);
+}
+
 /* ==================== Utility Classes & Animations ==================== */
 .glass {
     background: var(--surface-glass);

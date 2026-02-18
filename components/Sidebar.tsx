@@ -7,11 +7,10 @@ interface SidebarProps {
   onSelectGrade: (grade: GradeLevel | null) => void;
   onOpenSettings?: () => void;
   onOpenGuide: () => void;
-  onOpenTour: () => void;
   className?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, onOpenTour, className }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, className }) => {
   return (
     <div className={`w-64 h-full flex flex-col fixed left-0 top-0 z-10 glass border-r border-white/20 shadow-xl backdrop-blur-xl bg-white/80 ${className}`}>
       <div className="p-6 flex items-center gap-3 border-b border-gray-100/50">
@@ -33,23 +32,15 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             }`}
         >
           <Home className={`w-5 h-5 transition-colors ${currentGrade === null ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-          Tổng quan
+          Tổng quan Dashboard
         </button>
 
         <button
           onClick={onOpenGuide}
-          className="w-full flex items-center gap-3 px-4 py-2 text-xs font-semibold rounded-xl transition-all duration-300 group text-slate-500 hover:bg-slate-50 border border-transparent"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-50 to-indigo-100/50 text-indigo-700 hover:from-indigo-100 hover:to-indigo-200 transition-all duration-300 border border-indigo-100 shadow-sm group"
         >
-          <BookOpen className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
-          <span>Tài liệu hướng dẫn</span>
-        </button>
-
-        <button
-          onClick={onOpenTour}
-          className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 rounded-xl transition-all duration-300 border border-indigo-100 shadow-sm group"
-        >
-          <Lightbulb className="w-5 h-5 text-indigo-600 animate-bounce" />
-          <span className="font-bold">Khám phá UI</span>
+          <BookOpen className="w-5 h-5 text-indigo-600 group-hover:scale-110 transition-transform" />
+          <span className="font-bold">Hướng dẫn sử dụng</span>
         </button>
 
         <div className="pt-6 pb-2">

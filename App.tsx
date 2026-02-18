@@ -11,7 +11,6 @@ import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings, Plus } fro
 
 import SettingsModal from './components/SettingsModal';
 import GuideModal from './components/GuideModal';
-import InteractiveTour from './components/InteractiveTour';
 
 interface ToastMessage {
   id: string;
@@ -35,7 +34,6 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
-  const [isTourOpen, setIsTourOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const toggleAdmin = (status: boolean) => {
@@ -312,10 +310,6 @@ function App() {
             setIsGuideOpen(true);
             setIsMobileMenuOpen(false);
           }}
-          onOpenTour={() => {
-            setIsTourOpen(true);
-            setIsMobileMenuOpen(false);
-          }}
           className="w-full"
         />
       </div>
@@ -330,7 +324,6 @@ function App() {
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
-        onOpenTour={() => setIsTourOpen(true)}
         className="hidden md:flex"
       />
 
@@ -345,20 +338,8 @@ function App() {
 
       <GuideModal
         isOpen={isGuideOpen}
-        onClose={() => {
-          setIsGuideOpen(false);
-          // Offer to start the interactive tour after closing the static guide
-          if (window.confirm("Bạn có muốn trải nghiệm chuyến tham quan thực tế (Interactive Tour) trên giao diện không?")) {
-            setIsTourOpen(true);
-          }
-        }}
-      />
-
-      {/* Interactive Tour */}
-      <InteractiveTour
-        isOpen={isTourOpen}
-        onClose={() => setIsTourOpen(false)}
-        isAdminMode={isAdmin}
+        onClose={() => setIsGuideOpen(false)}
+        isAdmin={isAdmin}
       />
 
       {/* Main Content */}
