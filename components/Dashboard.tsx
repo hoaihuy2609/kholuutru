@@ -160,13 +160,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
             </div>
 
             <div className="absolute -inset-10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl -z-10 opacity-60"></div>
-
-            <div className="absolute -top-6 -right-6 animate-float text-indigo-500 opacity-80" style={{ animationDelay: '0.5s' }}>
-              <Atom className="w-16 h-16 drop-shadow-lg" />
-            </div>
-            <div className="absolute -bottom-6 -left-6 animate-float text-purple-500 opacity-80" style={{ animationDelay: '1.5s' }}>
-              <Zap className="w-14 h-14 drop-shadow-lg" />
-            </div>
           </div>
         </div>
       </div>
