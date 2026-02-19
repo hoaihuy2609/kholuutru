@@ -91,6 +91,10 @@ const Chatbot: React.FC = () => {
                     addMessage(`Xác thực thành công! Mã kích hoạt của bạn là:`, 'bot');
                     addMessage(result.key, 'bot');
                     addMessage('Bạn hãy copy mã này và dán vào phần "Mở khóa học viên" trong Cài đặt nhé.', 'bot');
+
+                    // Lưu SĐT vào bộ nhớ tạm để bên Settings tự điền
+                    localStorage.setItem('pv_pending_sdt', userText);
+
                     setStep('done');
                 } else {
                     addMessage(result.msg || 'Không tìm thấy thông tin của bạn. Bạn đã đóng học phí chưa nhỉ?', 'bot');

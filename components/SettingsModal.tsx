@@ -32,9 +32,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
             const history = localStorage.getItem('pv_activation_history');
             if (history) setActivationHistory(JSON.parse(history));
 
-            // Lấy SĐT đã kích hoạt nếu có
+            // Lấy SĐT đã kích hoạt hoặc SĐT đang chờ (từ chatbot)
             const savedSdt = localStorage.getItem('pv_activated_sdt');
-            if (savedSdt) setStudentSdt(savedSdt);
+            const pendingSdt = localStorage.getItem('pv_pending_sdt');
+            if (pendingSdt) setStudentSdt(pendingSdt);
+            else if (savedSdt) setStudentSdt(savedSdt);
         }
     }, [isOpen]);
 
