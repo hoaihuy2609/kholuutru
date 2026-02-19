@@ -15,18 +15,18 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
 
     const botScenes = [
         {
-            title: "CÁCH 1: QUA CHATBOT (Tự động)",
-            desc: "Bước 1: Vào Cài đặt -> Copy mã máy (ID).",
-            icon: <Monitor className="w-5 h-5" />
-        },
-        {
-            title: "Bước 2: Chat lấy mã",
-            desc: "Nhấn icon Chatbot góc phải, nhập SĐT & ID máy để nhận mã PV-...",
+            title: "BƯỚC 1: MỞ CHATBOT",
+            desc: "Nhấn vào biểu tượng Chatbot màu tím ở ngay góc phải màn hình.",
             icon: <Atom className="w-5 h-5 text-indigo-500" />
         },
         {
-            title: "Bước 3: Mở khóa",
-            desc: "Nhập SĐT & Mã nhận được vào Cài đặt để kích hoạt.",
+            title: "BƯỚC 2: NHẬN MÃ TỰ ĐỘNG",
+            desc: "Nhập đúng SĐT của bạn. Bot sẽ tự nhận diện máy và cấp mã PV-...",
+            icon: <Phone className="w-5 h-5 text-blue-500" />
+        },
+        {
+            title: "BƯỚC 3: MỞ KHÓA APP",
+            desc: "Vào Cài đặt -> Nhập SĐT và dán mã vừa nhận được để vào học.",
             icon: <ShieldCheck className="w-5 h-5 text-emerald-500" />
         }
     ];
@@ -211,57 +211,86 @@ const SimulatedAppView: React.FC<{ scene: number, guidePath: 'bot' | 'manual' }>
 
                         <div className="p-5 space-y-4">
                             {/* Path-Specific Visuals */}
-                            {guidePath === 'bot' && scene === 1 ? (
-                                <div className="p-4 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-200 text-white space-y-3 animate-bounce">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-white/20 p-2 rounded-xl">
-                                            <Atom className="w-5 h-5" />
+                            {guidePath === 'bot' ? (
+                                scene === 0 || scene === 1 ? (
+                                    <div className="p-4 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-200 text-white space-y-3 animate-bounce">
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-white/20 p-2 rounded-xl">
+                                                <Atom className="w-5 h-5" />
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase">
+                                                {scene === 0 ? 'NHẤN VÀO BOT' : 'ĐANG NHẬN MÃ...'}
+                                            </span>
                                         </div>
-                                        <span className="text-[10px] font-black uppercase">Đang lấy mã tự động...</span>
+                                        {scene === 1 && (
+                                            <div className="bg-white/10 p-2 rounded-xl text-[8px] font-mono leading-tight">
+                                                Nhập SĐT để bot tự lấy mã ID máy này...
+                                            </div>
+                                        )}
+                                        <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
+                                            <div className="h-full bg-white animate-progress" />
+                                        </div>
                                     </div>
-                                    <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
-                                        <div className="h-full bg-white animate-progress" />
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="p-3 rounded-2xl border-2 border-emerald-400 bg-emerald-50 shadow-lg">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Phone className="w-3 h-3 text-emerald-600" />
+                                                <div className="h-1.5 w-20 rounded bg-emerald-200" />
+                                            </div>
+                                            <div className="h-8 bg-white rounded-xl border border-slate-100 flex items-center px-3 text-[10px] font-bold text-slate-400">
+                                                09xx-xxx-xxx
+                                            </div>
+                                        </div>
+                                        <div className="p-3 rounded-2xl border-2 border-emerald-400 bg-emerald-50 shadow-lg">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                                                <div className="h-1.5 w-24 rounded bg-emerald-200" />
+                                            </div>
+                                            <div className="h-8 bg-white rounded-xl border border-slate-100 flex items-center px-3 text-[10px] font-mono font-bold text-emerald-600">
+                                                PV-XXXX-XXXX
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                )
                             ) : (
+                                /* MANUAL PATH VISUALS */
                                 <div className="space-y-4">
-                                    {/* SĐT Input Field (The real one) */}
-                                    <div className={`p-3 rounded-2xl border-2 transition-all ${scene === 2 || (guidePath === 'manual' && scene === 0) ? 'border-amber-400 bg-amber-50 shadow-lg' : 'border-slate-100'}`}>
+                                    <div className={`p-3 rounded-2xl border-2 transition-all ${scene === 0 ? 'border-blue-400 bg-blue-50' : scene === 2 ? 'border-emerald-400 bg-emerald-50 shadow-lg' : 'border-slate-100'}`}>
                                         <div className="flex items-center gap-2 mb-2">
-                                            <Phone className={`w-3 h-3 ${scene === 2 ? 'text-amber-600' : 'text-slate-400'}`} />
-                                            <div className={`h-1.5 w-20 rounded ${scene === 2 ? 'bg-amber-200' : 'bg-slate-200'}`} />
+                                            <Phone className={`w-3 h-3 ${scene === 2 ? 'text-emerald-600' : 'text-slate-400'}`} />
+                                            <div className={`h-1.5 w-20 rounded ${scene === 2 ? 'bg-emerald-200' : 'bg-slate-200'}`} />
                                         </div>
                                         <div className="h-8 bg-white rounded-xl border border-slate-100 flex items-center px-3 text-[10px] font-bold text-slate-400 italic">
-                                            {scene === 2 ? '09xx-xxx-xxx' : 'Nhập SĐT của bạn...'}
+                                            {scene === 2 ? '09xx-xxx-xxx' : 'Nhập SĐT...'}
                                         </div>
                                     </div>
 
-                                    {/* Key Input Field */}
-                                    <div className={`p-3 rounded-2xl border-2 transition-all ${scene === 2 ? 'border-emerald-400 bg-emerald-50 shadow-lg' : 'border-slate-100'}`}>
+                                    <div className={`p-3 rounded-2xl border-2 transition-all ${scene === 1 || scene === 2 ? 'border-emerald-400 bg-emerald-50 shadow-lg' : 'border-slate-100'}`}>
                                         <div className="flex items-center gap-2 mb-2">
-                                            <ShieldCheck className={`w-3 h-3 ${scene === 2 ? 'text-emerald-600' : 'text-slate-400'}`} />
+                                            <ShieldCheck className={`w-3 h-3 ${scene >= 1 ? 'text-emerald-600' : 'text-slate-400'}`} />
                                             <div className="h-1.5 w-24 rounded bg-slate-100" />
                                         </div>
                                         <div className="h-8 bg-white rounded-xl border border-slate-100 flex items-center px-3 text-[10px] font-mono font-bold text-emerald-600">
-                                            {scene === 2 ? 'PV-XXXX-XXXX' : 'PV-...'}
+                                            {scene >= 1 ? 'PV-XXXX-XXXX' : 'PV-...'}
                                         </div>
-                                    </div>
-
-                                    {/* Activate Button */}
-                                    <div className={`w-full py-3 rounded-2xl text-[10px] font-black text-center transition-all ${scene === 2 ? 'bg-amber-600 text-white shadow-lg shadow-amber-200 scale-95' : 'bg-slate-100 text-slate-400'}`}>
-                                        MỞ KHÓA NGAY
                                     </div>
                                 </div>
                             )}
 
+                            {/* Activate Button */}
+                            <div className={`w-full py-3 rounded-2xl text-[10px] font-black text-center transition-all ${scene === 2 ? 'bg-amber-600 text-white shadow-lg shadow-amber-200 scale-95' : 'bg-slate-100 text-slate-400'}`}>
+                                MỞ KHÓA NGAY
+                            </div>
+
                             {/* ID Section (The real one) */}
-                            <div className={`mt-4 pt-4 border-t border-slate-100 flex items-center justify-between px-1 ${scene === 0 ? 'animate-pulse' : ''}`}>
+                            <div className={`mt-4 pt-4 border-t border-slate-100 flex items-center justify-between px-1 ${guidePath === 'manual' && scene === 0 ? 'animate-pulse' : ''}`}>
                                 <div className="flex items-center gap-2">
                                     <Monitor className="w-3 h-3 text-slate-400" />
                                     <div className="h-1.5 w-16 bg-slate-200 rounded" />
                                 </div>
-                                <div className={`text-[8px] font-black px-2 py-1 rounded transition-all ${scene === 0 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                                    {scene === 0 ? 'VỪA COPY' : 'ID: ABC-XYZ'}
+                                <div className={`text-[8px] font-black px-2 py-1 rounded transition-all ${guidePath === 'manual' && scene === 0 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                    {guidePath === 'manual' && scene === 0 ? 'COPY GỬI THẦY' : 'ID: ABC-XYZ'}
                                 </div>
                             </div>
                         </div>
