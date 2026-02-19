@@ -394,8 +394,8 @@ function App() {
           />
         ))}
       </div>
-      {/* Chatbot Component */}
-      <Chatbot />
+      {/* Chatbot Component - Only show on Dashboard (Overview) */}
+      {!currentGrade && !showAdminDashboard && <Chatbot />}
     </div>
   );
 }
