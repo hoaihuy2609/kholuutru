@@ -53,21 +53,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
         gradient: 'from-violet-500 to-fuchsia-600',
         shadow: 'shadow-fuchsia-500/20',
         bg: 'bg-fuchsia-50',
-        neon: 'text-fuchsia-400'
+        neon: 'text-fuchsia-600'
       };
       case GradeLevel.Grade11: return {
         icon: Zap,
         gradient: 'from-blue-500 to-cyan-500',
         shadow: 'shadow-cyan-500/20',
         bg: 'bg-cyan-50',
-        neon: 'text-cyan-400'
+        neon: 'text-blue-600'
       };
       case GradeLevel.Grade10: return {
         icon: Activity,
         gradient: 'from-emerald-500 to-teal-600',
         shadow: 'shadow-teal-500/20',
         bg: 'bg-teal-50',
-        neon: 'text-teal-400'
+        neon: 'text-teal-600'
       };
       default: return {
         icon: BookOpen,
@@ -277,7 +277,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
 
                   {/* Card Body */}
                   <div className="p-6 flex-1 flex flex-col">
-                    <h3 className={`text-2xl font-bold text-slate-800 mb-2 transition-all ${neon} group-hover:animate-neon-glow`}>
+                    <h3 className={`text-2xl font-bold mb-2 transition-all ${neon} group-hover:animate-neon-glow`}>
                       {grade.title}
                     </h3>
                     <p className="text-sm text-slate-500 line-clamp-3 mb-6 flex-1 leading-relaxed">
