@@ -237,54 +237,54 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
                     {/* Activation Section (Only for Students if not activated) */}
                     {!isAdmin && !isActivated && (
-                        <div id="tour-activation-section" className="p-5 bg-amber-50 rounded-2xl border border-amber-200 space-y-4 animate-pulse-subtle">
-                            <div className="flex items-center gap-2 text-amber-700 font-bold text-sm">
-                                <ShieldAlert className="w-5 h-5" />
-                                Yêu cầu kích hoạt từ giáo viên
+                        <div id="tour-activation-section" className="p-6 bg-amber-50/50 rounded-3xl border border-amber-200/40 space-y-6">
+                            <div className="text-center space-y-2">
+                                <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
+                                    <KeyRound className="w-6 h-6" />
+                                </div>
+                                <h4 className="font-bold text-amber-800 text-lg">Kích hoạt tài khoản</h4>
+                                <p className="text-xs text-amber-600/80 px-4 leading-relaxed">
+                                    Hệ thống đã tự động nhận diện thiết bị. Vui lòng dán mã kích hoạt nhận từ <b>Bot PhysiVault</b> để bắt đầu học.
+                                </p>
                             </div>
-                            <div className="space-y-2">
-                                <span className="text-[10px] text-amber-800 font-bold uppercase">Mã máy của bạn:</span>
+
+                            <div className="space-y-4">
                                 <div className="flex gap-2">
-                                    <code className="flex-1 p-3 bg-white rounded-lg border border-amber-200 text-sm font-mono font-bold text-center select-all">
-                                        {myMachineId}
-                                    </code>
-                                    <button
-                                        onClick={() => { navigator.clipboard.writeText(myMachineId); onShowToast('Đã copy mã máy!', 'success'); }}
-                                        className="px-4 bg-white rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-100 font-bold text-xs"
-                                    >
-                                        Copy
-                                    </button>
-                                </div>
-                                <p className="text-xs text-amber-600 italic">Gửi mã 12 ký tự phía trên cho thầy để nhận Mã kích hoạt khóa học.</p>
-                            </div>
-                            <div className="space-y-3">
-                                <div className="space-y-1">
-                                    <span className="text-[10px] text-amber-800 font-bold uppercase ml-1">Số điện thoại đã đăng ký:</span>
-                                    <input
-                                        type="tel"
-                                        value={studentSdt}
-                                        onChange={(e) => setStudentSdt(e.target.value)}
-                                        placeholder="Nhập SĐT để xác nhận chính chủ..."
-                                        className="w-full px-4 py-3 text-sm rounded-xl border border-amber-200 outline-none focus:ring-4 focus:ring-amber-500/20 bg-white"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <span className="text-[10px] text-amber-800 font-bold uppercase ml-1">Mã kích hoạt từ Bot:</span>
-                                    <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-400">
+                                            <ShieldCheck className="w-5 h-5" />
+                                        </div>
                                         <input
                                             type="text"
                                             value={studentKeyInput}
                                             onChange={(e) => setStudentKeyInput(e.target.value.toUpperCase())}
                                             placeholder="Dán mã PV-... vào đây"
-                                            className="flex-1 px-4 py-3 text-sm rounded-xl border border-amber-200 outline-none focus:ring-4 focus:ring-amber-500/20 bg-white"
+                                            className="w-full pl-12 pr-4 py-4 text-base font-mono font-bold rounded-2xl border-2 border-amber-200/50 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 bg-white shadow-sm transition-all"
                                         />
-                                        <button
-                                            onClick={handleActivate}
-                                            className="px-6 py-3 bg-amber-600 text-white text-sm font-bold rounded-xl hover:bg-amber-700 transition-colors shadow-md shadow-amber-200"
-                                        >
-                                            Mở khóa
-                                        </button>
                                     </div>
+                                    <button
+                                        onClick={handleActivate}
+                                        className="px-8 py-4 bg-amber-600 text-white font-bold rounded-2xl hover:bg-amber-700 transition-all shadow-lg shadow-amber-200 active:scale-95"
+                                    >
+                                        Mở khóa
+                                    </button>
+                                </div>
+
+                                {/* Support Info (Minimalist) */}
+                                <div className="flex items-center justify-between px-2 text-[10px] font-medium text-amber-600/60 font-mono">
+                                    <div className="flex items-center gap-1.5 cursor-help group relative">
+                                        <Monitor className="w-3 h-3" />
+                                        <span>ID: {myMachineId}</span>
+                                        <div className="absolute bottom-full left-0 mb-2 p-2 bg-slate-800 text-white rounded text-[9px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                                            Mã máy định danh duy nhất
+                                        </div>
+                                    </div>
+                                    {studentSdt && (
+                                        <div className="flex items-center gap-1.5">
+                                            <UserCheck className="w-3 h-3" />
+                                            <span>SĐT: {studentSdt}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
