@@ -265,6 +265,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                             </div>
 
                             <div className="space-y-4">
+                                {/* SĐT Input (Visible if not auto-filled or needs change) */}
+                                <div className="relative">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-400">
+                                        <Phone className="w-5 h-5" />
+                                    </div>
+                                    <input
+                                        type="tel"
+                                        value={studentSdt}
+                                        onChange={(e) => setStudentSdt(e.target.value)}
+                                        placeholder="Nhập Số điện thoại của bạn"
+                                        className="w-full pl-12 pr-4 py-4 text-base font-bold rounded-2xl border-2 border-amber-200/50 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 bg-white shadow-sm transition-all"
+                                    />
+                                    {localStorage.getItem('pv_pending_sdt') && (
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                            <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded-lg font-bold">Tự động điền từ Bot</span>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-400">
@@ -295,12 +314,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                             Mã máy định danh duy nhất
                                         </div>
                                     </div>
-                                    {studentSdt && (
-                                        <div className="flex items-center gap-1.5">
-                                            <UserCheck className="w-3 h-3" />
-                                            <span>SĐT: {studentSdt}</span>
-                                        </div>
-                                    )}
+                                    <div className="text-[9px] italic opacity-70">
+                                        * Nhập đúng SĐT để khớp với mã kích hoạt
+                                    </div>
                                 </div>
                             </div>
                         </div>
