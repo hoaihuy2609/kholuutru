@@ -12,43 +12,23 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
     const [activeScene, setActiveScene] = useState<number>(0);
     const [isPlaying, setIsPlaying] = useState(true);
 
-    const studentScenes = [
+    const scenes = [
         {
             title: "Bước 1: Lấy Mã Máy (ID)",
-            desc: "Vào Cài đặt -> Copy mã máy định danh gửi cho thầy hoặc nhập vào Bot.",
-            icon: <Monitor className="w-5 h-5" />
+            desc: "Vào Cài đặt -> Copy dãy ID máy gửi cho thầy hoặc nhập vào Bot.",
+            icon: <Monitor className="w-5 h-5 text-amber-500" />
         },
         {
             title: "Bước 2: Chat lấy mã tự động",
-            desc: "Nhấn vào biểu tượng Chatbot ở góc phải để đăng ký SĐT và nhận mã PV-...",
-            icon: <Atom className="w-5 h-5" />
+            desc: "Nhấn biểu tượng Chatbot ở góc phải màn hình để nhận mã PV-...",
+            icon: <Atom className="w-5 h-5 text-indigo-500" />
         },
         {
-            title: "Bước 3: Nhập SĐT & Mở khóa",
-            desc: "Nhập SĐT và dán mã nhận được vào Cài đặt để bắt đầu học tập.",
-            icon: <ShieldCheck className="w-5 h-5" />
+            title: "Bước 3: Mở khóa & Học tập",
+            desc: "Nhập SĐT của bạn và dán mã kích hoạt vào App để bắt đầu bài học.",
+            icon: <ShieldCheck className="w-5 h-5 text-emerald-500" />
         }
     ];
-
-    const adminScenes = [
-        {
-            title: "Quản lý Học viên",
-            desc: "Vào Dashboard để xem thống kê, tìm kiếm và quản lý danh sách lớp.",
-            icon: <LayoutDashboard className="w-5 h-5" />
-        },
-        {
-            title: "Trạm cấp mã thủ công",
-            desc: "Cấp mã 'chay' cho học sinh nhanh chóng khi không dùng tới Chatbot.",
-            icon: <KeyRound className="w-5 h-5" />
-        },
-        {
-            title: "Đồng bộ dữ liệu mây",
-            desc: "Mọi thay đổi trên Web sẽ tự động đồng bộ lên Google Sheets bí mật.",
-            icon: <Upload className="w-5 h-5" />
-        }
-    ];
-
-    const scenes = isAdmin ? adminScenes : studentScenes;
 
     useEffect(() => {
         if (!isOpen || !isPlaying) return;
@@ -211,30 +191,36 @@ const SimulatedAppView: React.FC<{ scene: number }> = ({ scene }) => {
                                     </div>
                                 </div>
 
-                                {/* Scene 2: Activation Input */}
-                                <div className={`p-3 rounded-xl border-2 transition-all ${scene === 1 ? 'border-green-400 bg-green-50 shadow-lg' : 'border-slate-100'}`}>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <ShieldCheck className={`w-4 h-4 ${scene === 1 ? 'text-green-600' : 'text-slate-400'}`} />
-                                        <div className="h-2 w-24 bg-slate-200 rounded" />
+                                {/* Scene 2: Chatbot Interaction highlighting */}
+                                <div className={`p-3 rounded-xl border-2 transition-all ${scene === 1 ? 'border-indigo-400 bg-indigo-50 shadow-lg scale-105' : 'border-slate-100 opacity-50'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white animate-bounce">
+                                            <Atom className="w-6 h-6" />
+                                        </div>
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-2 w-20 bg-indigo-200 rounded" />
+                                            <div className="h-1.5 w-32 bg-slate-200 rounded" />
+                                        </div>
                                     </div>
-                                    <div className="flex gap-1.5">
-                                        <div className="flex-1 h-8 bg-white rounded border border-slate-200 flex items-center px-2">
-                                            {scene === 1 && <span className="text-[10px] text-green-700 font-bold overflow-hidden whitespace-nowrap border-r-2 border-green-500 animate-typing">PV-XXXXXXXXXXXX</span>}
-                                        </div>
-                                        <div className={`px-4 flex items-center h-8 rounded text-[10px] font-bold ${scene === 1 ? 'bg-green-600 text-white shadow-md' : 'bg-slate-200 text-slate-400'}`}>
-                                            MỞ KHÓA
-                                        </div>
+                                    <div className="mt-3 py-2 px-3 bg-white rounded-lg border border-indigo-100 text-[9px] font-bold text-indigo-600 text-center uppercase tracking-widest">
+                                        Đang trò chuyện với Bot...
                                     </div>
                                 </div>
 
-                                {/* Scene 3: Import File */}
-                                <div className={`p-3 rounded-xl border-2 transition-all ${scene === 2 ? 'border-indigo-400 bg-indigo-50 shadow-lg' : 'border-slate-100'}`}>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Upload className={`w-4 h-4 ${scene === 2 ? 'text-indigo-600' : 'text-slate-400'}`} />
-                                        <div className="h-2 w-24 bg-slate-200 rounded" />
-                                    </div>
-                                    <div className={`w-full h-8 rounded flex items-center justify-center gap-2 border-dashed border-2 transition-all ${scene === 2 ? 'bg-white border-indigo-400 text-indigo-600' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
-                                        <div className="h-1 w-10 bg-slate-200 rounded" />
+                                {/* Scene 3: SĐT + Key Activation */}
+                                <div className={`p-3 rounded-xl border-2 transition-all ${scene === 2 ? 'border-emerald-400 bg-emerald-50 shadow-lg scale-105' : 'border-slate-100'}`}>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <Phone className="w-3 h-3 text-emerald-600" />
+                                            <div className="h-6 flex-1 bg-white border border-emerald-100 rounded flex items-center px-2 text-[9px] font-bold text-slate-400">09xx-xxx-xxx</div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                                            <div className="h-6 flex-1 bg-white border border-emerald-100 rounded flex items-center px-2 text-[9px] font-bold text-emerald-600">PV-XXXX-XXXX</div>
+                                        </div>
+                                        <div className="w-full h-8 bg-emerald-600 text-white rounded-xl text-[9px] font-black flex items-center justify-center shadow-lg shadow-emerald-200">
+                                            MỞ KHÓA NGAY
+                                        </div>
                                     </div>
                                 </div>
                             </div>
