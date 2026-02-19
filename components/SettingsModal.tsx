@@ -219,9 +219,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                 </div>
                             ) : (
                                 <p className="text-xs text-slate-500 leading-relaxed italic">
-                                    {isAdmin
-                                        ? 'Bạn đang ở chế độ Quản trị: Có toàn quyền thêm, sửa, xóa nội dung và cấp mã kích hoạt cho học sinh.'
-                                        : 'Bạn đang ở chế độ Học sinh: Các tính năng nạp dữ liệu sẽ bị hạn chế cho đến khi bạn nhập mã kích hoạt.'}
+                                    {isAdmin ? (
+                                        'Bạn đang ở chế độ Quản trị: Có toàn quyền thêm, sửa, xóa nội dung và cấp mã kích hoạt cho học sinh.'
+                                    ) : isActivated ? (
+                                        <span className="text-green-600 font-bold flex items-center gap-1">
+                                            <ShieldCheck className="w-3 h-3" /> Hệ thống đã được kích hoạt chính chủ. Bạn có thể nạp bài giảng mới.
+                                        </span>
+                                    ) : (
+                                        'Bạn đang ở chế độ Học sinh: Các tính năng nạp dữ liệu sẽ bị hạn chế cho đến khi bạn nhập mã kích hoạt.'
+                                    )}
                                 </p>
                             )}
                         </div>
