@@ -3,6 +3,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone } from 'lucide-react';
 import { useCloudStorage, exportData, importData, getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
 
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-48QJxzX_uwaXF2ODDpoJN508ZrSGAh6rwbolMbIPWnGnHqUvB6FtxDR8wrGBg4kf/exec";
+
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -44,28 +46,49 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
     if (!isOpen) return null;
 
-    const handleGenerateKey = () => {
+    const handleGenerateKey = async () => {
         const targetId = adminTargetId.trim();
         const name = studentName.trim();
+        const sdt = adminTargetSdt.trim();
+
         if (!targetId) {
             onShowToast('Vui lòng nhập Mã máy của học sinh', 'warning');
             return;
         }
-        if (!adminTargetSdt.trim()) {
+        if (!sdt) {
             onShowToast('Vui lòng nhập SĐT học sinh để tạo mã chính xác!', 'warning');
             return;
         }
-        // Admin tạo mã tay (bao gồm SĐT để khớp với logic mới)
-        const key = generateActivationKey(targetId, adminTargetSdt.trim());
+
+        // Tạo mã kích hoạt
+        const key = generateActivationKey(targetId, sdt);
         setGeneratedKey(key);
 
-        // Tránh trùng lặp: lọc bỏ ID cũ nếu đã tồn tại và đưa ID mới lên đầu
+        // ĐỒNG BỘ LÊN GOOGLE SHEETS
+        try {
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'add',
+                    sdt: sdt,
+                    name: name || 'Học sinh tự tạo',
+                    machineId: targetId,
+                    key: key
+                })
+            });
+            onShowToast('Đã tạo mã và đồng bộ lên hệ thống!', 'success');
+        } catch (error) {
+            console.error(error);
+            onShowToast('Đã tạo mã nhưng lỗi đồng bộ lên Sheets (Kiểm tra lại Script)', 'warning');
+        }
+
+        // Lưu vào lịch sử cục bộ
         const filteredHistory = activationHistory.filter(h => h.id !== targetId);
         const newHistory = [{ id: targetId, name: name || 'Học sinh mới', key, date: Date.now() }, ...filteredHistory].slice(0, 50);
 
         setActivationHistory(newHistory);
         localStorage.setItem('pv_activation_history', JSON.stringify(newHistory));
-        onShowToast('Đã tạo mã kích hoạt thành công!', 'success');
+
         setStudentName('');
         setAdminTargetSdt('');
     };
