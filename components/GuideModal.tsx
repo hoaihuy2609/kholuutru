@@ -25,8 +25,8 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
             icon: <Phone className="w-5 h-5 text-blue-500" />
         },
         {
-            title: "BƯỚC 3: MỞ KHÓA APP",
-            desc: "Vào Cài đặt -> Nhập SĐT và dán mã vừa nhận được để vào học.",
+            title: "BƯỚC 3: DÁN MÃ KÍCH HOẠT",
+            desc: "Vào Cài đặt -> Dán mã PV-... vào ô. Số điện thoại sẽ tự động hiện ra.",
             icon: <ShieldCheck className="w-5 h-5 text-emerald-500" />
         }
     ];
@@ -238,8 +238,9 @@ const SimulatedAppView: React.FC<{ scene: number, guidePath: 'bot' | 'manual' }>
                                                 <Phone className="w-3 h-3 text-emerald-600" />
                                                 <div className="h-1.5 w-20 rounded bg-emerald-200" />
                                             </div>
-                                            <div className="h-8 bg-white rounded-xl border border-slate-100 flex items-center px-3 text-[10px] font-bold text-slate-400">
-                                                09xx-xxx-xxx
+                                            <div className="h-8 bg-white rounded-xl border border-slate-100 flex items-center justify-between px-3 text-[10px] font-bold text-slate-400">
+                                                <span>09xx-xxx-xxx</span>
+                                                <span className="text-[7px] bg-emerald-100 text-emerald-600 px-1 rounded">TỰ ĐỘNG</span>
                                             </div>
                                         </div>
                                         <div className="p-3 rounded-2xl border-2 border-emerald-400 bg-emerald-50 shadow-lg">
