@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard } from 'lucide-react';
+import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone } from 'lucide-react';
 import { useCloudStorage, exportData, importData, getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
 
 interface SettingsModalProps {
@@ -23,6 +23,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     const [studentKeyInput, setStudentKeyInput] = useState('');
     const [studentSdt, setStudentSdt] = useState(''); // New state for SĐT
     const [adminTargetId, setAdminTargetId] = useState('');
+    const [adminTargetSdt, setAdminTargetSdt] = useState('');
     const [studentName, setStudentName] = useState('');
     const [generatedKey, setGeneratedKey] = useState('');
     const [activationHistory, setActivationHistory] = useState<{ id: string, name: string, key: string, date: number }[]>([]);
@@ -50,8 +51,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
             onShowToast('Vui lòng nhập Mã máy của học sinh', 'warning');
             return;
         }
-        // Admin tạo mã tay (thường không cần SĐT hoặc nhập sau)
-        const key = generateActivationKey(targetId, "");
+        if (!adminTargetSdt.trim()) {
+            onShowToast('Vui lòng nhập SĐT học sinh để tạo mã chính xác!', 'warning');
+            return;
+        }
+        // Admin tạo mã tay (bao gồm SĐT để khớp với logic mới)
+        const key = generateActivationKey(targetId, adminTargetSdt.trim());
         setGeneratedKey(key);
 
         // Tránh trùng lặp: lọc bỏ ID cũ nếu đã tồn tại và đưa ID mới lên đầu
@@ -62,6 +67,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         localStorage.setItem('pv_activation_history', JSON.stringify(newHistory));
         onShowToast('Đã tạo mã kích hoạt thành công!', 'success');
         setStudentName('');
+        setAdminTargetSdt('');
     };
 
     const handleActivate = () => {
@@ -319,7 +325,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <span className="text-[10px] text-slate-500 font-bold uppercase ml-1">Mã máy học sinh</span>
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase ml-1">SĐT Học sinh (Bắt buộc)</span>
+                                    <div className="relative">
+                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <input
+                                            type="tel"
+                                            value={adminTargetSdt}
+                                            onChange={(e) => setAdminTargetSdt(e.target.value)}
+                                            placeholder="Nhập SĐT đã đăng ký..."
+                                            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-indigo-100 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase ml-1">Mã máy học sinh (ID)</span>
                                     <div className="relative">
                                         <Monitor className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                         <input
