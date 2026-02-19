@@ -13,7 +13,7 @@ interface Student {
     key: string;
 }
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-48QJxzX_uwaXF2ODDpoJN508ZrSGAh6rwbolMbIPWnGnHqUvB6FtxDR8wrGBg4kf/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyMkOMHGB-SN17uS8lXVfnruVnnJZiVuNsTmPnQOMQWvme2g5QIeJZKKrkvaUwRsg_H/exec";
 
 interface AdminDashboardProps {
     onBack: () => void;
