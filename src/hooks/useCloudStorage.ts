@@ -84,9 +84,9 @@ export const getMachineId = (): string => {
 };
 
 export const generateActivationKey = (machineId: string, sdt: string = ""): string => {
-    // Thuật toán tạo mã kích hoạt bí mật dựa trên mã máy và SĐT
-    // Nếu sdt trống (dùng cho admin gen tay cho máy cũ), logic cũ vẫn chạy hoặc sdt được coi là chuỗi rỗng
-    const rawData = machineId + sdt + SYSTEM_SALT;
+    // Chuẩn hóa SĐT: Loại bỏ số 0 ở đầu để khớp với logic trên Google Sheets
+    const normalizedSdt = sdt.replace(/^0+/, "");
+    const rawData = machineId + normalizedSdt + SYSTEM_SALT;
     const hash = CryptoJS.SHA256(rawData).toString();
 
     // Lấy 12 ký tự đầu của hash để tạo mã PV-XXXX-YYYY
