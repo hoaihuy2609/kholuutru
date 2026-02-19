@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2 } from 'lucide-react';
+import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard } from 'lucide-react';
 import { useCloudStorage, exportData, importData, getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
 
 interface SettingsModalProps {
@@ -9,9 +9,10 @@ interface SettingsModalProps {
     onShowToast: (message: string, type: 'success' | 'error' | 'warning') => void;
     isAdmin: boolean;
     onToggleAdmin: (status: boolean) => void;
+    onOpenDashboard: () => void;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowToast, isAdmin, onToggleAdmin }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowToast, isAdmin, onToggleAdmin, onOpenDashboard }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { lessons, storedFiles, isActivated, activateSystem } = useCloudStorage();
     const [password, setPassword] = useState('');
@@ -188,12 +189,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                     Mở khóa Admin
                                 </button>
                             ) : (
-                                <button
-                                    onClick={() => onToggleAdmin(false)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-all border border-red-100"
-                                >
-                                    Thoát Admin
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={onOpenDashboard}
+                                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                                    >
+                                        <LayoutDashboard className="w-4 h-4" />
+                                        Quản lý Học viên
+                                    </button>
+                                    <button
+                                        onClick={() => onToggleAdmin(false)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-all border border-red-100"
+                                    >
+                                        Thoát Admin
+                                    </button>
+                                </div>
                             )}
                         </div>
 

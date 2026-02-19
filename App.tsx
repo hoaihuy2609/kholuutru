@@ -12,6 +12,7 @@ import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings, Plus } fro
 import SettingsModal from './components/SettingsModal';
 import GuideModal from './components/GuideModal';
 import Chatbot from './components/Chatbot';
+import AdminDashboard from './components/AdminDashboard';
 
 interface ToastMessage {
   id: string;
@@ -35,6 +36,7 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const toggleAdmin = (status: boolean) => {
@@ -335,6 +337,10 @@ function App() {
         onShowToast={showToast}
         isAdmin={isAdmin}
         onToggleAdmin={toggleAdmin}
+        onOpenDashboard={() => {
+          setShowAdminDashboard(true);
+          setIsSettingsOpen(false);
+        }}
       />
 
       <GuideModal
@@ -342,6 +348,13 @@ function App() {
         onClose={() => setIsGuideOpen(false)}
         isAdmin={isAdmin}
       />
+
+      {showAdminDashboard && (
+        <AdminDashboard
+          onBack={() => setShowAdminDashboard(false)}
+          onShowToast={showToast}
+        />
+      )}
 
       {/* Main Content */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen transition-all duration-300">

@@ -115,7 +115,7 @@ const Chatbot: React.FC = () => {
     };
 
     return (
-        <div className="fixed bottom-6 right-6 z-[100] font-sans">
+        <div className="fixed bottom-6 right-6 z-40 font-sans">
             {/* Chat Bubble Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
