@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, BookOpen, Monitor, KeyRound, Upload, CheckCircle2, Settings, Atom, FolderOpen, Home, ShieldCheck } from 'lucide-react';
+import { X, BookOpen, Monitor, KeyRound, Upload, CheckCircle2, Settings, Atom, FolderOpen, Home, ShieldCheck, LayoutDashboard } from 'lucide-react';
 
 interface GuideModalProps {
     isOpen: boolean;
@@ -12,23 +12,43 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
     const [activeScene, setActiveScene] = useState<number>(0);
     const [isPlaying, setIsPlaying] = useState(true);
 
-    const scenes = [
+    const studentScenes = [
         {
-            title: "Bước 1: Lấy Mã Máy",
-            desc: "Bấm vào Cài đặt -> Copy dãy 12 ký tự gửi cho thầy.",
+            title: "Bước 1: Lấy Mã Máy (ID)",
+            desc: "Vào Cài đặt -> Copy mã máy định danh gửi cho thầy hoặc nhập vào Bot.",
             icon: <Monitor className="w-5 h-5" />
         },
         {
-            title: "Bước 2: Mở khóa",
-            desc: "Dán mã PV-... thầy gửi vào ô kích hoạt.",
+            title: "Bước 2: Chat lấy mã tự động",
+            desc: "Nhấn vào biểu tượng Chatbot ở góc phải để đăng ký SĐT và nhận mã PV-...",
+            icon: <Atom className="w-5 h-5" />
+        },
+        {
+            title: "Bước 3: Nhập SĐT & Mở khóa",
+            desc: "Nhập SĐT và dán mã nhận được vào Cài đặt để bắt đầu học tập.",
+            icon: <ShieldCheck className="w-5 h-5" />
+        }
+    ];
+
+    const adminScenes = [
+        {
+            title: "Quản lý Học viên",
+            desc: "Vào Dashboard để xem thống kê, tìm kiếm và quản lý danh sách lớp.",
+            icon: <LayoutDashboard className="w-5 h-5" />
+        },
+        {
+            title: "Trạm cấp mã thủ công",
+            desc: "Cấp mã 'chay' cho học sinh nhanh chóng khi không dùng tới Chatbot.",
             icon: <KeyRound className="w-5 h-5" />
         },
         {
-            title: "Bước 3: Nạp Bài",
-            desc: "Chọn file .json giáo án thầy gửi vào máy.",
+            title: "Đồng bộ dữ liệu mây",
+            desc: "Mọi thay đổi trên Web sẽ tự động đồng bộ lên Google Sheets bí mật.",
             icon: <Upload className="w-5 h-5" />
         }
     ];
+
+    const scenes = isAdmin ? adminScenes : studentScenes;
 
     useEffect(() => {
         if (!isOpen || !isPlaying) return;
@@ -54,7 +74,7 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
                         </div>
                         <div>
                             <h2 className="font-bold text-lg text-slate-800 leading-tight">Hướng dẫn nhanh</h2>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Dành cho học sinh</p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Dành cho {isAdmin ? 'Quản trị viên' : 'Học sinh'}</p>
                         </div>
                     </div>
 
