@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, BookOpen, Monitor, KeyRound, Upload, CheckCircle2, Settings, Atom, FolderOpen, Home, ShieldCheck, LayoutDashboard } from 'lucide-react';
+import { X, BookOpen, Monitor, KeyRound, Upload, CheckCircle2, Settings, Atom, FolderOpen, Home, ShieldCheck, LayoutDashboard, Phone } from 'lucide-react';
 
 interface GuideModalProps {
     isOpen: boolean;
