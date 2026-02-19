@@ -83,10 +83,14 @@ export const getMachineId = (): string => {
     return hash.substring(0, 12).toUpperCase().replace(/(.{4})/g, '$1-').slice(0, -1);
 };
 
-export const generateActivationKey = (machineId: string): string => {
-    // Thuật toán tạo mã kích hoạt bí mật dựa trên mã máy
-    const hash = CryptoJS.HmacSHA256(machineId, SYSTEM_SALT).toString();
-    return "PV-" + hash.substring(10, 22).toUpperCase().replace(/(.{4})/g, '$1-').slice(0, -1);
+export const generateActivationKey = (machineId: string, sdt: string = ""): string => {
+    // Thuật toán tạo mã kích hoạt bí mật dựa trên mã máy và SĐT
+    // Nếu sdt trống (dùng cho admin gen tay cho máy cũ), logic cũ vẫn chạy hoặc sdt được coi là chuỗi rỗng
+    const rawData = machineId + sdt + SYSTEM_SALT;
+    const hash = CryptoJS.SHA256(rawData).toString();
+
+    // Lấy 12 ký tự đầu của hash để tạo mã PV-XXXX-YYYY
+    return "PV-" + hash.substring(0, 12).toUpperCase().replace(/(.{4})/g, '$1-').slice(0, -1);
 };
 
 export const checkActivationStatus = (): boolean => {
@@ -198,11 +202,12 @@ export const useCloudStorage = () => {
         return Promise.resolve();
     };
 
-    const activateSystem = (key: string): boolean => {
+    const activateSystem = (key: string, sdt: string = ""): boolean => {
         const machineId = getMachineId();
-        const expectedKey = generateActivationKey(machineId);
+        const expectedKey = generateActivationKey(machineId, sdt);
         if (key === expectedKey) {
             localStorage.setItem(STORAGE_ACTIVATION_KEY, 'true');
+            if (sdt) localStorage.setItem('pv_activated_sdt', sdt);
             setIsActivated(true);
             return true;
         }

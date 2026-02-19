@@ -20,6 +20,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     // Activation States
     const [myMachineId, setMyMachineId] = useState('');
     const [studentKeyInput, setStudentKeyInput] = useState('');
+    const [studentSdt, setStudentSdt] = useState(''); // New state for SĐT
     const [adminTargetId, setAdminTargetId] = useState('');
     const [studentName, setStudentName] = useState('');
     const [generatedKey, setGeneratedKey] = useState('');
@@ -30,6 +31,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
             setMyMachineId(getMachineId());
             const history = localStorage.getItem('pv_activation_history');
             if (history) setActivationHistory(JSON.parse(history));
+
+            // Lấy SĐT đã kích hoạt nếu có
+            const savedSdt = localStorage.getItem('pv_activated_sdt');
+            if (savedSdt) setStudentSdt(savedSdt);
         }
     }, [isOpen]);
 
@@ -42,7 +47,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
             onShowToast('Vui lòng nhập Mã máy của học sinh', 'warning');
             return;
         }
-        const key = generateActivationKey(targetId);
+        // Admin tạo mã tay (thường không cần SĐT hoặc nhập sau)
+        const key = generateActivationKey(targetId, "");
         setGeneratedKey(key);
 
         // Tránh trùng lặp: lọc bỏ ID cũ nếu đã tồn tại và đưa ID mới lên đầu
@@ -56,11 +62,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     };
 
     const handleActivate = () => {
-        if (activateSystem(studentKeyInput.trim())) {
+        const sdt = studentSdt.trim();
+        const key = studentKeyInput.trim();
+
+        if (!sdt) {
+            onShowToast('Vui lòng nhập Số điện thoại đã đăng ký!', 'warning');
+            return;
+        }
+
+        if (activateSystem(key, sdt)) {
             onShowToast('Kích hoạt hệ thống thành công!', 'success');
             setStudentKeyInput('');
         } else {
-            onShowToast('Mã kích hoạt không hợp lệ cho máy này!', 'error');
+            onShowToast('Mã kích hoạt hoặc SĐT không khớp với máy này!', 'error');
         }
     };
 
@@ -235,20 +249,35 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                 </div>
                                 <p className="text-xs text-amber-600 italic">Gửi mã 12 ký tự phía trên cho thầy để nhận Mã kích hoạt khóa học.</p>
                             </div>
-                            <div className="pt-2 flex gap-2">
-                                <input
-                                    type="text"
-                                    value={studentKeyInput}
-                                    onChange={(e) => setStudentKeyInput(e.target.value.toUpperCase())}
-                                    placeholder="Dán mã kích hoạt PV-... vào đây"
-                                    className="flex-1 px-4 py-3 text-sm rounded-xl border border-amber-200 outline-none focus:ring-4 focus:ring-amber-500/20"
-                                />
-                                <button
-                                    onClick={handleActivate}
-                                    className="px-6 py-3 bg-amber-600 text-white text-sm font-bold rounded-xl hover:bg-amber-700 transition-colors shadow-md shadow-amber-200"
-                                >
-                                    Mở khóa
-                                </button>
+                            <div className="space-y-3">
+                                <div className="space-y-1">
+                                    <span className="text-[10px] text-amber-800 font-bold uppercase ml-1">Số điện thoại đã đăng ký:</span>
+                                    <input
+                                        type="tel"
+                                        value={studentSdt}
+                                        onChange={(e) => setStudentSdt(e.target.value)}
+                                        placeholder="Nhập SĐT để xác nhận chính chủ..."
+                                        className="w-full px-4 py-3 text-sm rounded-xl border border-amber-200 outline-none focus:ring-4 focus:ring-amber-500/20 bg-white"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-[10px] text-amber-800 font-bold uppercase ml-1">Mã kích hoạt từ Bot:</span>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={studentKeyInput}
+                                            onChange={(e) => setStudentKeyInput(e.target.value.toUpperCase())}
+                                            placeholder="Dán mã PV-... vào đây"
+                                            className="flex-1 px-4 py-3 text-sm rounded-xl border border-amber-200 outline-none focus:ring-4 focus:ring-amber-500/20 bg-white"
+                                        />
+                                        <button
+                                            onClick={handleActivate}
+                                            className="px-6 py-3 bg-amber-600 text-white text-sm font-bold rounded-xl hover:bg-amber-700 transition-colors shadow-md shadow-amber-200"
+                                        >
+                                            Mở khóa
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

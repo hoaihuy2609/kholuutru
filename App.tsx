@@ -11,6 +11,7 @@ import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings, Plus } fro
 
 import SettingsModal from './components/SettingsModal';
 import GuideModal from './components/GuideModal';
+import Chatbot from './components/Chatbot';
 
 interface ToastMessage {
   id: string;
@@ -380,6 +381,8 @@ function App() {
           />
         ))}
       </div>
+      {/* Chatbot Component */}
+      <Chatbot />
     </div>
   );
 }
