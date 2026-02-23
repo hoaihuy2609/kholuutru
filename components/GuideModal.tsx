@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, Settings, ShieldCheck, ChevronRight, MessageCircle, Bot, Send, RefreshCw, Lock, User, Copy, Monitor, Key, Upload, Phone } from 'lucide-react';
+import { X, CheckCircle2, Settings, ShieldCheck, ChevronRight, MessageCircle, Bot, Send, RefreshCw, Lock, User, Copy, Monitor, Key, Upload, Phone, ShieldAlert, KeyRound, Unlock, LayoutDashboard } from 'lucide-react';
 
 interface GuideModalProps {
     isOpen: boolean;
@@ -264,98 +264,109 @@ const SimulatedAppView: React.FC<{ scene: number }> = ({ scene }) => {
                             </div>
                         )}
 
-                        {/* SCENE 3: HIGH-FIDELITY SETTINGS MODAL MATCHING USER IMAGE */}
+                        {/* SCENE 3: PIXEL-PERFECT SETTINGS MODAL MATCHING ACTUAL UI */}
                         {scene === 2 && (
-                            <div className="absolute inset-0 bg-white/60 backdrop-blur-[6px] flex items-center justify-center p-6 z-[30]">
-                                <div className="w-full max-w-[480px] bg-white rounded-[24px] border border-[#E9E9E7] shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden animate-scale-in flex flex-col pointer-events-auto">
-                                    {/* Modal Header */}
-                                    <div className="px-6 py-4 border-b border-[#F7F6F3] flex items-center justify-between">
-                                        <h3 className="font-bold text-[16px] text-slate-800">Cài đặt & Bảo mật Hệ thống</h3>
-                                        <X className="w-5 h-5 text-slate-400" />
+                            <div className="absolute inset-0 bg-[#00000040] backdrop-blur-[4px] flex items-center justify-center p-6 z-[30]">
+                                <div className="w-full max-w-[580px] bg-white rounded-[12px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-[#E9E9E7] overflow-hidden animate-scale-in flex flex-col pointer-events-auto">
+                                    {/* Modal Header matches SettingsModal.tsx lines 161-178 */}
+                                    <div className="px-5 py-3.5 border-b border-[#E9E9E7] flex items-center justify-between">
+                                        <h3 className="font-semibold text-base text-[#1A1A1A]">Cài đặt & Bảo mật Hệ thống</h3>
+                                        <X className="w-4 h-4 text-[#787774]" />
                                     </div>
 
-                                    {/* Modal Body */}
-                                    <div className="p-6 space-y-6 overflow-y-auto max-h-[450px] custom-scrollbar">
-                                        {/* Access Rights Card */}
-                                        <div className="p-5 bg-white border border-[#E9E9E7] rounded-2xl space-y-4">
-                                            <div className="flex items-center justify-between">
+                                    {/* Modal Body matches SettingsModal.tsx lines 181-652 */}
+                                    <div className="p-5 space-y-4 max-h-[500px] overflow-y-auto">
+
+                                        {/* Quyền truy cập Card (Simplified as student mode) */}
+                                        <div className="border border-[#E9E9E7] rounded-xl overflow-hidden">
+                                            <div className="flex items-center justify-between px-4 py-3 border-b border-[#E9E9E7]">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="p-2.5 bg-slate-50 rounded-xl">
-                                                        <Lock className="w-5 h-5 text-slate-400" />
+                                                    <div className="p-2 bg-[#F1F0EC] rounded-lg">
+                                                        <Lock className="w-4 h-4 text-[#787774]" />
                                                     </div>
                                                     <div>
-                                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">QUYỀN TRUY CẬP</div>
-                                                        <div className="text-[14px] font-bold text-slate-800">Chế độ Học sinh</div>
+                                                        <div className="text-[10px] uppercase font-semibold tracking-wider text-[#AEACA8]">Quyền truy cập</div>
+                                                        <div className="text-sm font-semibold text-[#1A1A1A]">Chế độ Học sinh</div>
                                                     </div>
                                                 </div>
-                                                <button className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-600 flex items-center gap-2">
-                                                    <Key className="w-3.5 h-3.5" /> Mở khóa Admin
-                                                </button>
+                                                <div className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-[#E9E9E7] bg-[#F1F0EC] text-[#57564F]">
+                                                    <KeyRound className="w-3.5 h-3.5" /> Mở khóa Admin
+                                                </div>
                                             </div>
-                                            <p className="text-[12px] text-slate-500 leading-relaxed italic">
-                                                Bạn đang ở chế độ Học sinh: Các tính năng nạp dữ liệu sẽ bị hạn chế cho đến khi bạn nhập mã kích hoạt.
-                                            </p>
+                                            <div className="px-4 py-3 bg-[#FAFAF9]">
+                                                <p className="text-xs text-[#787774] leading-relaxed">
+                                                    Bạn đang ở chế độ Học sinh: Các tính năng nạp dữ liệu sẽ bị hạn chế cho đến khi bạn nhập mã kích hoạt.
+                                                </p>
+                                            </div>
                                         </div>
 
-                                        {/* Activation Section */}
-                                        <div className="p-6 border-2 border-orange-500/20 rounded-3xl bg-white shadow-sm space-y-5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="p-2.5 bg-[#FFF3E8] rounded-2xl">
-                                                    <Key className="w-6 h-6 text-[#D9730D]" />
+                                        {/* Activation Section (THE FOCUS OF THIS STEP) */}
+                                        <div className="border border-[#E9E9E7] rounded-xl overflow-hidden">
+                                            <div className="flex items-center gap-3 px-4 py-3 border-b border-[#E9E9E7] border-l-[3px] border-l-[#D9730D]">
+                                                <div className="p-2 bg-[#FFF3E8] rounded-lg">
+                                                    <KeyRound className="w-4 h-4 text-[#D9730D]" />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-bold text-[15px] text-slate-800">Kích hoạt tài khoản</h4>
-                                                    <p className="text-[11px] text-slate-500 font-medium">Dán mã kích hoạt nhận từ <span className="text-[#D9730D] font-bold">Bot PhysiVault</span> để bắt đầu học.</p>
+                                                    <h4 className="text-sm font-semibold text-[#1A1A1A]">Kích hoạt tài khoản</h4>
+                                                    <p className="text-xs text-[#787774] mt-0.5">
+                                                        Dán mã kích hoạt nhận từ <span className="text-[#D9730D] font-bold">Bot PhysiVault</span> để bắt đầu học.
+                                                    </p>
                                                 </div>
                                             </div>
-
-                                            <div className="space-y-4">
+                                            <div className="p-4 space-y-3 bg-[#FAFAF9]">
+                                                {/* Phone input */}
                                                 <div className="relative">
-                                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                                    <div className="w-full h-12 bg-[#F7F6F3] border border-[#E9E9E7] rounded-xl flex items-center pl-11 pr-4 text-[13px] text-slate-400 font-medium">
+                                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#AEACA8]" />
+                                                    <div className="w-full h-10 bg-white border border-[#E9E9E7] rounded-lg flex items-center pl-9 pr-4 text-[13px] text-[#AEACA8]">
                                                         Nhập Số điện thoại của bạn
                                                     </div>
                                                 </div>
-                                                <div className="flex gap-3">
+                                                {/* Key input with ORANGE BORDER focus style */}
+                                                <div className="flex gap-2">
                                                     <div className="relative flex-1">
-                                                        <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                                        <div className="w-full h-12 bg-white border-2 border-orange-500 rounded-xl flex items-center pl-11 pr-4 shadow-[0_4px_15px_rgba(217,115,13,0.1)]">
-                                                            <div className="text-[14px] font-mono font-black text-[#D9730D] tracking-widest uppercase">PV-XXXX-XXXX-XXXX</div>
+                                                        <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#AEACA8]" />
+                                                        <div className="w-full h-10 bg-white border-2 border-[#D9730D] rounded-lg flex items-center pl-9 pr-4 shadow-[0_4px_12px_rgba(217,115,13,0.15)]">
+                                                            <div className="text-[14px] font-mono font-bold text-[#D9730D] tracking-wider">PV-XXXX-XXXX-XXXX</div>
                                                         </div>
                                                     </div>
-                                                    <button className="h-12 px-6 bg-[#D9730D] rounded-xl text-white font-bold text-[14px] shadow-lg shadow-orange-100 whitespace-nowrap">
+                                                    <div className="px-5 h-10 bg-[#D9730D] text-white rounded-lg flex items-center font-semibold text-sm">
                                                         Mở khóa
-                                                    </button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center justify-between px-1">
-                                                <div className="flex items-center gap-2 opacity-30">
-                                                    <Monitor className="w-3.5 h-3.5 text-slate-600" />
-                                                    <span className="text-[10px] font-bold text-slate-600">ID: 89C3-7DB0-0D28</span>
+                                                {/* Footer metadata */}
+                                                <div className="flex items-center justify-between text-[10px] text-[#AEACA8]">
+                                                    <div className="flex items-center gap-1.5 font-mono">
+                                                        <Monitor className="w-3 h-3" /> ID: 89C3-7DB0-0D28
+                                                    </div>
+                                                    <span className="italic">* Nhập đúng SĐT để khớp với mã kích hoạt</span>
                                                 </div>
-                                                <span className="text-[10px] italic text-slate-400 font-medium">* Nhập đúng SĐT để khớp với mã kích hoạt</span>
                                             </div>
                                         </div>
 
-                                        {/* Import Data Section (Locked) */}
-                                        <div className="space-y-4">
-                                            <div className="flex items-center gap-2">
-                                                <Upload className="w-4 h-4 text-slate-400" />
-                                                <span className="text-[13px] font-bold text-slate-700">Nhập học liệu mới</span>
+                                        {/* Import Section (Locked) */}
+                                        <div className="space-y-2">
+                                            <h4 className="text-sm font-semibold flex items-center gap-2 text-[#1A1A1A]">
+                                                <Upload className="w-4 h-4 text-[#9065B0]" /> Nhập học liệu mới
+                                            </h4>
+                                            <div className="p-5 border-2 border-dashed border-[#E9E9E7] rounded-lg flex flex-col items-center gap-2 opacity-50">
+                                                <Lock className="w-5 h-5 text-[#AEACA8] opacity-40 ml-0.5" />
+                                                <p className="text-xs font-medium text-[#787774]">Chức năng đang bị khóa</p>
+                                                <p className="text-[10px] text-[#AEACA8]">Vui lòng kích hoạt mã ở phía trên để nạp bài giảng.</p>
                                             </div>
-                                            <div className="h-32 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col items-center justify-center gap-3 opacity-50">
-                                                <Lock className="w-6 h-6 text-slate-300" />
-                                                <div className="text-center">
-                                                    <div className="text-[12px] font-bold text-slate-400">Chức năng đang bị khóa</div>
-                                                    <div className="text-[10px] text-slate-400 mt-1">Vui lòng kích hoạt mã ở phía trên để nạp bài giảng.</div>
-                                                </div>
-                                            </div>
+                                        </div>
+
+                                        {/* Note Box */}
+                                        <div className="flex gap-3 items-start px-4 py-3 bg-[#F7F6F3] border border-[#E9E9E7] rounded-lg mt-2">
+                                            <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-[#AEACA8]" />
+                                            <p className="text-xs leading-relaxed text-[#787774]">
+                                                Lưu ý cho Học sinh: Hệ thống cần được kích hoạt bằng mã duy nhất cho máy này để đảm bảo quyền truy cập học liệu chính thức.
+                                            </p>
                                         </div>
                                     </div>
 
-                                    {/* Modal Footer */}
-                                    <div className="p-4 border-t border-[#F7F6F3] flex justify-center">
-                                        <div className="text-[13px] text-slate-400 font-medium">Quay lại trang chủ</div>
+                                    {/* Footer matches SettingsModal.tsx line 655-668 */}
+                                    <div className="px-5 py-3 border-t border-[#E9E9E7] text-center">
+                                        <span className="text-sm text-[#787774] font-medium">Quay lại trang chủ</span>
                                     </div>
                                 </div>
                             </div>
