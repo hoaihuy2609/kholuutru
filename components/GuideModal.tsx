@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, Settings, ShieldCheck, ChevronRight, MessageCircle, Bot, Send, RefreshCw, Lock, User, Copy, Monitor, Key, Upload, Phone, ShieldAlert, KeyRound, Unlock, LayoutDashboard } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+    X, CheckCircle2, Settings, ShieldCheck, ChevronRight, ChevronLeft,
+    MessageCircle, Bot, Send, RefreshCw, Copy, Check, User, Phone,
+    KeyRound, ShieldAlert, Monitor, Unlock
+} from 'lucide-react';
 
 interface GuideModalProps {
     isOpen: boolean;
@@ -7,51 +11,71 @@ interface GuideModalProps {
     isAdmin: boolean;
 }
 
+// ── Step definitions ──────────────────────────────────────────────────────────
+const steps = [
+    {
+        id: 1,
+        label: 'Mở trợ lý AI',
+        shortDesc: 'Nhấn nút chatbot ở góc màn hình',
+        icon: MessageCircle,
+        color: '#D9730D',
+        bg: '#FFF3E8',
+    },
+    {
+        id: 2,
+        label: 'Nhận mã kích hoạt',
+        shortDesc: 'Nhập SĐT, Bot cấp mã PV duy nhất',
+        icon: Bot,
+        color: '#D9730D',
+        bg: '#FFF3E8',
+    },
+    {
+        id: 3,
+        label: 'Nhập mã mở khóa',
+        shortDesc: 'Vào Cài đặt, dán mã để mở khóa',
+        icon: Settings,
+        color: '#6B7CDB',
+        bg: '#EEF0FB',
+    },
+    {
+        id: 4,
+        label: 'Bắt đầu học',
+        shortDesc: 'Truy cập toàn bộ tài liệu',
+        icon: CheckCircle2,
+        color: '#448361',
+        bg: '#EAF3EE',
+    },
+];
+
+// ── Main Component ────────────────────────────────────────────────────────────
 const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => {
-    const [activeScene, setActiveScene] = useState<number>(0);
-    const [isPlaying, setIsPlaying] = useState(true);
-
-    const activationSteps = [
-        {
-            title: "Bước 1: Mở trợ lý ảo",
-            desc: "Nhấn vào biểu tượng Chatbot màu đen ở góc màn hình để bắt đầu.",
-            icon: <MessageCircle className="w-5 h-5" />
-        },
-        {
-            title: "Bước 2: Nhận mã kích hoạt",
-            desc: "Nhập SĐT của bạn, Bot sẽ tự động cấp mã PV duy nhất cho tài khoản.",
-            icon: <Bot className="w-5 h-5" />
-        },
-        {
-            title: "Bước 3: Mở khóa hệ thống",
-            desc: "Vào Cài đặt, nhập SĐT và dán mã PV-... để truy cập toàn bộ tài liệu.",
-            icon: <ShieldCheck className="w-5 h-5" />
-        }
-    ];
-
-    useEffect(() => {
-        if (!isOpen || !isPlaying) return;
-        const timer = setInterval(() => {
-            setActiveScene(prev => (prev + 1) % activationSteps.length);
-        }, 7000);
-        return () => clearInterval(timer);
-    }, [isOpen, isPlaying, activationSteps.length]);
+    const [activeStep, setActiveStep] = useState(0); // 0-indexed
 
     if (!isOpen) return null;
 
+    const isFirst = activeStep === 0;
+    const isLast = activeStep === steps.length - 1;
+
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in text-sans">
+        <div
+            className="fixed inset-0 z-[60] flex items-center justify-center p-3 md:p-4 bg-black/40 backdrop-blur-sm animate-fade-in font-sans"
+            onClick={onClose}
+        >
             <div
-                className="bg-white rounded-[12px] shadow-2xl w-full max-w-6xl overflow-hidden animate-scale-in border border-[#E9E9E7] flex flex-col h-[90vh] md:h-[720px]"
-                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-[14px] shadow-2xl w-full max-w-5xl overflow-hidden animate-scale-in border border-[#E9E9E7] flex flex-col"
+                style={{ maxHeight: '92vh' }}
+                onClick={e => e.stopPropagation()}
             >
-                {/* Unified Header matching SettingsModal style */}
+                {/* ── Header ── */}
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#E9E9E7] bg-white shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="p-1.5 bg-[#FFF3E8] rounded-lg">
                             <ShieldCheck className="w-4 h-4 text-[#D9730D]" />
                         </div>
-                        <h3 className="font-semibold text-base text-[#1A1A1A]">Hướng dẫn kích hoạt & Mở khóa Hệ thống</h3>
+                        <div>
+                            <h3 className="font-semibold text-sm text-[#1A1A1A]">Hướng dẫn kích hoạt hệ thống</h3>
+                            <p className="text-[11px] text-[#AEACA8] mt-0.5">Làm theo từng bước để mở khóa toàn bộ tài liệu</p>
+                        </div>
                     </div>
                     <button
                         onClick={onClose}
@@ -61,62 +85,108 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
                     </button>
                 </div>
 
-                <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-                    {/* Left Sidebar matching App Sidebar style */}
-                    <div className="w-full md:w-[320px] bg-[#F1F0EC] border-r border-[#E9E9E7] flex flex-col shrink-0">
-                        <div className="p-6 space-y-3 flex-1 overflow-y-auto custom-scrollbar">
-                            {activationSteps.map((step, idx) => {
-                                const isActive = activeScene === idx;
-                                return (
-                                    <div
-                                        key={idx}
-                                        onClick={() => { setActiveScene(idx); setIsPlaying(false); }}
-                                        className={`group relative p-4 rounded-xl transition-all duration-200 cursor-pointer ${isActive
-                                            ? 'bg-white shadow-sm translate-x-1'
-                                            : 'hover:bg-white/40'
-                                            }`}
+                {/* ── Stepper Progress Bar ── */}
+                <div className="px-5 py-4 bg-[#FAFAF9] border-b border-[#E9E9E7] shrink-0">
+                    <div className="flex items-center gap-0">
+                        {steps.map((step, idx) => {
+                            const Icon = step.icon;
+                            const isActive = idx === activeStep;
+                            const isDone = idx < activeStep;
+                            return (
+                                <React.Fragment key={step.id}>
+                                    {/* Step node */}
+                                    <button
+                                        onClick={() => setActiveStep(idx)}
+                                        className="flex flex-col items-center gap-1.5 group focus:outline-none"
+                                        style={{ minWidth: 0, flex: '0 0 auto' }}
                                     >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`p-2 rounded-lg transition-colors ${isActive ? 'bg-[#FFF3E8] text-[#D9730D]' : 'bg-white/60 text-[#AEACA8]'}`}>
-                                                {step.icon}
-                                            </div>
-                                            <div className="flex-1 overflow-hidden">
-                                                <h4 className={`text-sm font-bold truncate transition-colors ${isActive ? 'text-[#1A1A1A]' : 'text-[#787774]'}`}>{step.title}</h4>
-                                                {isActive && (
-                                                    <p className="text-[12px] text-[#787774] mt-1 leading-relaxed animate-fade-in font-medium">
-                                                        {step.desc}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            {isActive && <ChevronRight className="w-4 h-4 text-[#D9730D] shrink-0" />}
+                                        <div
+                                            className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 shrink-0"
+                                            style={{
+                                                background: isDone ? '#448361' : isActive ? step.color : '#F1F0EC',
+                                                boxShadow: isActive ? `0 0 0 3px ${step.color}22` : 'none',
+                                            }}
+                                        >
+                                            {isDone
+                                                ? <Check className="w-4 h-4 text-white" />
+                                                : <Icon className="w-4 h-4" style={{ color: isActive ? '#FFFFFF' : '#AEACA8' }} />
+                                            }
                                         </div>
-                                        {isActive && (
-                                            <div className="absolute left-0 top-3 bottom-3 w-1 bg-[#D9730D] rounded-full" />
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                        <span
+                                            className="text-[11px] font-semibold hidden sm:block max-w-[80px] text-center leading-tight"
+                                            style={{ color: isActive ? step.color : isDone ? '#448361' : '#AEACA8' }}
+                                        >
+                                            {step.label}
+                                        </span>
+                                    </button>
+
+                                    {/* Connector line */}
+                                    {idx < steps.length - 1 && (
+                                        <div className="flex-1 h-0.5 mx-2" style={{ background: idx < activeStep ? '#448361' : '#E9E9E7', minWidth: '20px' }} />
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* ── Body: Two-column layout ── */}
+                <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+
+                    {/* Left: Description panel */}
+                    <div className="w-full md:w-[280px] shrink-0 flex flex-col bg-white border-b md:border-b-0 md:border-r border-[#E9E9E7]">
+                        <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
+                            <StepDescription step={steps[activeStep]} stepIndex={activeStep} />
                         </div>
 
-                        {/* Sidebar Footer */}
-                        <div className="p-6 border-t border-[#E9E9E7]/60">
-                            <button
-                                onClick={onClose}
-                                className="w-full py-3 bg-[#1A1A1A] text-white text-sm font-bold rounded-xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
-                            >
-                                Tôi đã hiểu
-                                <CheckCircle2 className="w-4 h-4" />
-                            </button>
+                        {/* Navigation buttons */}
+                        <div className="p-5 border-t border-[#E9E9E7] space-y-2.5">
+                            {isLast ? (
+                                <button
+                                    onClick={onClose}
+                                    className="w-full py-3 bg-[#448361] text-white text-sm font-bold rounded-xl hover:bg-[#3a7055] transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+                                >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    Tôi đã hiểu, bắt đầu thôi!
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => setActiveStep(s => s + 1)}
+                                    className="w-full py-3 text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+                                    style={{ background: steps[activeStep].color }}
+                                >
+                                    Bước tiếp theo
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            )}
+                            {!isFirst && (
+                                <button
+                                    onClick={() => setActiveStep(s => s - 1)}
+                                    className="w-full py-2.5 text-sm font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-[#787774] hover:bg-[#F1F0EC] active:scale-[0.98]"
+                                >
+                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                    Quay lại
+                                </button>
+                            )}
                         </div>
                     </div>
 
-                    {/* Right Simulation Panel */}
-                    <div className="flex-1 bg-[#F7F6F3] relative overflow-hidden flex items-center justify-center p-6 md:p-12">
-                        <div className="relative z-10 w-full max-w-[680px] aspect-[16/10] bg-white rounded-[12px] shadow-xl border border-[#E9E9E7] overflow-hidden flex flex-col">
-                            <SimulatedAppView scene={activeScene} />
+                    {/* Right: Simulation panel */}
+                    <div className="flex-1 bg-[#F7F6F3] relative overflow-hidden flex items-center justify-center p-4 md:p-10 min-h-[300px] md:min-h-0">
+                        {/* Decorative blur */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#6B7CDB]/5 rounded-full blur-[100px] pointer-events-none" />
+
+                        <div className="relative z-10 w-full max-w-[640px] bg-white rounded-[12px] shadow-xl border border-[#E9E9E7] overflow-hidden flex flex-col aspect-[16/10]">
+                            <SimulationView stepIndex={activeStep} />
                         </div>
-                        {/* Decorative background blur */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#6B7CDB]/5 rounded-full blur-[120px] pointer-events-none" />
+
+                        {/* Step badge */}
+                        <div
+                            className="absolute bottom-4 right-4 px-3 py-1.5 rounded-full text-[11px] font-bold"
+                            style={{ background: steps[activeStep].bg, color: steps[activeStep].color }}
+                        >
+                            Bước {activeStep + 1} / {steps.length}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -124,266 +194,394 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
     );
 };
 
-const SimulatedAppView: React.FC<{ scene: number }> = ({ scene }) => {
+// ── Step Description Left Panel ───────────────────────────────────────────────
+const StepDescription: React.FC<{ step: typeof steps[0]; stepIndex: number }> = ({ step, stepIndex }) => {
+    const Icon = step.icon;
+
+    const descriptions: { title: string; bullets: string[] }[] = [
+        {
+            title: 'Mở trợ lý PhysiVault AI',
+            bullets: [
+                'Nhìn vào góc dưới bên phải màn hình',
+                'Nhấn vào nút tròn màu đen có biểu tượng bong bóng chat',
+                'Cửa sổ trợ lý AI sẽ hiện ra ngay lập tức',
+            ],
+        },
+        {
+            title: 'Nhập SĐT để nhận mã',
+            bullets: [
+                'Bot sẽ hỏi và bạn gõ số điện thoại đã đăng ký với thầy Huy',
+                'Nhấn Enter hoặc nút gửi (mũi tên cam)',
+                'Bot xác thực và trả về mã dạng PV-XXXX-XXXX-XXXX',
+                'Nhấn nút Copy để sao chép mã vào clipboard',
+            ],
+        },
+        {
+            title: 'Dán mã vào Cài đặt',
+            bullets: [
+                'Nhấn vào "Settings & Sync" ở sidebar (hoặc icon ⚙ trên mobile)',
+                'Nhập lại đúng số điện thoại của bạn vào ô SĐT',
+                'Dán mã PV-... vào ô bên cạnh (Ctrl+V hoặc nhấn giữ để Paste)',
+                'Nhấn nút cam "Mở khóa" để hoàn tất',
+            ],
+        },
+        {
+            title: 'Kích hoạt thành công!',
+            bullets: [
+                'Hệ thống xác nhận mã hợp lệ — bạn đã được mở khóa',
+                'Toàn bộ tài liệu vật lý Lớp 10, 11, 12 sẵn sàng',
+                'Quyền truy cập gắn liền với thiết bị này',
+                'Liên hệ thầy Huy nếu cần hỗ trợ thêm',
+            ],
+        },
+    ];
+
+    const desc = descriptions[stepIndex];
+
+    return (
+        <div className="animate-fade-in space-y-5">
+            {/* Icon + Title */}
+            <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl" style={{ background: step.bg }}>
+                    <Icon className="w-5 h-5" style={{ color: step.color }} />
+                </div>
+                <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: step.color }}>
+                        Bước {stepIndex + 1}
+                    </div>
+                    <h4 className="text-sm font-bold text-[#1A1A1A] leading-snug mt-0.5">
+                        {desc.title}
+                    </h4>
+                </div>
+            </div>
+
+            {/* Bullets */}
+            <div className="space-y-2.5">
+                {desc.bullets.map((b, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                        <div
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5"
+                            style={{ background: step.bg, color: step.color }}
+                        >
+                            {i + 1}
+                        </div>
+                        <p className="text-[12.5px] text-[#57564F] leading-relaxed">{b}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* Tip box */}
+            {stepIndex === 1 && (
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#FFF3E8] border border-[#D9730D]/20">
+                    <ShieldAlert className="w-3.5 h-3.5 text-[#D9730D] shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-[#D9730D] leading-relaxed font-medium">
+                        SĐT phải là số <strong>đã đăng ký với thầy Huy</strong>. Nếu chưa đăng ký, liên hệ thầy trước.
+                    </p>
+                </div>
+            )}
+            {stepIndex === 2 && (
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#EEF0FB] border border-[#6B7CDB]/20">
+                    <ShieldAlert className="w-3.5 h-3.5 text-[#6B7CDB] shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-[#6B7CDB] leading-relaxed font-medium">
+                        Nhập <strong>đúng SĐT</strong> như lúc nhắn Bot. Sai SĐT sẽ không khớp với mã PV.
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ── Simulation Views ──────────────────────────────────────────────────────────
+const SimulationView: React.FC<{ stepIndex: number }> = ({ stepIndex }) => {
     return (
         <div className="w-full h-full flex flex-col overflow-hidden font-sans bg-[#FAFAF9]">
-            {/* Browser Header */}
-            <div className="h-10 bg-white border-b border-[#E9E9E7] flex items-center px-4 justify-between shrink-0">
+            {/* Browser chrome */}
+            <div className="h-9 bg-white border-b border-[#E9E9E7] flex items-center px-4 justify-between shrink-0">
                 <div className="flex gap-1.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
                     <div className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]" />
                     <div className="w-2.5 h-2.5 rounded-full bg-[#28C840]" />
                 </div>
-                <div className="h-5 w-48 bg-[#F1F0EC] rounded-md border border-[#E9E9E7] flex items-center px-2">
-                    <div className="w-3 h-3 bg-[#AEACA8]/20 rounded shrink-0" />
-                    <div className="ml-2 h-1.5 w-full bg-[#AEACA8]/10 rounded-full" />
+                <div className="h-5 w-48 bg-[#F1F0EC] rounded-md border border-[#E9E9E7] flex items-center px-2 gap-2">
+                    <div className="w-2.5 h-2.5 bg-[#D9730D]/30 rounded-sm shrink-0" />
+                    <span className="text-[9px] text-[#AEACA8] font-medium">physivault.app</span>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-[#F1F0EC]" />
+                <div className="w-7 h-7 rounded-full bg-[#F1F0EC]" />
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
-                {/* Sidebar Mockup */}
-                <div className="w-32 bg-[#F1F0EC] border-r border-[#E9E9E7] h-full p-4 space-y-4 shrink-0">
-                    <div className="h-4 w-full bg-white rounded shadow-sm border border-[#E9E9E7] mb-4" />
-                    {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-md bg-[#DDE2F7]" />
-                            <div className="h-1 w-full bg-[#DDE2F7]/50 rounded-full" />
+            {/* App area */}
+            <div className="flex-1 flex overflow-hidden relative">
+                {/* Sidebar mockup */}
+                <div className="w-28 bg-[#F1F0EC] border-r border-[#E9E9E7] h-full p-3 space-y-3 shrink-0 flex flex-col">
+                    <div className="h-3.5 w-full bg-white rounded-md shadow-sm border border-[#E9E9E7]" />
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-sm bg-[#DDE2F7]" />
+                            <div className="h-1 flex-1 bg-[#DDE2F7]/50 rounded-full" />
                         </div>
                     ))}
-                    <div className={`mt-auto p-2 rounded-lg flex items-center gap-2 transition-all ${scene === 2 ? 'bg-[#1A1A1A] text-white shadow-md ring-2 ring-[#1A1A1A]/10' : 'bg-white border border-[#E9E9E7] text-[#787774]'}`}>
-                        <Settings className="w-3.5 h-3.5" />
-                        <div className={`h-1 w-full rounded-full ${scene === 2 ? 'bg-white/40' : 'bg-[#F1F0EC]'}`} />
+                    <div className="flex-1" />
+                    {/* Settings button — highlight on step 3 */}
+                    <div
+                        className="p-2 rounded-lg flex items-center gap-1.5 transition-all duration-300"
+                        style={
+                            stepIndex === 2
+                                ? { background: '#1A1A1A', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }
+                                : { background: 'white', border: '1px solid #E9E9E7' }
+                        }
+                    >
+                        <Settings className="w-3 h-3 shrink-0" style={{ color: stepIndex === 2 ? 'white' : '#787774' }} />
+                        <div className="h-1 flex-1 rounded-full" style={{ background: stepIndex === 2 ? 'rgba(255,255,255,0.3)' : '#E9E9E7' }} />
                     </div>
                 </div>
 
-                {/* Content Area Mockup */}
-                <div className="flex-1 p-6 relative flex flex-col bg-white">
-                    <div className="flex items-center justify-between mb-8">
-                        <div className="space-y-2">
-                            <div className="h-5 w-32 bg-[#1A1A1A]/80 rounded-md" />
-                            <div className="h-1.5 w-48 bg-[#AEACA8]/30 rounded-full" />
-                        </div>
-                        <div className="flex gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-[#F7F6F3] border border-[#E9E9E7]" />
-                            <div className="w-8 h-8 rounded-lg bg-[#F7F6F3] border border-[#E9E9E7]" />
-                        </div>
+                {/* Main content */}
+                <div className="flex-1 p-5 bg-white relative overflow-hidden">
+                    {/* Default content skeleton */}
+                    <div className="space-y-2 mb-4">
+                        <div className="h-4 w-28 bg-[#1A1A1A]/70 rounded-md" />
+                        <div className="h-1.5 w-40 bg-[#AEACA8]/20 rounded-full" />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                         {[1, 2, 3, 4].map(i => (
-                            <div key={i} className="p-4 rounded-xl border border-[#E9E9E7] bg-[#FAFAF9] space-y-3">
-                                <div className="h-8 w-8 bg-white border border-[#E9E9E7] rounded-lg shadow-sm" />
-                                <div className="space-y-1.5">
-                                    <div className="h-1.5 w-full bg-[#E9E9E7] rounded-full" />
+                            <div key={i} className="p-3 rounded-xl border border-[#E9E9E7] bg-[#FAFAF9] space-y-2">
+                                <div className="w-7 h-7 bg-white border border-[#E9E9E7] rounded-lg" />
+                                <div className="space-y-1">
+                                    <div className="h-1.5 bg-[#E9E9E7] rounded-full" />
                                     <div className="h-1.5 w-2/3 bg-[#E9E9E7] rounded-full" />
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    {/* Simulation Overlays */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                        {/* Scene 1: Chatbot click highlight */}
-                        {scene === 0 && (
-                            <div className="absolute bottom-6 right-6 flex flex-col items-center gap-3 animate-bounce">
-                                <div className="w-14 h-14 bg-[#2D2D2D] rounded-full shadow-lg flex items-center justify-center border-4 border-white">
-                                    <MessageCircle className="w-7 h-7 text-white" />
-                                </div>
-                                <div className="px-3 py-1.5 bg-white rounded-lg shadow-md border border-[#E9E9E7] text-[10px] font-black text-[#1A1A1A] uppercase tracking-wider">
-                                    Nhấn để mở Bot
-                                </div>
+                    {/* ── Step 1: Chatbot button bounce ── */}
+                    {stepIndex === 0 && (
+                        <div className="absolute bottom-4 right-4 flex flex-col items-center gap-2 animate-bounce z-20">
+                            <div
+                                className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-white"
+                                style={{ background: '#2D2D2D', boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}
+                            >
+                                <MessageCircle className="w-6 h-6 text-white" />
                             </div>
-                        )}
+                            <div
+                                className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider"
+                                style={{ background: 'white', color: '#1A1A1A', border: '1px solid #E9E9E7', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                            >
+                                Nhấn tại đây!
+                            </div>
+                        </div>
+                    )}
 
-                        {/* Scene 2: HIGH-FIDELITY CHAT INTERFACE MATCHING CHATBOT.TSX */}
-                        {scene === 1 && (
-                            <div className="absolute bottom-8 right-8 w-[340px] bg-white rounded-[12px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] overflow-hidden border border-[#E9E9E7] animate-scale-in flex flex-col pointer-events-auto origin-bottom-right">
-                                {/* Header exactly matching Chatbot.tsx lines 114-129 */}
-                                <div className="flex items-center gap-3 px-4 py-3 shrink-0" style={{ borderBottom: '1px solid #E9E9E7', borderTop: '3px solid #D9730D' }}>
-                                    <div className="p-2 rounded-lg" style={{ background: '#FFF3E8' }}>
-                                        <Bot className="w-4 h-4" style={{ color: '#D9730D' }} />
-                                    </div>
-                                    <div>
-                                        <h4 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>PhysiVault AI</h4>
-                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                            <span className="text-[10px]" style={{ color: '#787774' }}>Đang trực tuyến</span>
-                                        </div>
-                                    </div>
+                    {/* ── Step 2: Chat window open, conversation shown ── */}
+                    {stepIndex === 1 && (
+                        <div
+                            className="absolute bottom-3 right-3 flex flex-col overflow-hidden animate-scale-in origin-bottom-right z-20"
+                            style={{
+                                width: '230px',
+                                height: '280px',
+                                background: '#FFFFFF',
+                                border: '1px solid #E9E9E7',
+                                borderRadius: '12px',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                            }}
+                        >
+                            {/* Chat header */}
+                            <div
+                                className="flex items-center gap-2 px-3 py-2 shrink-0"
+                                style={{ borderBottom: '1px solid #E9E9E7', borderTop: '3px solid #D9730D' }}
+                            >
+                                <div className="p-1.5 rounded-lg bg-[#FFF3E8]">
+                                    <Bot className="w-3 h-3 text-[#D9730D]" />
                                 </div>
-
-                                {/* Messages Area matching Chatbot.tsx lines 132-190 */}
-                                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar" style={{ background: '#FAFAF9', height: '320px' }}>
-                                    {/* Bot Message 1 */}
-                                    <div className="flex justify-start animate-fade-in">
-                                        <div className="flex gap-2 max-w-[85%] flex-row text-sans">
-                                            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: '#FFF3E8', color: '#D9730D' }}>
-                                                <Bot className="w-3.5 h-3.5" />
-                                            </div>
-                                            <div className="px-3 py-2 text-[13px] leading-relaxed bg-white border border-[#E9E9E7] text-[#1A1A1A]" style={{ borderRadius: '2px 12px 12px 12px' }}>
-                                                Chào bạn! Mình là trợ lý PhysiVault. Cần mình giúp gì cho bạn hôm nay?
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* User Message */}
-                                    <div className="flex justify-end animate-fade-in">
-                                        <div className="flex gap-2 max-w-[85%] flex-row-reverse">
-                                            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: '#EEF0FB', color: '#6B7CDB' }}>
-                                                <User className="w-3.5 h-3.5" />
-                                            </div>
-                                            <div className="px-3 py-2 text-[13px] leading-relaxed bg-[#2D2D2D] text-white font-medium" style={{ borderRadius: '12px 2px 12px 12px' }}>
-                                                09xx-xxx-xxx
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Bot Response Sequence */}
-                                    <div className="space-y-2 animate-fade-in">
-                                        <div className="flex justify-start">
-                                            <div className="flex gap-2 max-w-[85%] flex-row">
-                                                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: '#FFF3E8', color: '#D9730D' }}>
-                                                    <Bot className="w-3.5 h-3.5" />
-                                                </div>
-                                                <div className="px-3 py-2 text-[13px] leading-relaxed bg-white border border-[#E9E9E7] text-[#1A1A1A]" style={{ borderRadius: '2px 12px 12px 12px' }}>
-                                                    Xác thực thành công! Mã kích hoạt của bạn là:
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-start">
-                                            <div className="flex gap-2 max-w-[85%] ml-8"> {/* Offset to align without repeating icon */}
-                                                <div className="px-3 py-2 text-[13px] leading-relaxed bg-white border-2 border-[#D9730D] text-[#1A1A1A] flex items-center gap-2 font-bold" style={{ borderRadius: '2px 12px 12px 12px' }}>
-                                                    <code className="font-mono">PV-XXXX-XXXX-XXXX</code>
-                                                    <Copy className="w-3.5 h-3.5 text-[#AEACA8]" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Input Area matching Chatbot.tsx lines 193-229 */}
-                                <div className="p-3 shrink-0" style={{ borderTop: '1px solid #E9E9E7', background: '#FFFFFF' }}>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex-1 text-[13px] p-2 px-3 border border-[#E9E9E7] rounded-lg text-[#AEACA8] font-medium" style={{ background: '#F7F6F3' }}>
-                                            Nhập số điện thoại...
-                                        </div>
-                                        <div className="p-2.5 rounded-lg text-white" style={{ background: '#D9730D' }}>
-                                            <Send className="w-4 h-4" />
-                                        </div>
-                                    </div>
-                                    <div className="mt-2 flex items-center justify-center gap-4 text-[10px]" style={{ color: '#AEACA8' }}>
-                                        <span className="flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Tự động 24/7</span>
-                                        <span className="flex items-center gap-1"><Bot className="w-3 h-3" /> Chặn dùng chung</span>
+                                <div>
+                                    <div className="text-[11px] font-semibold text-[#1A1A1A]">PhysiVault AI</div>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+                                        <span className="text-[9px] text-[#787774]">Đang trực tuyến</span>
                                     </div>
                                 </div>
                             </div>
-                        )}
 
-                        {/* Scene 3: PIXEL-PERFECT SETTINGSMODAL REPLICA */}
-                        {scene === 2 && (
-                            <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px] flex items-center justify-center p-4 z-[30]">
-                                <div className="w-full max-w-[480px] bg-white rounded-[12px] shadow-2xl border border-[#E9E9E7] overflow-hidden animate-scale-in flex flex-col pointer-events-auto">
-                                    {/* Modal Header */}
-                                    <div className="px-5 py-3.5 border-b border-[#E9E9E7] flex items-center justify-between bg-white">
-                                        <h3 className="font-semibold text-sm text-[#1A1A1A]">Cài đặt & Bảo mật Hệ thống</h3>
-                                        <X className="w-3.5 h-3.5 text-[#787774]" />
+                            {/* Messages */}
+                            <div className="flex-1 overflow-hidden p-2.5 space-y-2" style={{ background: '#FAFAF9' }}>
+                                {/* Bot greeting */}
+                                <div className="flex gap-1.5">
+                                    <div className="w-5 h-5 rounded-full shrink-0 mt-0.5 flex items-center justify-center bg-[#FFF3E8]">
+                                        <Bot className="w-3 h-3 text-[#D9730D]" />
                                     </div>
-
-                                    {/* Modal Body */}
-                                    <div className="p-5 space-y-4 max-h-[380px] overflow-y-auto custom-scrollbar">
-                                        {/* Quyền truy cập Section */}
-                                        <div className="border border-[#E9E9E7] rounded-xl overflow-hidden">
-                                            <div className="flex items-center justify-between px-4 py-3 border-b border-[#E9E9E7]">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-2 bg-[#F1F0EC] rounded-lg">
-                                                        <Lock className="w-4 h-4 text-[#787774]" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-[9px] uppercase font-bold tracking-wider text-[#AEACA8]">Quyền truy cập</div>
-                                                        <div className="text-xs font-bold text-[#1A1A1A]">Chế độ Học sinh</div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-[#E9E9E7] bg-[#F1F0EC] text-[#57564F]">
-                                                    <KeyRound className="w-3 h-3" /> Mở khóa Admin
-                                                </div>
-                                            </div>
-                                            <div className="px-4 py-3 bg-[#FAFAF9]">
-                                                <p className="text-[11px] text-[#787774] leading-relaxed">
-                                                    Tính năng nạp dữ liệu bị hạn chế cho đến khi bạn nhập mã kích hoạt.
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Activation Section (THE FOCUS) */}
-                                        <div className="border border-[#E9E9E7] rounded-xl overflow-hidden">
-                                            <div className="flex items-center gap-3 px-4 py-3 border-b border-[#E9E9E7] border-l-[3px] border-l-[#D9730D]">
-                                                <div className="p-1.5 bg-[#FFF3E8] rounded-lg">
-                                                    <KeyRound className="w-4 h-4 text-[#D9730D]" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-xs font-bold text-[#1A1A1A]">Kích hoạt tài khoản</h4>
-                                                    <p className="text-[10px] text-[#787774] mt-0.5 font-medium">
-                                                        Dán mã kích hoạt nhận từ <span className="text-[#D9730D] font-bold">Bot PhysiVault</span>
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="p-4 space-y-3 bg-[#FAFAF9]">
-                                                <div className="relative">
-                                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#AEACA8]" />
-                                                    <div className="w-full h-10 bg-white border border-[#E9E9E7] rounded-lg flex items-center pl-9 pr-4 text-[12px] text-[#AEACA8] font-medium">
-                                                        Nhập Số điện thoại của bạn
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <div className="relative flex-1">
-                                                        <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#AEACA8]" />
-                                                        <div className="w-full h-10 bg-white border-2 border-[#3366FF] rounded-lg flex items-center pl-9 pr-4 shadow-[0_4px_16px_rgba(51,102,255,0.2)] animate-pulse-slow">
-                                                            <div className="text-[13px] font-mono font-black text-[#3366FF] tracking-wider">PV-XXXX-XXXX-XXXX</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="px-4 h-10 bg-[#D9730D] text-white rounded-lg flex items-center font-bold text-xs shadow-md">
-                                                        Mở khóa
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between text-[9px] text-[#AEACA8] font-bold uppercase tracking-wider">
-                                                    <div className="flex items-center gap-1"><Monitor className="w-3 h-3" /> ID: 89C3-7DB0-0D28</div>
-                                                    <span className="italic font-medium normal-case text-[#D9730D]/60">* Nhập đúng SĐT để khớp mã</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Import Section (Locked) */}
-                                        <div className="space-y-2">
-                                            <h4 className="text-[11px] font-bold flex items-center gap-2 text-[#1A1A1A]">
-                                                <Upload className="w-3.5 h-3.5 text-[#9065B0]" /> Nhập học liệu mới
-                                            </h4>
-                                            <div className="p-4 border-2 border-dashed border-[#E9E9E7] rounded-xl flex flex-col items-center gap-2 opacity-50 bg-[#FAFAF9]">
-                                                <Lock className="w-5 h-5 text-[#AEACA8] opacity-30" />
-                                                <div className="text-center">
-                                                    <p className="text-[10px] font-bold text-[#787774]">Chức năng đang bị khóa</p>
-                                                    <p className="text-[9px] text-[#AEACA8]">Kích hoạt mã để nạp bài giảng.</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Note Box */}
-                                        <div className="flex gap-3 items-start px-4 py-3 bg-[#F7F6F3] border border-[#E9E9E7] rounded-xl">
-                                            <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#AEACA8]" />
-                                            <p className="text-[11px] leading-relaxed text-[#787774] font-medium">
-                                                Hệ thống cần được kích hoạt bằng mã duy nhất để đảm bảo quyền truy cập chính thức.
-                                            </p>
-                                        </div>
+                                    <div
+                                        className="px-2 py-1.5 text-[10px] leading-relaxed text-[#1A1A1A] bg-white border border-[#E9E9E7] max-w-[80%]"
+                                        style={{ borderRadius: '2px 8px 8px 8px' }}
+                                    >
+                                        Chào! Nhập SĐT đã đăng ký với thầy Huy nhé.
                                     </div>
-
-                                    {/* Footer */}
-                                    <div className="px-5 py-3 border-t border-[#E9E9E7] text-center bg-white">
-                                        <span className="text-xs text-[#AEACA8] font-bold hover:text-[#1A1A1A] transition-colors cursor-pointer">Quay lại trang chủ</span>
+                                </div>
+                                {/* User message */}
+                                <div className="flex gap-1.5 justify-end">
+                                    <div
+                                        className="px-2 py-1.5 text-[10px] leading-relaxed text-white max-w-[80%]"
+                                        style={{ background: '#2D2D2D', borderRadius: '8px 2px 8px 8px' }}
+                                    >
+                                        09xx-xxx-xxx
+                                    </div>
+                                    <div className="w-5 h-5 rounded-full shrink-0 mt-0.5 flex items-center justify-center bg-[#EEF0FB]">
+                                        <User className="w-3 h-3 text-[#6B7CDB]" />
+                                    </div>
+                                </div>
+                                {/* Bot + Code */}
+                                <div className="flex gap-1.5">
+                                    <div className="w-5 h-5 rounded-full shrink-0 mt-0.5 flex items-center justify-center bg-[#FFF3E8]">
+                                        <Bot className="w-3 h-3 text-[#D9730D]" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <div
+                                            className="px-2 py-1.5 text-[10px] leading-relaxed text-[#1A1A1A] bg-white border border-[#E9E9E7]"
+                                            style={{ borderRadius: '2px 8px 8px 8px' }}
+                                        >
+                                            Xác thực thành công! Mã của bạn:
+                                        </div>
+                                        <div
+                                            className="px-2 py-1.5 text-[10px] font-mono font-bold text-[#1A1A1A] bg-white flex items-center gap-1.5"
+                                            style={{ border: '1.5px solid #D9730D', borderRadius: '2px 8px 8px 8px' }}
+                                        >
+                                            <span>PV-XXXX-XXXX</span>
+                                            <Copy className="w-2.5 h-2.5 text-[#AEACA8]" />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
+
+                            {/* Input */}
+                            <div className="p-2 shrink-0 bg-white border-t border-[#E9E9E7] flex gap-1.5">
+                                <div
+                                    className="flex-1 h-7 rounded-lg text-[9px] flex items-center px-2 text-[#AEACA8]"
+                                    style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}
+                                >
+                                    Nhập số điện thoại...
+                                </div>
+                                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#D9730D]">
+                                    <Send className="w-3 h-3 text-white" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Step 3: Settings modal ── */}
+                    {stepIndex === 2 && (
+                        <div
+                            className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[1px] z-20"
+                        >
+                            <div
+                                className="w-[320px] bg-white rounded-[12px] shadow-2xl border border-[#E9E9E7] overflow-hidden animate-scale-in flex flex-col"
+                            >
+                                {/* Modal header */}
+                                <div className="px-4 py-3 border-b border-[#E9E9E7] flex items-center justify-between">
+                                    <span className="text-[11px] font-semibold text-[#1A1A1A]">Cài đặt &amp; Bảo mật Hệ thống</span>
+                                    <X className="w-3 h-3 text-[#787774]" />
+                                </div>
+
+                                {/* Body */}
+                                <div className="p-3.5 space-y-3">
+                                    {/* Activation section */}
+                                    <div className="rounded-xl border border-[#E9E9E7] overflow-hidden">
+                                        <div
+                                            className="flex items-center gap-2.5 px-3 py-2.5 border-b border-[#E9E9E7]"
+                                            style={{ borderLeft: '3px solid #D9730D' }}
+                                        >
+                                            <div className="p-1.5 bg-[#FFF3E8] rounded-lg">
+                                                <KeyRound className="w-3.5 h-3.5 text-[#D9730D]" />
+                                            </div>
+                                            <div>
+                                                <div className="text-[10px] font-bold text-[#1A1A1A]">Kích hoạt tài khoản</div>
+                                                <div className="text-[9px] text-[#787774] mt-0.5">Dán mã từ <span className="text-[#D9730D] font-bold">Bot PhysiVault</span></div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-3 space-y-2.5 bg-[#FAFAF9]">
+                                            {/* Phone field */}
+                                            <div className="relative">
+                                                <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#AEACA8]" />
+                                                <div
+                                                    className="w-full h-8 bg-white border border-[#E9E9E7] rounded-lg flex items-center pl-7 pr-3 text-[10px] text-[#1A1A1A] font-medium"
+                                                >
+                                                    09xx-xxx-xxx
+                                                </div>
+                                            </div>
+
+                                            {/* Key field + button */}
+                                            <div className="flex gap-2">
+                                                <div className="relative flex-1">
+                                                    <ShieldCheck className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#AEACA8]" />
+                                                    <div
+                                                        className="w-full h-8 bg-white rounded-lg flex items-center pl-7 pr-3"
+                                                        style={{ border: '2px solid #D9730D', boxShadow: '0 0 0 3px rgba(217,115,13,0.12)' }}
+                                                    >
+                                                        <span className="text-[10px] font-mono font-black text-[#D9730D]">PV-XXXX-XXXX</span>
+                                                    </div>
+                                                </div>
+                                                <div
+                                                    className="px-3 h-8 rounded-lg flex items-center text-[10px] font-bold text-white shrink-0"
+                                                    style={{ background: '#D9730D' }}
+                                                >
+                                                    Mở khóa
+                                                </div>
+                                            </div>
+
+                                            {/* Machine ID */}
+                                            <div className="flex items-center gap-1 text-[8px] text-[#AEACA8]">
+                                                <Monitor className="w-2.5 h-2.5" />
+                                                <span className="font-mono">ID: 89C3-7DB0-0D28</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Step 4: Success state ── */}
+                    {stepIndex === 3 && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-[2px] z-20">
+                            <div className="flex flex-col items-center gap-4 animate-scale-in">
+                                {/* Big check */}
+                                <div
+                                    className="w-20 h-20 rounded-full flex items-center justify-center"
+                                    style={{ background: '#EAF3EE', boxShadow: '0 0 0 8px rgba(68,131,97,0.1)' }}
+                                >
+                                    <CheckCircle2 className="w-10 h-10 text-[#448361]" />
+                                </div>
+
+                                <div className="text-center space-y-1.5">
+                                    <div className="text-sm font-bold text-[#1A1A1A]">Kích hoạt thành công!</div>
+                                    <div className="text-[11px] text-[#787774] leading-relaxed max-w-[200px]">
+                                        Tài liệu Lớp 10, 11, 12 đã sẵn sàng cho bạn.
+                                    </div>
+                                </div>
+
+                                {/* Unlocked badge */}
+                                <div
+                                    className="flex items-center gap-2 px-4 py-2 rounded-full text-[11px] font-bold"
+                                    style={{ background: '#EAF3EE', color: '#448361' }}
+                                >
+                                    <Unlock className="w-3.5 h-3.5" />
+                                    Hệ thống đã mở khóa
+                                </div>
+
+                                {/* Grade chips */}
+                                <div className="flex gap-2">
+                                    {['Lớp 10', 'Lớp 11', 'Lớp 12'].map(g => (
+                                        <div
+                                            key={g}
+                                            className="px-3 py-1.5 rounded-lg text-[10px] font-bold"
+                                            style={{ background: '#EEF0FB', color: '#6B7CDB' }}
+                                        >
+                                            {g}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
