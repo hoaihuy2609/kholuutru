@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
     X, CheckCircle2, Settings, ShieldCheck, ChevronRight, ChevronLeft,
-    MessageCircle, Bot, Send, RefreshCw, Copy, Check, User, Phone,
-    KeyRound, ShieldAlert, Monitor, Unlock
+    MessageCircle, Bot, Send, Copy, Check, User, Phone,
+    KeyRound, ShieldAlert, Monitor, Unlock, Upload, Lock
 } from 'lucide-react';
 
 interface GuideModalProps {
@@ -39,11 +39,11 @@ const steps = [
     },
     {
         id: 4,
-        label: 'Bắt đầu học',
-        shortDesc: 'Truy cập toàn bộ tài liệu',
-        icon: CheckCircle2,
-        color: '#448361',
-        bg: '#EAF3EE',
+        label: 'Nhập học liệu',
+        shortDesc: 'Upload file bài giảng từ thầy',
+        icon: Upload,
+        color: '#9065B0',
+        bg: '#F3ECF8',
     },
 ];
 
@@ -226,12 +226,12 @@ const StepDescription: React.FC<{ step: typeof steps[0]; stepIndex: number }> = 
             ],
         },
         {
-            title: 'Kích hoạt thành công!',
+            title: 'Nhập học liệu từ thầy',
             bullets: [
-                'Hệ thống xác nhận mã hợp lệ — bạn đã được mở khóa',
-                'Toàn bộ tài liệu vật lý Lớp 10, 11, 12 sẵn sàng',
-                'Quyền truy cập gắn liền với thiết bị này',
-                'Liên hệ thầy Huy nếu cần hỗ trợ thêm',
+                'Sau khi kích hoạt, mục "Nhập học liệu mới" sẽ được mở khóa',
+                'Nhấn nút "Chọn file bài giảng từ thầy (.json)"',
+                'Chọn file .json do thầy Huy cung cấp trên thiết bị của bạn',
+                'Xác nhận để hệ thống tự động nạp toàn bộ bài giảng',
             ],
         },
     ];
@@ -284,6 +284,14 @@ const StepDescription: React.FC<{ step: typeof steps[0]; stepIndex: number }> = 
                     <ShieldAlert className="w-3.5 h-3.5 text-[#6B7CDB] shrink-0 mt-0.5" />
                     <p className="text-[11px] text-[#6B7CDB] leading-relaxed font-medium">
                         Nhập <strong>đúng SĐT</strong> như lúc nhắn Bot. Sai SĐT sẽ không khớp với mã PV.
+                    </p>
+                </div>
+            )}
+            {stepIndex === 3 && (
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#F3ECF8] border border-[#9065B0]/20">
+                    <ShieldAlert className="w-3.5 h-3.5 text-[#9065B0] shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-[#9065B0] leading-relaxed font-medium">
+                        File .json do <strong>thầy Huy cung cấp</strong> chứa toàn bộ bài giảng. Không tự tạo file này.
                     </p>
                 </div>
             )}
@@ -466,14 +474,10 @@ const SimulationView: React.FC<{ stepIndex: number }> = ({ stepIndex }) => {
                         </div>
                     )}
 
-                    {/* ── Step 3: Settings modal ── */}
+                    {/* ── Step 3: Settings modal — POST-ACTIVATION state ── */}
                     {stepIndex === 2 && (
-                        <div
-                            className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[1px] z-20"
-                        >
-                            <div
-                                className="w-[320px] bg-white rounded-[12px] shadow-2xl border border-[#E9E9E7] overflow-hidden animate-scale-in flex flex-col"
-                            >
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[1px] z-20">
+                            <div className="w-[310px] bg-white rounded-[12px] shadow-2xl border border-[#E9E9E7] overflow-hidden animate-scale-in flex flex-col">
                                 {/* Modal header */}
                                 <div className="px-4 py-3 border-b border-[#E9E9E7] flex items-center justify-between">
                                     <span className="text-[11px] font-semibold text-[#1A1A1A]">Cài đặt &amp; Bảo mật Hệ thống</span>
@@ -482,102 +486,141 @@ const SimulationView: React.FC<{ stepIndex: number }> = ({ stepIndex }) => {
 
                                 {/* Body */}
                                 <div className="p-3.5 space-y-3">
-                                    {/* Activation section */}
+                                    {/* Access row — now activated (student mode) */}
                                     <div className="rounded-xl border border-[#E9E9E7] overflow-hidden">
-                                        <div
-                                            className="flex items-center gap-2.5 px-3 py-2.5 border-b border-[#E9E9E7]"
-                                            style={{ borderLeft: '3px solid #D9730D' }}
-                                        >
-                                            <div className="p-1.5 bg-[#FFF3E8] rounded-lg">
-                                                <KeyRound className="w-3.5 h-3.5 text-[#D9730D]" />
+                                        <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#E9E9E7]">
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-1.5 bg-[#F1F0EC] rounded-lg">
+                                                    <Lock className="w-3.5 h-3.5 text-[#787774]" />
+                                                </div>
+                                                <div>
+                                                    <div className="text-[8px] uppercase font-bold tracking-wider text-[#AEACA8]">Quyền truy cập</div>
+                                                    <div className="text-[11px] font-semibold text-[#1A1A1A]">Chế độ Học sinh</div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <div className="text-[10px] font-bold text-[#1A1A1A]">Kích hoạt tài khoản</div>
-                                                <div className="text-[9px] text-[#787774] mt-0.5">Dán mã từ <span className="text-[#D9730D] font-bold">Bot PhysiVault</span></div>
+                                            <div
+                                                className="flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-lg"
+                                                style={{ background: '#F1F0EC', color: '#57564F', border: '1px solid #E9E9E7' }}
+                                            >
+                                                <KeyRound className="w-2.5 h-2.5" /> Mở khóa Admin
                                             </div>
                                         </div>
-
-                                        <div className="p-3 space-y-2.5 bg-[#FAFAF9]">
-                                            {/* Phone field */}
-                                            <div className="relative">
-                                                <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#AEACA8]" />
-                                                <div
-                                                    className="w-full h-8 bg-white border border-[#E9E9E7] rounded-lg flex items-center pl-7 pr-3 text-[10px] text-[#1A1A1A] font-medium"
-                                                >
-                                                    09xx-xxx-xxx
-                                                </div>
-                                            </div>
-
-                                            {/* Key field + button */}
-                                            <div className="flex gap-2">
-                                                <div className="relative flex-1">
-                                                    <ShieldCheck className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#AEACA8]" />
-                                                    <div
-                                                        className="w-full h-8 bg-white rounded-lg flex items-center pl-7 pr-3"
-                                                        style={{ border: '2px solid #D9730D', boxShadow: '0 0 0 3px rgba(217,115,13,0.12)' }}
-                                                    >
-                                                        <span className="text-[10px] font-mono font-black text-[#D9730D]">PV-XXXX-XXXX</span>
-                                                    </div>
-                                                </div>
-                                                <div
-                                                    className="px-3 h-8 rounded-lg flex items-center text-[10px] font-bold text-white shrink-0"
-                                                    style={{ background: '#D9730D' }}
-                                                >
-                                                    Mở khóa
-                                                </div>
-                                            </div>
-
-                                            {/* Machine ID */}
-                                            <div className="flex items-center gap-1 text-[8px] text-[#AEACA8]">
-                                                <Monitor className="w-2.5 h-2.5" />
-                                                <span className="font-mono">ID: 89C3-7DB0-0D28</span>
-                                            </div>
+                                        {/* Green success message */}
+                                        <div className="px-3 py-2.5 bg-[#FAFAF9]">
+                                            <span className="flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: '#448361' }}>
+                                                <ShieldCheck className="w-3 h-3" />
+                                                Hệ thống đã được kích hoạt. Bạn có thể nạp bài giảng mới.
+                                            </span>
                                         </div>
                                     </div>
+
+                                    {/* Import section — now unlocked */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#1A1A1A]">
+                                            <Upload className="w-3.5 h-3.5 text-[#9065B0]" />
+                                            Nhập học liệu mới
+                                        </div>
+                                        <div
+                                            className="w-full py-2.5 rounded-lg flex items-center justify-center gap-1.5 text-[10px] font-semibold"
+                                            style={{ background: '#F3ECF8', color: '#9065B0', border: '1px solid #9065B033' }}
+                                        >
+                                            <Upload className="w-3 h-3" />
+                                            Chọn file bài giảng từ thầy (.json)
+                                        </div>
+                                    </div>
+
+                                    {/* Note */}
+                                    <div
+                                        className="flex items-start gap-2 px-3 py-2.5 rounded-lg"
+                                        style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}
+                                    >
+                                        <ShieldAlert className="w-3 h-3 text-[#AEACA8] shrink-0 mt-0.5" />
+                                        <p className="text-[9px] leading-relaxed text-[#787774]">
+                                            Lưu ý cho Học sinh: Hệ thống cần được kích hoạt bằng mã duy nhất cho máy này để đảm bảo quyền truy cập học liệu chính thức.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Footer */}
+                                <div className="px-4 py-2.5 border-t border-[#E9E9E7] text-center">
+                                    <span className="text-[10px] text-[#AEACA8] font-medium">Quay lại trang chủ</span>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* ── Step 4: Success state ── */}
+                    {/* ── Step 4: Upload / Import flow ── */}
                     {stepIndex === 3 && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-[2px] z-20">
-                            <div className="flex flex-col items-center gap-4 animate-scale-in">
-                                {/* Big check */}
-                                <div
-                                    className="w-20 h-20 rounded-full flex items-center justify-center"
-                                    style={{ background: '#EAF3EE', boxShadow: '0 0 0 8px rgba(68,131,97,0.1)' }}
-                                >
-                                    <CheckCircle2 className="w-10 h-10 text-[#448361]" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[1px] z-20">
+                            <div className="w-[310px] bg-white rounded-[12px] shadow-2xl border border-[#E9E9E7] overflow-hidden animate-scale-in flex flex-col">
+                                {/* Modal header */}
+                                <div className="px-4 py-3 border-b border-[#E9E9E7] flex items-center justify-between">
+                                    <span className="text-[11px] font-semibold text-[#1A1A1A]">Cài đặt &amp; Bảo mật Hệ thống</span>
+                                    <X className="w-3 h-3 text-[#787774]" />
                                 </div>
 
-                                <div className="text-center space-y-1.5">
-                                    <div className="text-sm font-bold text-[#1A1A1A]">Kích hoạt thành công!</div>
-                                    <div className="text-[11px] text-[#787774] leading-relaxed max-w-[200px]">
-                                        Tài liệu Lớp 10, 11, 12 đã sẵn sàng cho bạn.
+                                {/* Body */}
+                                <div className="p-3.5 space-y-3">
+                                    {/* Import section highlight */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#1A1A1A]">
+                                            <Upload className="w-3.5 h-3.5 text-[#9065B0]" />
+                                            Nhập học liệu mới
+                                        </div>
+                                        {/* Upload button — highlighted / pulsing */}
+                                        <div
+                                            className="w-full py-3 rounded-lg flex items-center justify-center gap-1.5 text-[11px] font-semibold animate-pulse"
+                                            style={{
+                                                background: '#F3ECF8',
+                                                color: '#9065B0',
+                                                border: '2px solid #9065B0',
+                                                boxShadow: '0 0 0 4px rgba(144,101,176,0.1)',
+                                            }}
+                                        >
+                                            <Upload className="w-3.5 h-3.5" />
+                                            Chọn file bài giảng từ thầy (.json)
+                                        </div>
+                                    </div>
+
+                                    {/* File selected state */}
+                                    <div
+                                        className="rounded-lg p-2.5 flex items-center gap-2.5"
+                                        style={{ background: '#F3ECF8', border: '1px solid #9065B033' }}
+                                    >
+                                        <div
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                            style={{ background: '#9065B0' }}
+                                        >
+                                            <Upload className="w-4 h-4 text-white" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="text-[10px] font-bold text-[#1A1A1A] truncate">baiGiang_VatLy_2025.json</div>
+                                            <div className="text-[9px] text-[#9065B0] mt-0.5">Đang nhập dữ liệu...</div>
+                                            {/* Progress bar */}
+                                            <div className="mt-1.5 h-1 rounded-full bg-[#E9E9E7] overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full"
+                                                    style={{ width: '70%', background: '#9065B0' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Success tip */}
+                                    <div
+                                        className="flex items-center gap-2 px-3 py-2.5 rounded-lg"
+                                        style={{ background: '#EAF3EE', border: '1px solid #44836133' }}
+                                    >
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-[#448361] shrink-0" />
+                                        <p className="text-[9px] leading-relaxed font-semibold" style={{ color: '#448361' }}>
+                                            Nhập xong — tải lại trang để xem bài giảng!
+                                        </p>
                                     </div>
                                 </div>
 
-                                {/* Unlocked badge */}
-                                <div
-                                    className="flex items-center gap-2 px-4 py-2 rounded-full text-[11px] font-bold"
-                                    style={{ background: '#EAF3EE', color: '#448361' }}
-                                >
-                                    <Unlock className="w-3.5 h-3.5" />
-                                    Hệ thống đã mở khóa
-                                </div>
-
-                                {/* Grade chips */}
-                                <div className="flex gap-2">
-                                    {['Lớp 10', 'Lớp 11', 'Lớp 12'].map(g => (
-                                        <div
-                                            key={g}
-                                            className="px-3 py-1.5 rounded-lg text-[10px] font-bold"
-                                            style={{ background: '#EEF0FB', color: '#6B7CDB' }}
-                                        >
-                                            {g}
-                                        </div>
-                                    ))}
+                                {/* Footer */}
+                                <div className="px-4 py-2.5 border-t border-[#E9E9E7] text-center">
+                                    <span className="text-[10px] text-[#AEACA8] font-medium">Quay lại trang chủ</span>
                                 </div>
                             </div>
                         </div>
