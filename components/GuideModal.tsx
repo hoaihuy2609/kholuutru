@@ -196,58 +196,85 @@ const SimulatedAppView: React.FC<{ scene: number }> = ({ scene }) => {
                             </div>
                         )}
 
-                        {/* Scene 2: High-fidelity Chat Interface */}
+                        {/* Scene 2: HIGH-FIDELITY CHAT INTERFACE MATCHING CHATBOT.TSX */}
                         {scene === 1 && (
-                            <div className="absolute bottom-8 right-8 w-[320px] bg-white rounded-[12px] shadow-xl overflow-hidden border border-[#E9E9E7] animate-scale-in flex flex-col pointer-events-auto">
+                            <div className="absolute bottom-8 right-8 w-[340px] bg-white rounded-[12px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] overflow-hidden border border-[#E9E9E7] animate-scale-in flex flex-col pointer-events-auto origin-bottom-right">
+                                {/* Header exactly matching Chatbot.tsx lines 114-129 */}
                                 <div className="flex items-center gap-3 px-4 py-3 shrink-0" style={{ borderBottom: '1px solid #E9E9E7', borderTop: '3px solid #D9730D' }}>
-                                    <div className="p-1.5 rounded-lg bg-[#FFF3E8]">
-                                        <Bot className="w-3.5 h-3.5 text-[#D9730D]" />
+                                    <div className="p-2 rounded-lg" style={{ background: '#FFF3E8' }}>
+                                        <Bot className="w-4 h-4" style={{ color: '#D9730D' }} />
                                     </div>
                                     <div>
-                                        <h4 className="text-xs font-bold text-[#1A1A1A]">PhysiVault AI</h4>
-                                        <div className="flex items-center gap-1 mt-0.5">
+                                        <h4 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>PhysiVault AI</h4>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
                                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                            <span className="text-[9px] text-[#787774]">Đang trực tuyến</span>
+                                            <span className="text-[10px]" style={{ color: '#787774' }}>Đang trực tuyến</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="p-4 h-[280px] bg-[#FAFAF9] space-y-3 overflow-y-auto custom-scrollbar">
-                                    <div className="flex justify-start gap-2 max-w-[90%]">
-                                        <div className="w-5 h-5 rounded-full bg-[#FFF3E8] text-[#D9730D] flex items-center justify-center shrink-0 mt-0.5">
-                                            <Bot className="w-3 h-3" />
-                                        </div>
-                                        <div className="px-3 py-2 text-xs bg-white border border-[#E9E9E7] text-[#1A1A1A]" style={{ borderRadius: '2px 12px 12px 12px' }}>
-                                            Chào bạn! Nhập SĐT để lấy mã nhé.
+
+                                {/* Messages Area matching Chatbot.tsx lines 132-190 */}
+                                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar" style={{ background: '#FAFAF9', height: '320px' }}>
+                                    {/* Bot Message 1 */}
+                                    <div className="flex justify-start animate-fade-in">
+                                        <div className="flex gap-2 max-w-[85%] flex-row text-sans">
+                                            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: '#FFF3E8', color: '#D9730D' }}>
+                                                <Bot className="w-3.5 h-3.5" />
+                                            </div>
+                                            <div className="px-3 py-2 text-[13px] leading-relaxed bg-white border border-[#E9E9E7] text-[#1A1A1A]" style={{ borderRadius: '2px 12px 12px 12px' }}>
+                                                Chào bạn! Mình là trợ lý PhysiVault. Cần mình giúp gì cho bạn hôm nay?
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="flex justify-end gap-2 max-w-[90%] ml-auto">
-                                        <div className="px-3 py-2 text-xs bg-[#2D2D2D] text-white" style={{ borderRadius: '12px 2px 12px 12px' }}>
-                                            09xx-xxx-xxx
+
+                                    {/* User Message */}
+                                    <div className="flex justify-end animate-fade-in">
+                                        <div className="flex gap-2 max-w-[85%] flex-row-reverse">
+                                            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: '#EEF0FB', color: '#6B7CDB' }}>
+                                                <User className="w-3.5 h-3.5" />
+                                            </div>
+                                            <div className="px-3 py-2 text-[13px] leading-relaxed bg-[#2D2D2D] text-white font-medium" style={{ borderRadius: '12px 2px 12px 12px' }}>
+                                                09xx-xxx-xxx
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-start gap-2 max-w-[90%]">
-                                            <div className="w-5 h-5 rounded-full bg-[#FFF3E8] text-[#D9730D] flex items-center justify-center shrink-0 mt-0.5">
-                                                <Bot className="w-3 h-3" />
-                                            </div>
-                                            <div className="px-3 py-2 text-xs bg-white border border-[#E9E9E7] text-[#1A1A1A]" style={{ borderRadius: '2px 12px 12px 12px' }}>
-                                                Mã kích hoạt của bạn là:
+
+                                    {/* Bot Response Sequence */}
+                                    <div className="space-y-2 animate-fade-in">
+                                        <div className="flex justify-start">
+                                            <div className="flex gap-2 max-w-[85%] flex-row">
+                                                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: '#FFF3E8', color: '#D9730D' }}>
+                                                    <Bot className="w-3.5 h-3.5" />
+                                                </div>
+                                                <div className="px-3 py-2 text-[13px] leading-relaxed bg-white border border-[#E9E9E7] text-[#1A1A1A]" style={{ borderRadius: '2px 12px 12px 12px' }}>
+                                                    Xác thực thành công! Mã kích hoạt của bạn là:
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="flex justify-start gap-2 max-w-[90%]">
-                                            <div className="w-5 h-5 rounded-full bg-[#FFF3E8] text-[#D9730D] flex items-center justify-center shrink-0 mt-0.5">
-                                                <Bot className="w-3 h-3" />
-                                            </div>
-                                            <div className="px-3 py-2 text-xs bg-white border-2 border-[#D9730D] text-[#1A1A1A] flex items-center gap-2 font-mono font-bold" style={{ borderRadius: '2px 12px 12px 12px' }}>
-                                                PV-XXXX-XXXX-XXXX
-                                                <Copy className="w-3 h-3 text-[#AEACA8]" />
+                                        <div className="flex justify-start">
+                                            <div className="flex gap-2 max-w-[85%] ml-8"> {/* Offset to align without repeating icon */}
+                                                <div className="px-3 py-2 text-[13px] leading-relaxed bg-white border-2 border-[#D9730D] text-[#1A1A1A] flex items-center gap-2 font-bold" style={{ borderRadius: '2px 12px 12px 12px' }}>
+                                                    <code className="font-mono">PV-XXXX-XXXX-XXXX</code>
+                                                    <Copy className="w-3.5 h-3.5 text-[#AEACA8]" />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="p-3 bg-white border-t border-[#E9E9E7]">
-                                    <div className="h-9 bg-[#F7F6F3] border border-[#E9E9E7] rounded-lg px-3 flex items-center text-xs text-[#AEACA8]">
-                                        Nhập SĐT...
+
+                                {/* Input Area matching Chatbot.tsx lines 193-229 */}
+                                <div className="p-3 shrink-0" style={{ borderTop: '1px solid #E9E9E7', background: '#FFFFFF' }}>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1 text-[13px] p-2 px-3 border border-[#E9E9E7] rounded-lg text-[#AEACA8] font-medium" style={{ background: '#F7F6F3' }}>
+                                            Nhập số điện thoại...
+                                        </div>
+                                        <div className="p-2.5 rounded-lg text-white" style={{ background: '#D9730D' }}>
+                                            <Send className="w-4 h-4" />
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 flex items-center justify-center gap-4 text-[10px]" style={{ color: '#AEACA8' }}>
+                                        <span className="flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Tự động 24/7</span>
+                                        <span className="flex items-center gap-1"><Bot className="w-3 h-3" /> Chặn dùng chung</span>
                                     </div>
                                 </div>
                             </div>
