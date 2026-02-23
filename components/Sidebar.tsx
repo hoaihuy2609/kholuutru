@@ -1,5 +1,5 @@
 import React from 'react';
-import { Atom, FolderOpen, Home, Settings, BookOpen, Lightbulb, Zap, Activity } from 'lucide-react';
+import { Atom, Home, Settings, BookOpen, Zap, Activity } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
@@ -11,102 +11,123 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, className }) => {
+  const gradeConfig = {
+    [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
+    [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
+    [GradeLevel.Grade10]: { icon: Activity, label: 'Lớp 10', dot: '#448361' },
+  };
+
   return (
-    <div className={`w-64 h-full flex flex-col fixed left-0 top-0 z-10 glass border-r border-white/20 shadow-xl backdrop-blur-xl bg-white/80 ${className}`}>
+    <div
+      className={`w-64 h-full flex flex-col fixed left-0 top-0 z-10 ${className}`}
+      style={{ background: '#F1F0EC', borderRight: '1px solid #E9E9E7' }}
+    >
+      {/* Logo */}
       <div
         onClick={() => onSelectGrade(null)}
-        className="p-6 flex items-center gap-3 border-b border-gray-100/50 cursor-pointer group/logo hover:bg-slate-50/80 transition-all active:scale-95"
+        className="p-5 flex items-center gap-2.5 cursor-pointer group/logo transition-colors"
+        style={{ borderBottom: '1px solid #E9E9E7' }}
         title="Quay về Trang tổng quan"
       >
-        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white transform group-hover/logo:scale-110 group-hover/logo:rotate-12 transition-all duration-500">
-          <Atom className="w-6 h-6 animate-pulse" />
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: '#6B7CDB' }}
+        >
+          <Atom className="w-4 h-4 text-white" />
         </div>
         <div>
-          <h1 id="tour-logo" className="font-bold text-xl text-gray-800 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">PhysiVault</h1>
-          <p className="text-xs text-slate-500 font-medium tracking-wide">Kho lưu trữ vật lý</p>
+          <h1
+            id="tour-logo"
+            className="font-semibold text-sm leading-tight"
+            style={{ color: '#1A1A1A' }}
+          >
+            PhysiVault
+          </h1>
+          <p className="text-[11px] leading-tight" style={{ color: '#AEACA8' }}>
+            Kho lưu trữ vật lý
+          </p>
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
+      {/* Navigation */}
+      <nav className="flex-1 p-2 overflow-y-auto space-y-0.5">
+
+        {/* Home */}
         <button
           onClick={() => onSelectGrade(null)}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${currentGrade === null
-            ? 'bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-700 font-semibold shadow-sm border border-indigo-100/50'
-            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1'
-            }`}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+          style={{
+            background: currentGrade === null ? '#E3E2DE' : 'transparent',
+            color: currentGrade === null ? '#1A1A1A' : '#57564F',
+            fontWeight: currentGrade === null ? 500 : 400,
+          }}
+          onMouseEnter={e => { if (currentGrade !== null) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+          onMouseLeave={e => { if (currentGrade !== null) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
-          <Home className={`w-5 h-5 transition-colors ${currentGrade === null ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+          <Home className="w-4 h-4 shrink-0" style={{ color: currentGrade === null ? '#1A1A1A' : '#AEACA8' }} />
           Tổng quan
         </button>
 
+        {/* Guide */}
         <button
           onClick={onOpenGuide}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-50 to-indigo-100/50 text-indigo-700 hover:from-indigo-100 hover:to-indigo-200 transition-all duration-300 border border-indigo-100 shadow-sm group"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+          style={{ color: '#57564F', fontWeight: 400 }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
         >
-          <BookOpen className="w-5 h-5 text-indigo-600 group-hover:scale-110 transition-transform" />
-          <span className="font-bold">Hướng dẫn sử dụng</span>
+          <BookOpen className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
+          Hướng dẫn sử dụng
         </button>
 
-        <div className="pt-6 pb-2">
-          <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Khối Lớp</p>
+        {/* Section label */}
+        <div className="pt-4 pb-1 px-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#AEACA8' }}>
+            Khối Lớp
+          </p>
         </div>
 
+        {/* Grade items */}
         {[GradeLevel.Grade12, GradeLevel.Grade11, GradeLevel.Grade10].map((grade) => {
           const isSelected = currentGrade === grade;
-
-          const gradeStyles = {
-            [GradeLevel.Grade12]: {
-              gradient: 'from-violet-500 to-fuchsia-600',
-              shadow: 'shadow-fuchsia-500/30',
-              icon: Atom,
-              hover: 'group-hover:text-fuchsia-500'
-            },
-            [GradeLevel.Grade11]: {
-              gradient: 'from-blue-500 to-cyan-500',
-              shadow: 'shadow-cyan-500/30',
-              icon: Zap,
-              hover: 'group-hover:text-cyan-500'
-            },
-            [GradeLevel.Grade10]: {
-              gradient: 'from-emerald-500 to-teal-600',
-              shadow: 'shadow-teal-500/30',
-              icon: Activity,
-              hover: 'group-hover:text-teal-500'
-            }
-          };
-
-          const { gradient, shadow, icon: Icon, hover } = gradeStyles[grade];
+          const { icon: Icon, label, dot } = gradeConfig[grade];
 
           return (
             <button
               key={grade}
               onClick={() => onSelectGrade(grade)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isSelected
-                ? `bg-gradient-to-r ${gradient} text-white shadow-lg ${shadow} transform scale-[1.02]`
-                : 'text-slate-600 hover:bg-white hover:shadow-md hover:border-slate-100 border border-transparent'
-                }`}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+              style={{
+                background: isSelected ? '#E3E2DE' : 'transparent',
+                color: isSelected ? '#1A1A1A' : '#57564F',
+                fontWeight: isSelected ? 500 : 400,
+              }}
+              onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+              onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
-              <Icon className={`w-5 h-5 transition-colors ${isSelected ? 'text-white' : `text-slate-400 ${hover}`}`} />
-              <span className="font-medium">Lớp {grade}</span>
-              {isSelected && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              )}
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ background: dot, opacity: isSelected ? 1 : 0.5 }}
+              />
+              <Icon className="w-4 h-4 shrink-0" style={{ color: isSelected ? '#1A1A1A' : '#AEACA8' }} />
+              {label}
             </button>
           );
         })}
-
-
-
       </nav>
 
-      <div className="p-4 border-t border-gray-100/50 bg-gray-50/50">
+      {/* Settings */}
+      <div className="p-2" style={{ borderTop: '1px solid #E9E9E7' }}>
         <button
           id="tour-settings-btn"
           onClick={onOpenSettings}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-md transition-all duration-300 border border-transparent hover:border-gray-100"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors"
+          style={{ color: '#57564F' }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
         >
-          <Settings className="w-5 h-5 transition-transform group-hover:rotate-90" />
-          <span className="font-medium">Cài đặt & Đồng bộ</span>
+          <Settings className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
+          Cài đặt &amp; Đồng bộ
         </button>
       </div>
     </div>

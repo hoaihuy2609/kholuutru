@@ -42,14 +42,11 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    if (autoCreate) {
-      setIsCreating(true);
-    }
+    if (autoCreate) setIsCreating(true);
   }, [autoCreate]);
 
-  // Helper to sort files
-  const sortFiles = (files: StoredFile[], option: 'newest' | 'oldest' | 'az' | 'za') => {
-    return [...files].sort((a, b) => {
+  const sortFiles = (files: StoredFile[], option: 'newest' | 'oldest' | 'az' | 'za') =>
+    [...files].sort((a, b) => {
       switch (option) {
         case 'newest': return b.uploadDate - a.uploadDate;
         case 'oldest': return a.uploadDate - b.uploadDate;
@@ -58,31 +55,20 @@ const ChapterView: React.FC<ChapterViewProps> = ({
         default: return 0;
       }
     });
-  };
 
-  // Filter and sort chapter files by category
-  const theoryFiles = sortFiles(chapterFiles.filter(f => f.category === "Lý thuyết trọng tâm (Chương)"), 'az');
-  const advancedFiles = sortFiles(chapterFiles.filter(f => f.category === "Bài tập Tính toán Nâng cao"), advancedSort);
-  const trueFalseFiles = sortFiles(chapterFiles.filter(f => f.category === "Trắc nghiệm Đúng/Sai (Chương)"), trueFalseSort);
+  const theoryFiles = sortFiles(chapterFiles.filter(f => f.category === 'Lý thuyết trọng tâm (Chương)'), 'az');
+  const trueFalseFiles = sortFiles(chapterFiles.filter(f => f.category === 'Trắc nghiệm Đúng/Sai (Chương)'), trueFalseSort);
+  const advancedFiles = sortFiles(chapterFiles.filter(f => f.category === 'Bài tập Tính toán Nâng cao'), advancedSort);
 
   const filteredLessons = lessons
-    .filter(lesson => {
-      const name = (lesson.name || '').toLowerCase().normalize('NFC');
-      const search = searchTerm.toLowerCase().trim().normalize('NFC');
-      return name.includes(search);
-    })
+    .filter(l => (l.name || '').toLowerCase().normalize('NFC').includes(searchTerm.toLowerCase().trim().normalize('NFC')))
     .sort((a, b) => {
       switch (sortOption) {
-        case 'newest':
-          return b.createdAt - a.createdAt;
-        case 'oldest':
-          return a.createdAt - b.createdAt;
-        case 'az':
-          return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-        case 'za':
-          return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
-        default:
-          return 0;
+        case 'newest': return b.createdAt - a.createdAt;
+        case 'oldest': return a.createdAt - b.createdAt;
+        case 'az': return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+        case 'za': return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
+        default: return 0;
       }
     });
 
@@ -112,285 +98,303 @@ const ChapterView: React.FC<ChapterViewProps> = ({
     if (bytes === 0) return '0 B';
     const k = 1024;
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + ['B', 'KB', 'MB', 'GB'][i];
   };
 
-  return (
-    <>
-      <div className="space-y-8 animate-fade-in pb-10">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+  /* ── Reusable file row ── */
+  const FileRow = ({ file, accentColor }: { file: StoredFile; accentColor: string }) => (
+    <div
+      className="flex items-center justify-between px-4 py-2.5 rounded-lg cursor-pointer transition-colors group/file"
+      style={{ border: '1px solid #E9E9E7' }}
+      onClick={() => setPreviewFile(file)}
+      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F7F6F3'}
+      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FFFFFF'}
+    >
+      <div className="flex items-center gap-2.5 overflow-hidden">
+        <FileText className="w-4 h-4 shrink-0" style={{ color: accentColor }} />
+        <div className="overflow-hidden">
+          <p className="text-sm font-medium truncate pr-2" style={{ color: '#1A1A1A' }}>{file.name}</p>
+          <p className="text-[10px] uppercase" style={{ color: '#AEACA8' }}>{formatSize(file.size)}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity shrink-0">
+        <button
+          onClick={e => { e.stopPropagation(); setPreviewFile(file); }}
+          className="p-1.5 rounded-md transition-colors"
+          style={{ color: '#787774' }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+        >
+          <Eye className="w-3.5 h-3.5" />
+        </button>
+        {isAdmin && (
           <button
-            onClick={onBack}
-            className="p-3 bg-white border border-slate-100 shadow-sm rounded-xl text-slate-500 hover:text-indigo-600 hover:shadow-md hover:border-indigo-100 transition-all active:scale-95"
+            onClick={e => { e.stopPropagation(); onDeleteChapterFile(file.id); }}
+            className="p-1.5 rounded-md transition-colors"
+            style={{ color: '#E03E3E' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FEE2E2'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
           >
-            <ArrowLeft className="w-5 h-5" />
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
+        )}
+      </div>
+    </div>
+  );
+
+  /* ── Reusable category section ── */
+  const CategorySection = ({
+    title, description, icon: Icon, accentColor, accentBg,
+    files, sortValue, onSortChange, uploadLabel, uploadCategory: cat,
+    showSort = false
+  }: {
+    title: string; description: string;
+    icon: React.ElementType; accentColor: string; accentBg: string;
+    files: StoredFile[]; sortValue?: string;
+    onSortChange?: (v: any) => void; uploadLabel: string; uploadCategory: string;
+    showSort?: boolean;
+  }) => (
+    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
+      {/* Header */}
+      <div
+        className="flex items-center justify-between p-4"
+        style={{ borderBottom: '1px solid #E9E9E7', borderLeft: `3px solid ${accentColor}` }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: accentBg }}>
+            <Icon className="w-4 h-4" style={{ color: accentColor }} />
+          </div>
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 text-indigo-700 uppercase tracking-wider">
-                Chương học
-              </span>
-            </div>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight leading-tight">{chapter.name}</h2>
-                <p className="text-slate-500">{chapter.description}</p>
-              </div>
-            </div>
+            <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>{title}</h3>
+            <p className="text-xs mt-0.5" style={{ color: '#787774' }}>{description}</p>
           </div>
         </div>
-
-        {/* Chapter Special Category: Core Theory */}
-        <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl p-8 text-white shadow-xl shadow-orange-200 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="relative z-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="max-w-xl">
-                <h3 className="text-2xl font-bold mb-2 flex items-center gap-3">
-                  <span className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
-                    <BookOpen className="w-6 h-6" />
-                  </span>
-                  Kho Lý thuyết trọng tâm
-                </h3>
-                <p className="text-amber-50 text-sm leading-relaxed">
-                  Khu vực lưu trữ các bài giảng lý thuyết, sơ đồ tư duy và kiến thức cốt lõi của chương. Học sinh có thể click xem trực tiếp.
-                </p>
-              </div>
-              {isAdmin && (
-                <button
-                  onClick={() => triggerUpload("Lý thuyết trọng tâm (Chương)")}
-                  className="flex items-center justify-center gap-2 bg-white text-orange-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
-                >
-                  <UploadCloud className="w-5 h-5" />
-                  Tải lý thuyết lên
-                </button>
-              )}
-            </div>
-
-            {theoryFiles.length > 0 && (
-              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {theoryFiles.map(file => (
-                  <div
-                    key={file.id}
-                    className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex items-center justify-between group/file hover:bg-white/20 transition-all cursor-pointer"
-                    onClick={() => setPreviewFile(file)}
-                  >
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <FileText className="w-5 h-5 text-amber-200 shrink-0" />
-                      <div className="overflow-hidden">
-                        <p className="text-sm font-bold truncate pr-2">{file.name}</p>
-                        <p className="text-[10px] text-amber-100 uppercase">{formatSize(file.size)}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover/file:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }}
-                        className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      {isAdmin && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onDeleteChapterFile(file.id); }}
-                          className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Create Lesson Section */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
-              <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
-              Bài học trong chương
-            </h3>
-            {isAdmin && !isCreating && (
-              <button
-                onClick={() => setIsCreating(true)}
-                className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100 font-bold active:scale-95 text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Tạo bài học mới
-              </button>
-            )}
-          </div>
-          {isCreating && (
-            <form onSubmit={handleSubmit} className="flex gap-3 items-center animate-fade-in bg-slate-50 p-4 rounded-2xl mb-6">
-              <input
-                type="text"
-                value={newLessonName}
-                onChange={(e) => setNewLessonName(e.target.value)}
-                placeholder="Nhập tên bài học (VD: Bài 1: Động lượng)"
-                className="flex-1 px-4 py-2.5 rounded-xl border border-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm"
-                autoFocus
-              />
-              <button
-                type="submit"
-                disabled={!newLessonName.trim()}
-                className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:shadow-none shadow-lg shadow-indigo-100 font-bold transition-all"
-              >
-                Lưu bài
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsCreating(false)}
-                className="bg-white text-slate-600 px-6 py-2.5 rounded-xl hover:bg-slate-50 border border-slate-200 font-bold transition-all"
-              >
-                Hủy
-              </button>
-            </form>
-          )}
-
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <SearchBar onSearch={setSearchTerm} placeholder="Tìm bài học..." />
-            </div>
-            <div className="relative shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          {showSort && onSortChange && (
+            <div className="relative">
               <select
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value as any)}
-                className="appearance-none bg-slate-50 border border-transparent text-slate-700 text-sm font-bold rounded-xl focus:ring-4 focus:ring-indigo-100 block w-full p-2.5 pr-10 outline-none transition-all cursor-pointer"
+                value={sortValue}
+                onChange={e => onSortChange(e.target.value as any)}
+                className="appearance-none text-xs px-2.5 py-1.5 pr-7 rounded-md outline-none cursor-pointer transition-colors"
+                style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
               >
                 <option value="newest">Mới nhất</option>
                 <option value="oldest">Cũ nhất</option>
                 <option value="az">Tên A-Z</option>
                 <option value="za">Tên Z-A</option>
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
-                <ArrowUpDown className="h-4 w-4" />
-              </div>
+              <ArrowUpDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#AEACA8' }} />
             </div>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => triggerUpload(cat)}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md transition-colors"
+              style={{ background: accentBg, color: accentColor, border: `1px solid ${accentColor}22` }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.8'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              {uploadLabel}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* File list */}
+      {files.length > 0 ? (
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2" style={{ background: '#FAFAF9' }}>
+          {files.map(file => (
+            <React.Fragment key={file.id}>
+              <FileRow file={file} accentColor={accentColor} />
+            </React.Fragment>
+          ))}
+        </div>
+      ) : (
+        <div className="py-8 text-center text-sm" style={{ color: '#AEACA8', background: '#FAFAF9' }}>
+          Chưa có tài liệu nào
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      <div className="space-y-6 animate-fade-in pb-10">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="p-2 rounded-lg transition-colors"
+            style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div>
+            <span
+              className="inline-block text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded mb-1"
+              style={{ background: '#EEF0FB', color: '#6B7CDB' }}
+            >
+              Chương học
+            </span>
+            <h2 className="text-2xl font-semibold" style={{ color: '#1A1A1A' }}>{chapter.name}</h2>
+            {chapter.description && (
+              <p className="text-sm mt-0.5" style={{ color: '#787774' }}>{chapter.description}</p>
+            )}
+          </div>
+        </div>
+
+        {/* ── Core Theory ── */}
+        <CategorySection
+          title="Kho Lý thuyết trọng tâm"
+          description="Bài giảng, sơ đồ tư duy và kiến thức cốt lõi của chương"
+          icon={BookOpen}
+          accentColor="#D9730D"
+          accentBg="#FFF3E8"
+          files={theoryFiles}
+          uploadLabel="Tải lý thuyết lên"
+          uploadCategory="Lý thuyết trọng tâm (Chương)"
+        />
+
+        {/* ── Lessons in Chapter ── */}
+        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
+          {/* Header */}
+          <div
+            className="flex items-center justify-between p-4"
+            style={{ borderBottom: '1px solid #E9E9E7', borderLeft: '3px solid #6B7CDB' }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#EEF0FB' }}>
+                <Folder className="w-4 h-4" style={{ color: '#6B7CDB' }} />
+              </div>
+              <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Bài học trong chương</h3>
+            </div>
+            {isAdmin && !isCreating && (
+              <button
+                onClick={() => setIsCreating(true)}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md transition-colors"
+                style={{ background: '#EEF0FB', color: '#6B7CDB', border: '1px solid #6B7CDB22' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.8'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Tạo bài học mới
+              </button>
+            )}
           </div>
 
-          {
-            filteredLessons.length === 0 ? (
-              <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-3xl">
-                <Folder className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                <p className="text-slate-400 font-medium">
-                  {searchTerm ? 'Không tìm thấy bài học phù hợp.' : 'Chưa có bài học nào.'}
-                </p>
+          <div className="p-4" style={{ background: '#FAFAF9' }}>
+            {/* Create lesson form */}
+            {isCreating && (
+              <form onSubmit={handleSubmit} className="flex gap-2 items-center animate-fade-in mb-4">
+                <input
+                  type="text"
+                  value={newLessonName}
+                  onChange={e => setNewLessonName(e.target.value)}
+                  placeholder="Nhập tên bài học (VD: Bài 1: Động lượng)"
+                  className="flex-1 px-3 py-2 rounded-lg text-sm outline-none transition-all"
+                  style={{ border: '1px solid #CFCFCB', background: '#FFFFFF', color: '#1A1A1A' }}
+                  onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+                  onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB'}
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={!newLessonName.trim()}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-40"
+                  style={{ background: '#6B7CDB' }}
+                >
+                  Lưu
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCreating(false)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  style={{ background: '#F1F0EC', color: '#57564F', border: '1px solid #E9E9E7' }}
+                >
+                  Hủy
+                </button>
+              </form>
+            )}
+
+            {/* Search + Sort controls */}
+            <div className="flex flex-col md:flex-row gap-3 mb-4">
+              <div className="flex-1">
+                <SearchBar onSearch={setSearchTerm} placeholder="Tìm bài học..." />
+              </div>
+              <div className="relative shrink-0">
+                <select
+                  value={sortOption}
+                  onChange={e => setSortOption(e.target.value as any)}
+                  className="appearance-none text-sm px-3 py-2 pr-8 rounded-lg outline-none cursor-pointer"
+                  style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#57564F' }}
+                >
+                  <option value="newest">Mới nhất</option>
+                  <option value="oldest">Cũ nhất</option>
+                  <option value="az">Tên A-Z</option>
+                  <option value="za">Tên Z-A</option>
+                </select>
+                <ArrowUpDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#AEACA8' }} />
+              </div>
+            </div>
+
+            {/* Lesson list */}
+            {filteredLessons.length === 0 ? (
+              <div
+                className="text-center py-10 rounded-lg text-sm"
+                style={{ border: '1px dashed #E9E9E7', color: '#AEACA8' }}
+              >
+                {searchTerm ? 'Không tìm thấy bài học phù hợp.' : 'Chưa có bài học nào.'}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {filteredLessons.map((lesson) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {filteredLessons.map(lesson => (
                   <div
                     key={lesson.id}
                     onClick={() => onSelectLesson(lesson)}
-                    className="group bg-slate-50 p-5 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5 border border-transparent hover:border-indigo-100 transition-all cursor-pointer flex items-center justify-between"
+                    className="flex items-center justify-between px-4 py-3 rounded-lg cursor-pointer transition-colors group"
+                    style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.background = '#F7F6F3';
+                      (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.background = '#FFFFFF';
+                      (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
+                    }}
                   >
-                    <div className="flex items-center gap-4 overflow-hidden">
-                      <div className="w-12 h-12 rounded-xl bg-white shadow-sm text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                        <Folder className="w-6 h-6" />
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: '#F1F0EC' }}
+                      >
+                        <Folder className="w-4 h-4" style={{ color: '#787774' }} />
                       </div>
                       <div className="overflow-hidden">
-                        <h4 className="font-bold text-slate-800 group-hover:text-indigo-700 transition-colors truncate">
+                        <h4 className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }}>
                           {lesson.name}
                         </h4>
-                        <p className="text-[10px] text-slate-400 font-medium uppercase mt-1">
+                        <p className="text-[10px] uppercase mt-0.5" style={{ color: '#AEACA8' }}>
                           {new Date(lesson.createdAt).toLocaleDateString('vi-VN')}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 shrink-0">
                       {isAdmin && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); onDeleteLesson(lesson.id); }}
-                          className="p-2 text-slate-300 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                          onClick={e => { e.stopPropagation(); onDeleteLesson(lesson.id); }}
+                          className="p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                          style={{ color: '#E03E3E' }}
+                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FEE2E2'}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
-                      <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )
-          }
-        </div>
-
-        {/* Chapter Special Category: True/False Theory */}
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-8 text-white shadow-xl shadow-teal-200 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="relative z-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="max-w-xl">
-                <h3 className="text-2xl font-bold mb-2 flex items-center gap-3">
-                  <span className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
-                    <FileText className="w-6 h-6" />
-                  </span>
-                  Trắc nghiệm Đúng/Sai
-                </h3>
-                <p className="text-emerald-100 text-sm leading-relaxed">
-                  Khu vực dành cho các câu hỏi lý thuyết dạng Đúng/Sai của cả chương học.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <select
-                    value={trueFalseSort}
-                    onChange={(e) => setTrueFalseSort(e.target.value as any)}
-                    className="appearance-none bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold rounded-xl pr-8 pl-3 py-2 outline-none cursor-pointer hover:bg-white/20 transition-all"
-                  >
-                    <option value="newest" className="text-slate-800">Mới nhất</option>
-                    <option value="oldest" className="text-slate-800">Cũ nhất</option>
-                    <option value="az" className="text-slate-800">Tên A-Z</option>
-                    <option value="za" className="text-slate-800">Tên Z-A</option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/60">
-                    <ArrowUpDown className="h-3 w-3" />
-                  </div>
-                </div>
-
-                {isAdmin && (
-                  <button
-                    onClick={() => triggerUpload("Trắc nghiệm Đúng/Sai (Chương)")}
-                    className="flex items-center justify-center gap-2 bg-white text-emerald-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
-                  >
-                    <UploadCloud className="w-5 h-5" />
-                    Tải bài tập Đúng/Sai
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {trueFalseFiles.length > 0 && (
-              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {trueFalseFiles.map(file => (
-                  <div key={file.id} className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex items-center justify-between group/file hover:bg-white/20 transition-all">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <FileText className="w-5 h-5 text-emerald-200 shrink-0" />
-                      <div className="overflow-hidden">
-                        <p className="text-sm font-bold truncate pr-2">{file.name}</p>
-                        <p className="text-[10px] text-emerald-200 uppercase">{formatSize(file.size)}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover/file:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => setPreviewFile(file)}
-                        className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      {isAdmin && (
-                        <button
-                          onClick={() => onDeleteChapterFile(file.id)}
-                          className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                      <ChevronRight className="w-4 h-4" style={{ color: '#AEACA8' }} />
                     </div>
                   </div>
                 ))}
@@ -399,84 +403,35 @@ const ChapterView: React.FC<ChapterViewProps> = ({
           </div>
         </div>
 
-        {/* Chapter Special Category: Advanced Calculation Quiz */}
-        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="relative z-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="max-w-xl">
-                <h3 className="text-2xl font-bold mb-2 flex items-center gap-3">
-                  <span className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
-                    <Zap className="w-6 h-6" />
-                  </span>
-                  Bài tập Tính toán Nâng cao
-                </h3>
-                <p className="text-purple-100 text-sm leading-relaxed">
-                  Khu vực dành riêng cho các bài tập vận dụng cao, tính toán phức tạp của cả chương.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <select
-                    value={advancedSort}
-                    onChange={(e) => setAdvancedSort(e.target.value as any)}
-                    className="appearance-none bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold rounded-xl pr-8 pl-3 py-2 outline-none cursor-pointer hover:bg-white/20 transition-all"
-                  >
-                    <option value="newest" className="text-slate-800">Mới nhất</option>
-                    <option value="oldest" className="text-slate-800">Cũ nhất</option>
-                    <option value="az" className="text-slate-800">Tên A-Z</option>
-                    <option value="za" className="text-slate-800">Tên Z-A</option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/60">
-                    <ArrowUpDown className="h-3 w-3" />
-                  </div>
-                </div>
+        {/* ── True/False ── */}
+        <CategorySection
+          title="Trắc nghiệm Đúng/Sai"
+          description="Câu hỏi lý thuyết dạng Đúng/Sai của cả chương học"
+          icon={FileText}
+          accentColor="#448361"
+          accentBg="#EAF3EE"
+          files={trueFalseFiles}
+          sortValue={trueFalseSort}
+          onSortChange={setTrueFalseSort}
+          uploadLabel="Tải bài Đúng/Sai"
+          uploadCategory="Trắc nghiệm Đúng/Sai (Chương)"
+          showSort
+        />
 
-                {isAdmin && (
-                  <button
-                    onClick={() => triggerUpload("Bài tập Tính toán Nâng cao")}
-                    className="flex items-center justify-center gap-2 bg-white text-indigo-700 px-6 py-3 rounded-2xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all active:scale-95 whitespace-nowrap"
-                  >
-                    <UploadCloud className="w-5 h-5" />
-                    Tải tài liệu nâng cao
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {advancedFiles.length > 0 && (
-              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {advancedFiles.map(file => (
-                  <div key={file.id} className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex items-center justify-between group/file hover:bg-white/20 transition-all">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <FileText className="w-5 h-5 text-purple-200 shrink-0" />
-                      <div className="overflow-hidden">
-                        <p className="text-sm font-bold truncate pr-2">{file.name}</p>
-                        <p className="text-[10px] text-purple-200 uppercase">{formatSize(file.size)}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover/file:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => setPreviewFile(file)}
-                        className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      {isAdmin && (
-                        <button
-                          onClick={() => onDeleteChapterFile(file.id)}
-                          className="p-1.5 hover:bg-red-400/30 text-red-100 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        {/* ── Advanced Calculation ── */}
+        <CategorySection
+          title="Bài tập Tính toán Nâng cao"
+          description="Bài tập vận dụng cao, tính toán phức tạp của cả chương"
+          icon={Zap}
+          accentColor="#9065B0"
+          accentBg="#F3ECF8"
+          files={advancedFiles}
+          sortValue={advancedSort}
+          onSortChange={setAdvancedSort}
+          uploadLabel="Tải tài liệu nâng cao"
+          uploadCategory="Bài tập Tính toán Nâng cao"
+          showSort
+        />
 
         <input
           type="file"
@@ -488,7 +443,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
         />
       </div>
 
-      {/* PDF Preview Modal outside the animate-fade-in div */}
+      {/* PDF Preview Modal */}
       <Modal
         isOpen={!!previewFile}
         onClose={() => setPreviewFile(null)}
@@ -496,8 +451,8 @@ const ChapterView: React.FC<ChapterViewProps> = ({
         maxWidth="1200px"
       >
         {previewFile && (
-          <div className="w-full h-full bg-slate-100 flex items-center justify-center p-0 md:p-6">
-            <div className={`w-full h-[82vh] md:h-[85vh] bg-white rounded-xl overflow-hidden shadow-2xl border border-slate-200`}>
+          <div className="w-full h-full flex items-center justify-center p-0 md:p-6" style={{ background: '#F1F0EC' }}>
+            <div className="w-full h-[82vh] md:h-[85vh] bg-white rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7' }}>
               {previewFile.type.includes('pdf') ? (
                 <iframe
                   src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`}

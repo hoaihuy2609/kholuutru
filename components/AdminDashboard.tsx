@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import {
     Users, UserPlus, Trash2, Search, RefreshCw,
-    ShieldCheck, Monitor, Phone, Download, ArrowLeft,
+    ShieldCheck, Monitor, Phone,
     TrendingUp, UserCheck, ShieldAlert, LayoutDashboard,
-    UserMinus, RotateCcw, Ban
+    UserMinus, RotateCcw, Ban, ArrowLeft, X
 } from 'lucide-react';
 
 interface Student {
@@ -22,6 +22,22 @@ interface AdminDashboardProps {
     onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void;
 }
 
+/* Shared inline input style */
+const inputSt: React.CSSProperties = {
+    width: '100%',
+    background: '#F7F6F3',
+    border: '1px solid #E9E9E7',
+    borderRadius: '8px',
+    padding: '10px 12px',
+    fontSize: '14px',
+    color: '#1A1A1A',
+    outline: 'none',
+};
+
+const Loader2 = ({ className }: { className?: string }) => (
+    <RefreshCw className={`${className} animate-spin`} />
+);
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) => {
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -30,51 +46,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) 
     const [newStudent, setNewStudent] = useState({ sdt: '', name: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Fetch data from Google Sheets
     const fetchStudents = async () => {
         setLoading(true);
         try {
             const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=list`);
             const result = await response.json();
-            if (result.success) {
-                setStudents(result.data);
-            } else {
-                onShowToast(result.msg || 'Lỗi lấy dữ liệu', 'error');
-            }
-        } catch (error) {
-            console.error(error);
+            if (result.success) setStudents(result.data);
+            else onShowToast(result.msg || 'Lỗi lấy dữ liệu', 'error');
+        } catch {
             onShowToast('Không thể kết nối với hệ thống quản lý', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        fetchStudents();
-    }, []);
+    useEffect(() => { fetchStudents(); }, []);
 
     const handleAddStudent = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newStudent.sdt || !newStudent.name) return;
-
         setIsSubmitting(true);
         try {
-            const response = await fetch(GOOGLE_SCRIPT_URL, {
+            await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify({
-                    action: 'add',
-                    sdt: newStudent.sdt,
-                    name: newStudent.name
-                })
+                body: JSON.stringify({ action: 'add', sdt: newStudent.sdt, name: newStudent.name })
             });
-            // Vì POST lên Google Script thường là no-cors hoặc trả về CORS error 
-            // nhưng dữ liệu vẫn vào. Nếu muốn chính xác phải xử lý kỹ hơn.
-            // Ở đây sau khi POST xong ta sẽ Fetch lại danh sách.
             onShowToast('Đã gửi yêu cầu thêm học viên!', 'success');
             setIsAddModalOpen(false);
             setNewStudent({ sdt: '', name: '' });
-            setTimeout(fetchStudents, 2000); // Đợi 2s để Script xử lý xong
-        } catch (error) {
+            setTimeout(fetchStudents, 2000);
+        } catch {
             onShowToast('Lỗi khi thêm học viên', 'error');
         } finally {
             setIsSubmitting(false);
@@ -83,56 +84,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) 
 
     const handleDeleteStudent = async (sdt: string) => {
         if (!window.confirm(`Bạn có chắc muốn xóa học viên ${sdt} không?`)) return;
-
         try {
-            await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    action: 'delete',
-                    sdt: sdt
-                })
-            });
+            await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', sdt }) });
             onShowToast('Đã gửi yêu cầu xóa!', 'warning');
             setTimeout(fetchStudents, 2000);
-        } catch (error) {
-            onShowToast('Lỗi khi xóa học viên', 'error');
-        }
+        } catch { onShowToast('Lỗi khi xóa học viên', 'error'); }
     };
 
     const handleKickStudent = async (sdt: string, name: string) => {
         if (!window.confirm(`Bạn có chắc muốn KICK học viên "${name}" (${sdt}) không?\n\nHọc viên sẽ không thể truy cập tài liệu nữa.`)) return;
-
         try {
-            await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    action: 'kick',
-                    sdt: sdt
-                })
-            });
+            await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'kick', sdt }) });
             onShowToast(`Đã kick học viên ${name}!`, 'success');
             setTimeout(fetchStudents, 2000);
-        } catch (error) {
-            onShowToast('Lỗi khi kick học viên', 'error');
-        }
+        } catch { onShowToast('Lỗi khi kick học viên', 'error'); }
     };
 
     const handleUnkickStudent = async (sdt: string, name: string) => {
         if (!window.confirm(`Mở khóa cho học viên "${name}" (${sdt})?\n\nHọc viên sẽ cần kích hoạt lại từ đầu.`)) return;
-
         try {
-            await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    action: 'unkick',
-                    sdt: sdt
-                })
-            });
+            await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'unkick', sdt }) });
             onShowToast(`Đã mở khóa cho ${name}!`, 'success');
             setTimeout(fetchStudents, 2000);
-        } catch (error) {
-            onShowToast('Lỗi khi mở khóa học viên', 'error');
-        }
+        } catch { onShowToast('Lỗi khi mở khóa học viên', 'error'); }
     };
 
     const filteredStudents = students.filter(s =>
@@ -143,254 +117,299 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) 
         total: students.length,
         activated: students.filter(s => s.machineId && s.status !== 'KICKED').length,
         pending: students.filter(s => !s.machineId && s.status !== 'KICKED').length,
-        kicked: students.filter(s => s.status === 'KICKED').length
+        kicked: students.filter(s => s.status === 'KICKED').length,
     };
 
+    /* Stat card config */
+    const statCards = [
+        {
+            label: 'Tổng học viên',
+            value: stats.total,
+            icon: <Users className="w-5 h-5" />,
+            accent: '#6B7CDB',
+            bg: '#EEF0FB',
+            sub: <span className="flex items-center gap-1 text-[11px]" style={{ color: '#6B7CDB' }}><TrendingUp className="w-3 h-3" /> +12% so với tháng trước</span>,
+        },
+        {
+            label: 'Đã kích hoạt',
+            value: stats.activated,
+            icon: <ShieldCheck className="w-5 h-5" />,
+            accent: '#448361',
+            bg: '#EAF3EE',
+            sub: <span className="text-[11px]" style={{ color: '#787774' }}>Hiệu suất: <b style={{ color: '#448361' }}>{Math.round((stats.activated / stats.total) * 100 || 0)}%</b> đã vào học</span>,
+        },
+        {
+            label: 'Đang chờ',
+            value: stats.pending,
+            icon: <ShieldAlert className="w-5 h-5" />,
+            accent: '#D9730D',
+            bg: '#FFF3E8',
+            sub: <span className="text-[11px] italic" style={{ color: '#787774' }}>Cần hỗ trợ các bạn chưa vào được app</span>,
+        },
+        {
+            label: 'Bị Kick',
+            value: stats.kicked,
+            icon: <Ban className="w-5 h-5" />,
+            accent: '#E03E3E',
+            bg: '#FEF0F0',
+            sub: <span className="text-[11px] italic" style={{ color: '#787774' }}>Đã bị thu hồi quyền truy cập</span>,
+        },
+    ];
+
     return (
-        <div className="fixed inset-0 z-[60] bg-slate-50 flex flex-col font-sans overflow-hidden animate-fade-in">
-            {/* Top Navigation */}
-            <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-4">
+        <div className="fixed inset-0 z-[60] flex flex-col font-sans overflow-hidden animate-fade-in" style={{ background: '#F7F6F3' }}>
+
+            {/* ── Top nav ── */}
+            <div className="flex items-center justify-between px-6 py-3.5" style={{ background: '#FFFFFF', borderBottom: '1px solid #E9E9E7' }}>
+                <div className="flex items-center gap-3">
                     <button
                         onClick={onBack}
-                        className="p-2 hover:bg-slate-100 rounded-xl text-slate-500 transition-all active:scale-95"
+                        className="p-1.5 rounded-lg transition-colors"
+                        style={{ color: '#787774' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-200">
-                            <LayoutDashboard className="w-5 h-5" />
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-lg" style={{ background: '#EEF0FB' }}>
+                            <LayoutDashboard className="w-4 h-4" style={{ color: '#6B7CDB' }} />
                         </div>
                         <div>
-                            <h1 className="text-xl font-black text-slate-800 tracking-tight">PhysiVault Panel</h1>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Hệ thống quản trị học viên v4.0</p>
+                            <h1 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>PhysiVault Panel</h1>
+                            <p className="text-[10px] uppercase tracking-widest" style={{ color: '#AEACA8' }}>Hệ thống quản trị học viên v4.0</p>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-2xl text-indigo-600 font-bold text-sm">
+                <div className="flex items-center gap-2">
+                    <div
+                        className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium"
+                        style={{ background: '#EEF0FB', color: '#6B7CDB' }}
+                    >
                         <UserCheck className="w-4 h-4" />
                         Thầy Huy Online
                     </div>
                     <button
                         onClick={fetchStudents}
-                        className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all hover:rotate-180 duration-500"
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ color: '#787774', border: '1px solid #E9E9E7', background: '#FFFFFF' }}
                         title="Tải lại dữ liệu"
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FFFFFF'}
                     >
-                        <RefreshCw className="w-5 h-5" />
+                        <RefreshCw className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
-            {/* Main Content Area */}
-            <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-8 custom-scrollbar">
+            {/* ── Main scroll area ── */}
+            <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6 custom-scrollbar">
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:scale-110 transition-transform duration-700">
-                            <Users className="w-24 h-24" />
-                        </div>
-                        <div className="relative z-10 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Tổng học viên</p>
-                                <h3 className="text-4xl font-black text-slate-800">{stats.total}</h3>
+                {/* Stat cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {statCards.map((card) => (
+                        <div
+                            key={card.label}
+                            className="rounded-xl p-5 flex flex-col gap-3 transition-shadow"
+                            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', borderLeft: `3px solid ${card.accent}` }}
+                        >
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>{card.label}</span>
+                                <div className="p-1.5 rounded-lg" style={{ background: card.bg, color: card.accent }}>
+                                    {card.icon}
+                                </div>
                             </div>
-                            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
-                                <Users className="w-6 h-6" />
-                            </div>
+                            <div className="text-3xl font-bold" style={{ color: card.accent }}>{card.value}</div>
+                            <div>{card.sub}</div>
                         </div>
-                        <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-blue-600 bg-blue-50/50 w-fit px-2 py-1 rounded-lg">
-                            <TrendingUp className="w-3 h-3" /> +12% So với tháng trước
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:scale-110 transition-transform duration-700">
-                            <ShieldCheck className="w-24 h-24" />
-                        </div>
-                        <div className="relative z-10 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Đã kích hoạt</p>
-                                <h3 className="text-4xl font-black text-emerald-600">{stats.activated}</h3>
-                            </div>
-                            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
-                                <ShieldCheck className="w-6 h-6" />
-                            </div>
-                        </div>
-                        <div className="mt-4 text-[10px] font-bold text-slate-400">
-                            Hiệu suất: <span className="text-emerald-600">{Math.round((stats.activated / stats.total) * 100 || 0)}%</span> đã vào học
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:scale-110 transition-transform duration-700">
-                            <ShieldAlert className="w-24 h-24" />
-                        </div>
-                        <div className="relative z-10 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Đang chờ</p>
-                                <h3 className="text-4xl font-black text-orange-500">{stats.pending}</h3>
-                            </div>
-                            <div className="w-12 h-12 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center">
-                                <ShieldAlert className="w-6 h-6" />
-                            </div>
-                        </div>
-                        <div className="mt-4 text-[10px] font-bold text-slate-400 italic">
-                            Cần hỗ trợ các bạn chưa vào được app
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-[2.5rem] border border-red-100 shadow-xl shadow-red-100/40 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:scale-110 transition-transform duration-700">
-                            <Ban className="w-24 h-24" />
-                        </div>
-                        <div className="relative z-10 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-1">Bị Kick</p>
-                                <h3 className="text-4xl font-black text-red-500">{stats.kicked}</h3>
-                            </div>
-                            <div className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center">
-                                <Ban className="w-6 h-6" />
-                            </div>
-                        </div>
-                        <div className="mt-4 text-[10px] font-bold text-red-400 italic">
-                            Đã bị thu hồi quyền truy cập
-                        </div>
-                    </div>
+                    ))}
                 </div>
 
-                {/* Table Section */}
-                <div className="bg-white rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40 overflow-hidden flex flex-col">
-                    <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                {/* Table section */}
+                <div className="rounded-xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
+                    {/* Table toolbar */}
+                    <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3" style={{ borderBottom: '1px solid #E9E9E7' }}>
+                        <div className="relative flex-1 max-w-sm">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#AEACA8' }} />
                             <input
                                 type="text"
                                 placeholder="Tìm theo tên hoặc SĐT..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-none rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-slate-700 placeholder:text-slate-400"
+                                onChange={e => setSearchTerm(e.target.value)}
+                                style={{ ...inputSt, paddingLeft: '36px' }}
+                                onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+                                onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
                             />
                         </div>
                         <button
                             onClick={() => setIsAddModalOpen(true)}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 py-4 rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transition-all active:scale-95 whitespace-nowrap"
+                            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-colors whitespace-nowrap"
+                            style={{ background: '#6B7CDB' }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#5a6bc9'}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#6B7CDB'}
                         >
-                            <UserPlus className="w-5 h-5" /> Thêm học viên mới
+                            <UserPlus className="w-4 h-4" />
+                            Thêm học viên mới
                         </button>
                     </div>
 
+                    {/* Table */}
                     <div className="overflow-x-auto custom-scrollbar">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-50/50">
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Học viên</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Số điện thoại</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã máy (ID)</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã kích hoạt</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Lệnh</th>
+                                <tr style={{ background: '#FAFAF9' }}>
+                                    {['Học viên', 'Số điện thoại', 'Mã máy (ID)', 'Mã kích hoạt', 'Trạng thái', 'Lệnh'].map((h, i) => (
+                                        <th
+                                            key={h}
+                                            className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider"
+                                            style={{ color: '#AEACA8', textAlign: i === 5 ? 'right' : 'left', borderBottom: '1px solid #E9E9E7' }}
+                                        >
+                                            {h}
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50">
+                            <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={6} className="px-8 py-20 text-center">
-                                            <div className="flex flex-col items-center gap-4">
-                                                <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
-                                                <p className="text-slate-500 font-bold text-sm">Đang nạp dữ liệu từ Google Sheets...</p>
+                                        <td colSpan={6} className="px-5 py-16 text-center">
+                                            <div className="flex flex-col items-center gap-3">
+                                                <Loader2 className="w-8 h-8" style={{ color: '#6B7CDB' } as React.CSSProperties} />
+                                                <p className="text-sm" style={{ color: '#787774' }}>Đang nạp dữ liệu từ Google Sheets...</p>
                                             </div>
                                         </td>
                                     </tr>
                                 ) : filteredStudents.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-8 py-20 text-center text-slate-400 italic">
+                                        <td colSpan={6} className="px-5 py-16 text-center text-sm italic" style={{ color: '#AEACA8' }}>
                                             Không tìm thấy học viên nào phù hợp.
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredStudents.map((s, idx) => (
-                                        <tr key={idx} className={`hover:bg-indigo-50/20 transition-colors group ${s.status === 'KICKED' ? 'opacity-60 bg-red-50/30' : ''}`}>
-                                            <td className="px-8 py-5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${s.status === 'KICKED' ? 'bg-red-500 text-white' : s.machineId ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                                                        {s.status === 'KICKED' ? <Ban className="w-5 h-5" /> : s.name.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <p className={`font-bold ${s.status === 'KICKED' ? 'text-red-600 line-through' : 'text-slate-700'}`}>{s.name}</p>
-                                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-                                                            {s.status === 'KICKED' ? 'Đã bị kick' : s.machineId ? 'Đang hoạt động' : 'Chưa kích hoạt'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-5 font-mono font-bold text-slate-600">{s.sdt}</td>
-                                            <td className="px-8 py-5">
-                                                {s.machineId ? (
-                                                    <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg w-fit font-mono text-xs font-bold border border-emerald-100">
-                                                        <Monitor className="w-3 h-3" />
-                                                        {s.machineId}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase italic bg-slate-100 px-2 py-1 rounded">Chưa vào máy</span>
-                                                )}
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                {s.key ? (
-                                                    <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg w-fit font-mono text-xs font-bold border border-indigo-100">
-                                                        {s.key}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-[10px] font-bold text-slate-400 opacity-30">N/A</span>
-                                                )}
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                {s.status === 'KICKED' ? (
-                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-xl text-xs font-black border border-red-200">
-                                                        <Ban className="w-3 h-3" /> ĐÃ KICK
-                                                    </span>
-                                                ) : s.machineId ? (
-                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold border border-emerald-100">
-                                                        <ShieldCheck className="w-3 h-3" /> Hoạt động
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-600 rounded-xl text-xs font-bold border border-amber-100">
-                                                        <ShieldAlert className="w-3 h-3" /> Chờ
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-8 py-5 text-right">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    {s.status === 'KICKED' ? (
-                                                        <button
-                                                            onClick={() => handleUnkickStudent(s.sdt, s.name)}
-                                                            className="p-3 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
-                                                            title="Mở khóa học viên"
+                                    filteredStudents.map((s, idx) => {
+                                        const isKicked = s.status === 'KICKED';
+                                        return (
+                                            <tr
+                                                key={idx}
+                                                style={{
+                                                    borderBottom: '1px solid #F1F0EC',
+                                                    background: isKicked ? '#FEF8F8' : 'transparent',
+                                                    opacity: isKicked ? 0.75 : 1,
+                                                }}
+                                                onMouseEnter={e => !isKicked && ((e.currentTarget as HTMLElement).style.background = '#FAFAF9')}
+                                                onMouseLeave={e => !isKicked && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+                                            >
+                                                {/* Student name */}
+                                                <td className="px-5 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div
+                                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold shrink-0"
+                                                            style={{
+                                                                background: isKicked ? '#E03E3E' : s.machineId ? '#6B7CDB' : '#E9E9E7',
+                                                                color: isKicked || s.machineId ? '#FFFFFF' : '#787774',
+                                                            }}
                                                         >
-                                                            <RotateCcw className="w-5 h-5" />
-                                                        </button>
+                                                            {isKicked ? <Ban className="w-4 h-4" /> : s.name.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-medium" style={{ color: isKicked ? '#E03E3E' : '#1A1A1A', textDecoration: isKicked ? 'line-through' : 'none' }}>
+                                                                {s.name}
+                                                            </p>
+                                                            <p className="text-[10px] uppercase tracking-tight" style={{ color: '#AEACA8' }}>
+                                                                {isKicked ? 'Đã bị kick' : s.machineId ? 'Đang hoạt động' : 'Chưa kích hoạt'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                {/* Phone */}
+                                                <td className="px-5 py-4 font-mono text-sm" style={{ color: '#1A1A1A' }}>{s.sdt}</td>
+                                                {/* Machine ID */}
+                                                <td className="px-5 py-4">
+                                                    {s.machineId ? (
+                                                        <span
+                                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium"
+                                                            style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #44836122' }}
+                                                        >
+                                                            <Monitor className="w-3 h-3" />
+                                                            {s.machineId}
+                                                        </span>
                                                     ) : (
-                                                        <button
-                                                            onClick={() => handleKickStudent(s.sdt, s.name)}
-                                                            className="p-3 text-slate-300 hover:text-orange-600 hover:bg-orange-50 rounded-xl transition-all"
-                                                            title="Kick học viên"
-                                                        >
-                                                            <UserMinus className="w-5 h-5" />
-                                                        </button>
+                                                        <span className="text-[10px] italic px-2 py-1 rounded" style={{ background: '#F1F0EC', color: '#AEACA8' }}>
+                                                            Chưa vào máy
+                                                        </span>
                                                     )}
-                                                    <button
-                                                        onClick={() => handleDeleteStudent(s.sdt)}
-                                                        className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                                                        title="Xóa học viên"
-                                                    >
-                                                        <Trash2 className="w-5 h-5" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
+                                                </td>
+                                                {/* Key */}
+                                                <td className="px-5 py-4">
+                                                    {s.key ? (
+                                                        <span
+                                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium"
+                                                            style={{ background: '#EEF0FB', color: '#6B7CDB', border: '1px solid #6B7CDB22' }}
+                                                        >
+                                                            {s.key}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs" style={{ color: '#CFCFCB' }}>—</span>
+                                                    )}
+                                                </td>
+                                                {/* Status */}
+                                                <td className="px-5 py-4">
+                                                    {isKicked ? (
+                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium" style={{ background: '#FEF0F0', color: '#E03E3E', border: '1px solid #E03E3E22' }}>
+                                                            <Ban className="w-3 h-3" /> ĐÃ KICK
+                                                        </span>
+                                                    ) : s.machineId ? (
+                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium" style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #44836122' }}>
+                                                            <ShieldCheck className="w-3 h-3" /> Hoạt động
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium" style={{ background: '#FFF3E8', color: '#D9730D', border: '1px solid #D9730D22' }}>
+                                                            <ShieldAlert className="w-3 h-3" /> Chờ
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                {/* Actions */}
+                                                <td className="px-5 py-4">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        {isKicked ? (
+                                                            <button
+                                                                onClick={() => handleUnkickStudent(s.sdt, s.name)}
+                                                                className="p-2 rounded-lg transition-colors"
+                                                                style={{ color: '#CFCFCB' }}
+                                                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#448361'; (e.currentTarget as HTMLElement).style.background = '#EAF3EE'; }}
+                                                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                                                title="Mở khóa học viên"
+                                                            >
+                                                                <RotateCcw className="w-4 h-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleKickStudent(s.sdt, s.name)}
+                                                                className="p-2 rounded-lg transition-colors"
+                                                                style={{ color: '#CFCFCB' }}
+                                                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#D9730D'; (e.currentTarget as HTMLElement).style.background = '#FFF3E8'; }}
+                                                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                                                title="Kick học viên"
+                                                            >
+                                                                <UserMinus className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleDeleteStudent(s.sdt)}
+                                                            className="p-2 rounded-lg transition-colors"
+                                                            style={{ color: '#CFCFCB' }}
+                                                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#E03E3E'; (e.currentTarget as HTMLElement).style.background = '#FEF0F0'; }}
+                                                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                                            title="Xóa học viên"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>
@@ -398,57 +417,89 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) 
                 </div>
             </div>
 
-            {/* Add Student Modal */}
+            {/* ── Add Student Modal ── */}
             {isAddModalOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in" onClick={() => setIsAddModalOpen(false)}>
-                    <div className="bg-white rounded-[3rem] w-full max-w-md overflow-hidden shadow-2xl animate-scale-in border border-white" onClick={e => e.stopPropagation()}>
-                        <div className="p-8 bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
-                            <h3 className="text-2xl font-black mb-1">Thêm học viên mới</h3>
-                            <p className="opacity-80 text-xs font-bold uppercase tracking-wider">Nhập đúng SĐT để hệ thống cấp mã</p>
+                <div
+                    className="fixed inset-0 z-[70] flex items-center justify-center p-4 animate-fade-in"
+                    style={{ background: 'rgba(26,26,26,0.45)' }}
+                    onClick={() => setIsAddModalOpen(false)}
+                >
+                    <div
+                        className="w-full overflow-hidden animate-scale-in"
+                        style={{ maxWidth: '400px', background: '#FFFFFF', border: '1px solid #E9E9E7', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Modal header */}
+                        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E9E9E7' }}>
+                            <div>
+                                <h3 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Thêm học viên mới</h3>
+                                <p className="text-xs mt-0.5" style={{ color: '#787774' }}>Nhập đúng SĐT để hệ thống cấp mã</p>
+                            </div>
+                            <button
+                                onClick={() => setIsAddModalOpen(false)}
+                                className="p-1.5 rounded-lg transition-colors"
+                                style={{ color: '#787774' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
                         </div>
-                        <form onSubmit={handleAddStudent} className="p-8 space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Tên học viên</label>
+
+                        <form onSubmit={handleAddStudent} className="p-5 space-y-4">
+                            {/* Name */}
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Tên học viên</label>
                                 <div className="relative">
-                                    <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                    <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#AEACA8' }} />
                                     <input
-                                        type="text"
-                                        required
+                                        type="text" required
                                         value={newStudent.name}
                                         onChange={e => setNewStudent({ ...newStudent, name: e.target.value })}
                                         placeholder="Ví dụ: Nguyễn Trần Hoài Huy"
-                                        className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 border-none font-bold text-slate-700"
+                                        style={{ ...inputSt, paddingLeft: '32px' }}
+                                        onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+                                        onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Số điện thoại</label>
+                            {/* Phone */}
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Số điện thoại</label>
                                 <div className="relative">
-                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#AEACA8' }} />
                                     <input
-                                        type="tel"
-                                        required
+                                        type="tel" required
                                         value={newStudent.sdt}
                                         onChange={e => setNewStudent({ ...newStudent, sdt: e.target.value })}
                                         placeholder="Ví dụ: 0985032870"
-                                        className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 border-none font-bold text-slate-700"
+                                        style={{ ...inputSt, paddingLeft: '32px' }}
+                                        onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+                                        onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
                                     />
                                 </div>
                             </div>
-                            <div className="flex gap-4 pt-4">
+                            {/* Buttons */}
+                            <div className="flex gap-3 pt-2">
                                 <button
                                     type="button"
                                     onClick={() => setIsAddModalOpen(false)}
-                                    className="flex-1 py-4 px-4 bg-slate-100 text-slate-500 font-bold rounded-2xl hover:bg-slate-200 transition-all"
+                                    className="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                                    style={{ background: '#F1F0EC', color: '#57564F', border: '1px solid #E9E9E7' }}
+                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
                                 >
                                     Hủy bỏ
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isSubmitting}
-                                    className="flex-1 py-4 px-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2"
+                                    className="flex-1 py-2.5 text-sm font-medium text-white rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                                    style={{ background: '#6B7CDB' }}
+                                    onMouseEnter={e => !isSubmitting && ((e.currentTarget as HTMLElement).style.background = '#5a6bc9')}
+                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#6B7CDB'}
                                 >
-                                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Lưu học viên'}
+                                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu học viên'}
                                 </button>
                             </div>
                         </form>
@@ -458,9 +509,5 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) 
         </div>
     );
 };
-
-const Loader2 = ({ className }: { className?: string }) => (
-    <RefreshCw className={`${className} animate-spin`} />
-);
 
 export default AdminDashboard;

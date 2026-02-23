@@ -6,12 +6,11 @@ interface CountdownTimerProps {
 }
 
 const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin }) => {
-    const [examDate, setExamDate] = useState<string>(() => {
-        return localStorage.getItem('physivault_exam_date') || '';
-    });
+    const [examDate, setExamDate] = useState<string>(() =>
+        localStorage.getItem('physivault_exam_date') || ''
+    );
     const [isEditing, setIsEditing] = useState(false);
 
-    // Mặc định là 8h sáng ngày mai nếu chưa có ngày
     const getDefaultDate = () => {
         const d = new Date();
         d.setDate(d.getDate() + 1);
@@ -24,30 +23,24 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 1000);
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
     useEffect(() => {
         if (!examDate) return;
-        const calculateTimeLeft = () => {
-            const difference = +new Date(examDate) - +new Date();
-            if (difference > 0) {
-                setTimeLeft({
-                    days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-                    hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-                    minutes: Math.floor((difference / 1000 / 60) % 60),
-                    seconds: Math.floor((difference / 1000) % 60)
-                });
-            } else {
-                setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-            }
+        const calc = () => {
+            const diff = +new Date(examDate) - +new Date();
+            setTimeLeft(diff > 0 ? {
+                days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+                hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+                minutes: Math.floor((diff / 1000 / 60) % 60),
+                seconds: Math.floor((diff / 1000) % 60),
+            } : { days: 0, hours: 0, minutes: 0, seconds: 0 });
         };
-        calculateTimeLeft();
-        const timer = setInterval(calculateTimeLeft, 1000);
-        return () => clearInterval(timer);
+        calc();
+        const t = setInterval(calc, 1000);
+        return () => clearInterval(t);
     }, [examDate]);
 
     const handleSave = () => {
@@ -60,62 +53,82 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin }) => {
     const isExpired = hasTargetDate && +new Date(examDate) <= +new Date();
 
     return (
-        <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-xl shadow-indigo-500/5 relative overflow-hidden group transition-all duration-500">
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors"></div>
-
+        <div
+            className="rounded-xl p-5 transition-colors"
+            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
+        >
             {!isEditing ? (
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    {/* Left: clock + label */}
                     <div className="flex items-center gap-4">
-                        <div className="relative group/clock flex items-center justify-center">
-                            {/* Animated Outer Glow */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/40 to-purple-600/40 rounded-2xl blur-lg group-hover/clock:blur-xl transition-all duration-500 animate-pulse"></div>
-
-                            {/* Clock Container */}
-                            <div className="relative px-4 py-2.5 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl text-white shadow-xl shadow-indigo-500/20 border border-white/20 flex flex-col items-center justify-center min-w-[90px] animate-float">
-                                <div className="text-sm font-black tracking-widest flex items-center gap-0.5">
-                                    <span>{currentTime.getHours().toString().padStart(2, '0')}</span>
-                                    <span className="animate-pulse">:</span>
-                                    <span>{currentTime.getMinutes().toString().padStart(2, '0')}</span>
-                                    <span className="text-[10px] opacity-60 ml-1 font-bold">{currentTime.getSeconds().toString().padStart(2, '0')}</span>
-                                </div>
-                                <div className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-80 mt-0.5">
-                                    Real-time
-                                </div>
+                        {/* Clock widget */}
+                        <div
+                            className="flex flex-col items-center justify-center px-4 py-2.5 rounded-lg shrink-0"
+                            style={{ background: '#F7F6F3', border: '1px solid #E9E9E7', minWidth: '80px' }}
+                        >
+                            <div className="text-sm font-semibold tabular-nums" style={{ color: '#1A1A1A', letterSpacing: '0.05em' }}>
+                                {currentTime.getHours().toString().padStart(2, '0')}
+                                <span className="text-[#AEACA8]">:</span>
+                                {currentTime.getMinutes().toString().padStart(2, '0')}
+                                <span className="text-xs ml-1 tabular-nums" style={{ color: '#AEACA8' }}>
+                                    {currentTime.getSeconds().toString().padStart(2, '0')}
+                                </span>
+                            </div>
+                            <div className="text-[9px] uppercase tracking-widest mt-0.5" style={{ color: '#AEACA8' }}>
+                                Real-time
                             </div>
                         </div>
+
                         <div>
-                            <h3 className="font-bold text-slate-800 text-xl flex items-center gap-2">
+                            <h3 className="font-semibold flex items-center gap-2" style={{ color: '#1A1A1A' }}>
                                 Hành trình đến kỳ thi
                                 {isAdmin && (
                                     <button
                                         onClick={() => { setTempDate(examDate || getDefaultDate()); setIsEditing(true); }}
-                                        className="p-1.5 bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                        className="p-1.5 rounded-md transition-colors"
+                                        style={{ color: '#AEACA8' }}
+                                        onMouseEnter={e => {
+                                            (e.currentTarget as HTMLElement).style.background = '#F1F0EC';
+                                            (e.currentTarget as HTMLElement).style.color = '#6B7CDB';
+                                        }}
+                                        onMouseLeave={e => {
+                                            (e.currentTarget as HTMLElement).style.background = 'transparent';
+                                            (e.currentTarget as HTMLElement).style.color = '#AEACA8';
+                                        }}
                                         title="Chỉnh sửa ngày thi"
                                     >
-                                        <Edit2 className="w-4 h-4" />
+                                        <Edit2 className="w-3.5 h-3.5" />
                                     </button>
                                 )}
                             </h3>
-                            <p className="text-slate-500 font-medium">
+                            <p className="text-sm mt-0.5" style={{ color: '#787774' }}>
                                 {hasTargetDate
-                                    ? (isExpired ? 'Thời gian đã điểm!' : `Mục tiêu: ${new Date(examDate).toLocaleDateString('vi-VN')} lúc ${new Date(examDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`)
-                                    : 'Hãy đặt mục tiêu cho kỳ thi sắp tới của bạn'}
+                                    ? (isExpired
+                                        ? 'Thời gian đã điểm!'
+                                        : `Mục tiêu: ${new Date(examDate).toLocaleDateString('vi-VN')} lúc ${new Date(examDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`)
+                                    : 'Hãy đặt mục tiêu cho kỳ thi sắp tới'}
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    {/* Right: countdown or CTA */}
+                    <div className="flex items-center gap-2">
                         {!hasTargetDate ? (
                             isAdmin ? (
                                 <button
                                     onClick={() => setIsEditing(true)}
-                                    className="flex items-center gap-2 px-8 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all active:scale-95"
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                    style={{ background: '#EEF0FB', color: '#6B7CDB', border: '1px solid #6B7CDB22' }}
+                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.8'}
+                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
                                 >
-                                    <Target className="w-5 h-5" />
+                                    <Target className="w-4 h-4" />
                                     Thiết lập ngay
                                 </button>
                             ) : (
-                                <div className="text-slate-400 italic text-sm">Chờ giáo viên thiết lập ngày thi...</div>
+                                <span className="text-sm italic" style={{ color: '#AEACA8' }}>
+                                    Chờ giáo viên thiết lập ngày thi...
+                                </span>
                             )
                         ) : (
                             <div className="flex items-center gap-2">
@@ -127,15 +140,26 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin }) => {
                                 ].map((item, index) => (
                                     <React.Fragment key={item.label}>
                                         <div className="flex flex-col items-center">
-                                            <div className="min-w-[55px] sm:min-w-[70px] h-14 sm:h-20 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-white/80 transition-transform hover:scale-105 duration-300">
-                                                <span className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-b from-indigo-700 to-indigo-400">
-                                                    {String(item.value).padStart(2, '0')}
-                                                </span>
+                                            <div
+                                                className="flex items-center justify-center rounded-lg tabular-nums"
+                                                style={{
+                                                    minWidth: '52px',
+                                                    height: '52px',
+                                                    background: '#F7F6F3',
+                                                    border: '1px solid #E9E9E7',
+                                                    fontSize: '1.25rem',
+                                                    fontWeight: 600,
+                                                    color: '#1A1A1A',
+                                                }}
+                                            >
+                                                {String(item.value).padStart(2, '0')}
                                             </div>
-                                            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">{item.label}</span>
+                                            <span className="text-[10px] uppercase tracking-wider mt-1.5" style={{ color: '#AEACA8' }}>
+                                                {item.label}
+                                            </span>
                                         </div>
                                         {index < 3 && (
-                                            <div className="text-2xl font-bold text-indigo-200 pb-6">:</div>
+                                            <div className="text-xl font-light pb-5" style={{ color: '#CFCFCB' }}>:</div>
                                         )}
                                     </React.Fragment>
                                 ))}
@@ -144,43 +168,61 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin }) => {
                     </div>
                 </div>
             ) : (
-                <div className="relative z-10 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <Calendar className="w-6 h-6 text-indigo-600" />
+                /* Edit mode */
+                <div className="animate-fade-in">
+                    <div className="flex items-center justify-between mb-5">
+                        <h3 className="font-semibold flex items-center gap-2" style={{ color: '#1A1A1A' }}>
+                            <Calendar className="w-4 h-4" style={{ color: '#6B7CDB' }} />
                             Cài đặt mục tiêu thi cử
                         </h3>
-                        <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
-                            <X className="w-6 h-6" />
+                        <button
+                            onClick={() => setIsEditing(false)}
+                            className="p-1.5 rounded-md transition-colors"
+                            style={{ color: '#AEACA8' }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                        >
+                            <X className="w-4 h-4" />
                         </button>
                     </div>
 
-                    <div className="max-w-md">
-                        <div className="space-y-4">
-                            <label className="block text-sm font-bold text-slate-600 ml-1 uppercase tracking-wider">
-                                Chọn ngày & giờ thi dự kiến:
-                            </label>
-                            <input
-                                type="datetime-local"
-                                value={tempDate}
-                                onChange={(e) => setTempDate(e.target.value)}
-                                className="w-full px-5 py-4 rounded-2xl border-2 border-indigo-50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-lg font-bold text-slate-700 bg-white/80 shadow-inner"
-                            />
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    onClick={handleSave}
-                                    className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                >
-                                    <Check className="w-6 h-6" />
-                                    Xác nhận mục tiêu
-                                </button>
-                                <button
-                                    onClick={() => setIsEditing(false)}
-                                    className="px-6 py-4 bg-white text-slate-500 border border-slate-200 rounded-2xl font-bold hover:bg-slate-50 transition-all font-bold"
-                                >
-                                    Hủy
-                                </button>
-                            </div>
+                    <div className="max-w-sm space-y-3">
+                        <label className="text-xs font-medium uppercase tracking-wider" style={{ color: '#787774' }}>
+                            Chọn ngày &amp; giờ thi dự kiến:
+                        </label>
+                        <input
+                            type="datetime-local"
+                            value={tempDate}
+                            onChange={e => setTempDate(e.target.value)}
+                            className="w-full px-4 py-3 rounded-lg text-sm font-medium outline-none transition-colors"
+                            style={{
+                                border: '1px solid #E9E9E7',
+                                background: '#F7F6F3',
+                                color: '#1A1A1A',
+                            }}
+                            onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+                            onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleSave}
+                                className="flex-1 py-2.5 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2 transition-colors"
+                                style={{ background: '#6B7CDB' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#5a6bc9'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#6B7CDB'}
+                            >
+                                <Check className="w-4 h-4" />
+                                Xác nhận mục tiêu
+                            </button>
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                className="px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                                style={{ background: '#F1F0EC', color: '#57564F', border: '1px solid #E9E9E7' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                            >
+                                Hủy
+                            </button>
                         </div>
                     </div>
                 </div>

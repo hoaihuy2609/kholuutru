@@ -8,9 +8,10 @@ interface SearchBarProps {
 
 const SearchBar: React.FC<SearchBarProps> = ({
     onSearch,
-    placeholder = "Tìm kiếm tài liệu..."
+    placeholder = 'Tìm kiếm tài liệu...'
 }) => {
     const [query, setQuery] = useState('');
+    const [focused, setFocused] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -25,22 +26,33 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
     return (
         <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="w-5 h-5 text-gray-400" />
-            </div>
+            <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none"
+                style={{ color: focused ? '#6B7CDB' : '#AEACA8' }}
+            />
             <input
                 type="text"
                 value={query}
                 onChange={handleChange}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
                 placeholder={placeholder}
-                className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full pl-8 pr-8 py-2 text-sm rounded-lg transition-colors outline-none"
+                style={{
+                    background: '#FFFFFF',
+                    border: `1px solid ${focused ? '#6B7CDB' : '#E9E9E7'}`,
+                    color: '#1A1A1A',
+                }}
             />
             {query && (
                 <button
                     onClick={handleClear}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center hover:bg-gray-50 rounded-r-lg transition-colors"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded transition-colors"
+                    style={{ color: '#AEACA8' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#787774'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#AEACA8'}
                 >
-                    <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                    <X className="w-3.5 h-3.5" />
                 </button>
             )}
         </div>
