@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, Settings, ShieldCheck, ChevronRight, MessageCircle, Bot, Send, RefreshCw, Lock, User, Copy } from 'lucide-react';
+import { X, CheckCircle2, Settings, ShieldCheck, ChevronRight, MessageCircle, Bot, Send, RefreshCw, Lock, User, Copy, Monitor } from 'lucide-react';
 
 interface GuideModalProps {
     isOpen: boolean;
@@ -239,7 +239,7 @@ const SimulatedAppView: React.FC<{ scene: number }> = ({ scene }) => {
                                                 <Bot className="w-3.5 h-3.5" />
                                             </div>
                                             <div className="px-3 py-2 text-sm leading-relaxed bg-white border border-[#E9E9E7] text-[#1A1A1A] flex items-center gap-2" style={{ borderRadius: '2px 12px 12px 12px' }}>
-                                                <code className="font-mono font-bold tracking-wider">PV-741D-E030-EAB4</code>
+                                                <code className="font-mono font-bold tracking-wider">PV-XXXX-XXXX-XXXX</code>
                                                 <Copy className="w-3.5 h-3.5 text-[#AEACA8]" />
                                             </div>
                                         </div>
@@ -299,7 +299,7 @@ const SimulatedAppView: React.FC<{ scene: number }> = ({ scene }) => {
                                         <div className="space-y-2">
                                             <div className="h-2 w-32 bg-[#AEACA8]/30 rounded-full ml-1" />
                                             <div className="h-14 w-full bg-white rounded-2xl border-2 border-[#D9730D] flex items-center px-5 shadow-[0_10px_30px_-10px_rgba(217,115,13,0.3)]">
-                                                <div className="text-[16px] font-mono font-bold text-[#D9730D] tracking-widest uppercase">PV-741D-E030-EAB4</div>
+                                                <div className="text-[16px] font-mono font-bold text-[#D9730D] tracking-widest uppercase">PV-XXXX-XXXX-XXXX</div>
                                             </div>
                                         </div>
                                     </div>
