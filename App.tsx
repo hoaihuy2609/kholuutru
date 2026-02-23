@@ -557,6 +557,10 @@ function App() {
             setCurrentLesson(null);
             setIsMobileMenuOpen(false);
           }}
+          onOpenSettings={() => {
+            setIsSettingsOpen(true);
+            setIsMobileMenuOpen(false);
+          }}
           onOpenGuide={() => {
             setIsGuideOpen(true);
             setIsMobileMenuOpen(false);
