@@ -133,8 +133,8 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
                 {/* ── Body: Two-column layout ── */}
                 <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
 
-                    {/* Left: Description panel */}
-                    <div className="w-full md:w-[280px] shrink-0 flex flex-col bg-white border-b md:border-b-0 md:border-r border-[#E9E9E7]">
+                    {/* Left: Description panel — full width on mobile, fixed width on desktop */}
+                    <div className="w-full md:w-[280px] shrink-0 flex flex-col bg-white md:border-r border-[#E9E9E7]">
                         <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
                             <StepDescription step={steps[activeStep]} stepIndex={activeStep} />
                         </div>
@@ -171,8 +171,8 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
                         </div>
                     </div>
 
-                    {/* Right: Simulation panel */}
-                    <div className="flex-1 bg-[#F7F6F3] relative overflow-hidden flex items-center justify-center p-4 md:p-10 min-h-[300px] md:min-h-0">
+                    {/* Right: Simulation panel — hidden on mobile */}
+                    <div className="hidden md:flex flex-1 bg-[#F7F6F3] relative overflow-hidden items-center justify-center p-10">
                         {/* Decorative blur */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#6B7CDB]/5 rounded-full blur-[100px] pointer-events-none" />
 
