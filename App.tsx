@@ -329,61 +329,114 @@ function App() {
   // === KICKED SCREEN ===
   if (isKicked && !isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#F7F6F3' }}>
-        <div className="max-w-md w-full animate-fade-in space-y-6">
-          {/* Tag Label */}
-          <div className="flex justify-center">
-            <span
-              className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-full"
-              style={{ background: '#FEE2E2', color: '#E03E3E' }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#E03E3E] inline-block" />
-              Hệ thống bảo mật
+      <div className="min-h-screen flex items-center justify-center p-6 font-sans" style={{ background: '#F7F6F3' }}>
+        {/* Subtle grid pattern */}
+        <div
+          className="fixed inset-0 pointer-events-none opacity-[0.025]"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(0deg,#1A1A1A 0,#1A1A1A 1px,transparent 0,transparent 50%),repeating-linear-gradient(90deg,#1A1A1A 0,#1A1A1A 1px,transparent 0,transparent 50%)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+
+        <div className="relative max-w-sm w-full animate-fade-in">
+          {/* Brand top */}
+          <div className="text-center mb-8">
+            <span className="text-[11px] font-bold uppercase tracking-[0.25em]" style={{ color: '#CFCFCB' }}>
+              PhysiVault
             </span>
           </div>
 
-          {/* Main Card */}
+          {/* Main card */}
           <div
-            className="rounded-2xl p-8 text-center space-y-6"
-            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}
+            className="rounded-2xl overflow-hidden"
+            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}
           >
-            {/* Icon */}
-            <div
-              className="mx-auto w-20 h-20 rounded-2xl flex items-center justify-center"
-              style={{ background: '#FEE2E2' }}
-            >
-              <ShieldOff className="w-10 h-10 text-[#E03E3E]" />
-            </div>
+            {/* Red accent top bar */}
+            <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg,#E03E3E,#F87171)' }} />
 
-            <div className="space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1A1A1A' }}>
-                Truy cập bị từ chối
-              </h1>
-              <p className="text-sm leading-relaxed" style={{ color: '#787774' }}>
-                Thiết bị của bạn đã bị thu hồi quyền truy cập bởi Quản trị viên.
-                Bạn không thể xem tài liệu trên thiết bị này nữa.
-              </p>
-            </div>
+            <div className="p-8 text-center space-y-6">
+              {/* Icon with ring glow */}
+              <div className="mx-auto relative w-fit">
+                <div
+                  className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto"
+                  style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}
+                >
+                  <ShieldOff className="w-9 h-9 text-[#E03E3E]" />
+                </div>
+                {/* Pulse ring */}
+                <div
+                  className="absolute inset-0 rounded-2xl animate-ping opacity-10"
+                  style={{ background: '#E03E3E' }}
+                />
+              </div>
 
-            {/* Status Section */}
-            <div
-              className="rounded-xl p-4 flex items-center justify-between text-sm"
-              style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}
-            >
-              <span style={{ color: '#787774', fontWeight: 500 }}>Trạng thái:</span>
-              <span className="flex items-center gap-1.5 font-semibold" style={{ color: '#E03E3E' }}>
-                <Ban className="w-3.5 h-3.5" /> ĐÃ BỊ KICK
-              </span>
-            </div>
+              {/* Text */}
+              <div className="space-y-2.5">
+                <div
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                  style={{ background: '#FEF2F2', color: '#E03E3E', border: '1px solid #FECACA' }}
+                >
+                  <Ban className="w-3 h-3" />
+                  Quyền truy cập bị thu hồi
+                </div>
+                <h1 className="text-xl font-semibold tracking-tight" style={{ color: '#1A1A1A' }}>
+                  Thiết bị này đã bị khóa
+                </h1>
+                <p className="text-sm leading-relaxed" style={{ color: '#787774' }}>
+                  Quản trị viên đã thu hồi quyền truy cập của thiết bị bạn.
+                  Bạn không thể xem tài liệu trên thiết bị này nữa.
+                </p>
+              </div>
 
-            <p className="text-xs italic" style={{ color: '#AEACA8' }}>
-              Nếu bạn cho rằng đây là nhầm lẫn, vui lòng liên hệ trực tiếp với Thầy Huy để được hỗ trợ.
-            </p>
+              {/* Info rows */}
+              <div
+                className="rounded-xl overflow-hidden text-left"
+                style={{ border: '1px solid #E9E9E7' }}
+              >
+                <div
+                  className="flex items-center justify-between px-4 py-3 text-xs"
+                  style={{ background: '#F7F6F3', borderBottom: '1px solid #E9E9E7' }}
+                >
+                  <span style={{ color: '#AEACA8', fontWeight: 600 }}>TRẠNG THÁI</span>
+                  <span
+                    className="flex items-center gap-1.5 font-bold uppercase tracking-wide"
+                    style={{ color: '#E03E3E' }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#E03E3E] animate-pulse inline-block" />
+                    Đã bị khóa
+                  </span>
+                </div>
+                <div
+                  className="px-4 py-3.5 space-y-1"
+                  style={{ background: '#FFFFFF' }}
+                >
+                  <p className="text-xs font-medium" style={{ color: '#57564F' }}>
+                    Nếu bạn cho rằng đây là nhầm lẫn, hãy liên hệ:
+                  </p>
+                  <p className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>
+                    Thầy Huy — Quản trị viên PhysiVault
+                  </p>
+                </div>
+              </div>
+
+              {/* Contact CTA */}
+              <a
+                href="https://zalo.me"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                style={{ background: '#1A1A1A', color: '#FFFFFF' }}
+              >
+                Liên hệ hỗ trợ
+              </a>
+            </div>
           </div>
 
-          <div className="text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: '#AEACA8' }}>
-              PhysiVault Security System
+          {/* Footer */}
+          <div className="text-center mt-6">
+            <p className="text-[10px] uppercase tracking-[0.2em] font-bold" style={{ color: '#CFCFCB' }}>
+              PhysiVault · Security System
             </p>
           </div>
         </div>
@@ -394,63 +447,87 @@ function App() {
   // === OFFLINE EXPIRED SCREEN ===
   if (isOfflineExpired && !isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#F7F6F3' }}>
-        <div className="max-w-md w-full animate-fade-in space-y-6">
-          {/* Tag Label */}
-          <div className="flex justify-center">
-            <span
-              className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-full"
-              style={{ background: '#FFF3E8', color: '#D9730D' }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#D9730D] inline-block" />
-              Yêu cầu kết nối
+      <div className="min-h-screen flex items-center justify-center p-6 font-sans" style={{ background: '#F7F6F3' }}>
+        {/* Subtle grid pattern */}
+        <div
+          className="fixed inset-0 pointer-events-none opacity-[0.025]"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(0deg,#1A1A1A 0,#1A1A1A 1px,transparent 0,transparent 50%),repeating-linear-gradient(90deg,#1A1A1A 0,#1A1A1A 1px,transparent 0,transparent 50%)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+
+        <div className="relative max-w-sm w-full animate-fade-in">
+          {/* Brand top */}
+          <div className="text-center mb-8">
+            <span className="text-[11px] font-bold uppercase tracking-[0.25em]" style={{ color: '#CFCFCB' }}>
+              PhysiVault
             </span>
           </div>
 
-          {/* Main Card */}
+          {/* Main card */}
           <div
-            className="rounded-2xl p-8 text-center space-y-6"
-            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}
+            className="rounded-2xl overflow-hidden"
+            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}
           >
-            {/* Icon */}
-            <div
-              className="mx-auto w-20 h-20 rounded-2xl flex items-center justify-center"
-              style={{ background: '#FFF3E8' }}
-            >
-              <WifiOff className="w-10 h-10 text-[#D9730D]" />
-            </div>
+            {/* Orange accent top bar */}
+            <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg,#D9730D,#F59E0B)' }} />
 
-            <div className="space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight" style={{ color: '#1A1A1A' }}>
-                Cần kết nối mạng
-              </h1>
-              <p className="text-sm leading-relaxed" style={{ color: '#787774' }}>
-                Phiên xác minh offline của bạn đã hết hạn.
-                Vui lòng kết nối mạng để tiếp tục sử dụng.
-              </p>
-            </div>
+            <div className="p-8 text-center space-y-6">
+              {/* Icon */}
+              <div
+                className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto"
+                style={{ background: '#FFF7ED', border: '1px solid #FED7AA' }}
+              >
+                <WifiOff className="w-9 h-9 text-[#D9730D]" />
+              </div>
 
-            {/* Info Section */}
-            <div
-              className="rounded-xl p-4 text-xs leading-relaxed"
-              style={{ background: '#F7F6F3', border: '1px solid #E9E9E7', color: '#787774' }}
-            >
-              Hệ thống cần xác minh quyền truy cập của bạn mỗi 24 giờ. Sau khi có mạng, hãy tải lại trang.
-            </div>
+              {/* Text */}
+              <div className="space-y-2.5">
+                <div
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                  style={{ background: '#FFF7ED', color: '#D9730D', border: '1px solid #FED7AA' }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#D9730D] animate-pulse inline-block" />
+                  Yêu cầu kết nối mạng
+                </div>
+                <h1 className="text-xl font-semibold tracking-tight" style={{ color: '#1A1A1A' }}>
+                  Phiên xác minh đã hết hạn
+                </h1>
+                <p className="text-sm leading-relaxed" style={{ color: '#787774' }}>
+                  Hệ thống không thể xác minh quyền truy cập của bạn khi offline quá 24 giờ.
+                  Vui lòng kết nối mạng để tiếp tục.
+                </p>
+              </div>
 
-            {/* Action */}
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full py-3 rounded-xl font-semibold transition-all active:scale-[0.98]"
-              style={{ background: '#D9730D', color: '#FFFFFF' }}
-            >
-              Thử lại ngay
-            </button>
+              {/* Info box */}
+              <div
+                className="rounded-xl p-4 text-left space-y-2"
+                style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Lưu ý</p>
+                <p className="text-xs leading-relaxed" style={{ color: '#57564F' }}>
+                  Quyền truy cập vẫn còn hiệu lực. Chỉ cần kết nối WiFi hoặc 4G rồi tải lại trang là tiếp tục học được ngay.
+                </p>
+              </div>
+
+              {/* Action */}
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full py-3 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                style={{ background: '#D9730D', color: '#FFFFFF' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#c4650b'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#D9730D'}
+              >
+                Tải lại trang
+              </button>
+            </div>
           </div>
 
-          <div className="text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: '#AEACA8' }}>
-              PhysiVault Security System
+          {/* Footer */}
+          <div className="text-center mt-6">
+            <p className="text-[10px] uppercase tracking-[0.2em] font-bold" style={{ color: '#CFCFCB' }}>
+              PhysiVault · Security System
             </p>
           </div>
         </div>
