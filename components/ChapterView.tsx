@@ -104,7 +104,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   /* ── Reusable file row ── */
   const FileRow = ({ file, accentColor }: { file: StoredFile; accentColor: string }) => (
     <div
-      className="flex items-center justify-between px-4 py-2.5 rounded-lg cursor-pointer transition-colors group/file"
+      className="flex items-center justify-between px-3 md:px-4 py-2.5 rounded-lg cursor-pointer transition-colors group/file"
       style={{ border: '1px solid #E9E9E7' }}
       onClick={() => setPreviewFile(file)}
       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F7F6F3'}
@@ -117,7 +117,8 @@ const ChapterView: React.FC<ChapterViewProps> = ({
           <p className="text-[10px] uppercase" style={{ color: '#AEACA8' }}>{formatSize(file.size)}</p>
         </div>
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity shrink-0">
+      {/* Mobile: always visible — Desktop: hover only */}
+      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover/file:opacity-100 transition-opacity shrink-0">
         <button
           onClick={e => { e.stopPropagation(); setPreviewFile(file); }}
           className="p-1.5 rounded-md transition-colors"
@@ -157,7 +158,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
     <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
       {/* Header */}
       <div
-        className="flex items-center justify-between p-4"
+        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-2 sm:gap-0"
         style={{ borderBottom: '1px solid #E9E9E7', borderLeft: `3px solid ${accentColor}` }}
       >
         <div className="flex items-center gap-3">
@@ -169,7 +170,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
             <p className="text-xs mt-0.5" style={{ color: '#787774' }}>{description}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
           {showSort && onSortChange && (
             <div className="relative">
               <select

@@ -111,14 +111,19 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
         </div>
 
         {/* Category Tabs */}
-        <div className="flex flex-wrap gap-1" style={{ borderBottom: '1px solid #E9E9E7', paddingBottom: '0' }}>
+        <div className="flex gap-0.5 overflow-x-auto" style={{ borderBottom: '1px solid #E9E9E7' }}>
           {LESSON_CATEGORIES.map(cat => {
             const isActive = selectedCategory === cat;
+            const mobileLabel: Record<string, string> = {
+              'Trắc nghiệm Lý thuyết (ABCD)': 'TN ABCD',
+              'Trắc nghiệm Lý thuyết (Đúng/Sai)': 'Đúng/Sai',
+              'Bài tập Tính toán Cơ bản': 'Tính toán',
+            };
             return (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className="relative px-3 py-2 text-sm font-medium transition-colors rounded-t-md"
+                className="relative px-2.5 md:px-3 py-2 text-xs md:text-sm font-medium transition-colors rounded-t-md shrink-0 whitespace-nowrap"
                 style={{
                   color: isActive ? '#6B7CDB' : '#787774',
                   background: isActive ? '#FFFFFF' : 'transparent',
@@ -126,7 +131,8 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                   marginBottom: '-1px',
                 }}
               >
-                {cat}
+                <span className="md:hidden">{mobileLabel[cat] || cat}</span>
+                <span className="hidden md:inline">{cat}</span>
                 <span
                   className="ml-1.5 text-xs px-1.5 py-0.5 rounded"
                   style={{
@@ -177,7 +183,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
         >
           {/* Toolbar */}
           <div
-            className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4"
+            className="flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-3 p-3 md:p-4"
             style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAF9' }}
           >
             <div className="flex items-center gap-2">
@@ -190,10 +196,10 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
               </span>
             </div>
             <div className="flex gap-2">
-              <div className="w-60">
+              <div className="flex-1 md:w-60">
                 <SearchBar onSearch={setSearchQuery} placeholder="Tìm tài liệu..." />
               </div>
-              <div className="relative">
+              <div className="relative shrink-0">
                 <select
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value as SortOption)}
@@ -234,12 +240,14 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4 p-3 md:p-4">
               {filteredAndSortedFiles.map(file => (
                 <div
                   key={file.id}
-                  className="group rounded-xl overflow-hidden flex flex-col transition-colors"
-                  style={{ border: '1px solid #E9E9E7', height: '260px', background: '#FFFFFF' }}
+                  className="group rounded-xl overflow-hidden transition-colors
+                             flex items-center gap-3 p-3
+                             md:flex-col md:items-stretch md:gap-0 md:p-0 md:h-[260px]"
+                  style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}
                   onMouseEnter={e => {
                     (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
                     (e.currentTarget as HTMLElement).style.background = '#FAFAF9';
@@ -249,27 +257,32 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                     (e.currentTarget as HTMLElement).style.background = '#FFFFFF';
                   }}
                 >
-                  {/* Preview Area */}
+                  {/* ── Mobile: compact icon ── */}
                   <div
-                    className="flex-none h-32 flex items-center justify-center relative"
+                    className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 md:hidden"
+                    style={{ background: '#FEF2F2', border: '1px solid #fecaca' }}
+                  >
+                    <FileText className="w-5 h-5" style={{ color: '#E03E3E' }} />
+                  </div>
+
+                  {/* ── Desktop: preview area with hover overlay ── */}
+                  <div
+                    className="hidden md:flex flex-none h-32 items-center justify-center relative"
                     style={{ background: '#F7F6F3', borderBottom: '1px solid #E9E9E7' }}
                   >
-                    {/* File icon */}
                     <div
-                      className="w-14 h-18 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
+                      className="w-14 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
                       style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', padding: '10px 12px' }}
                     >
                       <FileText className="w-8 h-8" style={{ color: '#E03E3E' }} />
                     </div>
-
-                    {/* Hover overlay with actions */}
                     <div
                       className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-t-xl"
                       style={{ background: 'rgba(247,246,243,0.85)' }}
                     >
                       <button
                         onClick={e => { e.stopPropagation(); setPreviewFile(file); }}
-                        className="p-2 rounded-lg transition-colors"
+                        className="p-2 rounded-lg"
                         style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#6B7CDB' }}
                         title="Xem trước"
                       >
@@ -278,7 +291,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                       {isAdmin && (
                         <button
                           onClick={e => { e.stopPropagation(); onDelete(file.id); }}
-                          className="p-2 rounded-lg transition-colors"
+                          className="p-2 rounded-lg"
                           style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#E03E3E' }}
                           title="Xóa"
                         >
@@ -288,8 +301,38 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                     </div>
                   </div>
 
-                  {/* File Info */}
-                  <div className="flex-1 p-3 flex flex-col justify-between">
+                  {/* ── Mobile: file info inline ── */}
+                  <div className="flex-1 min-w-0 md:hidden">
+                    <h4 className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }} title={file.name}>
+                      {file.name}
+                    </h4>
+                    <p className="text-[10px] mt-0.5" style={{ color: '#AEACA8' }}>
+                      {file.type.split('/')[1]?.toUpperCase() || 'FILE'} · {formatSize(file.size)} · {formatDate(file.uploadDate)}
+                    </p>
+                  </div>
+
+                  {/* ── Mobile: action buttons always visible ── */}
+                  <div className="flex items-center gap-1.5 shrink-0 md:hidden">
+                    <button
+                      onClick={e => { e.stopPropagation(); setPreviewFile(file); }}
+                      className="p-2 rounded-lg"
+                      style={{ background: '#EEF0FB', color: '#6B7CDB' }}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={e => { e.stopPropagation(); onDelete(file.id); }}
+                        className="p-2 rounded-lg"
+                        style={{ background: '#FEF2F2', color: '#E03E3E' }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* ── Desktop: file info bottom section ── */}
+                  <div className="hidden md:flex flex-1 p-3 flex-col justify-between">
                     <div>
                       <h4
                         className="text-sm font-medium line-clamp-2 leading-snug mb-1.5"
@@ -299,24 +342,15 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                         {file.name}
                       </h4>
                       <div className="flex items-center gap-1.5 text-xs" style={{ color: '#AEACA8' }}>
-                        <span
-                          className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                          style={{ background: '#F1F0EC', color: '#787774' }}
-                        >
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: '#F1F0EC', color: '#787774' }}>
                           {file.type.split('/')[1]?.toUpperCase() || 'FILE'}
                         </span>
                         <span>·</span>
                         <span>{formatSize(file.size)}</span>
                       </div>
                     </div>
-
-                    <div
-                      className="flex items-center justify-between pt-2.5 mt-2"
-                      style={{ borderTop: '1px solid #F1F0EC' }}
-                    >
-                      <span className="text-[10px]" style={{ color: '#AEACA8' }}>
-                        {formatDate(file.uploadDate)}
-                      </span>
+                    <div className="flex items-center justify-between pt-2.5 mt-2" style={{ borderTop: '1px solid #F1F0EC' }}>
+                      <span className="text-[10px]" style={{ color: '#AEACA8' }}>{formatDate(file.uploadDate)}</span>
                       {isAdmin && (
                         <a
                           href={file.url}
