@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, Settings, ShieldCheck, ChevronRight, MessageCircle, Bot, Send, RefreshCw, Lock } from 'lucide-react';
+import { X, CheckCircle2, Settings, ShieldCheck, ChevronRight, MessageCircle, Bot, Send, RefreshCw, Lock, User, Copy } from 'lucide-react';
 
 interface GuideModalProps {
     isOpen: boolean;
@@ -19,12 +19,12 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
         },
         {
             title: "Bước 2: Nhận mã kích hoạt",
-            desc: "Nhập SĐT của bạn vào khung chat. Bot sẽ tự động cấp mã PV duy nhất.",
+            desc: "Nhập SĐT của bạn, Bot sẽ tự động cấp mã PV duy nhất cho tài khoản.",
             icon: <Bot className="w-5 h-5 text-[#6B7CDB]" />
         },
         {
             title: "Bước 3: Mở khóa hệ thống",
-            desc: "Vào Cài đặt, dán mã PV-... vào ô kích hoạt để truy cập toàn bộ tài liệu.",
+            desc: "Vào Cài đặt, nhập SĐT và dán mã PV-... để truy cập toàn bộ tài liệu.",
             icon: <ShieldCheck className="w-5 h-5 text-[#D9730D]" />
         }
     ];
@@ -33,7 +33,7 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
         if (!isOpen || !isPlaying) return;
         const timer = setInterval(() => {
             setActiveScene(prev => (prev + 1) % activationSteps.length);
-        }, 6000);
+        }, 7000);
         return () => clearInterval(timer);
     }, [isOpen, isPlaying, activationSteps.length]);
 
@@ -64,13 +64,13 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
                                 <div
                                     key={idx}
                                     onClick={() => { setActiveScene(idx); setIsPlaying(false); }}
-                                    className={`group p-5 rounded-2xl transition-all cursor-pointer border-l-4 ${isActive
+                                    className={`group p-5 rounded-2xl transition-all duration-300 cursor-pointer border-l-4 ${isActive
                                         ? 'bg-white shadow-md border-[#D9730D]'
                                         : 'bg-transparent border-transparent hover:bg-white/40'
                                         }`}
                                 >
                                     <div className="flex items-start gap-5">
-                                        <div className={`mt-0.5 transition-all duration-300 ${isActive ? 'scale-110 opacity-100' : 'opacity-40 scale-100'}`}>
+                                        <div className={`mt-0.5 transition-all duration-500 ${isActive ? 'scale-110 opacity-100' : 'opacity-40 scale-100'}`}>
                                             {step.icon}
                                         </div>
                                         <div className="flex-1">
@@ -96,7 +96,7 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
 
                 {/* Right Simulation Panel */}
                 <div className="flex-1 bg-[#F7F6F3] relative overflow-hidden flex items-center justify-center p-6 md:p-12">
-                    <div className="relative z-10 w-full max-w-[650px] aspect-[4/3] bg-white rounded-3xl shadow-2xl border border-[#E9E9E7] overflow-hidden flex flex-col">
+                    <div className="relative z-10 w-full max-w-[650px] aspect-[4/3] bg-white rounded-[40px] shadow-2xl border border-[#E9E9E7] overflow-hidden flex flex-col">
                         <SimulatedAppView scene={activeScene} />
                     </div>
                     {/* Decorative Elements */}
@@ -118,7 +118,7 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
 const SimulatedAppView: React.FC<{ scene: number }> = ({ scene }) => {
     return (
         <div className="w-full h-full flex flex-col overflow-hidden font-sans bg-[#F7F6F3]">
-            {/* Header */}
+            {/* Browser Header */}
             <div className="h-12 bg-white border-b border-[#E9E9E7] flex items-center px-6 justify-between shrink-0">
                 <div className="flex items-center gap-3">
                     <div className="flex gap-1.5">
@@ -168,13 +168,13 @@ const SimulatedAppView: React.FC<{ scene: number }> = ({ scene }) => {
                         ))}
                     </div>
 
-                    {/* Step-specific Overlays */}
+                    {/* Step Overlays */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
 
-                        {/* SCENE 1: CHATBOT ICON CLICK */}
+                        {/* SCENE 1: BLACK CHATBOT ICON CLICK */}
                         {scene === 0 && (
                             <div className="absolute bottom-8 right-8 flex flex-col items-center gap-4 animate-bounce">
-                                <div className="w-16 h-16 bg-[#1A1A1A] rounded-2xl shadow-2xl flex items-center justify-center ring-[6px] ring-white">
+                                <div className="w-16 h-16 bg-[#2D2D2D] rounded-full shadow-2xl flex items-center justify-center ring-[6px] ring-white">
                                     <MessageCircle className="w-8 h-8 text-white" />
                                 </div>
                                 <div className="px-4 py-2 bg-white rounded-xl shadow-xl border border-[#E9E9E7] text-xs font-bold text-[#1A1A1A] whitespace-nowrap">
@@ -183,78 +183,91 @@ const SimulatedAppView: React.FC<{ scene: number }> = ({ scene }) => {
                             </div>
                         )}
 
-                        {/* SCENE 2: REALISTIC CHAT INTERFACE */}
+                        {/* SCENE 2: REALISTIC CHAT INTERFACE MATCHING CHATBOT.TSX */}
                         {scene === 1 && (
-                            <div className="absolute bottom-10 right-10 w-[350px] bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden border border-orange-500/20 animate-scale-in flex flex-col pointer-events-auto">
-                                {/* Chat Header */}
-                                <div className="p-4 border-b-2 border-orange-500 flex items-center justify-between bg-white">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-2xl bg-[#FFF3E8] flex items-center justify-center border border-orange-100">
-                                            <Bot className="w-5 h-5 text-orange-600" />
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-sm text-slate-800">PhysiVault AI</div>
-                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                <div className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20 animate-pulse" />
-                                                <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Đang trực tuyến</span>
-                                            </div>
+                            <div className="absolute bottom-10 right-10 w-[340px] bg-white rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] overflow-hidden border border-[#E9E9E7] animate-scale-in flex flex-col pointer-events-auto">
+                                {/* Header matches Chatbot.tsx line 115-129 */}
+                                <div className="flex items-center gap-3 px-4 py-3 shrink-0" style={{ borderBottom: '1px solid #E9E9E7', borderTop: '3px solid #D9730D' }}>
+                                    <div className="p-2 rounded-lg" style={{ background: '#FFF3E8' }}>
+                                        <Bot className="w-4 h-4" style={{ color: '#D9730D' }} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>PhysiVault AI</h4>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                            <span className="text-[10px]" style={{ color: '#787774' }}>Đang trực tuyến</span>
                                         </div>
                                     </div>
-                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
                                 </div>
 
-                                {/* Chat Body */}
-                                <div className="p-5 h-[280px] bg-slate-50/50 space-y-5 overflow-y-auto">
-                                    <div className="flex gap-3">
-                                        <div className="w-7 h-7 rounded-lg bg-[#FFF3E8] flex items-center justify-center shrink-0 border border-orange-100">
-                                            <Bot className="w-4 h-4 text-orange-500" />
+                                {/* Messages Area matches Chatbot.tsx line 132-190 */}
+                                <div className="p-4 h-[320px] bg-[#FAFAF9] space-y-4 overflow-y-auto overflow-x-hidden">
+                                    {/* Bot Initial Message */}
+                                    <div className="flex justify-start gap-2 max-w-[90%]">
+                                        <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-[#FFF3E8] text-[#D9730D]">
+                                            <Bot className="w-3.5 h-3.5" />
                                         </div>
-                                        <div className="bg-white border border-slate-100 p-3.5 rounded-2xl rounded-tl-none shadow-sm max-w-[85%] text-[13px] text-slate-700 leading-relaxed font-medium">
+                                        <div className="px-3 py-2 text-sm leading-relaxed bg-white border border-[#E9E9E7] text-[#1A1A1A]" style={{ borderRadius: '2px 12px 12px 12px' }}>
                                             Chào bạn! Mình là trợ lý PhysiVault. Cần mình giúp gì cho bạn hôm nay?
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col items-end gap-1.5">
-                                        <div className="bg-[#1A1A1A] text-white p-3 px-4 rounded-2xl rounded-tr-none shadow-md text-[13px] font-medium animate-slide-up">
+                                    {/* User Input Mockup */}
+                                    <div className="flex justify-end gap-2 max-w-[90%] ml-auto animate-slide-up">
+                                        <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-[#EEF0FB] text-[#6B7CDB]">
+                                            <User className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="px-3 py-2 text-sm leading-relaxed bg-[#2D2D2D] text-white" style={{ borderRadius: '12px 2px 12px 12px' }}>
                                             09xx-xxx-xxx
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-3 animate-slide-up">
-                                        <div className="w-7 h-7 rounded-lg bg-[#FFF3E8] flex items-center justify-center shrink-0 border border-orange-100">
-                                            <Bot className="w-4 h-4 text-orange-500" />
-                                        </div>
-                                        <div className="space-y-3 max-w-[85%]">
-                                            <div className="bg-white border border-slate-100 p-3.5 rounded-2xl rounded-tl-none shadow-sm text-[13px] text-slate-700 leading-relaxed font-medium">
-                                                Bot đã nhận diện SĐT. Đây là mã kích hoạt của bạn:
+                                    {/* Sequence from User Image */}
+                                    <div className="space-y-3 animate-slide-up delay-100">
+                                        {/* Bot success */}
+                                        <div className="flex justify-start gap-2 max-w-[90%]">
+                                            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-[#FFF3E8] text-[#D9730D]">
+                                                <Bot className="w-3.5 h-3.5" />
                                             </div>
-                                            <div className="bg-[#EEF0FB] p-4 rounded-2xl border-2 border-[#6B7CDB]/30 shadow-inner flex flex-col items-center gap-2 group cursor-copy hover:border-[#6B7CDB] transition-all">
-                                                <div className="text-[10px] font-bold text-[#6B7CDB] uppercase tracking-[0.2em] opacity-80">MÃ CỦA BẠN</div>
-                                                <div className="text-[18px] font-mono font-black text-[#6B7CDB] tracking-widest">PV-8X2A-9M3L</div>
+                                            <div className="px-3 py-2 text-sm leading-relaxed bg-white border border-[#E9E9E7] text-[#1A1A1A]" style={{ borderRadius: '2px 12px 12px 12px' }}>
+                                                Xác thực thành công! Mã kích hoạt của bạn là:
+                                            </div>
+                                        </div>
+                                        {/* Bot key bubble */}
+                                        <div className="flex justify-start gap-2 max-w-[90%]">
+                                            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-[#FFF3E8] text-[#D9730D]">
+                                                <Bot className="w-3.5 h-3.5" />
+                                            </div>
+                                            <div className="px-3 py-2 text-sm leading-relaxed bg-white border border-[#E9E9E7] text-[#1A1A1A] flex items-center gap-2" style={{ borderRadius: '2px 12px 12px 12px' }}>
+                                                <code className="font-mono font-bold tracking-wider">PV-741D-E030-EAB4</code>
+                                                <Copy className="w-3.5 h-3.5 text-[#AEACA8]" />
+                                            </div>
+                                        </div>
+                                        {/* Bot instruction */}
+                                        <div className="flex justify-start gap-2 max-w-[90%]">
+                                            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-[#FFF3E8] text-[#D9730D]">
+                                                <Bot className="w-3.5 h-3.5" />
+                                            </div>
+                                            <div className="px-3 py-2 text-sm leading-relaxed bg-white border border-[#E9E9E7] text-[#1A1A1A]" style={{ borderRadius: '2px 12px 12px 12px' }}>
+                                                Bạn hãy copy mã này và dán vào phần "Mở khóa học viên" trong Cài đặt nhé.
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Chat Input Area */}
-                                <div className="p-4 bg-white border-t border-slate-100">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex-1 h-11 bg-slate-50 rounded-xl border border-orange-500 px-4 flex items-center justify-between text-[13px] text-slate-400 font-medium">
-                                            <span>Nhập số điện thoại...</span>
+                                {/* Input Area matches Chatbot.tsx line 193-229 */}
+                                <div className="p-3 bg-white" style={{ borderTop: '1px solid #E9E9E7' }}>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1 text-sm p-2 px-3 bg-[#F7F6F3] border border-[#E9E9E7] rounded-lg text-[#AEACA8]">
+                                            Nhập số điện thoại...
                                         </div>
-                                        <div className="w-11 h-11 bg-orange-600 rounded-xl shadow-lg shadow-orange-200 flex items-center justify-center">
-                                            <Send className="w-5 h-5 text-white" />
+                                        <div className="p-2.5 rounded-lg text-white bg-[#D9730D]">
+                                            <Send className="w-4 h-4" />
                                         </div>
                                     </div>
-                                    <div className="flex justify-between items-center mt-3 px-2">
-                                        <div className="flex items-center gap-1.5 opacity-40">
-                                            <RefreshCw className="w-3 h-3" />
-                                            <span className="text-[9px] font-bold uppercase tracking-wider">Tự động 24/7</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 opacity-40">
-                                            <Lock className="w-3 h-3" />
-                                            <span className="text-[9px] font-bold uppercase tracking-wider">Chặn dùng chung</span>
-                                        </div>
+                                    <div className="mt-2 flex items-center justify-center gap-4 text-[10px] text-[#AEACA8]">
+                                        <span className="flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Tự động 24/7</span>
+                                        <span className="flex items-center gap-1"><Bot className="w-3 h-3" /> Chặn dùng chung</span>
                                     </div>
                                 </div>
                             </div>
@@ -263,41 +276,41 @@ const SimulatedAppView: React.FC<{ scene: number }> = ({ scene }) => {
                         {/* SCENE 3: SETTINGS MODAL ACTIVATION */}
                         {scene === 2 && (
                             <div className="absolute inset-0 bg-white/60 backdrop-blur-[4px] flex items-center justify-center p-8 z-[30]">
-                                <div className="w-full max-w-[380px] bg-white rounded-[40px] border border-orange-500/20 shadow-[0_30px_60px_-12px_rgba(0,0,0,0.15)] p-8 animate-scale-in flex flex-col gap-6">
+                                <div className="w-full max-w-[420px] bg-white rounded-[40px] border border-[#E9E9E7] shadow-[0_30px_60px_-12px_rgba(0,0,0,0.15)] p-8 animate-scale-in flex flex-col gap-6">
                                     <div className="flex items-center justify-between border-b border-[#F7F6F3] pb-5">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-slate-50 rounded-xl">
                                                 <Settings className="w-5 h-5 text-slate-600" />
                                             </div>
-                                            <div className="h-2.5 w-32 bg-[#1A1A1A] rounded-full" />
+                                            <div className="h-5 w-40 bg-[#1A1A1A] rounded-full opacity-10" />
                                         </div>
-                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
-                                            <X className="w-4 h-4 text-slate-400" />
+                                        <X className="w-5 h-5 text-slate-400" />
+                                    </div>
+
+                                    <div className="space-y-5">
+                                        {/* Phone input mockup */}
+                                        <div className="space-y-2">
+                                            <div className="h-2 w-24 bg-[#AEACA8]/30 rounded-full ml-1" />
+                                            <div className="h-14 w-full bg-[#F7F6F3] rounded-2xl border border-[#E9E9E7] flex items-center px-5">
+                                                <div className="text-[14px] font-medium text-slate-500">09xx-xxx-xxx</div>
+                                            </div>
+                                        </div>
+                                        {/* Code input mockup with orange highlight */}
+                                        <div className="space-y-2">
+                                            <div className="h-2 w-32 bg-[#AEACA8]/30 rounded-full ml-1" />
+                                            <div className="h-14 w-full bg-white rounded-2xl border-2 border-[#D9730D] flex items-center px-5 shadow-[0_10px_30px_-10px_rgba(217,115,13,0.3)]">
+                                                <div className="text-[16px] font-mono font-bold text-[#D9730D] tracking-widest uppercase">PV-741D-E030-EAB4</div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <div className="h-1.5 w-24 bg-[#AEACA8] rounded-full ml-1" />
-                                            <div className="h-12 w-full bg-[#F7F6F3] rounded-2xl border border-[#E9E9E7] flex items-center px-5">
-                                                <div className="text-[13px] font-medium text-slate-400">09xx-xxx-xxx</div>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <div className="h-1.5 w-32 bg-[#AEACA8] rounded-full ml-1" />
-                                            <div className="h-12 w-full bg-white rounded-2xl border-2 border-orange-500 flex items-center px-5 shadow-[0_10px_20px_-5px_rgba(249,115,22,0.2)]">
-                                                <div className="text-[15px] font-mono font-black text-orange-600 tracking-widest uppercase">PV-8X2A-9M3L</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="w-full py-4.5 bg-orange-600 rounded-2xl text-[14px] text-white font-bold text-center tracking-[0.1em] shadow-xl shadow-orange-200 active:scale-95 transition-all">
+                                    <div className="w-full py-5 bg-[#D9730D] rounded-2xl text-[15px] text-white font-bold text-center tracking-[0.1em] shadow-[0_10px_25px_-5px_rgba(217,115,13,0.4)]">
                                         MỞ KHÓA NGAY
                                     </div>
 
-                                    <div className="flex items-center justify-center gap-2 opacity-30 mt-1">
-                                        <Monitor className="w-3.5 h-3.5" />
-                                        <div className="h-1 w-20 bg-slate-400 rounded-full" />
+                                    <div className="flex items-center justify-center gap-2 opacity-20">
+                                        <Monitor className="w-4 h-4" />
+                                        <div className="h-1 w-24 bg-slate-400 rounded-full" />
                                     </div>
                                 </div>
                             </div>
