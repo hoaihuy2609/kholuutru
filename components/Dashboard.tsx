@@ -73,7 +73,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
             {/* Attribution */}
             <div className="space-y-2 mb-6">
               <div
-                className="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg"
+                className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg"
                 style={{ background: '#F1F0EC', border: '1px solid #E9E9E7' }}
               >
                 <span className="text-xs font-medium px-1.5 py-0.5 rounded" style={{ background: '#E9E9E7', color: '#57564F' }}>
