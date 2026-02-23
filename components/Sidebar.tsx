@@ -116,8 +116,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         })}
       </nav>
 
-      {/* Settings */}
-      <div className="p-2" style={{ borderTop: '1px solid #E9E9E7' }}>
+      {/* Settings — ẩn trên mobile (dùng gear icon ở header thay thế) */}
+      <div className="hidden md:block p-2" style={{ borderTop: '1px solid #E9E9E7' }}>
         <button
           id="tour-settings-btn"
           onClick={onOpenSettings}
