@@ -214,14 +214,15 @@ export const useCloudStorage = () => {
         return false;
     };
 
-    const verifyAccess = async (): Promise<boolean> => {
+    const verifyAccess = async (): Promise<'ok' | 'kicked' | 'offline_expired'> => {
         const sdt = localStorage.getItem('pv_activated_sdt');
         const isCurrentlyActivated = localStorage.getItem(STORAGE_ACTIVATION_KEY) === 'true';
 
-        if (!isCurrentlyActivated || !sdt) return true;
+        if (!isCurrentlyActivated || !sdt) return 'ok';
 
         const machineId = getMachineId();
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqtcHkPal4oAB0R0A6s2WmxsS6SOxsQefruSPZXEJm_c_Ivl6sW_HnqOVDxUuoAH-W/exec";
+        const OFFLINE_GRACE_PERIOD = 24 * 60 * 60 * 1000; // 24 giờ
 
         try {
             const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=check&sdt=${sdt}&machineId=${machineId}`);
@@ -232,13 +233,27 @@ export const useCloudStorage = () => {
                 localStorage.removeItem(STORAGE_ACTIVATION_KEY);
                 localStorage.removeItem('pv_activated_sdt');
                 localStorage.removeItem('pv_pending_sdt');
+                localStorage.removeItem('pv_last_check');
                 setIsActivated(false);
-                return false;
+                return 'kicked';
             }
-            return true;
+            // Check thành công → đóng dấu thời gian
+            localStorage.setItem('pv_last_check', Date.now().toString());
+            return 'ok';
         } catch (e) {
-            // Nếu lỗi mạng thì tạm thời cho qua để tránh gián đoạn việc học
-            return true;
+            // Lỗi mạng → kiểm tra hạn sử dụng offline
+            const lastCheck = localStorage.getItem('pv_last_check');
+            if (!lastCheck) {
+                // Chưa bao giờ check thành công → cần mạng
+                return 'offline_expired';
+            }
+            const elapsed = Date.now() - parseInt(lastCheck);
+            if (elapsed > OFFLINE_GRACE_PERIOD) {
+                // Quá 24h chưa check → hết hạn offline
+                return 'offline_expired';
+            }
+            // Vẫn trong hạn 24h → cho qua
+            return 'ok';
         }
     };
 

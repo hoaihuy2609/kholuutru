@@ -7,7 +7,7 @@ import ChapterView from './components/ChapterView';
 import LessonView from './components/LessonView';
 import Toast, { ToastType } from './components/Toast';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
-import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings, Plus, Ban, ShieldOff } from 'lucide-react';
+import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings, Plus, Ban, ShieldOff, WifiOff } from 'lucide-react';
 
 import SettingsModal from './components/SettingsModal';
 import GuideModal from './components/GuideModal';
@@ -30,14 +30,20 @@ function App() {
   const { lessons, storedFiles, loading, isActivated, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess } = useCloudStorage();
 
   const [isKicked, setIsKicked] = useState(false);
+  const [isOfflineExpired, setIsOfflineExpired] = useState(false);
 
   // Check access on mount
   React.useEffect(() => {
     const check = async () => {
       if (isActivated) {
-        const ok = await verifyAccess();
-        if (!ok) {
+        const status = await verifyAccess();
+        if (status === 'kicked') {
           setIsKicked(true);
+          setIsOfflineExpired(false);
+        } else if (status === 'offline_expired') {
+          setIsOfflineExpired(true);
+        } else {
+          setIsOfflineExpired(false);
         }
       }
     };
@@ -339,6 +345,54 @@ function App() {
 
           {/* Branding */}
           <div className="pt-4">
+            <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.3em]">
+              PhysiVault Security System
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // === OFFLINE EXPIRED SCREEN ===
+  if (isOfflineExpired && !isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6 font-sans">
+        <div className="max-w-md w-full text-center space-y-8 animate-fade-in">
+          {/* Icon */}
+          <div className="relative mx-auto w-28 h-28">
+            <div className="absolute inset-0 bg-amber-500/20 rounded-full animate-pulse" />
+            <div className="relative w-28 h-28 bg-amber-500/10 backdrop-blur-xl rounded-full flex items-center justify-center border-2 border-amber-500/30">
+              <WifiOff className="w-14 h-14 text-amber-400" />
+            </div>
+          </div>
+
+          {/* Title */}
+          <div className="space-y-3">
+            <h1 className="text-2xl font-black text-white tracking-tight">CẦN KẾT NỐI MẠNG</h1>
+            <p className="text-amber-300/80 text-sm leading-relaxed font-medium">
+              Phiên xác minh offline của bạn đã hết hạn.<br />
+              Vui lòng kết nối mạng để tiếp tục sử dụng.
+            </p>
+          </div>
+
+          {/* Info Card */}
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 space-y-3">
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Hệ thống cần xác minh quyền truy cập của bạn mỗi 24 giờ. Sau khi có mạng, hãy tải lại trang.
+            </p>
+          </div>
+
+          {/* Retry Button */}
+          <button
+            onClick={() => window.location.reload()}
+            className="px-8 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black rounded-2xl transition-all active:scale-95 shadow-lg shadow-amber-500/20"
+          >
+            Thử lại
+          </button>
+
+          {/* Branding */}
+          <div className="pt-2">
             <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.3em]">
               PhysiVault Security System
             </p>
