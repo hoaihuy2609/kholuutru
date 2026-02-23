@@ -325,8 +325,8 @@ const SimulatedAppView: React.FC<{ scene: number }> = ({ scene }) => {
                                                 <div className="flex gap-2">
                                                     <div className="relative flex-1">
                                                         <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#AEACA8]" />
-                                                        <div className="w-full h-10 bg-white border-2 border-[#D9730D] rounded-lg flex items-center pl-9 pr-4 shadow-[0_4px_12px_rgba(217,115,13,0.15)]">
-                                                            <div className="text-[14px] font-mono font-bold text-[#D9730D] tracking-wider">PV-XXXX-XXXX-XXXX</div>
+                                                        <div className="w-full h-10 bg-white border-2 border-[#3366FF] rounded-lg flex items-center pl-9 pr-4 shadow-[0_4px_20px_rgba(51,102,255,0.25)] animate-pulse-slow">
+                                                            <div className="text-[14px] font-mono font-bold text-[#3366FF] tracking-wider">PV-XXXX-XXXX-XXXX</div>
                                                         </div>
                                                     </div>
                                                     <div className="px-5 h-10 bg-[#D9730D] text-white rounded-lg flex items-center font-semibold text-sm">

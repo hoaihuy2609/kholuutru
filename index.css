@@ -234,6 +234,10 @@ body {
     animation: pulse 2s ease-in-out infinite;
 }
 
+.animate-pulse-slow {
+    animation: pulse 4s ease-in-out infinite;
+}
+
 /* Skeleton loader */
 .skeleton {
     background: linear-gradient(90deg,
