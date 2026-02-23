@@ -42,53 +42,53 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in text-sans">
             <div
-                className="bg-white rounded-[12px] shadow-2xl w-full max-w-3xl overflow-hidden animate-scale-in border border-[#E9E9E7] flex flex-col h-[90vh] md:h-[520px]"
+                className="bg-white rounded-[12px] shadow-2xl w-full max-w-6xl overflow-hidden animate-scale-in border border-[#E9E9E7] flex flex-col h-[90vh] md:h-[720px]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Unified Header matching SettingsModal style */}
-                <div className="flex items-center justify-between px-5 py-3 border-b border-[#E9E9E7] bg-white shrink-0">
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#E9E9E7] bg-white shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="p-1.5 bg-[#FFF3E8] rounded-lg">
                             <ShieldCheck className="w-4 h-4 text-[#D9730D]" />
                         </div>
-                        <h3 className="font-semibold text-[15px] text-[#1A1A1A]">Hướng dẫn & Kích hoạt</h3>
+                        <h3 className="font-semibold text-base text-[#1A1A1A]">Hướng dẫn kích hoạt & Mở khóa Hệ thống</h3>
                     </div>
                     <button
                         onClick={onClose}
                         className="p-1.5 rounded-md hover:bg-[#F1F0EC] transition-colors text-[#787774]"
                     >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
 
                 <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                     {/* Left Sidebar matching App Sidebar style */}
-                    <div className="w-full md:w-[220px] bg-[#F1F0EC] border-r border-[#E9E9E7] flex flex-col shrink-0">
-                        <div className="p-3.5 space-y-2 flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="w-full md:w-[320px] bg-[#F1F0EC] border-r border-[#E9E9E7] flex flex-col shrink-0">
+                        <div className="p-6 space-y-3 flex-1 overflow-y-auto custom-scrollbar">
                             {activationSteps.map((step, idx) => {
                                 const isActive = activeScene === idx;
                                 return (
                                     <div
                                         key={idx}
                                         onClick={() => { setActiveScene(idx); setIsPlaying(false); }}
-                                        className={`group relative p-3 rounded-xl transition-all duration-200 cursor-pointer ${isActive
+                                        className={`group relative p-4 rounded-xl transition-all duration-200 cursor-pointer ${isActive
                                             ? 'bg-white shadow-sm translate-x-1'
                                             : 'hover:bg-white/40'
                                             }`}
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <div className={`p-1.5 rounded-lg transition-colors ${isActive ? 'bg-[#FFF3E8] text-[#D9730D]' : 'bg-white/60 text-[#AEACA8]'}`}>
-                                                {/* Scale down icons a bit */}
-                                                <div className="scale-90">{step.icon}</div>
+                                        <div className="flex items-center gap-4">
+                                            <div className={`p-2 rounded-lg transition-colors ${isActive ? 'bg-[#FFF3E8] text-[#D9730D]' : 'bg-white/60 text-[#AEACA8]'}`}>
+                                                {step.icon}
                                             </div>
                                             <div className="flex-1 overflow-hidden">
-                                                <h4 className={`text-[11px] font-bold truncate transition-colors ${isActive ? 'text-[#1A1A1A]' : 'text-[#787774]'}`}>{step.title}</h4>
+                                                <h4 className={`text-sm font-bold truncate transition-colors ${isActive ? 'text-[#1A1A1A]' : 'text-[#787774]'}`}>{step.title}</h4>
                                                 {isActive && (
-                                                    <p className="text-[9px] text-[#787774] mt-0.5 leading-tight animate-fade-in font-medium">
+                                                    <p className="text-[12px] text-[#787774] mt-1 leading-relaxed animate-fade-in font-medium">
                                                         {step.desc}
                                                     </p>
                                                 )}
                                             </div>
+                                            {isActive && <ChevronRight className="w-4 h-4 text-[#D9730D] shrink-0" />}
                                         </div>
                                         {isActive && (
                                             <div className="absolute left-0 top-3 bottom-3 w-1 bg-[#D9730D] rounded-full" />
@@ -99,20 +99,20 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, isAdmin }) => 
                         </div>
 
                         {/* Sidebar Footer */}
-                        <div className="p-3.5 border-t border-[#E9E9E7]/60">
+                        <div className="p-6 border-t border-[#E9E9E7]/60">
                             <button
                                 onClick={onClose}
-                                className="w-full py-2 bg-[#1A1A1A] text-white text-[11px] font-bold rounded-xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+                                className="w-full py-3 bg-[#1A1A1A] text-white text-sm font-bold rounded-xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
                             >
                                 Tôi đã hiểu
-                                <CheckCircle2 className="w-3 h-3" />
+                                <CheckCircle2 className="w-4 h-4" />
                             </button>
                         </div>
                     </div>
 
                     {/* Right Simulation Panel */}
-                    <div className="flex-1 bg-[#F7F6F3] relative overflow-hidden flex items-center justify-center p-4">
-                        <div className="relative z-10 w-full max-w-[500px] aspect-[16/10] bg-white rounded-[12px] shadow-xl border border-[#E9E9E7] overflow-hidden flex flex-col">
+                    <div className="flex-1 bg-[#F7F6F3] relative overflow-hidden flex items-center justify-center p-6 md:p-12">
+                        <div className="relative z-10 w-full max-w-[680px] aspect-[16/10] bg-white rounded-[12px] shadow-xl border border-[#E9E9E7] overflow-hidden flex flex-col">
                             <SimulatedAppView scene={activeScene} />
                         </div>
                         {/* Decorative background blur */}
