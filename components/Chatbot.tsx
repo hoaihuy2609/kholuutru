@@ -10,7 +10,7 @@ interface Message {
     timestamp: number;
 }
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyMkOMHGB-SN17uS8lXVfnruVnnJZiVuNsTmPnQOMQWvme2g5QIeJZKKrkvaUwRsg_H/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqtcHkPal4oAB0R0A6s2WmxsS6SOxsQefruSPZXEJm_c_Ivl6sW_HnqOVDxUuoAH-W/exec";
 
 const Chatbot: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);

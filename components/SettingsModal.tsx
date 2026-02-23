@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone } from 'lucide-react';
 import { useCloudStorage, exportData, importData, getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyMkOMHGB-SN17uS8lXVfnruVnnJZiVuNsTmPnQOMQWvme2g5QIeJZKKrkvaUwRsg_H/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqtcHkPal4oAB0R0A6s2WmxsS6SOxsQefruSPZXEJm_c_Ivl6sW_HnqOVDxUuoAH-W/exec";
 
 interface SettingsModalProps {
     isOpen: boolean;

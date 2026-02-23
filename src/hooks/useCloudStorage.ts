@@ -214,6 +214,34 @@ export const useCloudStorage = () => {
         return false;
     };
 
+    const verifyAccess = async (): Promise<boolean> => {
+        const sdt = localStorage.getItem('pv_activated_sdt');
+        const isCurrentlyActivated = localStorage.getItem(STORAGE_ACTIVATION_KEY) === 'true';
+
+        if (!isCurrentlyActivated || !sdt) return true;
+
+        const machineId = getMachineId();
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqtcHkPal4oAB0R0A6s2WmxsS6SOxsQefruSPZXEJm_c_Ivl6sW_HnqOVDxUuoAH-W/exec";
+
+        try {
+            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=check&sdt=${sdt}&machineId=${machineId}`);
+            const result = await response.json();
+
+            if (!result.success) {
+                // BỊ KICK! Xóa sạch dấu vết
+                localStorage.removeItem(STORAGE_ACTIVATION_KEY);
+                localStorage.removeItem('pv_activated_sdt');
+                localStorage.removeItem('pv_pending_sdt');
+                setIsActivated(false);
+                return false;
+            }
+            return true;
+        } catch (e) {
+            // Nếu lỗi mạng thì tạm thời cho qua để tránh gián đoạn việc học
+            return true;
+        }
+    };
+
     return {
         lessons,
         storedFiles,
@@ -223,7 +251,8 @@ export const useCloudStorage = () => {
         deleteLesson,
         uploadFiles,
         deleteFile,
-        activateSystem
+        activateSystem,
+        verifyAccess
     };
 };
 

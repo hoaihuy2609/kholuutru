@@ -7,7 +7,7 @@ import ChapterView from './components/ChapterView';
 import LessonView from './components/LessonView';
 import Toast, { ToastType } from './components/Toast';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
-import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings, Plus } from 'lucide-react';
+import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings, Plus, Ban, ShieldOff } from 'lucide-react';
 
 import SettingsModal from './components/SettingsModal';
 import GuideModal from './components/GuideModal';
@@ -27,7 +27,25 @@ function App() {
   const [autoCreateLesson, setAutoCreateLesson] = useState(false);
 
   // Replace local state with Cloud Storage hook
-  const { lessons, storedFiles, loading, addLesson, deleteLesson, uploadFiles, deleteFile } = useCloudStorage();
+  const { lessons, storedFiles, loading, isActivated, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess } = useCloudStorage();
+
+  const [isKicked, setIsKicked] = useState(false);
+
+  // Check access on mount
+  React.useEffect(() => {
+    const check = async () => {
+      if (isActivated) {
+        const ok = await verifyAccess();
+        if (!ok) {
+          setIsKicked(true);
+        }
+      }
+    };
+    check();
+    // Check every 5 minutes
+    const interval = setInterval(check, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [isActivated]);
 
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     return localStorage.getItem('physivault_is_admin') === 'true';
@@ -282,6 +300,53 @@ function App() {
 
     return <Dashboard onSelectGrade={setCurrentGrade} fileCounts={getFileCounts} isAdmin={isAdmin} />;
   };
+
+  // === KICKED SCREEN ===
+  if (isKicked && !isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-950 to-slate-900 flex items-center justify-center p-6 font-sans">
+        <div className="max-w-md w-full text-center space-y-8 animate-fade-in">
+          {/* Icon */}
+          <div className="relative mx-auto w-28 h-28">
+            <div className="absolute inset-0 bg-red-500/20 rounded-full animate-ping" />
+            <div className="relative w-28 h-28 bg-red-500/10 backdrop-blur-xl rounded-full flex items-center justify-center border-2 border-red-500/30">
+              <ShieldOff className="w-14 h-14 text-red-400" />
+            </div>
+          </div>
+
+          {/* Title */}
+          <div className="space-y-3">
+            <h1 className="text-3xl font-black text-white tracking-tight">TRUY CẬP BỊ TỪ CHỐI</h1>
+            <p className="text-red-300/80 text-sm leading-relaxed font-medium">
+              Thiết bị của bạn đã bị thu hồi quyền truy cập bởi Quản trị viên.<br />
+              Bạn không thể xem tài liệu trên thiết bị này nữa.
+            </p>
+          </div>
+
+          {/* Info Card */}
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 space-y-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-400 font-bold uppercase tracking-wider">Trạng thái</span>
+              <span className="flex items-center gap-1.5 text-red-400 font-black">
+                <Ban className="w-3.5 h-3.5" /> ĐÃ BỊ KICK
+              </span>
+            </div>
+            <div className="h-px bg-white/10" />
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Nếu bạn cho rằng đây là nhầm lẫn, vui lòng liên hệ trực tiếp với Thầy Huy để được hỗ trợ.
+            </p>
+          </div>
+
+          {/* Branding */}
+          <div className="pt-4">
+            <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.3em]">
+              PhysiVault Security System
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 relative overflow-hidden font-sans text-slate-900">

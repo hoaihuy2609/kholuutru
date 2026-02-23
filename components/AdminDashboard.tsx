@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import {
     Users, UserPlus, Trash2, Search, RefreshCw,
     ShieldCheck, Monitor, Phone, Download, ArrowLeft,
-    TrendingUp, UserCheck, ShieldAlert, LayoutDashboard
+    TrendingUp, UserCheck, ShieldAlert, LayoutDashboard,
+    UserMinus, RotateCcw, Ban
 } from 'lucide-react';
 
 interface Student {
@@ -11,9 +12,10 @@ interface Student {
     name: string;
     machineId: string;
     key: string;
+    status: string;
 }
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyMkOMHGB-SN17uS8lXVfnruVnnJZiVuNsTmPnQOMQWvme2g5QIeJZKKrkvaUwRsg_H/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqtcHkPal4oAB0R0A6s2WmxsS6SOxsQefruSPZXEJm_c_Ivl6sW_HnqOVDxUuoAH-W/exec";
 
 interface AdminDashboardProps {
     onBack: () => void;
@@ -97,14 +99,51 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) 
         }
     };
 
+    const handleKickStudent = async (sdt: string, name: string) => {
+        if (!window.confirm(`Bạn có chắc muốn KICK học viên "${name}" (${sdt}) không?\n\nHọc viên sẽ không thể truy cập tài liệu nữa.`)) return;
+
+        try {
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'kick',
+                    sdt: sdt
+                })
+            });
+            onShowToast(`Đã kick học viên ${name}!`, 'success');
+            setTimeout(fetchStudents, 2000);
+        } catch (error) {
+            onShowToast('Lỗi khi kick học viên', 'error');
+        }
+    };
+
+    const handleUnkickStudent = async (sdt: string, name: string) => {
+        if (!window.confirm(`Mở khóa cho học viên "${name}" (${sdt})?\n\nHọc viên sẽ cần kích hoạt lại từ đầu.`)) return;
+
+        try {
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'unkick',
+                    sdt: sdt
+                })
+            });
+            onShowToast(`Đã mở khóa cho ${name}!`, 'success');
+            setTimeout(fetchStudents, 2000);
+        } catch (error) {
+            onShowToast('Lỗi khi mở khóa học viên', 'error');
+        }
+    };
+
     const filteredStudents = students.filter(s =>
         s.sdt.includes(searchTerm) || s.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const stats = {
         total: students.length,
-        activated: students.filter(s => s.machineId).length,
-        pending: students.filter(s => !s.machineId).length
+        activated: students.filter(s => s.machineId && s.status !== 'KICKED').length,
+        pending: students.filter(s => !s.machineId && s.status !== 'KICKED').length,
+        kicked: students.filter(s => s.status === 'KICKED').length
     };
 
     return (
@@ -148,7 +187,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) 
             <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-8 custom-scrollbar">
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:scale-110 transition-transform duration-700">
                             <Users className="w-24 h-24" />
@@ -202,6 +241,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) 
                             Cần hỗ trợ các bạn chưa vào được app
                         </div>
                     </div>
+
+                    <div className="bg-white p-6 rounded-[2.5rem] border border-red-100 shadow-xl shadow-red-100/40 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:scale-110 transition-transform duration-700">
+                            <Ban className="w-24 h-24" />
+                        </div>
+                        <div className="relative z-10 flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-1">Bị Kick</p>
+                                <h3 className="text-4xl font-black text-red-500">{stats.kicked}</h3>
+                            </div>
+                            <div className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center">
+                                <Ban className="w-6 h-6" />
+                            </div>
+                        </div>
+                        <div className="mt-4 text-[10px] font-bold text-red-400 italic">
+                            Đã bị thu hồi quyền truy cập
+                        </div>
+                    </div>
                 </div>
 
                 {/* Table Section */}
@@ -233,13 +290,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) 
                                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Số điện thoại</th>
                                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã máy (ID)</th>
                                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã kích hoạt</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
                                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Lệnh</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={5} className="px-8 py-20 text-center">
+                                        <td colSpan={6} className="px-8 py-20 text-center">
                                             <div className="flex flex-col items-center gap-4">
                                                 <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
                                                 <p className="text-slate-500 font-bold text-sm">Đang nạp dữ liệu từ Google Sheets...</p>
@@ -248,21 +306,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) 
                                     </tr>
                                 ) : filteredStudents.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="px-8 py-20 text-center text-slate-400 italic">
+                                        <td colSpan={6} className="px-8 py-20 text-center text-slate-400 italic">
                                             Không tìm thấy học viên nào phù hợp.
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredStudents.map((s, idx) => (
-                                        <tr key={idx} className="hover:bg-indigo-50/20 transition-colors group">
+                                        <tr key={idx} className={`hover:bg-indigo-50/20 transition-colors group ${s.status === 'KICKED' ? 'opacity-60 bg-red-50/30' : ''}`}>
                                             <td className="px-8 py-5">
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${s.machineId ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                                                        {s.name.charAt(0).toUpperCase()}
+                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${s.status === 'KICKED' ? 'bg-red-500 text-white' : s.machineId ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                                                        {s.status === 'KICKED' ? <Ban className="w-5 h-5" /> : s.name.charAt(0).toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <p className="font-bold text-slate-700">{s.name}</p>
-                                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Thành viên mới</p>
+                                                        <p className={`font-bold ${s.status === 'KICKED' ? 'text-red-600 line-through' : 'text-slate-700'}`}>{s.name}</p>
+                                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+                                                            {s.status === 'KICKED' ? 'Đã bị kick' : s.machineId ? 'Đang hoạt động' : 'Chưa kích hoạt'}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -286,14 +346,48 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) 
                                                     <span className="text-[10px] font-bold text-slate-400 opacity-30">N/A</span>
                                                 )}
                                             </td>
+                                            <td className="px-8 py-5">
+                                                {s.status === 'KICKED' ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-xl text-xs font-black border border-red-200">
+                                                        <Ban className="w-3 h-3" /> ĐÃ KICK
+                                                    </span>
+                                                ) : s.machineId ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold border border-emerald-100">
+                                                        <ShieldCheck className="w-3 h-3" /> Hoạt động
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-600 rounded-xl text-xs font-bold border border-amber-100">
+                                                        <ShieldAlert className="w-3 h-3" /> Chờ
+                                                    </span>
+                                                )}
+                                            </td>
                                             <td className="px-8 py-5 text-right">
-                                                <button
-                                                    onClick={() => handleDeleteStudent(s.sdt)}
-                                                    className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                                                    title="Xóa học viên"
-                                                >
-                                                    <Trash2 className="w-5 h-5" />
-                                                </button>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    {s.status === 'KICKED' ? (
+                                                        <button
+                                                            onClick={() => handleUnkickStudent(s.sdt, s.name)}
+                                                            className="p-3 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                                                            title="Mở khóa học viên"
+                                                        >
+                                                            <RotateCcw className="w-5 h-5" />
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleKickStudent(s.sdt, s.name)}
+                                                            className="p-3 text-slate-300 hover:text-orange-600 hover:bg-orange-50 rounded-xl transition-all"
+                                                            title="Kick học viên"
+                                                        >
+                                                            <UserMinus className="w-5 h-5" />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleDeleteStudent(s.sdt)}
+                                                        className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                                        title="Xóa học viên"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
