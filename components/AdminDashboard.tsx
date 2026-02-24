@@ -16,7 +16,7 @@ interface Student {
     grade?: number;
 }
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfWk8K8J34fw5ynCI00HrMeMW13o2YxOr0140GyhKbimabvAysm5CpjnX1DYVdq50x/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnnT7SdQmDy9nJsGytSYtOviOl8zYLDFTT1Kc2qZ26hu1yfinIE6LIgpCzVKvZSGsv/exec";
 
 interface AdminDashboardProps {
     onBack: () => void;
