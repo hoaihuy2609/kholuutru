@@ -222,20 +222,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    {[10, 11, 12].map(grade => {
-                        const st = syncStatus[grade];
-                        const c = GRADE_COLORS[grade];
-                        return (
-                            <button key={grade} onClick={() => handleSyncGrade(grade)} disabled={st === 'syncing'}
-                                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
-                                style={{ background: st === 'success' ? '#EAF3EE' : c.bg, color: st === 'success' ? '#448361' : c.accent, border: `1px solid ${c.accent}22` }}>
-                                {st === 'syncing' ? <Loader2 className="w-3 h-3" /> : st === 'success' ? <CheckCircle2 className="w-3 h-3" /> : <Send className="w-3 h-3" />}
-                                L{grade}
-                            </button>
-                        );
-                    })}
-                </div>
+
             </div>
 
             {/* ── Main ── */}
