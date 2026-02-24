@@ -296,11 +296,11 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                 </div>
 
                 {/* Sync Card */}
-                <div className="relative rounded-xl overflow-hidden"
+                <div className="rounded-xl overflow-hidden"
                     style={{ background: '#FFFFFF', border: `1px solid ${color.accent}33`, borderLeft: `3px solid ${color.accent}` }}>
                     <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-xl" style={{ background: color.bg }}>
+                            <div className="p-2 rounded-xl shrink-0" style={{ background: color.bg }}>
                                 <CloudUpload className="w-5 h-5" style={{ color: color.accent }} />
                             </div>
                             <div>
@@ -320,15 +320,52 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                         <button onClick={() => handleSyncGrade(selectedGrade)} disabled={syncStatus[selectedGrade] === 'syncing'}
                             className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-60 active:scale-[0.98] shrink-0"
                             style={{ background: syncStatus[selectedGrade] === 'success' ? '#448361' : color.accent }}>
-                            {syncStatus[selectedGrade] === 'syncing' ? <><Loader2 className="w-4 h-4" /> Đang Sync...</>
+                            {syncStatus[selectedGrade] === 'syncing'
+                                ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang Sync...</>
                                 : syncStatus[selectedGrade] === 'success' ? <><CheckCircle2 className="w-4 h-4" /> Đã Sync!</>
                                     : syncStatus[selectedGrade] === 'error' ? <><AlertCircle className="w-4 h-4" /> Thử lại</>
                                         : <><Send className="w-4 h-4" /> Sync lên Telegram</>}
                         </button>
                     </div>
-                    {syncProgress > 0 && syncStatus[selectedGrade] === 'syncing' && (
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-100">
-                            <div className="h-full transition-all duration-300" style={{ width: `${syncProgress}%`, background: `linear-gradient(90deg,${color.accent}88,${color.accent})` }} />
+
+                    {/* Progress Bar — chỉ hiện khi đang sync */}
+                    {syncStatus[selectedGrade] === 'syncing' && (
+                        <div className="px-4 pb-4">
+                            {/* Track */}
+                            <div className="relative h-2 rounded-full overflow-hidden" style={{ background: '#F1F0EC' }}>
+                                {/* Fill */}
+                                <div
+                                    className="absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out"
+                                    style={{
+                                        width: `${syncProgress || 2}%`,
+                                        background: `linear-gradient(90deg, ${color.accent}BB, ${color.accent})`,
+                                    }}
+                                />
+                                {/* Shimmer sweep — chạy liên tục qua phần fill */}
+                                <div
+                                    className="absolute inset-y-0 left-0 rounded-full overflow-hidden pointer-events-none"
+                                    style={{ width: `${syncProgress || 2}%` }}
+                                >
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            width: '40%',
+                                            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
+                                            animation: 'shimmer-sweep 1.6s ease-in-out infinite',
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            {/* Labels */}
+                            <div className="flex items-center justify-between mt-1.5">
+                                <span className="text-[11px]" style={{ color: '#AEACA8' }}>
+                                    Đang tải lên Telegram…
+                                </span>
+                                <span className="text-[11px] font-semibold tabular-nums" style={{ color: color.accent }}>
+                                    {syncProgress > 0 ? `${Math.round(syncProgress)}%` : '···'}
+                                </span>
+                            </div>
                         </div>
                     )}
                 </div>
