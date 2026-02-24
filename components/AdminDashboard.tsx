@@ -76,9 +76,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         e.preventDefault();
         if (!newStudent.sdt || !newStudent.name) return;
         setIsSubmitting(true);
+        console.log("[Admin] Đang thêm học viên:", newStudent);
+
         try {
+            // Using 'no-cors' because Google Apps Script doesn't support OPTIONS preflight for POST with JSON
             await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'add',
                     sdt: newStudent.sdt,
@@ -86,12 +91,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                     grade: newStudent.grade
                 })
             });
+
             onShowToast('Đã gửi yêu cầu thêm học viên!', 'success');
             setIsAddModalOpen(false);
             setNewStudent({ sdt: '', name: '', grade: 12 });
-            setTimeout(refreshStudents, 2000);
-        } catch {
-            onShowToast('Lỗi khi thêm học viên', 'error');
+
+            // Wait slightly longer and then refresh to allow Google Sheets to update
+            setTimeout(refreshStudents, 2500);
+        } catch (err) {
+            console.error("[Admin] Lỗi khi thêm:", err);
+            onShowToast('Lỗi khi kết nối hệ thống', 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -100,7 +109,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const handleDeleteStudent = async (sdt: string) => {
         if (!window.confirm(`Bạn có chắc muốn xóa học viên ${sdt} không?`)) return;
         try {
-            await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', sdt }) });
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete', sdt })
+            });
             onShowToast('Đã gửi yêu cầu xóa!', 'warning');
             setTimeout(refreshStudents, 2000);
         } catch { onShowToast('Lỗi khi xóa học viên', 'error'); }
@@ -109,7 +123,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const handleKickStudent = async (sdt: string, name: string) => {
         if (!window.confirm(`Bạn có chắc muốn KICK học viên "${name}" (${sdt}) không?\n\nHọc viên sẽ không thể truy cập tài liệu nữa.`)) return;
         try {
-            await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'kick', sdt }) });
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'kick', sdt })
+            });
             onShowToast(`Đã kick học viên ${name}!`, 'success');
             setTimeout(refreshStudents, 2000);
         } catch { onShowToast('Lỗi khi kick học viên', 'error'); }
@@ -118,7 +137,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const handleUnkickStudent = async (sdt: string, name: string) => {
         if (!window.confirm(`Mở khóa cho học viên "${name}" (${sdt})?\n\nHọc viên sẽ cần kích hoạt lại từ đầu.`)) return;
         try {
-            await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'unkick', sdt }) });
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'unkick', sdt })
+            });
             onShowToast(`Đã mở khóa cho ${name}!`, 'success');
             setTimeout(refreshStudents, 2000);
         } catch { onShowToast('Lỗi khi mở khóa học viên', 'error'); }
