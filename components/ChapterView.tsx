@@ -110,22 +110,15 @@ const ProgressBar: React.FC<{ total: number; done: number; inProgress: number }>
       </div>
       {/* Track */}
       <div className="h-2 rounded-full overflow-hidden" style={{ background: '#F1F0EC' }}>
-        <div className="h-full flex">
-          <div
-            className="h-full transition-all duration-500 rounded-l-full"
-            style={{ width: `${donePct}%`, background: '#448361', borderRadius: inProgress === 0 && done === total ? '999px' : undefined }}
-          />
-          <div
-            className="h-full transition-all duration-500"
-            style={{ width: `${inProgPct}%`, background: '#6B7CDB' }}
-          />
-        </div>
+        <div
+          className="h-full transition-all duration-500 rounded-full"
+          style={{ width: `${donePct}%`, background: '#448361' }}
+        />
       </div>
       {/* Legend dots */}
       <div className="flex items-center gap-4 mt-2">
         {[
           { color: '#448361', label: 'Hoàn thành' },
-          { color: '#6B7CDB', label: 'Đang làm' },
           { color: '#D5D3CE', label: 'Chưa làm' },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-1">
