@@ -152,6 +152,7 @@ export const useCloudStorage = () => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [storedFiles, setStoredFiles] = useState<FileStorage>({});
     const [loading, setLoading] = useState(true);
+    const [syncProgress, setSyncProgress] = useState<number>(0);
     const [isActivated, setIsActivated] = useState(checkActivationStatus());
 
     // Initial Load & Migration
@@ -329,13 +330,15 @@ export const useCloudStorage = () => {
     // --- Telegram Cloud Sync: Push bài giảng lên Telegram (TÁCH NHỎ THEO CHƯƠNG) ---
     const syncToGitHub = async (grade: number, lessonsToSync: Lesson[], filesToSync: FileStorage): Promise<string> => {
         if (!TELEGRAM_TOKEN) throw new Error('Chưa cấu hình Telegram');
+        setSyncProgress(1); // Bắt đầu: 1%
 
         // Lọc ra danh sách các Chương hiện có trong mảng bài giảng cần Sync
         const chapterIds = Array.from(new Set(lessonsToSync.map(l => l.chapterId)));
         const chapterFileIds: Record<string, string> = {};
 
         // 1. Gửi từng Chương lên Telegram (Xẻ nhỏ để né giới hạn 50MB)
-        for (const chId of chapterIds) {
+        for (let i = 0; i < chapterIds.length; i++) {
+            const chId = chapterIds[i];
             const chLessons = lessonsToSync.filter(l => l.chapterId === chId);
             const chFiles: FileStorage = {};
             chLessons.forEach(l => { if (filesToSync[l.id]) chFiles[l.id] = filesToSync[l.id]; });
@@ -363,6 +366,8 @@ export const useCloudStorage = () => {
             if (res.ok) {
                 const data = await res.json();
                 chapterFileIds[chId] = data.result.document.file_id;
+                // Cập nhật progress (dành 90% cho các chương, 10% cho file index)
+                setSyncProgress(Math.floor(((i + 1) / chapterIds.length) * 90));
             } else {
                 const err = await res.json();
                 throw new Error(`Lỗi Chương ${chId}: ${err.description}`);
@@ -389,13 +394,17 @@ export const useCloudStorage = () => {
             body: indexFormData
         });
 
-        if (!indexRes.ok) throw new Error("Lỗi gửi file Mục lục lên Telegram");
-
-        const indexResult = await indexRes.json();
-        const finalFileId = indexResult.result.document.file_id;
-
-        localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
-        return finalFileId;
+        if (indexRes.ok) {
+            const data = await indexRes.json();
+            const finalFileId = data.result.document.file_id;
+            localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
+            setSyncProgress(100); // Hoàn thành
+            setTimeout(() => setSyncProgress(0), 1000); // Reset
+            return finalFileId;
+        } else {
+            setSyncProgress(0);
+            throw new Error(`Lỗi upload Index: ${indexRes.statusText}`);
+        }
     };
 
     const verifyAccess = async (): Promise<'ok' | 'kicked' | 'offline_expired'> => {
@@ -454,6 +463,7 @@ export const useCloudStorage = () => {
         verifyAccess,
         fetchLessonsFromGitHub,
         syncToGitHub,
+        syncProgress,
     };
 };
 

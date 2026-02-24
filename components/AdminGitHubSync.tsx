@@ -23,7 +23,7 @@ const GRADE_COLORS: Record<number, { accent: string; bg: string; label: string }
 };
 
 const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }) => {
-    const { lessons, storedFiles, uploadFiles, deleteFile, deleteLesson, addLesson, syncToGitHub } = useCloudStorage();
+    const { lessons, storedFiles, uploadFiles, deleteFile, deleteLesson, addLesson, syncToGitHub, syncProgress } = useCloudStorage();
     const [selectedGrade, setSelectedGrade] = useState<number>(12);
     const [syncStatus, setSyncStatus] = useState<Record<number, SyncStatus>>({ 10: 'idle', 11: 'idle', 12: 'idle' });
     const [syncMsg, setSyncMsg] = useState<Record<number, string>>({});
@@ -47,6 +47,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
     });
 
     const totalFiles = Object.values(gradeFiles).flat().length;
+    const totalSize = Object.values(gradeFiles).flat().reduce((acc, f) => acc + f.size, 0);
 
     const handleSyncGrade = async (grade: number) => {
         const gData = CURRICULUM.find(g => g.level === grade);
@@ -217,47 +218,65 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
 
                 {/* Sync Card cho grade đang chọn */}
                 <div
-                    className="rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    className="relative rounded-xl overflow-hidden"
                     style={{ background: '#FFFFFF', border: `1px solid ${color.accent}33`, borderLeft: `3px solid ${color.accent}` }}
                 >
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-xl" style={{ background: color.bg }}>
-                            <CloudUpload className="w-5 h-5" style={{ color: color.accent }} />
-                        </div>
-                        <div>
-                            <div className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>
-                                Sync {color.label} lên Telegram
+                    <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-xl" style={{ background: color.bg }}>
+                                <CloudUpload className="w-5 h-5" style={{ color: color.accent }} />
                             </div>
-                            <div className="text-xs mt-0.5" style={{ color: '#787774' }}>
-                                {gradeLessons.length} bài giảng · {totalFiles} tài liệu
-                                {syncMsg[selectedGrade] && (
-                                    <span className="ml-2 font-medium" style={{ color: syncStatus[selectedGrade] === 'success' ? '#448361' : '#E03E3E' }}>
-                                        {syncMsg[selectedGrade]}
+                            <div>
+                                <div className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>
+                                    Sync {color.label} lên Telegram
+                                </div>
+                                <div className="text-xs mt-0.5" style={{ color: '#787774' }}>
+                                    {gradeLessons.length} bài giảng · {totalFiles} tài liệu ·
+                                    <span className="font-medium ml-1" style={{ color: '#1A1A1A' }}>
+                                        ~{(totalSize / 1024 / 1024).toFixed(1)}MB
                                     </span>
-                                )}
+                                    {syncMsg[selectedGrade] && (
+                                        <span className="ml-2 font-medium" style={{ color: syncStatus[selectedGrade] === 'success' ? '#448361' : '#E03E3E' }}>
+                                            {syncMsg[selectedGrade]}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                                onClick={() => handleSyncGrade(selectedGrade)}
+                                disabled={syncStatus[selectedGrade] === 'syncing'}
+                                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-60 active:scale-[0.98]"
+                                style={{ background: syncStatus[selectedGrade] === 'success' ? '#448361' : color.accent }}
+                                onMouseEnter={e => syncStatus[selectedGrade] !== 'syncing' && ((e.currentTarget as HTMLElement).style.opacity = '0.9')}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+                            >
+                                {syncStatus[selectedGrade] === 'syncing' ? (
+                                    <><Loader2 className="w-4 h-4 animate-spin" /> Đang Sync...</>
+                                ) : syncStatus[selectedGrade] === 'success' ? (
+                                    <><CheckCircle2 className="w-4 h-4" /> Đã Sync!</>
+                                ) : syncStatus[selectedGrade] === 'error' ? (
+                                    <><AlertCircle className="w-4 h-4" /> Thử lại</>
+                                ) : (
+                                    <><Send className="w-4 h-4" /> Sync lên Telegram</>
+                                )}
+                            </button>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                            onClick={() => handleSyncGrade(selectedGrade)}
-                            disabled={syncStatus[selectedGrade] === 'syncing'}
-                            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-60 active:scale-[0.98]"
-                            style={{ background: syncStatus[selectedGrade] === 'success' ? '#448361' : color.accent }}
-                            onMouseEnter={e => syncStatus[selectedGrade] !== 'syncing' && ((e.currentTarget as HTMLElement).style.opacity = '0.9')}
-                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
-                        >
-                            {syncStatus[selectedGrade] === 'syncing' ? (
-                                <><Loader2 className="w-4 h-4 animate-spin" /> Đang Sync...</>
-                            ) : syncStatus[selectedGrade] === 'success' ? (
-                                <><CheckCircle2 className="w-4 h-4" /> Đã Sync!</>
-                            ) : syncStatus[selectedGrade] === 'error' ? (
-                                <><AlertCircle className="w-4 h-4" /> Thử lại</>
-                            ) : (
-                                <><Send className="w-4 h-4" /> Sync lên Telegram</>
-                            )}
-                        </button>
-                    </div>
+
+                    {/* Progress Bar */}
+                    {syncProgress > 0 && selectedGrade && syncStatus[selectedGrade] === 'syncing' && (
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-100">
+                            <div
+                                className="h-full transition-all duration-500 ease-out"
+                                style={{
+                                    width: `${syncProgress}%`,
+                                    background: `linear-gradient(90deg, ${color.accent}88, ${color.accent})`
+                                }}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Lesson List - Grouped by Chapter */}
