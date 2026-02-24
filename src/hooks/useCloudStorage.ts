@@ -17,9 +17,9 @@ const SYSTEM_SALT = "PHV_SECURITY_2026_BY_HUY"; // Chìa khóa hệ thống nộ
 
 // --- GitHub Cloud Sync Config ---
 // Các biến này được đọc từ .env.local
-const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
-const GITHUB_REPO = import.meta.env.VITE_GITHUB_REPO || ''; // format: "username/repo"
-const GITHUB_BRANCH = import.meta.env.VITE_GITHUB_BRANCH || 'main';
+const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || (process.env as any).VITE_GITHUB_TOKEN || '';
+const GITHUB_REPO = import.meta.env.VITE_GITHUB_REPO || (process.env as any).VITE_GITHUB_REPO || ''; // format: "username/repo"
+const GITHUB_BRANCH = import.meta.env.VITE_GITHUB_BRANCH || (process.env as any).VITE_GITHUB_BRANCH || 'main';
 
 // --- XOR Obfuscation for GitHub content ---
 const XOR_KEY = 'PHV2026';
@@ -33,8 +33,13 @@ export const xorObfuscate = (data: string): string => {
     for (let i = 0; i < bytes.length; i++) {
         result[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
     }
-    // Chuyển bytes → base64 an toàn
-    return btoa(String.fromCharCode(...result));
+
+    // Sửa lỗi "Maximum call stack size exceeded" khi file quá lớn bằng cách dùng vòng lặp
+    let binary = '';
+    for (let i = 0; i < result.length; i++) {
+        binary += String.fromCharCode(result[i]);
+    }
+    return btoa(binary);
 };
 
 export const xorDeobfuscate = (encoded: string): string => {
