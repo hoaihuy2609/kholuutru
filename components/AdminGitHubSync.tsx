@@ -2,7 +2,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import {
     CloudUpload, Send, CheckCircle2, RefreshCw, AlertCircle,
-    GraduationCap, FileText, Trash2, Upload,
+    FileText, Trash2, Upload,
     BookOpen, X, MessageCircle, Tag, ChevronDown, ChevronRight,
     BarChart3, AlertTriangle
 } from 'lucide-react';
@@ -228,31 +228,33 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
             {/* ── Main ── */}
             <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 custom-scrollbar">
 
-                {/* Grade Tabs — Segment Control */}
-                <div className="flex items-center p-1 rounded-xl gap-0.5" style={{ background: '#EBEBEA', width: 'fit-content' }}>
-                    {[12, 11, 10].map(grade => {
+                {/* Grade Tabs — Notion style, consistent với Sidebar */}
+                <div className="flex items-center gap-0.5 p-1 rounded-lg" style={{ background: '#EBEBEA', width: 'fit-content' }}>
+                    {([12, 11, 10] as const).map(grade => {
                         const c = GRADE_COLORS[grade];
                         const gLessons = lessons.filter(l => CURRICULUM.find(g => g.level === grade)?.chapters.map(ch => ch.id).includes(l.chapterId));
                         const gFileCount = gLessons.reduce((s, l) => s + (storedFiles[l.id]?.length || 0), 0);
                         const isActive = selectedGrade === grade;
                         return (
                             <button key={grade} onClick={() => setSelectedGrade(grade)}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all"
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
                                 style={{
                                     background: isActive ? '#FFFFFF' : 'transparent',
-                                    color: isActive ? c.accent : '#787774',
-                                    boxShadow: isActive ? '0 1px 4px rgba(0,0,0,0.10)' : 'none',
-                                    fontWeight: isActive ? 600 : 400,
-                                }}>
-                                <GraduationCap className="w-3.5 h-3.5" />
+                                    color: isActive ? '#1A1A1A' : '#787774',
+                                    fontWeight: isActive ? 500 : 400,
+                                    boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                                }}
+                                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)'; }}
+                                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                            >
+                                {/* Dot màu đặc trưng của lớp */}
+                                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.accent, opacity: isActive ? 1 : 0.4 }} />
                                 Lớp {grade}
-                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md tabular-nums"
-                                    style={{
-                                        background: isActive ? c.bg : 'rgba(0,0,0,0.06)',
-                                        color: isActive ? c.accent : '#AEACA8',
-                                    }}>
-                                    {gLessons.length}b · {gFileCount}f
-                                </span>
+                                {isActive && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: '#F1F0EC', color: '#787774' }}>
+                                        {gLessons.length}b · {gFileCount}f
+                                    </span>
+                                )}
                             </button>
                         );
                     })}
