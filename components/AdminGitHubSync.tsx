@@ -341,7 +341,9 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
                             </div>
                         ) : (
                             gradeData?.chapters.map(chapter => {
-                                const chapterLessons = gradeLessons.filter(l => l.chapterId === chapter.id);
+                                const chapterLessons = gradeLessons
+                                    .filter(l => l.chapterId === chapter.id)
+                                    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
                                 if (chapterLessons.length === 0) return null;
 
                                 return (
