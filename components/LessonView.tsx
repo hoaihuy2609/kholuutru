@@ -24,7 +24,8 @@ const LESSON_CATEGORIES = [
 interface AnswerPanelState {
   numQuestionsInput: string;
   numQuestions: number;
-  answers: Record<number, string>; // { 1: 'A', 2: 'C', ... }
+  answers: Record<number, string>;      // TN: 'A'/'B'/'C'/'D'  |  TL: free text
+  questionTypes: Record<number, 'TN' | 'TL'>; // default TN
 }
 
 const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack, onUpload, onDelete }) => {
@@ -40,12 +41,13 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
     numQuestionsInput: '',
     numQuestions: 0,
     answers: {},
+    questionTypes: {},
   });
 
   // Reset panel whenever a new file is opened
   useEffect(() => {
     if (previewFile) {
-      setPanel({ numQuestionsInput: '', numQuestions: 0, answers: {} });
+      setPanel({ numQuestionsInput: '', numQuestions: 0, answers: {}, questionTypes: {} });
     }
   }, [previewFile?.id]);
 
@@ -69,7 +71,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
   const confirmNumQuestions = () => {
     const n = parseInt(panel.numQuestionsInput, 10);
     if (!isNaN(n) && n > 0 && n <= 200) {
-      setPanel(p => ({ ...p, numQuestions: n, answers: {} }));
+      setPanel(p => ({ ...p, numQuestions: n, answers: {}, questionTypes: {} }));
     }
   };
 
@@ -80,8 +82,24 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
     }));
   };
 
+  const setTextAnswer = (q: number, text: string) => {
+    setPanel(p => ({ ...p, answers: { ...p.answers, [q]: text } }));
+  };
+
+  const toggleQuestionType = (q: number) => {
+    setPanel(p => {
+      const current = p.questionTypes[q] || 'TN';
+      const next = current === 'TN' ? 'TL' : 'TN';
+      return {
+        ...p,
+        questionTypes: { ...p.questionTypes, [q]: next },
+        answers: { ...p.answers, [q]: '' }, // clear answer when switching
+      };
+    });
+  };
+
   const resetAnswers = () => {
-    setPanel(p => ({ ...p, answers: {}, numQuestionsInput: '', numQuestions: 0 }));
+    setPanel(p => ({ ...p, answers: {}, numQuestionsInput: '', numQuestions: 0, questionTypes: {} }));
   };
 
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
@@ -566,7 +584,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                   >
                     <span>{panel.numQuestions} câu</span>
                     <span style={{ color: '#6B7CDB' }}>
-                      {Object.values(panel.answers).filter(Boolean).length} đã chọn
+                      {Object.values(panel.answers).filter(Boolean).length} đã điền
                     </span>
                   </div>
 
@@ -574,40 +592,63 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                   <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3B3B3B #1E1E1E' }}>
                     {Array.from({ length: panel.numQuestions }, (_, i) => i + 1).map(q => {
                       const chosen = panel.answers[q] || '';
+                      const qType = panel.questionTypes[q] || 'TN';
+                      const isTL = qType === 'TL';
                       return (
                         <div
                           key={q}
-                          className="flex items-center px-2.5 py-1"
+                          className="flex items-center gap-1 px-2 py-1"
                           style={{ borderBottom: '1px solid #252525' }}
                         >
-                          {/* Question number */}
-                          <span
-                            className="text-[10px] font-mono w-7 shrink-0"
-                            style={{ color: '#57564F' }}
+                          {/* Question number + TN/TL toggle */}
+                          <button
+                            onClick={() => toggleQuestionType(q)}
+                            className="text-[10px] font-mono w-6 shrink-0 text-center rounded transition-colors"
+                            style={{
+                              color: isTL ? '#F59E0B' : '#57564F',
+                              background: 'transparent',
+                            }}
+                            title={isTL ? 'Đang ở chế độ Tự luận — click để chuyển sang Trắc nghiệm' : 'Click để chuyển sang Tự luận'}
                           >
                             {q}.
-                          </span>
+                          </button>
 
-                          {/* ABCD buttons */}
-                          <div className="flex gap-0.5 flex-1">
-                            {['A', 'B', 'C', 'D'].map(letter => {
-                              const active = chosen === letter;
-                              return (
-                                <button
-                                  key={letter}
-                                  onClick={() => toggleAnswer(q, letter)}
-                                  className="flex-1 text-[11px] font-bold py-0.5 rounded transition-colors"
-                                  style={{
-                                    background: active ? '#6B7CDB' : '#2A2A2A',
-                                    color: active ? '#fff' : '#57564F',
-                                    border: active ? '1px solid #6B7CDB' : '1px solid #333',
-                                  }}
-                                >
-                                  {letter}
-                                </button>
-                              );
-                            })}
-                          </div>
+                          {isTL ? (
+                            /* ── TL: free-text input ── */
+                            <input
+                              type="text"
+                              value={chosen}
+                              onChange={e => setTextAnswer(q, e.target.value)}
+                              placeholder="Đáp án..."
+                              className="flex-1 min-w-0 text-[11px] px-1.5 py-0.5 rounded outline-none"
+                              style={{
+                                background: '#2A2A2A',
+                                border: '1px solid #F59E0B',
+                                color: '#E5E5E4',
+                              }}
+                            />
+                          ) : (
+                            /* ── TN: ABCD buttons ── */
+                            <div className="flex gap-0.5 flex-1">
+                              {['A', 'B', 'C', 'D'].map(letter => {
+                                const active = chosen === letter;
+                                return (
+                                  <button
+                                    key={letter}
+                                    onClick={() => toggleAnswer(q, letter)}
+                                    className="flex-1 text-[11px] font-bold py-0.5 rounded transition-colors"
+                                    style={{
+                                      background: active ? '#6B7CDB' : '#2A2A2A',
+                                      color: active ? '#fff' : '#57564F',
+                                      border: active ? '1px solid #6B7CDB' : '1px solid #333',
+                                    }}
+                                  >
+                                    {letter}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
