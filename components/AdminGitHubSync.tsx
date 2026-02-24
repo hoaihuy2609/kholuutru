@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import {
     CloudUpload, Send, CheckCircle2, RefreshCw, AlertCircle,
     GraduationCap, FileText, Trash2, Upload,
-    BookOpen, X, Download, MessageCircle
+    BookOpen, X, Download, MessageCircle, Tag
 } from 'lucide-react';
 
 const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
@@ -11,6 +11,12 @@ const Loader2 = ({ className, style }: { className?: string; style?: React.CSSPr
 );
 import { CURRICULUM } from '../constants';
 import { Lesson, StoredFile, FileStorage } from '../types';
+
+const LESSON_CATEGORIES = [
+    'Trắc nghiệm Lý thuyết (ABCD)',
+    'Trắc nghiệm Lý thuyết (Đúng/Sai)',
+    'Bài tập Tính toán Cơ bản',
+];
 
 interface AdminGitHubSyncProps {
     onBack: () => void;
@@ -42,7 +48,12 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, 
     const [newLessonChapter, setNewLessonChapter] = useState('');
     const [showAddLesson, setShowAddLesson] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [uploadTargetLesson, setUploadTargetLesson] = useState<string | null>(null);
+    // Dùng ref thay state để tránh race condition khi file input onChange bắn
+    const uploadTargetRef = useRef<string | null>(null);
+    const uploadCategoryRef = useRef<string>(LESSON_CATEGORIES[0]);
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [selectedUploadCategory, setSelectedUploadCategory] = useState<string>(LESSON_CATEGORIES[0]);
+    const [pendingUploadLessonId, setPendingUploadLessonId] = useState<string | null>(null);
 
     const gradeData = CURRICULUM.find(g => g.level === selectedGrade);
     const gradeLessons = lessons.filter(l => {
@@ -90,22 +101,34 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, 
     };
 
     const handleUploadTrigger = (lessonId: string) => {
-        setUploadTargetLesson(lessonId);
-        fileInputRef.current?.click();
+        setPendingUploadLessonId(lessonId);
+        setSelectedUploadCategory(LESSON_CATEGORIES[0]);
+        setShowCategoryModal(true);
+    };
+
+    const handleCategoryConfirm = () => {
+        // Ghi vào ref ngay lập tức — không cần chờ re-render
+        uploadTargetRef.current = pendingUploadLessonId;
+        uploadCategoryRef.current = selectedUploadCategory;
+        setShowCategoryModal(false);
+        setTimeout(() => fileInputRef.current?.click(), 50);
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []) as File[];
-        if (!files.length || !uploadTargetLesson) return;
-        setUploadingLesson(uploadTargetLesson);
+        const targetId = uploadTargetRef.current;
+        const category = uploadCategoryRef.current;
+        if (!files.length || !targetId) return;
+        setUploadingLesson(targetId);
         try {
-            await onUploadFiles(files, uploadTargetLesson, 'pdf');
-            onShowToast(`Đã thêm ${files.length} file vào bài giảng!`, 'success');
+            await onUploadFiles(files, targetId, category);
+            onShowToast(`Đã thêm ${files.length} file vào "${category}"!`, 'success');
         } catch {
             onShowToast('Lỗi khi thêm file', 'error');
         } finally {
             setUploadingLesson(null);
-            setUploadTargetLesson(null);
+            uploadTargetRef.current = null;
+            setPendingUploadLessonId(null);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
@@ -488,6 +511,86 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, 
                     </div>
                 </div>
             </div>
+
+            {/* ── Category Picker Modal ── */}
+            {showCategoryModal && (
+                <div
+                    className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+                    style={{ background: 'rgba(26,26,26,0.5)' }}
+                    onClick={() => setShowCategoryModal(false)}
+                >
+                    <div
+                        className="w-full max-w-sm rounded-2xl overflow-hidden animate-fade-in"
+                        style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E9E9E7' }}>
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 rounded-lg" style={{ background: color.bg }}>
+                                    <Tag className="w-4 h-4" style={{ color: color.accent }} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Chọn loại tài liệu</h3>
+                                    <p className="text-[10px]" style={{ color: '#AEACA8' }}>File sẽ hiển thị trong tab tương ứng</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowCategoryModal(false)}
+                                className="p-1.5 rounded-lg transition-colors"
+                                style={{ color: '#787774' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Category Options */}
+                        <div className="p-4 space-y-2">
+                            {LESSON_CATEGORIES.map(cat => (
+                                <button
+                                    key={cat}
+                                    onClick={() => setSelectedUploadCategory(cat)}
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-all"
+                                    style={{
+                                        background: selectedUploadCategory === cat ? color.bg : '#F7F6F3',
+                                        border: `1.5px solid ${selectedUploadCategory === cat ? color.accent : 'transparent'}`,
+                                        color: selectedUploadCategory === cat ? color.accent : '#57564F',
+                                        fontWeight: selectedUploadCategory === cat ? 600 : 400,
+                                    }}
+                                >
+                                    <div
+                                        className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center"
+                                        style={{
+                                            border: `2px solid ${selectedUploadCategory === cat ? color.accent : '#CFCFCB'}`,
+                                            background: selectedUploadCategory === cat ? color.accent : 'transparent',
+                                        }}
+                                    >
+                                        {selectedUploadCategory === cat && (
+                                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                        )}
+                                    </div>
+                                    {cat}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Confirm Button */}
+                        <div className="px-4 pb-4">
+                            <button
+                                onClick={handleCategoryConfirm}
+                                className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all active:scale-[0.98]"
+                                style={{ background: color.accent }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.9'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+                            >
+                                Chọn file →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Hidden file input */}
             <input
