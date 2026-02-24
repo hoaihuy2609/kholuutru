@@ -1,14 +1,16 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
     CloudUpload, Send, CheckCircle2, RefreshCw, AlertCircle,
     GraduationCap, FileText, Trash2, Upload,
-    BookOpen, X, Download, MessageCircle, Tag
+    BookOpen, X, MessageCircle, Tag, ChevronDown, ChevronRight,
+    BarChart3, AlertTriangle
 } from 'lucide-react';
 
 const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
     <RefreshCw className={`${className} animate-spin`} style={style} />
 );
+
 import { CURRICULUM } from '../constants';
 import { Lesson, StoredFile, FileStorage } from '../types';
 
@@ -17,6 +19,12 @@ const LESSON_CATEGORIES = [
     'Trắc nghiệm Lý thuyết (Đúng/Sai)',
     'Bài tập Tính toán Cơ bản',
 ];
+
+const CAT_CONFIG: Record<string, { short: string; color: string; bg: string }> = {
+    'Trắc nghiệm Lý thuyết (ABCD)': { short: 'TN ABCD', color: '#6B7CDB', bg: '#EEF0FB' },
+    'Trắc nghiệm Lý thuyết (Đúng/Sai)': { short: 'Đúng/Sai', color: '#9B72CB', bg: '#F3EEF9' },
+    'Bài tập Tính toán Cơ bản': { short: 'Tính toán', color: '#D9730D', bg: '#FFF3E8' },
+};
 
 interface AdminGitHubSyncProps {
     onBack: () => void;
@@ -39,7 +47,10 @@ const GRADE_COLORS: Record<number, { accent: string; bg: string; label: string }
     10: { accent: '#D9730D', bg: '#FFF3E8', label: 'Vật Lý 10' },
 };
 
-const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, lessons, storedFiles, onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress }) => {
+const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
+    onBack, onShowToast, lessons, storedFiles,
+    onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
+}) => {
     const [selectedGrade, setSelectedGrade] = useState<number>(12);
     const [syncStatus, setSyncStatus] = useState<Record<number, SyncStatus>>({ 10: 'idle', 11: 'idle', 12: 'idle' });
     const [syncMsg, setSyncMsg] = useState<Record<number, string>>({});
@@ -47,52 +58,54 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, 
     const [newLessonName, setNewLessonName] = useState('');
     const [newLessonChapter, setNewLessonChapter] = useState('');
     const [showAddLesson, setShowAddLesson] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    // Dùng ref thay state để tránh race condition khi file input onChange bắn
-    const uploadTargetRef = useRef<string | null>(null);
-    const uploadCategoryRef = useRef<string>(LESSON_CATEGORIES[0]);
+    const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
+    const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [selectedUploadCategory, setSelectedUploadCategory] = useState<string>(LESSON_CATEGORIES[0]);
     const [pendingUploadLessonId, setPendingUploadLessonId] = useState<string | null>(null);
 
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const uploadTargetRef = useRef<string | null>(null);
+    const uploadCategoryRef = useRef<string>(LESSON_CATEGORIES[0]);
+
+    const color = GRADE_COLORS[selectedGrade];
     const gradeData = CURRICULUM.find(g => g.level === selectedGrade);
-    const gradeLessons = lessons.filter(l => {
-        const chapterIds = gradeData?.chapters.map(c => c.id) || [];
-        return chapterIds.includes(l.chapterId);
-    });
+    const gradeLessons = lessons.filter(l => gradeData?.chapters.map(c => c.id).includes(l.chapterId));
 
-    // Lấy toàn bộ files của các lessons thuộc grade
-    const gradeFiles: Record<string, StoredFile[]> = {};
-    gradeLessons.forEach(l => {
-        if (storedFiles[l.id]) gradeFiles[l.id] = storedFiles[l.id];
-    });
+    // Tổng hợp số file theo category cho toàn grade
+    const categorySummary = useMemo(() => {
+        const counts: Record<string, number> = {};
+        let uncategorized = 0;
+        LESSON_CATEGORIES.forEach(cat => counts[cat] = 0);
+        gradeLessons.forEach(l => {
+            (storedFiles[l.id] || []).forEach(f => {
+                if (f.category && LESSON_CATEGORIES.includes(f.category)) counts[f.category]++;
+                else uncategorized++;
+            });
+        });
+        return { counts, uncategorized };
+    }, [gradeLessons, storedFiles]);
 
+    const gradeFiles: FileStorage = {};
+    gradeLessons.forEach(l => { if (storedFiles[l.id]) gradeFiles[l.id] = storedFiles[l.id]; });
     const totalFiles = Object.values(gradeFiles).flat().length;
     const totalSize = Object.values(gradeFiles).flat().reduce((acc, f) => acc + f.size, 0);
 
     const handleSyncGrade = async (grade: number) => {
         const gData = CURRICULUM.find(g => g.level === grade);
         if (!gData) return;
-
         const gLessons = lessons.filter(l => gData.chapters.map(c => c.id).includes(l.chapterId));
-        const gFiles: Record<string, StoredFile[]> = {};
+        const gFiles: FileStorage = {};
         gLessons.forEach(l => { if (storedFiles[l.id]) gFiles[l.id] = storedFiles[l.id]; });
-
-        if (gLessons.length === 0) {
-            onShowToast(`Lớp ${grade} chưa có bài giảng nào để Sync!`, 'warning');
-            return;
-        }
-
+        if (gLessons.length === 0) { onShowToast(`Lớp ${grade} chưa có bài giảng nào!`, 'warning'); return; }
         setSyncStatus(prev => ({ ...prev, [grade]: 'syncing' }));
         setSyncMsg(prev => ({ ...prev, [grade]: '' }));
-
         try {
             const fileId = await onSyncToGitHub(grade, gLessons, gFiles);
-            const fileCount = Object.values(gFiles).flat().length;
             setSyncStatus(prev => ({ ...prev, [grade]: 'success' }));
-            setSyncMsg(prev => ({ ...prev, [grade]: `✓ Đã lên Telegram (ID: ...${fileId.slice(-4)})` }));
-            onShowToast(`Đã Sync Lớp ${grade} lên Telegram thành công!`, 'success');
-            setTimeout(() => setSyncStatus(prev => ({ ...prev, [grade]: 'idle' })), 8000);
+            setSyncMsg(prev => ({ ...prev, [grade]: `✓ ID: ...${fileId.slice(-6)}` }));
+            onShowToast(`Đã Sync Lớp ${grade} lên Telegram!`, 'success');
+            setTimeout(() => setSyncStatus(prev => ({ ...prev, [grade]: 'idle' })), 10000);
         } catch (err: any) {
             setSyncStatus(prev => ({ ...prev, [grade]: 'error' }));
             setSyncMsg(prev => ({ ...prev, [grade]: err.message }));
@@ -107,7 +120,6 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, 
     };
 
     const handleCategoryConfirm = () => {
-        // Ghi vào ref ngay lập tức — không cần chờ re-render
         uploadTargetRef.current = pendingUploadLessonId;
         uploadCategoryRef.current = selectedUploadCategory;
         setShowCategoryModal(false);
@@ -123,9 +135,9 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, 
         try {
             await onUploadFiles(files, targetId, category);
             onShowToast(`Đã thêm ${files.length} file vào "${category}"!`, 'success');
-        } catch {
-            onShowToast('Lỗi khi thêm file', 'error');
-        } finally {
+            setExpandedLessons(prev => new Set([...prev, targetId]));
+        } catch { onShowToast('Lỗi khi thêm file', 'error'); }
+        finally {
             setUploadingLesson(null);
             uploadTargetRef.current = null;
             setPendingUploadLessonId(null);
@@ -134,21 +146,16 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, 
     };
 
     const handleAddLesson = async () => {
-        if (!newLessonName.trim() || !newLessonChapter) {
-            onShowToast('Vui lòng nhập tên bài và chọn chương!', 'warning');
-            return;
-        }
+        if (!newLessonName.trim() || !newLessonChapter) { onShowToast('Vui lòng nhập tên bài và chọn chương!', 'warning'); return; }
         await onAddLesson(newLessonName.trim(), newLessonChapter);
-        onShowToast(`Đã thêm bài giảng: ${newLessonName}`, 'success');
-        setNewLessonName('');
-        setNewLessonChapter('');
-        setShowAddLesson(false);
+        onShowToast(`Đã thêm: ${newLessonName}`, 'success');
+        setNewLessonName(''); setNewLessonChapter(''); setShowAddLesson(false);
     };
 
     const handleDeleteLesson = async (lessonId: string, name: string) => {
-        if (!window.confirm(`Xóa bài giảng "${name}"? Hành động này không thể hoàn tác.`)) return;
+        if (!window.confirm(`Xóa bài giảng "${name}"?`)) return;
         await onDeleteLesson(lessonId);
-        onShowToast(`Đã xóa bài giảng: ${name}`, 'success');
+        onShowToast(`Đã xóa: ${name}`, 'success');
     };
 
     const handleDeleteFile = async (fileId: string, lessonId: string, fileName: string) => {
@@ -157,49 +164,60 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, 
         onShowToast('Đã xóa file', 'success');
     };
 
-    const color = GRADE_COLORS[selectedGrade];
+    const toggleChapter = (chId: string) => {
+        setExpandedChapters(prev => {
+            const s = new Set(prev);
+            s.has(chId) ? s.delete(chId) : s.add(chId);
+            return s;
+        });
+    };
+
+    const toggleLesson = (lessonId: string) => {
+        setExpandedLessons(prev => {
+            const s = new Set(prev);
+            s.has(lessonId) ? s.delete(lessonId) : s.add(lessonId);
+            return s;
+        });
+    };
+
+    const expandAll = () => {
+        setExpandedChapters(new Set(gradeData?.chapters.map(c => c.id) || []));
+    };
+    const collapseAll = () => {
+        setExpandedChapters(new Set());
+        setExpandedLessons(new Set());
+    };
 
     return (
         <div className="fixed inset-0 z-[60] flex flex-col font-sans overflow-hidden animate-fade-in" style={{ background: '#F7F6F3' }}>
 
             {/* ── Top Nav ── */}
-            <div className="flex items-center justify-between px-5 py-3.5" style={{ background: '#FFFFFF', borderBottom: '1px solid #E9E9E7' }}>
+            <div className="flex items-center justify-between px-5 py-3" style={{ background: '#FFFFFF', borderBottom: '1px solid #E9E9E7' }}>
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={onBack}
-                        className="p-1.5 rounded-lg transition-colors"
-                        style={{ color: '#787774' }}
+                    <button onClick={onBack} className="p-1.5 rounded-lg transition-colors" style={{ color: '#787774' }}
                         onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                    >
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
                         <X className="w-5 h-5" />
                     </button>
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded-lg" style={{ background: '#EEF0FB' }}>
+                    <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg" style={{ background: '#EEF0FB' }}>
                             <MessageCircle className="w-4 h-4" style={{ color: '#6B7CDB' }} />
                         </div>
                         <div>
-                            <h1 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Telegram Cloud Sync</h1>
-                            <p className="text-[10px] uppercase tracking-widest" style={{ color: '#AEACA8' }}>Lưu trữ & Phân phối bảo mật</p>
+                            <h1 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Telegram Cloud Sync</h1>
+                            <p className="text-[10px] uppercase tracking-widest" style={{ color: '#AEACA8' }}>Quản lý & Phân phối tài liệu</p>
                         </div>
                     </div>
                 </div>
-
-                {/* Sync All Grades shortcut */}
                 <div className="flex items-center gap-2">
                     {[10, 11, 12].map(grade => {
                         const st = syncStatus[grade];
                         const c = GRADE_COLORS[grade];
                         return (
-                            <button
-                                key={grade}
-                                onClick={() => handleSyncGrade(grade)}
-                                disabled={st === 'syncing'}
+                            <button key={grade} onClick={() => handleSyncGrade(grade)} disabled={st === 'syncing'}
                                 className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
-                                style={{ background: st === 'success' ? '#EAF3EE' : c.bg, color: st === 'success' ? '#448361' : c.accent, border: `1px solid ${c.accent}22` }}
-                                title={`Sync Lớp ${grade} lên Telegram`}
-                            >
-                                {st === 'syncing' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : st === 'success' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+                                style={{ background: st === 'success' ? '#EAF3EE' : c.bg, color: st === 'success' ? '#448361' : c.accent, border: `1px solid ${c.accent}22` }}>
+                                {st === 'syncing' ? <Loader2 className="w-3 h-3" /> : st === 'success' ? <CheckCircle2 className="w-3 h-3" /> : <Send className="w-3 h-3" />}
                                 L{grade}
                             </button>
                         );
@@ -207,41 +225,24 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, 
                 </div>
             </div>
 
-            {/* ── Main content ── */}
-            <div className="flex-1 overflow-y-auto p-5 lg:p-8 space-y-5 custom-scrollbar">
+            {/* ── Main ── */}
+            <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 custom-scrollbar">
 
                 {/* Grade Tabs */}
                 <div className="flex gap-2 flex-wrap">
                     {[12, 11, 10].map(grade => {
                         const c = GRADE_COLORS[grade];
-                        const gLessons = lessons.filter(l => {
-                            const gd = CURRICULUM.find(g => g.level === grade);
-                            return gd?.chapters.map(ch => ch.id).includes(l.chapterId);
-                        });
-                        const gFileCount = gLessons.reduce((sum, l) => sum + (storedFiles[l.id]?.length || 0), 0);
+                        const gLessons = lessons.filter(l => CURRICULUM.find(g => g.level === grade)?.chapters.map(ch => ch.id).includes(l.chapterId));
+                        const gFileCount = gLessons.reduce((s, l) => s + (storedFiles[l.id]?.length || 0), 0);
                         const isActive = selectedGrade === grade;
-
                         return (
-                            <button
-                                key={grade}
-                                onClick={() => setSelectedGrade(grade)}
-                                className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                                style={{
-                                    background: isActive ? c.accent : '#FFFFFF',
-                                    color: isActive ? '#FFFFFF' : '#57564F',
-                                    border: `1px solid ${isActive ? c.accent : '#E9E9E7'}`,
-                                    boxShadow: isActive ? `0 2px 8px ${c.accent}30` : 'none',
-                                }}
-                            >
+                            <button key={grade} onClick={() => setSelectedGrade(grade)}
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+                                style={{ background: isActive ? c.accent : '#FFFFFF', color: isActive ? '#FFFFFF' : '#57564F', border: `1px solid ${isActive ? c.accent : '#E9E9E7'}`, boxShadow: isActive ? `0 2px 8px ${c.accent}30` : 'none' }}>
                                 <GraduationCap className="w-4 h-4" />
                                 Lớp {grade}
-                                <span
-                                    className="px-1.5 py-0.5 rounded text-[10px] font-bold"
-                                    style={{
-                                        background: isActive ? 'rgba(255,255,255,0.2)' : c.bg,
-                                        color: isActive ? '#FFFFFF' : c.accent,
-                                    }}
-                                >
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                                    style={{ background: isActive ? 'rgba(255,255,255,0.2)' : c.bg, color: isActive ? '#FFFFFF' : c.accent }}>
                                     {gLessons.length} bài · {gFileCount} file
                                 </span>
                             </button>
@@ -249,282 +250,340 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, 
                     })}
                 </div>
 
-                {/* Sync Card cho grade đang chọn */}
-                <div
-                    className="relative rounded-xl overflow-hidden"
-                    style={{ background: '#FFFFFF', border: `1px solid ${color.accent}33`, borderLeft: `3px solid ${color.accent}` }}
-                >
-                    <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                {/* Category Summary Bar */}
+                <div className="rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-3"
+                    style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
+                    <div className="flex items-center gap-1.5 col-span-2 md:col-span-1">
+                        <BarChart3 className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
+                        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Phân loại tài liệu</span>
+                    </div>
+                    {LESSON_CATEGORIES.map(cat => {
+                        const cfg = CAT_CONFIG[cat];
+                        const count = categorySummary.counts[cat] || 0;
+                        return (
+                            <div key={cat} className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                                style={{ background: cfg.bg }}>
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color }} />
+                                <div>
+                                    <div className="text-[10px] font-medium leading-tight" style={{ color: cfg.color }}>{cfg.short}</div>
+                                    <div className="text-base font-bold leading-tight" style={{ color: '#1A1A1A' }}>{count}</div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {categorySummary.uncategorized > 0 && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: '#FEF3C7' }}>
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                            <div>
+                                <div className="text-[10px] font-medium text-amber-600">Chưa phân loại</div>
+                                <div className="text-base font-bold" style={{ color: '#1A1A1A' }}>{categorySummary.uncategorized}</div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Sync Card */}
+                <div className="relative rounded-xl overflow-hidden"
+                    style={{ background: '#FFFFFF', border: `1px solid ${color.accent}33`, borderLeft: `3px solid ${color.accent}` }}>
+                    <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
-                            <div className="p-2.5 rounded-xl" style={{ background: color.bg }}>
+                            <div className="p-2 rounded-xl" style={{ background: color.bg }}>
                                 <CloudUpload className="w-5 h-5" style={{ color: color.accent }} />
                             </div>
                             <div>
-                                <div className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>
-                                    Sync {color.label} lên Telegram
-                                </div>
-                                <div className="text-xs mt-0.5" style={{ color: '#787774' }}>
-                                    {gradeLessons.length} bài giảng · {totalFiles} tài liệu ·
-                                    <span className="font-medium ml-1" style={{ color: '#1A1A1A' }}>
-                                        ~{(totalSize / 1024 / 1024).toFixed(1)}MB
-                                    </span>
+                                <div className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>Sync {color.label} lên Telegram</div>
+                                <div className="text-xs mt-0.5 flex flex-wrap gap-x-3" style={{ color: '#787774' }}>
+                                    <span>{gradeLessons.length} bài giảng</span>
+                                    <span>{totalFiles} tài liệu</span>
+                                    <span className="font-medium" style={{ color: '#1A1A1A' }}>~{(totalSize / 1024 / 1024).toFixed(1)}MB</span>
                                     {syncMsg[selectedGrade] && (
-                                        <span className="ml-2 font-medium" style={{ color: syncStatus[selectedGrade] === 'success' ? '#448361' : '#E03E3E' }}>
+                                        <span className="font-medium" style={{ color: syncStatus[selectedGrade] === 'success' ? '#448361' : '#E03E3E' }}>
                                             {syncMsg[selectedGrade]}
                                         </span>
                                     )}
                                 </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            <button
-                                onClick={() => handleSyncGrade(selectedGrade)}
-                                disabled={syncStatus[selectedGrade] === 'syncing'}
-                                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-60 active:scale-[0.98]"
-                                style={{ background: syncStatus[selectedGrade] === 'success' ? '#448361' : color.accent }}
-                                onMouseEnter={e => syncStatus[selectedGrade] !== 'syncing' && ((e.currentTarget as HTMLElement).style.opacity = '0.9')}
-                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
-                            >
-                                {syncStatus[selectedGrade] === 'syncing' ? (
-                                    <><Loader2 className="w-4 h-4 animate-spin" /> Đang Sync...</>
-                                ) : syncStatus[selectedGrade] === 'success' ? (
-                                    <><CheckCircle2 className="w-4 h-4" /> Đã Sync!</>
-                                ) : syncStatus[selectedGrade] === 'error' ? (
-                                    <><AlertCircle className="w-4 h-4" /> Thử lại</>
-                                ) : (
-                                    <><Send className="w-4 h-4" /> Sync lên Telegram</>
-                                )}
+                        <button onClick={() => handleSyncGrade(selectedGrade)} disabled={syncStatus[selectedGrade] === 'syncing'}
+                            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-60 active:scale-[0.98] shrink-0"
+                            style={{ background: syncStatus[selectedGrade] === 'success' ? '#448361' : color.accent }}>
+                            {syncStatus[selectedGrade] === 'syncing' ? <><Loader2 className="w-4 h-4" /> Đang Sync...</>
+                                : syncStatus[selectedGrade] === 'success' ? <><CheckCircle2 className="w-4 h-4" /> Đã Sync!</>
+                                    : syncStatus[selectedGrade] === 'error' ? <><AlertCircle className="w-4 h-4" /> Thử lại</>
+                                        : <><Send className="w-4 h-4" /> Sync lên Telegram</>}
+                        </button>
+                    </div>
+                    {syncProgress > 0 && syncStatus[selectedGrade] === 'syncing' && (
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-100">
+                            <div className="h-full transition-all duration-300" style={{ width: `${syncProgress}%`, background: `linear-gradient(90deg,${color.accent}88,${color.accent})` }} />
+                        </div>
+                    )}
+                </div>
+
+                {/* Lesson List */}
+                <div className="rounded-xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid #E9E9E7' }}>
+                        <div className="flex items-center gap-2">
+                            <BookOpen className="w-4 h-4" style={{ color: color.accent }} />
+                            <h3 className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>Danh sách bài giảng — {color.label}</h3>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: color.bg, color: color.accent }}>{gradeLessons.length}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button onClick={expandAll} className="text-[11px] px-2 py-1 rounded transition-colors" style={{ color: '#787774' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>Mở tất cả</button>
+                            <button onClick={collapseAll} className="text-[11px] px-2 py-1 rounded transition-colors" style={{ color: '#787774' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>Thu gọn</button>
+                            <button onClick={() => setShowAddLesson(!showAddLesson)}
+                                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                                style={{ background: showAddLesson ? color.bg : '#F1F0EC', color: showAddLesson ? color.accent : '#57564F', border: '1px solid #E9E9E7' }}>
+                                {showAddLesson ? <X className="w-3 h-3" /> : <Upload className="w-3 h-3" />}
+                                {showAddLesson ? 'Đóng' : 'Thêm bài'}
                             </button>
                         </div>
                     </div>
 
-                    {/* Progress Bar */}
-                    {syncProgress > 0 && selectedGrade && syncStatus[selectedGrade] === 'syncing' && (
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-100">
-                            <div
-                                className="h-full transition-all duration-500 ease-out"
-                                style={{
-                                    width: `${syncProgress}%`,
-                                    background: `linear-gradient(90deg, ${color.accent}88, ${color.accent})`
-                                }}
-                            />
-                        </div>
-                    )}
-                </div>
-
-                {/* Lesson List - Grouped by Chapter */}
-                <div className="rounded-xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid #E9E9E7' }}>
-                        <div className="flex items-center gap-2">
-                            <BookOpen className="w-4 h-4" style={{ color: color.accent }} />
-                            <h3 className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>
-                                Danh sách bài giảng — {color.label}
-                            </h3>
-                            <span
-                                className="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                                style={{ background: color.bg, color: color.accent }}
-                            >
-                                {gradeLessons.length}
-                            </span>
-                        </div>
-                        <button
-                            onClick={() => setShowAddLesson(!showAddLesson)}
-                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                            style={{
-                                background: showAddLesson ? color.bg : '#F1F0EC',
-                                color: showAddLesson ? color.accent : '#57564F',
-                                border: '1px solid #E9E9E7',
-                            }}
-                        >
-                            {showAddLesson ? <X className="w-3.5 h-3.5" /> : <Upload className="w-3.5 h-3.5" />}
-                            {showAddLesson ? 'Đóng' : 'Thêm bài giảng'}
-                        </button>
-                    </div>
-
                     {/* Add Lesson Form */}
                     {showAddLesson && (
-                        <div className="px-5 py-4 space-y-3 animate-fade-in" style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAF9' }}>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <select
-                                    value={newLessonChapter}
-                                    onChange={e => setNewLessonChapter(e.target.value)}
-                                    className="text-sm rounded-lg px-3 py-2.5 outline-none transition-all"
-                                    style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#1A1A1A' }}
-                                    onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = color.accent}
-                                    onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
-                                >
-                                    <option value="">-- Chọn chương --</option>
-                                    {gradeData?.chapters.map(ch => (
-                                        <option key={ch.id} value={ch.id}>{ch.name}</option>
-                                    ))}
-                                </select>
-                                <input
-                                    type="text"
-                                    value={newLessonName}
-                                    onChange={e => setNewLessonName(e.target.value)}
-                                    placeholder="Tên bài giảng..."
-                                    className="md:col-span-1 text-sm rounded-lg px-3 py-2.5 outline-none"
-                                    style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#1A1A1A' }}
-                                    onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = color.accent}
-                                    onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
-                                    onKeyDown={e => e.key === 'Enter' && handleAddLesson()}
-                                />
-                                <button
-                                    onClick={handleAddLesson}
-                                    className="text-sm font-semibold text-white rounded-lg px-4 py-2.5 transition-colors active:scale-[0.98]"
-                                    style={{ background: color.accent }}
-                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.9'}
-                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
-                                >
-                                    ＋ Tạo bài giảng
-                                </button>
-                            </div>
+                        <div className="px-5 py-3 grid grid-cols-1 md:grid-cols-3 gap-2 animate-fade-in" style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAF9' }}>
+                            <select value={newLessonChapter} onChange={e => setNewLessonChapter(e.target.value)}
+                                className="text-sm rounded-lg px-3 py-2 outline-none" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#1A1A1A' }}>
+                                <option value="">-- Chọn chương --</option>
+                                {gradeData?.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.name}</option>)}
+                            </select>
+                            <input value={newLessonName} onChange={e => setNewLessonName(e.target.value)}
+                                placeholder="Tên bài giảng..." onKeyDown={e => e.key === 'Enter' && handleAddLesson()}
+                                className="text-sm rounded-lg px-3 py-2 outline-none" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#1A1A1A' }} />
+                            <button onClick={handleAddLesson} className="text-sm font-semibold text-white rounded-lg px-4 py-2 transition-colors active:scale-[0.98]"
+                                style={{ background: color.accent }}>＋ Tạo bài giảng</button>
                         </div>
                     )}
 
-                    {/* Chapters & Lessons */}
-                    <div className="divide-y p-5 space-y-8" style={{ borderColor: '#F1F0EC' }}>
-                        {gradeLessons.length === 0 ? (
-                            <div className="py-12 text-center">
-                                <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
-                                <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có bài giảng nào</p>
-                                <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Nhấn "Thêm bài giảng" để bắt đầu</p>
-                            </div>
-                        ) : (
-                            gradeData?.chapters.map(chapter => {
-                                const chapterLessons = gradeLessons
-                                    .filter(l => l.chapterId === chapter.id)
+                    {/* Chapters */}
+                    {gradeLessons.length === 0 ? (
+                        <div className="py-12 text-center">
+                            <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
+                            <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có bài giảng nào</p>
+                        </div>
+                    ) : (
+                        <div>
+                            {gradeData?.chapters.map(chapter => {
+                                const chapterLessons = gradeLessons.filter(l => l.chapterId === chapter.id)
                                     .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
                                 if (chapterLessons.length === 0) return null;
+                                const isExpanded = expandedChapters.has(chapter.id);
+                                const chFileCount = chapterLessons.reduce((s, l) => s + (storedFiles[l.id]?.length || 0), 0);
+
+                                // Category counts for chapter
+                                const chCatCounts: Record<string, number> = {};
+                                LESSON_CATEGORIES.forEach(cat => chCatCounts[cat] = 0);
+                                let chUncategorized = 0;
+                                chapterLessons.forEach(l => {
+                                    (storedFiles[l.id] || []).forEach(f => {
+                                        if (f.category && LESSON_CATEGORIES.includes(f.category)) chCatCounts[f.category]++;
+                                        else chUncategorized++;
+                                    });
+                                });
 
                                 return (
-                                    <div key={chapter.id} className="space-y-4">
-                                        <div className="flex items-center gap-3 pb-2 border-b" style={{ borderColor: '#F1F0EC' }}>
-                                            <div className="p-1.5 rounded-lg" style={{ background: color.bg }}>
-                                                <BookOpen className="w-4 h-4" style={{ color: color.accent }} />
+                                    <div key={chapter.id} style={{ borderBottom: '1px solid #F1F0EC' }}>
+                                        {/* Chapter Header - Clickable */}
+                                        <div className="flex items-center justify-between px-5 py-3 cursor-pointer group"
+                                            style={{ background: isExpanded ? '#FAFAF9' : '#FFFFFF' }}
+                                            onClick={() => toggleChapter(chapter.id)}>
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="p-1.5 rounded-lg shrink-0" style={{ background: color.bg }}>
+                                                    <BookOpen className="w-3.5 h-3.5" style={{ color: color.accent }} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <div className="text-sm font-bold uppercase tracking-wide truncate" style={{ color: '#1A1A1A' }}>{chapter.name}</div>
+                                                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                        <span className="text-[11px]" style={{ color: '#AEACA8' }}>{chapterLessons.length} bài · {chFileCount} file</span>
+                                                        {LESSON_CATEGORIES.map(cat => {
+                                                            const cfg = CAT_CONFIG[cat];
+                                                            const cnt = chCatCounts[cat];
+                                                            if (!cnt) return null;
+                                                            return (
+                                                                <span key={cat} className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                                                                    style={{ background: cfg.bg, color: cfg.color }}>
+                                                                    {cfg.short}: {cnt}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                        {chUncategorized > 0 && (
+                                                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">
+                                                                ⚠ Chưa PL: {chUncategorized}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: '#1A1A1A' }}>
-                                                    {chapter.name}
-                                                </h2>
-                                                <p className="text-[10px]" style={{ color: '#AEACA8' }}>
-                                                    {chapterLessons.length} bài giảng
-                                                </p>
+                                            <div className="text-gray-400 shrink-0 ml-2">
+                                                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                             </div>
                                         </div>
 
-                                        <div className="space-y-3">
-                                            {chapterLessons.map(lesson => {
-                                                const lessonFiles = storedFiles[lesson.id] || [];
-                                                const isUploading = uploadingLesson === lesson.id;
-                                                return (
-                                                    <div key={lesson.id} className="bg-white rounded-xl p-4 border border-[#F1F0EC] hover:border-[#E9E9E7] transition-all group">
-                                                        <div className="flex items-start justify-between gap-4">
-                                                            <div className="flex-1 min-w-0">
-                                                                <h3 className="font-semibold text-sm mb-1" style={{ color: '#1A1A1A' }}>{lesson.name}</h3>
-                                                                <div className="space-y-1.5">
-                                                                    {lessonFiles.map(file => (
-                                                                        <div key={file.id} className="flex items-center gap-2 text-[11px] p-1.5 rounded-lg bg-[#F8F9FB]" style={{ color: '#787774' }}>
-                                                                            <FileText className="w-3.5 h-3.5 text-gray-400" />
-                                                                            <span className="flex-1 truncate">{file.name}</span>
-                                                                            <span className="text-[9px] text-[#AEACA8]">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
-                                                                            <button
-                                                                                onClick={() => handleDeleteFile(file.id, lesson.id, file.name)}
-                                                                                className="p-1 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                            >
-                                                                                <Trash2 className="w-3 h-3" />
-                                                                            </button>
-                                                                        </div>
-                                                                    ))}
-                                                                    {lessonFiles.length === 0 && (
-                                                                        <span className="text-[10px] italic text-[#AEACA8]">Chưa có tài liệu</span>
+                                        {/* Lesson Rows */}
+                                        {isExpanded && (
+                                            <div style={{ borderTop: '1px solid #F1F0EC' }}>
+                                                {chapterLessons.map(lesson => {
+                                                    const lessonFiles = storedFiles[lesson.id] || [];
+                                                    const isLessonExpanded = expandedLessons.has(lesson.id);
+                                                    const isUploading = uploadingLesson === lesson.id;
+
+                                                    // Count by category
+                                                    const lCatFiles: Record<string, StoredFile[]> = {};
+                                                    let lUncategorized: StoredFile[] = [];
+                                                    LESSON_CATEGORIES.forEach(cat => lCatFiles[cat] = []);
+                                                    lessonFiles.forEach(f => {
+                                                        if (f.category && LESSON_CATEGORIES.includes(f.category)) lCatFiles[f.category].push(f);
+                                                        else lUncategorized.push(f);
+                                                    });
+
+                                                    return (
+                                                        <div key={lesson.id} style={{ borderBottom: '1px solid #F8F7F5' }}>
+                                                            {/* Lesson Row */}
+                                                            <div className="flex items-center gap-3 px-5 py-2.5 group" style={{ paddingLeft: '52px' }}>
+                                                                <button onClick={() => toggleLesson(lesson.id)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                                                                    <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: '#AEACA8' }} />
+                                                                    <span className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }}>{lesson.name}</span>
+                                                                </button>
+
+                                                                {/* Category Badges */}
+                                                                <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
+                                                                    {LESSON_CATEGORIES.map(cat => {
+                                                                        const cfg = CAT_CONFIG[cat];
+                                                                        const cnt = lCatFiles[cat].length;
+                                                                        return (
+                                                                            <span key={cat}
+                                                                                className="text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap"
+                                                                                style={{
+                                                                                    background: cnt > 0 ? cfg.bg : '#F1F0EC',
+                                                                                    color: cnt > 0 ? cfg.color : '#CFCFCB',
+                                                                                }}>
+                                                                                {cfg.short}: {cnt}
+                                                                            </span>
+                                                                        );
+                                                                    })}
+                                                                    {lUncategorized.length > 0 && (
+                                                                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-500">
+                                                                            ⚠{lUncategorized.length}
+                                                                        </span>
                                                                     )}
                                                                 </div>
-                                                            </div>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <button
-                                                                    onClick={() => handleUploadTrigger(lesson.id)}
-                                                                    className="p-2 rounded-lg hover:bg-[#EEF0FB] text-gray-400 hover:text-[#6B7CDB] transition-colors"
-                                                                >
-                                                                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+
+                                                                {/* Actions */}
+                                                                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <button onClick={() => handleUploadTrigger(lesson.id)}
+                                                                        className="p-1.5 rounded-lg hover:bg-[#EEF0FB] text-gray-400 hover:text-[#6B7CDB] transition-colors"
+                                                                        title="Upload file">
+                                                                        {isUploading ? <Loader2 className="w-3.5 h-3.5" /> : <Upload className="w-3.5 h-3.5" />}
+                                                                    </button>
+                                                                    <button onClick={() => handleDeleteLesson(lesson.id, lesson.name)}
+                                                                        className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                                                                        title="Xóa bài">
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <button onClick={() => toggleLesson(lesson.id)}
+                                                                        className="p-1.5 rounded-lg transition-colors"
+                                                                        style={{ color: '#AEACA8' }}>
+                                                                        {isLessonExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                                                    </button>
+                                                                </div>
+                                                                {/* Show expand toggle always on mobile */}
+                                                                <button onClick={() => toggleLesson(lesson.id)} className="p-1.5 rounded-lg md:hidden" style={{ color: '#AEACA8' }}>
+                                                                    {isLessonExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                                                                 </button>
-                                                                <button
-                                                                    onClick={() => handleDeleteLesson(lesson.id, lesson.name)}
-                                                                    className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </button>
                                                             </div>
+
+                                                            {/* Expanded: Files grouped by category */}
+                                                            {isLessonExpanded && (
+                                                                <div className="pb-3 space-y-2 animate-fade-in" style={{ paddingLeft: '52px', paddingRight: '16px' }}>
+                                                                    {LESSON_CATEGORIES.map(cat => {
+                                                                        const cfg = CAT_CONFIG[cat];
+                                                                        const catFiles = lCatFiles[cat];
+                                                                        return (
+                                                                            <div key={cat}>
+                                                                                <div className="flex items-center gap-1.5 mb-1">
+                                                                                    <div className="w-2 h-2 rounded-full" style={{ background: cfg.color }} />
+                                                                                    <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: cfg.color }}>{cfg.short}</span>
+                                                                                    <span className="text-[10px]" style={{ color: '#AEACA8' }}>({catFiles.length})</span>
+                                                                                </div>
+                                                                                {catFiles.length === 0 ? (
+                                                                                    <div className="text-[11px] italic px-3 py-1.5 rounded" style={{ color: '#CFCFCB', background: '#FAFAF9' }}>
+                                                                                        Chưa có file — nhấn ↑ để upload
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div className="space-y-1">
+                                                                                        {catFiles.map(file => (
+                                                                                            <div key={file.id} className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded-lg group/f"
+                                                                                                style={{ background: cfg.bg + '60', color: '#57564F' }}>
+                                                                                                <FileText className="w-3 h-3 shrink-0" style={{ color: cfg.color }} />
+                                                                                                <span className="flex-1 truncate">{file.name}</span>
+                                                                                                <span className="text-[10px] shrink-0" style={{ color: '#AEACA8' }}>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                                                                                                <button onClick={() => handleDeleteFile(file.id, lesson.id, file.name)}
+                                                                                                    className="opacity-0 group-hover/f:opacity-100 p-0.5 hover:text-red-500 transition-all">
+                                                                                                    <Trash2 className="w-3 h-3" />
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                    {lUncategorized.length > 0 && (
+                                                                        <div>
+                                                                            <div className="flex items-center gap-1.5 mb-1">
+                                                                                <AlertTriangle className="w-2.5 h-2.5 text-amber-500" />
+                                                                                <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600">Chưa phân loại ({lUncategorized.length})</span>
+                                                                            </div>
+                                                                            {lUncategorized.map(file => (
+                                                                                <div key={file.id} className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded-lg group/f bg-amber-50" style={{ color: '#57564F' }}>
+                                                                                    <FileText className="w-3 h-3 shrink-0 text-amber-400" />
+                                                                                    <span className="flex-1 truncate">{file.name}</span>
+                                                                                    <span className="text-[10px] shrink-0" style={{ color: '#AEACA8' }}>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                                                                                    <button onClick={() => handleDeleteFile(file.id, lesson.id, file.name)}
+                                                                                        className="opacity-0 group-hover/f:opacity-100 p-0.5 hover:text-red-500 transition-all">
+                                                                                        <Trash2 className="w-3 h-3" />
+                                                                                    </button>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                    <button onClick={() => handleUploadTrigger(lesson.id)}
+                                                                        className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-colors mt-1"
+                                                                        style={{ border: `1px dashed ${color.accent}66`, color: color.accent, background: color.bg + '40' }}
+                                                                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = color.bg}
+                                                                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = color.bg + '40'}>
+                                                                        <Upload className="w-3 h-3" />
+                                                                        Upload thêm file vào bài này
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 );
-                            })
-                        )}
-                    </div>
-                </div>
-
-                {/* Help / Info */}
-                <div
-                    className="rounded-xl p-4 space-y-3"
-                    style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
-                >
-                    <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>
-                        Hướng dẫn sử dụng
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {[
-                            {
-                                step: '①',
-                                title: 'Thêm bài giảng',
-                                desc: 'Chọn chương, nhập tên bài giảng, nhấn tạo. Sau đó upload PDF vào từng bài.',
-                                color: '#6B7CDB',
-                                bg: '#EEF0FB',
-                            },
-                            {
-                                step: '②',
-                                title: 'Upload PDF',
-                                desc: 'Nhấn icon ↑ bên cạnh mỗi bài để đính kèm file PDF. Hệ thống lưu tạm trên máy.',
-                                color: '#D9730D',
-                                bg: '#FFF3E8',
-                            },
-                            {
-                                step: '③',
-                                title: 'Sync lên Telegram',
-                                desc: 'Nhấn "Sync lên Telegram" để đẩy toàn bộ bài giảng khối đó lên kho chứa. Học sinh sẽ tự động nhận diện và cập nhật.',
-                                color: '#448361',
-                                bg: '#EAF3EE',
-                            },
-                        ].map(item => (
-                            <div key={item.step} className="flex gap-3" style={{ padding: '12px', background: item.bg, borderRadius: '10px' }}>
-                                <span className="text-lg font-bold shrink-0" style={{ color: item.color }}>{item.step}</span>
-                                <div>
-                                    <p className="text-xs font-semibold" style={{ color: item.color }}>{item.title}</p>
-                                    <p className="text-xs mt-1 leading-relaxed" style={{ color: '#57564F' }}>{item.desc}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* ── Category Picker Modal ── */}
             {showCategoryModal && (
-                <div
-                    className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4"
                     style={{ background: 'rgba(26,26,26,0.5)' }}
-                    onClick={() => setShowCategoryModal(false)}
-                >
-                    <div
-                        className="w-full max-w-sm rounded-2xl overflow-hidden animate-fade-in"
+                    onClick={() => setShowCategoryModal(false)}>
+                    <div className="w-full max-w-sm rounded-2xl overflow-hidden animate-fade-in"
                         style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
-                        onClick={e => e.stopPropagation()}
-                    >
-                        {/* Header */}
+                        onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E9E9E7' }}>
                             <div className="flex items-center gap-2">
                                 <div className="p-1.5 rounded-lg" style={{ background: color.bg }}>
@@ -535,56 +594,34 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, 
                                     <p className="text-[10px]" style={{ color: '#AEACA8' }}>File sẽ hiển thị trong tab tương ứng</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setShowCategoryModal(false)}
-                                className="p-1.5 rounded-lg transition-colors"
+                            <button onClick={() => setShowCategoryModal(false)} className="p-1.5 rounded-lg transition-colors"
                                 style={{ color: '#787774' }}
                                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
-                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                            >
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-
-                        {/* Category Options */}
                         <div className="p-4 space-y-2">
-                            {LESSON_CATEGORIES.map(cat => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setSelectedUploadCategory(cat)}
-                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-all"
-                                    style={{
-                                        background: selectedUploadCategory === cat ? color.bg : '#F7F6F3',
-                                        border: `1.5px solid ${selectedUploadCategory === cat ? color.accent : 'transparent'}`,
-                                        color: selectedUploadCategory === cat ? color.accent : '#57564F',
-                                        fontWeight: selectedUploadCategory === cat ? 600 : 400,
-                                    }}
-                                >
-                                    <div
-                                        className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center"
-                                        style={{
-                                            border: `2px solid ${selectedUploadCategory === cat ? color.accent : '#CFCFCB'}`,
-                                            background: selectedUploadCategory === cat ? color.accent : 'transparent',
-                                        }}
-                                    >
-                                        {selectedUploadCategory === cat && (
-                                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                                        )}
-                                    </div>
-                                    {cat}
-                                </button>
-                            ))}
+                            {LESSON_CATEGORIES.map(cat => {
+                                const cfg = CAT_CONFIG[cat];
+                                const isSelected = selectedUploadCategory === cat;
+                                return (
+                                    <button key={cat} onClick={() => setSelectedUploadCategory(cat)}
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-all"
+                                        style={{ background: isSelected ? cfg.bg : '#F7F6F3', border: `1.5px solid ${isSelected ? cfg.color : 'transparent'}`, color: isSelected ? cfg.color : '#57564F', fontWeight: isSelected ? 600 : 400 }}>
+                                        <div className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center"
+                                            style={{ border: `2px solid ${isSelected ? cfg.color : '#CFCFCB'}`, background: isSelected ? cfg.color : 'transparent' }}>
+                                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                        </div>
+                                        {cat}
+                                    </button>
+                                );
+                            })}
                         </div>
-
-                        {/* Confirm Button */}
                         <div className="px-4 pb-4">
-                            <button
-                                onClick={handleCategoryConfirm}
+                            <button onClick={handleCategoryConfirm}
                                 className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all active:scale-[0.98]"
-                                style={{ background: color.accent }}
-                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.9'}
-                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
-                            >
+                                style={{ background: color.accent }}>
                                 Chọn file →
                             </button>
                         </div>
@@ -593,14 +630,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, 
             )}
 
             {/* Hidden file input */}
-            <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept=".pdf,.pptx,.docx,.jpg,.png"
-                multiple
-                onChange={handleFileChange}
-            />
+            <input type="file" ref={fileInputRef} className="hidden" accept=".pdf,.pptx,.docx,.jpg,.png" multiple onChange={handleFileChange} />
         </div>
     );
 };

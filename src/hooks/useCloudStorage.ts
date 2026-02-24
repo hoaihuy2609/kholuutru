@@ -380,6 +380,40 @@ export const useCloudStorage = () => {
             totalUploadSize += blob.size;
         }
 
+        // Helper upload 1 blob lên Telegram với retry khi 429
+        const uploadBlob = async (blob: Blob, fileName: string, onProgress?: (loaded: number) => void): Promise<string> => {
+            const MAX_RETRIES = 5;
+            for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+                const formData = new FormData();
+                formData.append('chat_id', TELEGRAM_CHAT_ID);
+                formData.append('document', blob, fileName);
+                const result = await new Promise<{ ok: boolean; fileId?: string; retryAfter?: number; error?: string }>((resolve) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`);
+                    xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(e.loaded); };
+                    xhr.onload = () => {
+                        const data = JSON.parse(xhr.responseText);
+                        if (xhr.status === 200 && data.ok) {
+                            resolve({ ok: true, fileId: data.result.document.file_id });
+                        } else if (xhr.status === 429) {
+                            resolve({ ok: false, retryAfter: (data?.parameters?.retry_after || 30) as number });
+                        } else {
+                            resolve({ ok: false, error: `HTTP ${xhr.status}: ${xhr.responseText.slice(0, 150)}` });
+                        }
+                    };
+                    xhr.onerror = () => resolve({ ok: false, error: 'Network Error' });
+                    xhr.send(formData);
+                });
+                if (result.ok && result.fileId) return result.fileId;
+                if (result.retryAfter) {
+                    await new Promise(r => setTimeout(r, (result.retryAfter! + 1) * 1000));
+                    continue;
+                }
+                throw new Error(result.error || 'Upload thất bại');
+            }
+            throw new Error('Quá 5 lần thử lại — Telegram đang bị giới hạn.');
+        };
+
         // Upload từng blob & thu thập file_id
         const lessonFileIds: string[] = [];
         let totalBytesSent = 0;
@@ -387,28 +421,11 @@ export const useCloudStorage = () => {
             const blob = blobs[i];
             const p = payloads[i];
             const fileName = `g${grade}_${p.chapterId}_${p.lessons[0]?.id || 'ch'}.json`;
-            const formData = new FormData();
-            formData.append('chat_id', TELEGRAM_CHAT_ID);
-            formData.append('document', blob, fileName);
-
-            const res = await new Promise<any>((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`);
-                xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const percent = Math.floor(((totalBytesSent + e.loaded) / totalUploadSize) * 93) + 1;
-                        setSyncProgress(Math.min(percent, 93));
-                    }
-                };
-                xhr.onload = () => {
-                    if (xhr.status === 200) resolve(JSON.parse(xhr.responseText));
-                    else reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText.slice(0, 200)}`));
-                };
-                xhr.onerror = () => reject(new Error("Network Error"));
-                xhr.send(formData);
+            const fileId = await uploadBlob(blob, fileName, (loaded) => {
+                const percent = Math.floor(((totalBytesSent + loaded) / totalUploadSize) * 93) + 1;
+                setSyncProgress(Math.min(percent, 93));
             });
-
-            lessonFileIds.push(res.result.document.file_id);
+            lessonFileIds.push(fileId);
             totalBytesSent += blob.size;
         }
 
