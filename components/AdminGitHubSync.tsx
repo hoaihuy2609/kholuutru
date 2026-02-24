@@ -260,36 +260,38 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                     })}
                 </div>
 
-                {/* Category Summary Bar */}
-                <div className="rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-3"
+                {/* Category Summary Bar — 1 hàng, label + 4 ô màu */}
+                <div className="rounded-xl px-4 py-3 flex items-center gap-3"
                     style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
-                    <div className="flex items-center gap-1.5 col-span-2 md:col-span-1">
-                        <BarChart3 className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
-                        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Phân loại tài liệu</span>
+                    {/* Label */}
+                    <div className="flex items-center gap-1.5 shrink-0 pr-3" style={{ borderRight: '1px solid #E9E9E7' }}>
+                        <BarChart3 className="w-3.5 h-3.5 shrink-0" style={{ color: '#AEACA8' }} />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: '#AEACA8' }}>Phân loại</span>
                     </div>
+                    {/* 3 category ô */}
                     {LESSON_CATEGORIES.map(cat => {
                         const cfg = CAT_CONFIG[cat];
                         const count = categorySummary.counts[cat] || 0;
                         return (
-                            <div key={cat} className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                            <div key={cat} className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg min-w-0"
                                 style={{ background: cfg.bg }}>
                                 <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color }} />
-                                <div>
-                                    <div className="text-[10px] font-medium leading-tight" style={{ color: cfg.color }}>{cfg.short}</div>
-                                    <div className="text-base font-bold leading-tight" style={{ color: '#1A1A1A' }}>{count}</div>
+                                <div className="min-w-0">
+                                    <div className="text-[10px] font-medium leading-tight truncate" style={{ color: cfg.color }}>{cfg.short}</div>
+                                    <div className="text-sm font-bold leading-tight tabular-nums" style={{ color: '#1A1A1A' }}>{count}</div>
                                 </div>
                             </div>
                         );
                     })}
-                    {categorySummary.uncategorized > 0 && (
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: '#FEF3C7' }}>
-                            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-500" />
-                            <div>
-                                <div className="text-[10px] font-medium text-amber-600">Chưa phân loại</div>
-                                <div className="text-base font-bold" style={{ color: '#1A1A1A' }}>{categorySummary.uncategorized}</div>
-                            </div>
+                    {/* Ô chưa phân loại — luôn hiện, mờ nếu = 0 */}
+                    <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg min-w-0"
+                        style={{ background: categorySummary.uncategorized > 0 ? '#FEF3C7' : '#F7F6F3', opacity: categorySummary.uncategorized > 0 ? 1 : 0.5 }}>
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" style={{ color: categorySummary.uncategorized > 0 ? '#F59E0B' : '#CFCFCB' }} />
+                        <div className="min-w-0">
+                            <div className="text-[10px] font-medium leading-tight truncate" style={{ color: categorySummary.uncategorized > 0 ? '#D97706' : '#AEACA8' }}>Chưa PL</div>
+                            <div className="text-sm font-bold leading-tight tabular-nums" style={{ color: '#1A1A1A' }}>{categorySummary.uncategorized}</div>
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 {/* Sync Card */}
