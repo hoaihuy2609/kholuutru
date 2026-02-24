@@ -336,58 +336,63 @@ export const useCloudStorage = () => {
         const chapterIds = Array.from(new Set(lessonsToSync.map(l => l.chapterId)));
         const chapterFileIds: Record<string, string> = {};
 
-        // 1. Gửi từng Chương lên Telegram (Xẻ nhỏ để né giới hạn 50MB)
-        for (let i = 0; i < chapterIds.length; i++) {
-            const chId = chapterIds[i];
+        // 1. Chuẩn bị các Blob dữ liệu và tính tổng dung lượng để track progress
+        const chapterBlobs: { chId: string, blob: Blob }[] = [];
+        let totalUploadSize = 0;
+
+        for (const chId of chapterIds) {
             const chLessons = lessonsToSync.filter(l => l.chapterId === chId);
             const chFiles: FileStorage = {};
             chLessons.forEach(l => { if (filesToSync[l.id]) chFiles[l.id] = filesToSync[l.id]; });
-
             if (chLessons.length === 0) continue;
 
-            const payload = {
-                chapterId: chId,
-                lessons: chLessons,
-                files: chFiles,
-                syncedAt: Date.now()
-            };
-
+            const payload = { chapterId: chId, lessons: chLessons, files: chFiles, syncedAt: Date.now() };
             const content = xorObfuscate(JSON.stringify(payload));
-            const formData = new FormData();
-            formData.append('chat_id', TELEGRAM_CHAT_ID);
             const blob = new Blob([content], { type: 'application/json' });
-            formData.append('document', blob, `grade${grade}_ch${chId}.json`);
-
-            const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                chapterFileIds[chId] = data.result.document.file_id;
-                // Cập nhật progress (dành 90% cho các chương, 10% cho file index)
-                setSyncProgress(Math.floor(((i + 1) / chapterIds.length) * 90));
-            } else {
-                const err = await res.json();
-                throw new Error(`Lỗi Chương ${chId}: ${err.description}`);
-            }
+            chapterBlobs.push({ chId, blob });
+            totalUploadSize += blob.size;
         }
 
-        // 2. Gửi file MỤC LỤC (Index) chứa tất cả File ID của các chương
-        const indexPayload = {
-            grade,
-            chapterFileIds,
-            syncedAt: Date.now(),
-            totalChapters: Object.keys(chapterFileIds).length
-        };
+        // 2. Gửi từng Chương và track progress thực tế
+        let totalBytesSentOverall = 0;
 
+        for (const { chId, blob } of chapterBlobs) {
+            const formData = new FormData();
+            formData.append('chat_id', TELEGRAM_CHAT_ID);
+            formData.append('document', blob, `grade${grade}_${chId}.json`);
+
+            const chapterRes = await new Promise<any>((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`);
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const currentSent = totalBytesSentOverall + e.loaded;
+                        const percent = Math.floor((currentSent / totalUploadSize) * 95); // Dành 5% cuối cho file index
+                        setSyncProgress(percent);
+                    }
+                };
+
+                xhr.onload = () => {
+                    if (xhr.status === 200) resolve(JSON.parse(xhr.responseText));
+                    else reject(new Error(xhr.statusText));
+                };
+                xhr.onerror = () => reject(new Error("Network Error"));
+                xhr.send(formData);
+            });
+
+            chapterFileIds[chId] = chapterRes.result.document.file_id;
+            totalBytesSentOverall += blob.size;
+        }
+
+        // 3. Gửi file Index cuối cùng
+        const indexPayload = { grade, chapterFileIds, updatedAt: Date.now() };
         const indexContent = xorObfuscate(JSON.stringify(indexPayload));
+        const indexBlob = new Blob([indexContent], { type: 'application/json' });
         const indexFormData = new FormData();
         indexFormData.append('chat_id', TELEGRAM_CHAT_ID);
-        const indexBlob = new Blob([indexContent], { type: 'application/json' });
         indexFormData.append('document', indexBlob, `index_grade${grade}.json`);
-        indexFormData.append('caption', `[INDEX] Lớp ${grade} - Đã tách thành ${Object.keys(chapterFileIds).length} tệp chương`);
+        indexFormData.append('caption', `[INDEX] Lớp ${grade} - Đã tách thành ${chapterIds.length} tệp chương`);
 
         const indexRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
             method: 'POST',
@@ -398,8 +403,8 @@ export const useCloudStorage = () => {
             const data = await indexRes.json();
             const finalFileId = data.result.document.file_id;
             localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
-            setSyncProgress(100); // Hoàn thành
-            setTimeout(() => setSyncProgress(0), 1000); // Reset
+            setSyncProgress(100);
+            setTimeout(() => setSyncProgress(0), 1000);
             return finalFileId;
         } else {
             setSyncProgress(0);
