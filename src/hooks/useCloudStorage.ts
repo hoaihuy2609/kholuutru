@@ -337,6 +337,10 @@ export const useCloudStorage = () => {
         if (!TELEGRAM_TOKEN) throw new Error('Chưa cấu hình Telegram');
         setSyncProgress(1); // Bắt đầu: 1%
 
+        if (lessonsToSync.length === 0) {
+            throw new Error('Này bro, chưa có bài giảng nào để Sync đâu! Hãy thêm ít nhất 1 bài nhé.');
+        }
+
         const chapterIds = Array.from(new Set(lessonsToSync.map(l => l.chapterId)));
         const chapterFileIds: Record<string, string> = {};
 
@@ -404,14 +408,12 @@ export const useCloudStorage = () => {
             const data = await indexRes.json();
             const finalFileId = data.result.document.file_id;
 
-            // Ghi lại File ID này lên Google Sheets (Dùng mode no-cors để đảm bảo lệnh gửi đi được)
+            // Ghi lại File ID này lên Google Sheets (Bỏ no-cors để Cốc Cốc không chặn)
             const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfWk8K8J34fw5ynCI00HrMeMW13o2YxOr0140GyhKbimabvAysm5CpjnX1DYVdq50x/exec";
             try {
-                await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=${grade}&file_id=${finalFileId}`, {
-                    mode: 'no-cors'
-                });
+                await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=${grade}&file_id=${finalFileId}`);
             } catch (e) {
-                console.error("[CloudSync] Lỗi ghi ID lên Sheets:", e);
+                console.error("[CloudSync] Không thể lưu địa chỉ lên Sheets, vui lòng kiểm tra lại Script!", e);
             }
 
             localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
