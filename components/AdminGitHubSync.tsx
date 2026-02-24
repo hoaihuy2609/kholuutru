@@ -21,9 +21,9 @@ const LESSON_CATEGORIES = [
 ];
 
 const CAT_CONFIG: Record<string, { short: string; color: string; bg: string }> = {
-    'Trắc nghiệm Lý thuyết (ABCD)': { short: 'TN ABCD', color: '#6B7CDB', bg: '#EEF0FB' },
-    'Trắc nghiệm Lý thuyết (Đúng/Sai)': { short: 'Đúng/Sai', color: '#9B72CB', bg: '#F3EEF9' },
-    'Bài tập Tính toán Cơ bản': { short: 'Tính toán', color: '#D9730D', bg: '#FFF3E8' },
+    'Trắc nghiệm Lý thuyết (ABCD)': { short: 'TN ABCD', color: '#4F5FBE', bg: '#DDE2F7' },
+    'Trắc nghiệm Lý thuyết (Đúng/Sai)': { short: 'Đúng/Sai', color: '#7C4FAE', bg: '#E8DAFC' },
+    'Bài tập Tính toán Cơ bản': { short: 'Tính toán', color: '#C4630A', bg: '#FFE4C8' },
 };
 
 interface AdminGitHubSyncProps {
@@ -228,7 +228,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
             {/* ── Main ── */}
             <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 custom-scrollbar">
 
-                {/* Grade Tabs — Notion style, consistent với Sidebar */}
+                {/* Grade Tabs */}
                 <div className="flex items-center gap-0.5 p-1 rounded-lg" style={{ background: '#EBEBEA', width: 'fit-content' }}>
                     {([12, 11, 10] as const).map(grade => {
                         const c = GRADE_COLORS[grade];
@@ -240,18 +240,18 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                                 className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
                                 style={{
                                     background: isActive ? '#FFFFFF' : 'transparent',
-                                    color: isActive ? '#1A1A1A' : '#787774',
-                                    fontWeight: isActive ? 500 : 400,
+                                    color: isActive ? '#1A1A1A' : '#57564F',
+                                    fontWeight: isActive ? 600 : 400,
                                     boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                                 }}
                                 onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)'; }}
                                 onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                             >
                                 {/* Dot màu đặc trưng của lớp */}
-                                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.accent, opacity: isActive ? 1 : 0.4 }} />
+                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.accent, opacity: isActive ? 1 : 0.65 }} />
                                 Lớp {grade}
                                 {isActive && (
-                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: '#F1F0EC', color: '#787774' }}>
+                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: `${c.accent}18`, color: c.accent }}>
                                         {gLessons.length}b · {gFileCount}f
                                     </span>
                                 )}
@@ -260,7 +260,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                     })}
                 </div>
 
-                {/* Category Summary Bar — 1 hàng, label + 4 ô màu */}
+                {/* Category Summary Bar */}
                 <div className="rounded-xl px-4 py-3 flex items-center gap-3"
                     style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
                     {/* Label */}
@@ -274,21 +274,25 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                         const count = categorySummary.counts[cat] || 0;
                         return (
                             <div key={cat} className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg min-w-0"
-                                style={{ background: cfg.bg }}>
-                                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color }} />
+                                style={{ background: cfg.bg, border: `1px solid ${cfg.color}30` }}>
+                                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cfg.color }} />
                                 <div className="min-w-0">
-                                    <div className="text-[10px] font-medium leading-tight truncate" style={{ color: cfg.color }}>{cfg.short}</div>
+                                    <div className="text-[10px] font-semibold leading-tight truncate" style={{ color: cfg.color }}>{cfg.short}</div>
                                     <div className="text-sm font-bold leading-tight tabular-nums" style={{ color: '#1A1A1A' }}>{count}</div>
                                 </div>
                             </div>
                         );
                     })}
-                    {/* Ô chưa phân loại — luôn hiện, mờ nếu = 0 */}
+                    {/* Ô chưa phân loại */}
                     <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg min-w-0"
-                        style={{ background: categorySummary.uncategorized > 0 ? '#FEF3C7' : '#F7F6F3', opacity: categorySummary.uncategorized > 0 ? 1 : 0.5 }}>
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" style={{ color: categorySummary.uncategorized > 0 ? '#F59E0B' : '#CFCFCB' }} />
+                        style={{
+                            background: categorySummary.uncategorized > 0 ? '#FDE68A' : '#F7F6F3',
+                            border: categorySummary.uncategorized > 0 ? '1px solid #F59E0B40' : '1px solid transparent',
+                            opacity: categorySummary.uncategorized > 0 ? 1 : 0.5,
+                        }}>
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" style={{ color: categorySummary.uncategorized > 0 ? '#D97706' : '#CFCFCB' }} />
                         <div className="min-w-0">
-                            <div className="text-[10px] font-medium leading-tight truncate" style={{ color: categorySummary.uncategorized > 0 ? '#D97706' : '#AEACA8' }}>Chưa PL</div>
+                            <div className="text-[10px] font-semibold leading-tight truncate" style={{ color: categorySummary.uncategorized > 0 ? '#B45309' : '#AEACA8' }}>Chưa PL</div>
                             <div className="text-sm font-bold leading-tight tabular-nums" style={{ color: '#1A1A1A' }}>{categorySummary.uncategorized}</div>
                         </div>
                     </div>
