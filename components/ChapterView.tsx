@@ -1,9 +1,172 @@
-import React, { useState, useRef } from 'react';
-import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye, BookOpen, Zap } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye, BookOpen, Zap, CheckCircle2, Circle, Loader2, Pencil } from 'lucide-react';
 import SearchBar from './SearchBar';
 import Modal from './Modal';
 import { Chapter, Lesson, StoredFile } from '../types';
 
+// ── Progress Types ──────────────────────────────────────────
+type ProgressStatus = 'none' | 'in_progress' | 'done';
+interface LessonProgress {
+  status: ProgressStatus;
+  note: string;
+  updatedAt: number;
+}
+type ProgressMap = Record<string, LessonProgress>;
+
+const STORAGE_KEY = 'physivault_lesson_progress';
+
+function loadProgress(): ProgressMap {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+function saveProgress(map: ProgressMap) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+}
+
+// ── Status config ────────────────────────────────────────────
+const STATUS_CONFIG: Record<ProgressStatus, { label: string; color: string; bg: string; next: ProgressStatus }> = {
+  none: { label: 'Chưa làm', color: '#AEACA8', bg: '#F1F0EC', next: 'in_progress' },
+  in_progress: { label: 'Đang làm', color: '#6B7CDB', bg: '#EEF0FB', next: 'done' },
+  done: { label: 'Hoàn thành', color: '#448361', bg: '#EAF3EE', next: 'none' },
+};
+
+// ── Status Button ────────────────────────────────────────────
+const StatusBtn: React.FC<{
+  status: ProgressStatus;
+  onClick: (e: React.MouseEvent) => void;
+}> = ({ status, onClick }) => {
+  const cfg = STATUS_CONFIG[status];
+  return (
+    <button
+      onClick={onClick}
+      title={`${cfg.label} — Click để đổi`}
+      className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all"
+      style={{ background: cfg.bg, border: `2px solid ${cfg.color}60` }}
+      onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = 'scale(1.1)'}
+      onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = 'scale(1)'}
+    >
+      {status === 'none' && <Circle className="w-3.5 h-3.5" style={{ color: cfg.color }} />}
+      {status === 'in_progress' && <Loader2 className="w-3.5 h-3.5" style={{ color: cfg.color }} />}
+      {status === 'done' && <CheckCircle2 className="w-3.5 h-3.5" style={{ color: cfg.color }} />}
+    </button>
+  );
+};
+
+// ── Inline Note ───────────────────────────────────────────────
+const InlineNote: React.FC<{
+  lessonId: string;
+  note: string;
+  onSave: (id: string, note: string) => void;
+}> = ({ lessonId, note, onSave }) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(note);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setDraft(note); }, [note]);
+
+  const handleBlur = () => {
+    setEditing(false);
+    onSave(lessonId, draft.trim());
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); handleBlur(); }
+    if (e.key === 'Escape') { setDraft(note); setEditing(false); }
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        autoFocus
+        maxLength={80}
+        onClick={e => e.stopPropagation()}
+        placeholder="VD: đang ở câu 5, trang 3..."
+        className="flex-1 min-w-0 text-xs px-2 py-1 rounded-md outline-none"
+        style={{
+          background: '#FFFFFF',
+          border: '1px solid #6B7CDB',
+          color: '#1A1A1A',
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      onClick={e => { e.stopPropagation(); setEditing(true); }}
+      className="flex-1 min-w-0 flex items-center gap-1 cursor-text group/note"
+      title="Click để ghi chú"
+    >
+      {note ? (
+        <>
+          <span className="text-xs truncate" style={{ color: '#6B6A65' }}>{note}</span>
+          <Pencil className="w-3 h-3 shrink-0 opacity-0 group-hover/note:opacity-60 transition-opacity" style={{ color: '#787774' }} />
+        </>
+      ) : (
+        <span className="text-xs opacity-0 group-hover/note:opacity-40 transition-opacity whitespace-nowrap" style={{ color: '#AEACA8' }}>
+          + Ghi chú...
+        </span>
+      )}
+    </div>
+  );
+};
+
+// ── Progress Bar ─────────────────────────────────────────────
+const ProgressBar: React.FC<{ total: number; done: number; inProgress: number }> = ({ total, done, inProgress }) => {
+  if (total === 0) return null;
+  const donePct = (done / total) * 100;
+  const inProgPct = (inProgress / total) * 100;
+  const none = total - done - inProgress;
+
+  return (
+    <div className="rounded-xl px-4 py-3" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold" style={{ color: '#1A1A1A' }}>Tiến độ bài học</span>
+        <span className="text-xs" style={{ color: '#787774' }}>
+          <span className="font-bold" style={{ color: '#448361' }}>{done}</span>/{total} hoàn thành
+          {inProgress > 0 && <> · <span className="font-bold" style={{ color: '#6B7CDB' }}>{inProgress}</span> đang làm</>}
+          {none > 0 && <> · <span style={{ color: '#AEACA8' }}>{none}</span> còn lại</>}
+        </span>
+      </div>
+      {/* Track */}
+      <div className="h-2 rounded-full overflow-hidden" style={{ background: '#F1F0EC' }}>
+        <div className="h-full flex">
+          <div
+            className="h-full transition-all duration-500 rounded-l-full"
+            style={{ width: `${donePct}%`, background: '#448361', borderRadius: inProgress === 0 && done === total ? '999px' : undefined }}
+          />
+          <div
+            className="h-full transition-all duration-500"
+            style={{ width: `${inProgPct}%`, background: '#6B7CDB' }}
+          />
+        </div>
+      </div>
+      {/* Legend dots */}
+      <div className="flex items-center gap-4 mt-2">
+        {[
+          { color: '#448361', label: 'Hoàn thành' },
+          { color: '#6B7CDB', label: 'Đang làm' },
+          { color: '#D5D3CE', label: 'Chưa làm' },
+        ].map(({ color, label }) => (
+          <div key={label} className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+            <span className="text-[10px]" style={{ color: '#AEACA8' }}>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ── Main Component ───────────────────────────────────────────
 interface ChapterViewProps {
   chapter: Chapter;
   lessons: Lesson[];
@@ -39,12 +202,41 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   const [advancedSort, setAdvancedSort] = useState<'newest' | 'oldest' | 'az' | 'za'>('az');
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
   const [uploadCategory, setUploadCategory] = useState<string>('');
+  const [progress, setProgress] = useState<ProgressMap>(loadProgress);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (autoCreate) setIsCreating(true);
   }, [autoCreate]);
 
+  // ── Progress helpers ────────────────────────
+  const getLP = useCallback((id: string): LessonProgress =>
+    progress[id] ?? { status: 'none', note: '', updatedAt: 0 }
+    , [progress]);
+
+  const cycleStatus = useCallback((e: React.MouseEvent, lessonId: string) => {
+    e.stopPropagation();
+    setProgress(prev => {
+      const cur = prev[lessonId] ?? { status: 'none', note: '', updatedAt: 0 };
+      const next = STATUS_CONFIG[cur.status].next;
+      const updated = { ...prev, [lessonId]: { ...cur, status: next, updatedAt: Date.now() } };
+      saveProgress(updated);
+      return updated;
+    });
+  }, []);
+
+  const saveNote = useCallback((lessonId: string, note: string) => {
+    setProgress(prev => {
+      const cur = prev[lessonId] ?? { status: 'in_progress', note: '', updatedAt: 0 };
+      // Auto-set đang làm nếu chưa có trạng thái và có ghi chú
+      const status = cur.status === 'none' && note ? 'in_progress' : cur.status;
+      const updated = { ...prev, [lessonId]: { ...cur, note, status, updatedAt: Date.now() } };
+      saveProgress(updated);
+      return updated;
+    });
+  }, []);
+
+  // ── Util ─────────────────────────────────────
   const sortFiles = (files: StoredFile[], option: 'newest' | 'oldest' | 'az' | 'za') =>
     [...files].sort((a, b) => {
       switch (option) {
@@ -71,6 +263,10 @@ const ChapterView: React.FC<ChapterViewProps> = ({
         default: return 0;
       }
     });
+
+  // Progress summary
+  const doneCount = lessons.filter(l => getLP(l.id).status === 'done').length;
+  const inProgressCount = lessons.filter(l => getLP(l.id).status === 'in_progress').length;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +313,6 @@ const ChapterView: React.FC<ChapterViewProps> = ({
           <p className="text-[10px] uppercase" style={{ color: '#AEACA8' }}>{formatSize(file.size)}</p>
         </div>
       </div>
-      {/* Mobile: always visible — Desktop: hover only */}
       <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover/file:opacity-100 transition-opacity shrink-0">
         <button
           onClick={e => { e.stopPropagation(); setPreviewFile(file); }}
@@ -156,7 +351,6 @@ const ChapterView: React.FC<ChapterViewProps> = ({
     showSort?: boolean;
   }) => (
     <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
-      {/* Header */}
       <div
         className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-2 sm:gap-0"
         style={{ borderBottom: '1px solid #E9E9E7', borderLeft: `3px solid ${accentColor}` }}
@@ -202,7 +396,6 @@ const ChapterView: React.FC<ChapterViewProps> = ({
         </div>
       </div>
 
-      {/* File list */}
       {files.length > 0 ? (
         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2" style={{ background: '#FAFAF9' }}>
           {files.map(file => (
@@ -320,6 +513,13 @@ const ChapterView: React.FC<ChapterViewProps> = ({
               </form>
             )}
 
+            {/* ── Progress Bar (chỉ hiện khi học sinh dùng) ── */}
+            {!isAdmin && lessons.length > 0 && (
+              <div className="mb-4">
+                <ProgressBar total={lessons.length} done={doneCount} inProgress={inProgressCount} />
+              </div>
+            )}
+
             {/* Search + Sort controls */}
             <div className="flex flex-col md:flex-row gap-3 mb-4">
               <div className="flex-1">
@@ -351,54 +551,96 @@ const ChapterView: React.FC<ChapterViewProps> = ({
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {filteredLessons.map(lesson => (
-                  <div
-                    key={lesson.id}
-                    onClick={() => onSelectLesson(lesson)}
-                    className="flex items-center justify-between px-4 py-3 rounded-lg cursor-pointer transition-colors group"
-                    style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
-                    onMouseEnter={e => {
-                      (e.currentTarget as HTMLElement).style.background = '#F7F6F3';
-                      (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
-                    }}
-                    onMouseLeave={e => {
-                      (e.currentTarget as HTMLElement).style.background = '#FFFFFF';
-                      (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
-                    }}
-                  >
-                    <div className="flex items-center gap-3 overflow-hidden">
+                {filteredLessons.map(lesson => {
+                  const lp = getLP(lesson.id);
+                  const isDone = lp.status === 'done';
+
+                  return (
+                    <div
+                      key={lesson.id}
+                      onClick={() => onSelectLesson(lesson)}
+                      className="flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer transition-colors group"
+                      style={{
+                        background: isDone ? '#F7FBF8' : '#FFFFFF',
+                        border: '1px solid #E9E9E7',
+                        opacity: isDone ? 0.82 : 1,
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLElement).style.background = isDone ? '#EEF7F3' : '#F7F6F3';
+                        (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLElement).style.background = isDone ? '#F7FBF8' : '#FFFFFF';
+                        (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
+                      }}
+                    >
+                      {/* Status button — chỉ học sinh thấy */}
+                      {!isAdmin && (
+                        <StatusBtn status={lp.status} onClick={e => cycleStatus(e, lesson.id)} />
+                      )}
+
+                      {/* Folder icon */}
                       <div
                         className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: '#F1F0EC' }}
+                        style={{ background: isDone ? '#EAF3EE' : '#F1F0EC' }}
                       >
-                        <Folder className="w-4 h-4" style={{ color: '#787774' }} />
+                        <Folder className="w-4 h-4" style={{ color: isDone ? '#448361' : '#787774' }} />
                       </div>
-                      <div className="overflow-hidden">
-                        <h4 className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }}>
+
+                      {/* Name + date */}
+                      <div className="overflow-hidden min-w-0" style={{ minWidth: 80 }}>
+                        <h4
+                          className="text-sm font-medium truncate"
+                          style={{
+                            color: isDone ? '#448361' : '#1A1A1A',
+                            textDecoration: isDone ? 'line-through' : 'none',
+                            textDecorationColor: '#44836180',
+                          }}
+                        >
                           {lesson.name}
                         </h4>
                         <p className="text-[10px] uppercase mt-0.5" style={{ color: '#AEACA8' }}>
                           {new Date(lesson.createdAt).toLocaleDateString('vi-VN')}
                         </p>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-1 shrink-0">
-                      {isAdmin && (
-                        <button
-                          onClick={e => { e.stopPropagation(); onDeleteLesson(lesson.id); }}
-                          className="p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100"
-                          style={{ color: '#E03E3E' }}
-                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FEE2E2'}
-                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                      {/* Inline note (chỉ học sinh, không hiện khi done) */}
+                      {!isAdmin && !isDone && (
+                        <InlineNote
+                          lessonId={lesson.id}
+                          note={lp.note}
+                          onSave={saveNote}
+                        />
                       )}
-                      <ChevronRight className="w-4 h-4" style={{ color: '#AEACA8' }} />
+
+                      {/* Done badge */}
+                      {!isAdmin && isDone && (
+                        <span
+                          className="flex-1 text-right text-[10px] font-semibold"
+                          style={{ color: '#448361' }}
+                        >
+                          ✓ Xong
+                        </span>
+                      )}
+
+                      {/* Right side actions */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {isAdmin && (
+                          <button
+                            onClick={e => { e.stopPropagation(); onDeleteLesson(lesson.id); }}
+                            className="p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                            style={{ color: '#E03E3E' }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FEE2E2'}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <ChevronRight className="w-4 h-4" style={{ color: '#AEACA8' }} />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
