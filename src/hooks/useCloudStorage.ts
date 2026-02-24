@@ -283,7 +283,11 @@ export const useCloudStorage = () => {
             // 2. Tải file MỤC LỤC trước để biết có bao nhiêu chương cần kéo về
             const indexRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${indexFileId}`);
             const indexResult = await indexRes.json();
-            if (!indexResult.success) throw new Error("Không thể tải Mục lục lớp " + grade);
+
+            if (!indexResult.success) {
+                console.error("[CloudSync] GAS Error:", indexResult.error);
+                throw new Error(indexResult.error || "Không thể tải Mục lục từ Telegram qua Google Script.");
+            }
 
             const indexData = JSON.parse(xorDeobfuscate(indexResult.data));
             const chapterFileIds = indexData.chapterFileIds as Record<string, string>;
@@ -410,10 +414,16 @@ export const useCloudStorage = () => {
 
             // Ghi lại File ID này lên Google Sheets (Bỏ no-cors để Cốc Cốc không chặn)
             const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnnT7SdQmDy9nJsGytSYtOviOl8zYLDFTT1Kc2qZ26hu1yfinIE6LIgpCzVKvZSGsv/exec";
-            try {
-                await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=${grade}&file_id=${finalFileId}`);
-            } catch (e) {
-                console.error("[CloudSync] Không thể lưu địa chỉ lên Sheets, vui lòng kiểm tra lại Script!", e);
+            console.log(`[CloudSync] Đang ghi đè ID mới lên Google Sheets...`);
+
+            const sheetRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=${grade}&file_id=${finalFileId}`);
+            if (!sheetRes.ok) {
+                throw new Error("Không thể ghi địa chỉ bài giảng lên Google Sheets. Bro hãy kiểm tra lại quyền truy cập của App Script nhé!");
+            }
+
+            const sheetResult = await sheetRes.json();
+            if (!sheetResult.success) {
+                throw new Error("Google Sheets từ chối lưu địa chỉ: " + (sheetResult.error || "Lỗi không xác định"));
             }
 
             localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
