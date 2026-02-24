@@ -269,7 +269,7 @@ export const useCloudStorage = () => {
     // --- Telegram Cloud Sync: Fetch bài giảng theo grade (Tải toàn bộ các chương trong 1 lượt) ---
     // --- Telegram Cloud Sync: Fetch bài giảng theo grade (Tải toàn bộ các chương trong 1 lượt) ---
     const fetchLessonsFromGitHub = async (grade: number): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyz8Gb7Uw99NrWwQyNHpY8YShyjFmqxImwDfWA0oi3Ue3VgIg1LSl3T_aso30P9HOE/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzA2B0IMc7H1SIKDTpHlKwW37yqyWM2nvbVUo4yviPvzeeLwhrer0l5W-G2SwYvfQVq/exec";
 
         // 1. Hỏi Google Sheets xem địa chỉ ID mới nhất của lớp này là gì
         try {
@@ -404,7 +404,7 @@ export const useCloudStorage = () => {
             const finalFileId = data.result.document.file_id;
 
             // Ghi lại File ID này lên Google Sheets để mọi người đều thấy
-            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyz8Gb7Uw99NrWwQyNHpY8YShyjFmqxImwDfWA0oi3Ue3VgIg1LSl3T_aso30P9HOE/exec";
+            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzA2B0IMc7H1SIKDTpHlKwW37yqyWM2nvbVUo4yviPvzeeLwhrer0l5W-G2SwYvfQVq/exec";
             try { await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=${grade}&file_id=${finalFileId}`); } catch (e) { }
 
             localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
@@ -424,7 +424,7 @@ export const useCloudStorage = () => {
         if (!isCurrentlyActivated || !sdt) return 'ok';
 
         const machineId = getMachineId();
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyz8Gb7Uw99NrWwQyNHpY8YShyjFmqxImwDfWA0oi3Ue3VgIg1LSl3T_aso30P9HOE/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzA2B0IMc7H1SIKDTpHlKwW37yqyWM2nvbVUo4yviPvzeeLwhrer0l5W-G2SwYvfQVq/exec";
         try {
             const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=check&sdt=${sdt}&machineId=${machineId}`);
             const result = await response.json();
