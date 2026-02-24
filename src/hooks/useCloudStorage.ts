@@ -269,7 +269,7 @@ export const useCloudStorage = () => {
     // --- Telegram Cloud Sync: Fetch bài giảng theo grade (Tải toàn bộ các chương trong 1 lượt) ---
     // --- Telegram Cloud Sync: Fetch bài giảng theo grade (Tải toàn bộ các chương trong 1 lượt) ---
     const fetchLessonsFromGitHub = async (grade: number): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnnT7SdQmDy9nJsGytSYtOviOl8zYLDFTT1Kc2qZ26hu1yfinIE6LIgpCzVKvZSGsv/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
         console.log(`[CloudSync] Đang hỏi Google cho Lớp ${grade} tại URL: ${GOOGLE_SCRIPT_URL}`);
 
         // 1. Hỏi Google Sheets xem địa chỉ ID mới nhất của lớp này là gì
@@ -413,7 +413,7 @@ export const useCloudStorage = () => {
             const finalFileId = data.result.document.file_id;
 
             // Ghi lại File ID này lên Google Sheets (Bỏ no-cors để Cốc Cốc không chặn)
-            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnnT7SdQmDy9nJsGytSYtOviOl8zYLDFTT1Kc2qZ26hu1yfinIE6LIgpCzVKvZSGsv/exec";
+            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
             console.log(`[CloudSync] Đang ghi đè ID mới lên Google Sheets...`);
 
             const sheetRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=${grade}&file_id=${finalFileId}`);
@@ -443,7 +443,7 @@ export const useCloudStorage = () => {
         if (!isCurrentlyActivated || !sdt) return 'ok';
 
         const machineId = getMachineId();
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnnT7SdQmDy9nJsGytSYtOviOl8zYLDFTT1Kc2qZ26hu1yfinIE6LIgpCzVKvZSGsv/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
         try {
             const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=check&sdt=${sdt}&machineId=${machineId}`);
             const result = await response.json();

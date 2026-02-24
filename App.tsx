@@ -7,7 +7,12 @@ import ChapterView from './components/ChapterView';
 import LessonView from './components/LessonView';
 import Toast, { ToastType } from './components/Toast';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
-import { Menu, FileText, ChevronRight, FolderOpen, Loader2, Settings, Plus, Ban, ShieldOff, WifiOff } from 'lucide-react';
+import { Menu, FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Plus, Ban, ShieldOff, WifiOff, MessageCircle, X, Send, Bot, User, Copy, Check } from 'lucide-react';
+import { getMachineId } from './src/hooks/useCloudStorage';
+
+const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+  <RefreshCw className={`${className} animate-spin`} style={style} />
+);
 
 import SettingsModal from './components/SettingsModal';
 import GuideModal from './components/GuideModal';
@@ -28,7 +33,7 @@ function App() {
   const [autoCreateLesson, setAutoCreateLesson] = useState(false);
 
   // Replace local state with Cloud Storage hook
-  const { lessons, storedFiles, loading, isActivated, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess } = useCloudStorage();
+  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress } = useCloudStorage();
 
   const [isKicked, setIsKicked] = useState(false);
   const [isOfflineExpired, setIsOfflineExpired] = useState(false);
@@ -590,6 +595,11 @@ function App() {
         onClose={() => setIsSettingsOpen(false)}
         onShowToast={showToast}
         isAdmin={isAdmin}
+        isActivated={isActivated}
+        lessons={lessons}
+        storedFiles={storedFiles}
+        onActivateSystem={activateSystem}
+        onFetchLessons={fetchLessonsFromGitHub}
         onToggleAdmin={toggleAdmin}
         onOpenDashboard={() => {
           setShowAdminDashboard(true);
@@ -618,6 +628,14 @@ function App() {
         <AdminGitHubSync
           onBack={() => setShowGitHubSync(false)}
           onShowToast={showToast}
+          lessons={lessons}
+          storedFiles={storedFiles}
+          onAddLesson={addLesson}
+          onDeleteLesson={deleteLesson}
+          onUploadFiles={uploadFiles}
+          onDeleteFile={deleteFile}
+          onSyncToGitHub={syncToGitHub}
+          syncProgress={syncProgress}
         />
       )}
 

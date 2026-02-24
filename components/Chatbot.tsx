@@ -1,7 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Bot, User, Loader2, RefreshCw, Copy, Check } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, RefreshCw, Copy, Check } from 'lucide-react';
 import { getMachineId } from '../src/hooks/useCloudStorage';
+
+const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+    <RefreshCw className={`${className} animate-spin`} style={style} />
+);
 
 interface Message {
     id: string;
@@ -10,7 +14,7 @@ interface Message {
     timestamp: number;
 }
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnnT7SdQmDy9nJsGytSYtOviOl8zYLDFTT1Kc2qZ26hu1yfinIE6LIgpCzVKvZSGsv/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
 
 const Chatbot: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -49,15 +53,12 @@ const Chatbot: React.FC = () => {
             setIsLoading(true);
             try {
                 const machineId = getMachineId();
-                await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST', mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sdt: userText, machineId })
-                });
-                const realResponse = await fetch(GOOGLE_SCRIPT_URL + "?sdt=" + userText + "&machineId=" + machineId);
+                // Chỉ dùng GET với action=check_student để Script biết cần làm gì
+                const url = `${GOOGLE_SCRIPT_URL}?action=check_student&sdt=${encodeURIComponent(userText)}&machineId=${encodeURIComponent(machineId)}`;
+                const realResponse = await fetch(url);
                 const result = await realResponse.json();
 
-                if (result.success) {
+                if (result.success && result.key) {
                     addMessage('Xác thực thành công! Mã kích hoạt của bạn là:', 'bot');
                     addMessage(result.key, 'bot');
                     addMessage('Bạn hãy copy mã này và dán vào phần "Mở khóa học viên" trong Cài đặt nhé.', 'bot');
@@ -73,6 +74,7 @@ const Chatbot: React.FC = () => {
             }
         }
     };
+
 
     const handleCopy = (text: string) => {
         navigator.clipboard.writeText(text);

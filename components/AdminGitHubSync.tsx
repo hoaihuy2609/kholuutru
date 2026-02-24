@@ -1,17 +1,28 @@
 
 import React, { useState, useRef } from 'react';
 import {
-    CloudUpload, Send, CheckCircle2, Loader2, AlertCircle,
-    GraduationCap, FileText, Trash2, Upload, RefreshCw,
+    CloudUpload, Send, CheckCircle2, RefreshCw, AlertCircle,
+    GraduationCap, FileText, Trash2, Upload,
     BookOpen, X, Download, MessageCircle
 } from 'lucide-react';
-import { useCloudStorage } from '../src/hooks/useCloudStorage';
+
+const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+    <RefreshCw className={`${className} animate-spin`} style={style} />
+);
 import { CURRICULUM } from '../constants';
-import { GradeLevel, Lesson, StoredFile } from '../types';
+import { Lesson, StoredFile, FileStorage } from '../types';
 
 interface AdminGitHubSyncProps {
     onBack: () => void;
     onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+    lessons: Lesson[];
+    storedFiles: FileStorage;
+    onAddLesson: (name: string, chapterId: string) => Promise<void>;
+    onDeleteLesson: (id: string) => Promise<void>;
+    onUploadFiles: (files: File[], targetId: string, category?: string) => Promise<void>;
+    onDeleteFile: (fileId: string, targetId: string) => Promise<void>;
+    onSyncToGitHub: (grade: number, lessons: Lesson[], files: FileStorage) => Promise<string>;
+    syncProgress: number;
 }
 
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
@@ -22,8 +33,7 @@ const GRADE_COLORS: Record<number, { accent: string; bg: string; label: string }
     10: { accent: '#D9730D', bg: '#FFF3E8', label: 'Vật Lý 10' },
 };
 
-const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }) => {
-    const { lessons, storedFiles, uploadFiles, deleteFile, deleteLesson, addLesson, syncToGitHub, syncProgress } = useCloudStorage();
+const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast, lessons, storedFiles, onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress }) => {
     const [selectedGrade, setSelectedGrade] = useState<number>(12);
     const [syncStatus, setSyncStatus] = useState<Record<number, SyncStatus>>({ 10: 'idle', 11: 'idle', 12: 'idle' });
     const [syncMsg, setSyncMsg] = useState<Record<number, string>>({});
@@ -66,7 +76,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
         setSyncMsg(prev => ({ ...prev, [grade]: '' }));
 
         try {
-            const fileId = await syncToGitHub(grade, gLessons, gFiles);
+            const fileId = await onSyncToGitHub(grade, gLessons, gFiles);
             const fileCount = Object.values(gFiles).flat().length;
             setSyncStatus(prev => ({ ...prev, [grade]: 'success' }));
             setSyncMsg(prev => ({ ...prev, [grade]: `✓ Đã lên Telegram (ID: ...${fileId.slice(-4)})` }));
@@ -89,7 +99,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
         if (!files.length || !uploadTargetLesson) return;
         setUploadingLesson(uploadTargetLesson);
         try {
-            await uploadFiles(files, uploadTargetLesson, 'pdf');
+            await onUploadFiles(files, uploadTargetLesson, 'pdf');
             onShowToast(`Đã thêm ${files.length} file vào bài giảng!`, 'success');
         } catch {
             onShowToast('Lỗi khi thêm file', 'error');
@@ -105,7 +115,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
             onShowToast('Vui lòng nhập tên bài và chọn chương!', 'warning');
             return;
         }
-        await addLesson(newLessonName.trim(), newLessonChapter);
+        await onAddLesson(newLessonName.trim(), newLessonChapter);
         onShowToast(`Đã thêm bài giảng: ${newLessonName}`, 'success');
         setNewLessonName('');
         setNewLessonChapter('');
@@ -114,13 +124,13 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
 
     const handleDeleteLesson = async (lessonId: string, name: string) => {
         if (!window.confirm(`Xóa bài giảng "${name}"? Hành động này không thể hoàn tác.`)) return;
-        await deleteLesson(lessonId);
+        await onDeleteLesson(lessonId);
         onShowToast(`Đã xóa bài giảng: ${name}`, 'success');
     };
 
     const handleDeleteFile = async (fileId: string, lessonId: string, fileName: string) => {
         if (!window.confirm(`Xóa file "${fileName}"?`)) return;
-        await deleteFile(fileId, lessonId);
+        await onDeleteFile(fileId, lessonId);
         onShowToast('Đã xóa file', 'success');
     };
 

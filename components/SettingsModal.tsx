@@ -1,15 +1,21 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone, GraduationCap, CloudDownload, Loader2, RefreshCw } from 'lucide-react';
-import { useCloudStorage, exportData, importData, getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
+import { exportData, importData, getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
+import { Lesson, FileStorage } from '../types';
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnnT7SdQmDy9nJsGytSYtOviOl8zYLDFTT1Kc2qZ26hu1yfinIE6LIgpCzVKvZSGsv/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
 
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
     onShowToast: (message: string, type: 'success' | 'error' | 'warning') => void;
     isAdmin: boolean;
+    isActivated: boolean;
+    lessons: Lesson[];
+    storedFiles: FileStorage;
+    onActivateSystem: (key: string, sdt: string, grade?: number) => boolean;
+    onFetchLessons: (grade: number) => Promise<{ success: boolean; lessonCount: number; fileCount: number }>;
     onToggleAdmin: (status: boolean) => void;
     onOpenDashboard: () => void;
 }
@@ -26,9 +32,8 @@ const inputStyle: React.CSSProperties = {
     width: '100%',
 };
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowToast, isAdmin, onToggleAdmin, onOpenDashboard }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowToast, isAdmin, isActivated, lessons, storedFiles, onActivateSystem, onFetchLessons, onToggleAdmin, onOpenDashboard }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { lessons, storedFiles, isActivated, activateSystem, fetchLessonsFromGitHub } = useCloudStorage();
     const [password, setPassword] = useState('');
     const [showPassInput, setShowPassInput] = useState(false);
 
@@ -88,13 +93,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         const sdt = studentSdt.trim();
         const key = studentKeyInput.trim();
         if (!sdt) { onShowToast('Vui lòng nhập Số điện thoại đã đăng ký!', 'warning'); return; }
-        if (activateSystem(key, sdt, studentGrade)) {
+        if (onActivateSystem(key, sdt, studentGrade)) {
             onShowToast('Kích hoạt thành công! Đang tải bài giảng...', 'success');
             setStudentKeyInput('');
             // Auto-fetch bài giảng từ GitHub
             setIsFetchingLessons(true);
             try {
-                const result = await fetchLessonsFromGitHub(studentGrade);
+                const result = await onFetchLessons(studentGrade);
                 setFetchResult(result);
                 onShowToast(`✓ Đã nhận ${result.lessonCount} bài giảng từ hệ thống!`, 'success');
             } catch (err: any) {
@@ -111,7 +116,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         const grade = parseInt(localStorage.getItem('physivault_grade') || '12');
         setIsFetchingLessons(true);
         try {
-            const result = await fetchLessonsFromGitHub(grade);
+            const result = await onFetchLessons(grade);
             setFetchResult(result);
             onShowToast(`✓ Đã tải ${result.lessonCount} bài giảng từ hệ thống!`, 'success');
         } catch (err: any) {
