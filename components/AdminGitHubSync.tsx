@@ -260,7 +260,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
                     </div>
                 </div>
 
-                {/* Lesson List */}
+                {/* Lesson List - Grouped by Chapter */}
                 <div className="rounded-xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
                     {/* Header */}
                     <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid #E9E9E7' }}>
@@ -331,93 +331,81 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
                         </div>
                     )}
 
-                    {/* Lessons */}
-                    <div className="divide-y" style={{ borderColor: '#F1F0EC' }}>
+                    {/* Chapters & Lessons */}
+                    <div className="divide-y p-5 space-y-8" style={{ borderColor: '#F1F0EC' }}>
                         {gradeLessons.length === 0 ? (
-                            <div className="px-5 py-12 text-center">
+                            <div className="py-12 text-center">
                                 <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
                                 <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có bài giảng nào</p>
                                 <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Nhấn "Thêm bài giảng" để bắt đầu</p>
                             </div>
                         ) : (
-                            gradeLessons.map(lesson => {
-                                const lessonFiles = storedFiles[lesson.id] || [];
-                                const chapter = gradeData?.chapters.find(ch => ch.id === lesson.chapterId);
-                                const isUploading = uploadingLesson === lesson.id;
+                            gradeData?.chapters.map(chapter => {
+                                const chapterLessons = gradeLessons.filter(l => l.chapterId === chapter.id);
+                                if (chapterLessons.length === 0) return null;
 
                                 return (
-                                    <div key={lesson.id} className="px-5 py-4 group">
-                                        <div className="flex items-start justify-between gap-3">
-                                            {/* Left */}
-                                            <div className="flex items-start gap-3 min-w-0">
-                                                <div className="p-2 rounded-lg mt-0.5 shrink-0" style={{ background: color.bg }}>
-                                                    <FileText className="w-4 h-4" style={{ color: color.accent }} />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-semibold truncate" style={{ color: '#1A1A1A' }}>{lesson.name}</p>
-                                                    <p className="text-xs mt-0.5" style={{ color: '#AEACA8' }}>
-                                                        {chapter?.name || 'Không rõ chương'}
-                                                    </p>
-                                                    {/* File list */}
-                                                    {lessonFiles.length > 0 && (
-                                                        <div className="mt-2 space-y-1">
-                                                            {lessonFiles.map(file => (
-                                                                <div key={file.id} className="flex items-center gap-2 text-xs" style={{ color: '#57564F' }}>
-                                                                    <FileText className="w-3 h-3 shrink-0" style={{ color: '#CFCFCB' }} />
-                                                                    <span className="truncate max-w-[220px]">{file.name}</span>
-                                                                    <span style={{ color: '#CFCFCB' }}>·</span>
-                                                                    <span style={{ color: '#AEACA8' }}>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
-                                                                    <button
-                                                                        onClick={() => handleDeleteFile(file.id, lesson.id, file.name)}
-                                                                        className="p-0.5 rounded transition-colors opacity-0 group-hover:opacity-100"
-                                                                        style={{ color: '#CFCFCB' }}
-                                                                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#E03E3E'}
-                                                                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#CFCFCB'}
-                                                                    >
-                                                                        <X className="w-3 h-3" />
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                    <div key={chapter.id} className="space-y-4">
+                                        <div className="flex items-center gap-3 pb-2 border-b" style={{ borderColor: '#F1F0EC' }}>
+                                            <div className="p-1.5 rounded-lg" style={{ background: color.bg }}>
+                                                <BookOpen className="w-4 h-4" style={{ color: color.accent }} />
                                             </div>
+                                            <div>
+                                                <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: '#1A1A1A' }}>
+                                                    {chapter.name}
+                                                </h2>
+                                                <p className="text-[10px]" style={{ color: '#AEACA8' }}>
+                                                    {chapterLessons.length} bài giảng
+                                                </p>
+                                            </div>
+                                        </div>
 
-                                            {/* Right actions */}
-                                            <div className="flex items-center gap-1 shrink-0">
-                                                {/* File count badge */}
-                                                {lessonFiles.length > 0 && (
-                                                    <span
-                                                        className="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                                                        style={{ background: color.bg, color: color.accent }}
-                                                    >
-                                                        {lessonFiles.length} file
-                                                    </span>
-                                                )}
-                                                {/* Upload */}
-                                                <button
-                                                    onClick={() => handleUploadTrigger(lesson.id)}
-                                                    disabled={isUploading}
-                                                    className="p-1.5 rounded-lg transition-colors disabled:opacity-50"
-                                                    style={{ color: '#AEACA8' }}
-                                                    title="Upload PDF"
-                                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = color.accent; (e.currentTarget as HTMLElement).style.background = color.bg; }}
-                                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#AEACA8'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                                                >
-                                                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                                </button>
-                                                {/* Delete lesson */}
-                                                <button
-                                                    onClick={() => handleDeleteLesson(lesson.id, lesson.name)}
-                                                    className="p-1.5 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                                    style={{ color: '#CFCFCB' }}
-                                                    title="Xóa bài giảng"
-                                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#E03E3E'; (e.currentTarget as HTMLElement).style.background = '#FEF0F0'; }}
-                                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
+                                        <div className="space-y-3">
+                                            {chapterLessons.map(lesson => {
+                                                const lessonFiles = storedFiles[lesson.id] || [];
+                                                const isUploading = uploadingLesson === lesson.id;
+                                                return (
+                                                    <div key={lesson.id} className="bg-white rounded-xl p-4 border border-[#F1F0EC] hover:border-[#E9E9E7] transition-all group">
+                                                        <div className="flex items-start justify-between gap-4">
+                                                            <div className="flex-1 min-w-0">
+                                                                <h3 className="font-semibold text-sm mb-1" style={{ color: '#1A1A1A' }}>{lesson.name}</h3>
+                                                                <div className="space-y-1.5">
+                                                                    {lessonFiles.map(file => (
+                                                                        <div key={file.id} className="flex items-center gap-2 text-[11px] p-1.5 rounded-lg bg-[#F8F9FB]" style={{ color: '#787774' }}>
+                                                                            <FileText className="w-3.5 h-3.5 text-gray-400" />
+                                                                            <span className="flex-1 truncate">{file.name}</span>
+                                                                            <span className="text-[9px] text-[#AEACA8]">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                                                                            <button
+                                                                                onClick={() => handleDeleteFile(file.id, lesson.id, file.name)}
+                                                                                className="p-1 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                            >
+                                                                                <Trash2 className="w-3 h-3" />
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
+                                                                    {lessonFiles.length === 0 && (
+                                                                        <span className="text-[10px] italic text-[#AEACA8]">Chưa có tài liệu</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <button
+                                                                    onClick={() => handleUploadTrigger(lesson.id)}
+                                                                    className="p-2 rounded-lg hover:bg-[#EEF0FB] text-gray-400 hover:text-[#6B7CDB] transition-colors"
+                                                                >
+                                                                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteLesson(lesson.id, lesson.name)}
+                                                                    className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 );
