@@ -267,64 +267,68 @@ export const useCloudStorage = () => {
     };
 
     // --- Telegram Cloud Sync: Fetch bài giảng theo grade (Tải toàn bộ các chương trong 1 lượt) ---
+    // --- Telegram Cloud Sync: Fetch bài giảng theo grade (Tải toàn bộ các chương trong 1 lượt) ---
     const fetchLessonsFromGitHub = async (grade: number): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
-        const indexFileId = localStorage.getItem(`pv_sync_file_id_${grade}`);
-        if (!indexFileId) throw new Error(`Chưa có liên kết dữ liệu cho Lớp ${grade}.`);
-
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyz8Gb7Uw99NrWwQyNHpY8YShyjFmqxImwDfWA0oi3Ue3VgIg1LSl3T_aso30P9HOE/exec";
 
-        // 1. Tải file MỤC LỤC trước để biết có bao nhiêu chương cần kéo về
-        const indexRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${indexFileId}`);
-        const indexResult = await indexRes.json();
-        if (!indexResult.success) throw new Error("Không thể tải Mục lục lớp " + grade);
+        // 1. Hỏi Google Sheets xem địa chỉ ID mới nhất của lớp này là gì
+        try {
+            const latestIndexRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_latest_index&grade=${grade}`);
+            const latestIndexResult = await latestIndexRes.json();
 
-        const indexData = JSON.parse(xorDeobfuscate(indexResult.data));
-        const chapterFileIds = indexData.chapterFileIds as Record<string, string>;
+            const indexFileId = latestIndexResult.file_id || localStorage.getItem(`pv_sync_file_id_${grade}`);
+            if (!indexFileId) throw new Error(`Hệ thống chưa có dữ liệu cho Lớp ${grade}. Thầy vui lòng Sync trước nhé!`);
 
-        const currentLessons = await dbGet(STORAGE_LESSONS_KEY) || [];
-        const currentFiles = await dbGet(STORAGE_FILES_KEY) || {};
+            // 2. Tải file MỤC LỤC trước để biết có bao nhiêu chương cần kéo về
+            const indexRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${indexFileId}`);
+            const indexResult = await indexRes.json();
+            if (!indexResult.success) throw new Error("Không thể tải Mục lục lớp " + grade);
 
-        const newLessonsMap = new Map();
-        // Giữ lại bài của các khối lớp khác (không thuộc khối đang sync)
-        currentLessons.forEach((l: Lesson) => newLessonsMap.set(l.id, l));
-        const newFiles = { ...currentFiles };
+            const indexData = JSON.parse(xorDeobfuscate(indexResult.data));
+            const chapterFileIds = indexData.chapterFileIds as Record<string, string>;
 
-        // 2. Tải tất cả các Chương (Dùng Promise.all để tải song song cho nhanh)
-        const chapterIds = Object.keys(chapterFileIds);
-        const chapterPromises = chapterIds.map(async (chId) => {
-            const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${chapterFileIds[chId]}`);
-            const result = await res.json();
-            if (result.success) {
-                return JSON.parse(xorDeobfuscate(result.data));
-            }
-            return null;
-        });
+            const currentLessons = await dbGet(STORAGE_LESSONS_KEY) || [];
+            const currentFiles = await dbGet(STORAGE_FILES_KEY) || {};
 
-        const allChaptersData = await Promise.all(chapterPromises);
-        let totalLessonCount = 0;
-        let totalFileCount = 0;
+            const newLessonsMap = new Map();
+            currentLessons.forEach((l: Lesson) => newLessonsMap.set(l.id, l));
+            const newFiles = { ...currentFiles };
 
-        allChaptersData.forEach(chapterData => {
-            if (chapterData) {
-                chapterData.lessons.forEach((l: Lesson) => newLessonsMap.set(l.id, l));
-                Object.assign(newFiles, chapterData.files);
-                totalLessonCount += chapterData.lessons.length;
-                totalFileCount += Object.values(chapterData.files as FileStorage).flat().length;
-            }
-        });
+            // 3. Tải tất cả các Chương (Dùng Promise.all để tải song song cho nhanh)
+            const chapterIds = Object.keys(chapterFileIds);
+            const chapterPromises = chapterIds.map(async (chId) => {
+                const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${chapterFileIds[chId]}`);
+                const result = await res.json();
+                if (result.success) {
+                    return JSON.parse(xorDeobfuscate(result.data));
+                }
+                return null;
+            });
 
-        const uniqueLessons = Array.from(newLessonsMap.values()) as Lesson[];
-        await dbSet(STORAGE_LESSONS_KEY, uniqueLessons);
-        await dbSet(STORAGE_FILES_KEY, newFiles);
+            const allChaptersData = await Promise.all(chapterPromises);
+            let totalLessonCount = 0;
+            let totalFileCount = 0;
 
-        setLessons(uniqueLessons);
-        setStoredFiles(newFiles);
+            allChaptersData.forEach(chapterData => {
+                if (chapterData) {
+                    chapterData.lessons.forEach((l: Lesson) => newLessonsMap.set(l.id, l));
+                    Object.assign(newFiles, chapterData.files);
+                    totalLessonCount += chapterData.lessons.length;
+                    totalFileCount += Object.values(chapterData.files as FileStorage).flat().length;
+                }
+            });
 
-        return {
-            success: true,
-            lessonCount: totalLessonCount,
-            fileCount: totalFileCount,
-        };
+            const uniqueLessons = Array.from(newLessonsMap.values()) as Lesson[];
+            await dbSet(STORAGE_LESSONS_KEY, uniqueLessons);
+            await dbSet(STORAGE_FILES_KEY, newFiles);
+
+            setLessons(uniqueLessons);
+            setStoredFiles(newFiles);
+
+            return { success: true, lessonCount: totalLessonCount, fileCount: totalFileCount };
+        } catch (err: any) {
+            throw new Error(`Sync thất bại: ${err.message}`);
+        }
     };
 
     // --- Telegram Cloud Sync: Push bài giảng lên Telegram (TÁCH NHỎ THEO CHƯƠNG) ---
@@ -332,7 +336,6 @@ export const useCloudStorage = () => {
         if (!TELEGRAM_TOKEN) throw new Error('Chưa cấu hình Telegram');
         setSyncProgress(1); // Bắt đầu: 1%
 
-        // Lọc ra danh sách các Chương hiện có trong mảng bài giảng cần Sync
         const chapterIds = Array.from(new Set(lessonsToSync.map(l => l.chapterId)));
         const chapterFileIds: Record<string, string> = {};
 
@@ -355,7 +358,6 @@ export const useCloudStorage = () => {
 
         // 2. Gửi từng Chương và track progress thực tế
         let totalBytesSentOverall = 0;
-
         for (const { chId, blob } of chapterBlobs) {
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM_CHAT_ID);
@@ -364,15 +366,13 @@ export const useCloudStorage = () => {
             const chapterRes = await new Promise<any>((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`);
-
                 xhr.upload.onprogress = (e) => {
                     if (e.lengthComputable) {
                         const currentSent = totalBytesSentOverall + e.loaded;
-                        const percent = Math.floor((currentSent / totalUploadSize) * 95); // Dành 5% cuối cho file index
+                        const percent = Math.floor((currentSent / totalUploadSize) * 95);
                         setSyncProgress(percent);
                     }
                 };
-
                 xhr.onload = () => {
                     if (xhr.status === 200) resolve(JSON.parse(xhr.responseText));
                     else reject(new Error(xhr.statusText));
@@ -402,6 +402,11 @@ export const useCloudStorage = () => {
         if (indexRes.ok) {
             const data = await indexRes.json();
             const finalFileId = data.result.document.file_id;
+
+            // Ghi lại File ID này lên Google Sheets để mọi người đều thấy
+            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyz8Gb7Uw99NrWwQyNHpY8YShyjFmqxImwDfWA0oi3Ue3VgIg1LSl3T_aso30P9HOE/exec";
+            try { await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=${grade}&file_id=${finalFileId}`); } catch (e) { }
+
             localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
             setSyncProgress(100);
             setTimeout(() => setSyncProgress(0), 1000);
@@ -420,38 +425,21 @@ export const useCloudStorage = () => {
 
         const machineId = getMachineId();
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyz8Gb7Uw99NrWwQyNHpY8YShyjFmqxImwDfWA0oi3Ue3VgIg1LSl3T_aso30P9HOE/exec";
-        const OFFLINE_GRACE_PERIOD = 24 * 60 * 60 * 1000; // 24 giờ
-
         try {
             const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=check&sdt=${sdt}&machineId=${machineId}`);
             const result = await response.json();
-
             if (!result.success) {
-                // BỊ KICK! Xóa sạch dấu vết
                 localStorage.removeItem(STORAGE_ACTIVATION_KEY);
-                localStorage.removeItem('pv_activated_sdt');
-                localStorage.removeItem('pv_pending_sdt');
-                localStorage.removeItem('pv_last_check');
                 setIsActivated(false);
                 return 'kicked';
             }
-            // Check thành công → đóng dấu thời gian
             localStorage.setItem('pv_last_check', Date.now().toString());
             return 'ok';
         } catch (e) {
-            // Lỗi mạng → kiểm tra hạn sử dụng offline
             const lastCheck = localStorage.getItem('pv_last_check');
-            if (!lastCheck) {
-                // Chưa bao giờ check thành công → cần mạng
-                return 'offline_expired';
-            }
+            if (!lastCheck) return 'offline_expired';
             const elapsed = Date.now() - parseInt(lastCheck);
-            if (elapsed > OFFLINE_GRACE_PERIOD) {
-                // Quá 24h chưa check → hết hạn offline
-                return 'offline_expired';
-            }
-            // Vẫn trong hạn 24h → cho qua
-            return 'ok';
+            return elapsed > 24 * 60 * 60 * 1000 ? 'offline_expired' : 'ok';
         }
     };
 
@@ -483,10 +471,8 @@ export const exportData = (lessons: Lesson[], files: FileStorage) => {
     };
 
     const finalContent = JSON.stringify(rawData);
-
     const blob = new Blob([finalContent], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement('a');
     a.href = url;
     a.download = `physivault_data_${new Date().toISOString().slice(0, 10)}.json`;
@@ -503,10 +489,7 @@ export const importData = async (file: File) => {
             try {
                 let content = e.target?.result as string;
                 let data: ExportData = JSON.parse(content);
-
-                if (!data.lessons || !data.files) {
-                    throw new Error("INVALID_FORMAT");
-                }
+                if (!data.lessons || !data.files) throw new Error("INVALID_FORMAT");
 
                 const currentLessons = await dbGet(STORAGE_LESSONS_KEY) || [];
                 const currentFiles = await dbGet(STORAGE_FILES_KEY) || {};
@@ -515,12 +498,10 @@ export const importData = async (file: File) => {
                 currentLessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
                 data.lessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
                 const uniqueLessons = Array.from(lessonMap.values());
-
                 const mergedFiles = { ...currentFiles, ...data.files };
 
                 await dbSet(STORAGE_LESSONS_KEY, uniqueLessons);
                 await dbSet(STORAGE_FILES_KEY, mergedFiles);
-
                 resolve();
             } catch (err) {
                 reject(err);
