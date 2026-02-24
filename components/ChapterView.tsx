@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye, BookOpen, Zap, CheckCircle2, Circle, Loader2, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye, BookOpen, Zap, CheckCircle2, Circle } from 'lucide-react';
 import SearchBar from './SearchBar';
 import Modal from './Modal';
 import { Chapter, Lesson, StoredFile } from '../types';
 
 // ── Progress Types ──────────────────────────────────────────
-type ProgressStatus = 'none' | 'in_progress' | 'done';
+type ProgressStatus = 'none' | 'done';
 interface LessonProgress {
   status: ProgressStatus;
   note: string;
@@ -26,96 +26,68 @@ function saveProgress(map: ProgressMap) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
 }
 
-// ── Status config ────────────────────────────────────────────
-const STATUS_CONFIG: Record<ProgressStatus, { label: string; color: string; bg: string; next: ProgressStatus }> = {
-  none: { label: 'Chưa làm', color: '#AEACA8', bg: '#F1F0EC', next: 'in_progress' },
-  in_progress: { label: 'Đang làm', color: '#6B7CDB', bg: '#EEF0FB', next: 'done' },
-  done: { label: 'Hoàn thành', color: '#448361', bg: '#EAF3EE', next: 'none' },
-};
-
-// ── Status Button ────────────────────────────────────────────
+// ── Status Button (2 states: none / done) ────────────────────
 const StatusBtn: React.FC<{
   status: ProgressStatus;
   onClick: (e: React.MouseEvent) => void;
 }> = ({ status, onClick }) => {
-  const cfg = STATUS_CONFIG[status];
+  const isDone = status === 'done';
   return (
     <button
       onClick={onClick}
-      title={`${cfg.label} — Click để đổi`}
+      title={isDone ? 'Hoàn thành — Click để bỏ' : 'Đánh dấu hoàn thành'}
       className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all"
-      style={{ background: cfg.bg, border: `2px solid ${cfg.color}60` }}
-      onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = 'scale(1.1)'}
+      style={{
+        background: isDone ? '#EAF3EE' : '#F1F0EC',
+        border: `2px solid ${isDone ? '#44836180' : '#AEACA860'}`,
+      }}
+      onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = 'scale(1.12)'}
       onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = 'scale(1)'}
     >
-      {status === 'none' && <Circle className="w-3.5 h-3.5" style={{ color: cfg.color }} />}
-      {status === 'in_progress' && <Loader2 className="w-3.5 h-3.5" style={{ color: cfg.color }} />}
-      {status === 'done' && <CheckCircle2 className="w-3.5 h-3.5" style={{ color: cfg.color }} />}
+      {isDone
+        ? <CheckCircle2 className="w-3.5 h-3.5" style={{ color: '#448361' }} />
+        : <Circle className="w-3.5 h-3.5" style={{ color: '#CFCFCB' }} />
+      }
     </button>
   );
 };
 
-// ── Inline Note ───────────────────────────────────────────────
+// ── Inline Note — always visible input style ──────────────────
 const InlineNote: React.FC<{
   lessonId: string;
   note: string;
   onSave: (id: string, note: string) => void;
 }> = ({ lessonId, note, onSave }) => {
-  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setDraft(note); }, [note]);
 
-  const handleBlur = () => {
-    setEditing(false);
-    onSave(lessonId, draft.trim());
-  };
+  const handleBlur = () => onSave(lessonId, draft.trim());
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') { e.preventDefault(); handleBlur(); }
-    if (e.key === 'Escape') { setDraft(note); setEditing(false); }
+    if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); }
+    if (e.key === 'Escape') { setDraft(note); (e.currentTarget as HTMLInputElement).blur(); }
   };
 
-  if (editing) {
-    return (
-      <input
-        ref={inputRef}
-        value={draft}
-        onChange={e => setDraft(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        autoFocus
-        maxLength={80}
-        onClick={e => e.stopPropagation()}
-        placeholder="VD: đang ở câu 5, trang 3..."
-        className="flex-1 min-w-0 text-xs px-2 py-1 rounded-md outline-none"
-        style={{
-          background: '#FFFFFF',
-          border: '1px solid #6B7CDB',
-          color: '#1A1A1A',
-        }}
-      />
-    );
-  }
-
   return (
-    <div
-      onClick={e => { e.stopPropagation(); setEditing(true); }}
-      className="flex-1 min-w-0 flex items-center gap-1 cursor-text group/note"
-      title="Click để ghi chú"
-    >
-      {note ? (
-        <>
-          <span className="text-xs truncate" style={{ color: '#6B6A65' }}>{note}</span>
-          <Pencil className="w-3 h-3 shrink-0 opacity-0 group-hover/note:opacity-60 transition-opacity" style={{ color: '#787774' }} />
-        </>
-      ) : (
-        <span className="text-xs opacity-0 group-hover/note:opacity-40 transition-opacity whitespace-nowrap" style={{ color: '#AEACA8' }}>
-          + Ghi chú...
-        </span>
-      )}
-    </div>
+    <input
+      value={draft}
+      onChange={e => setDraft(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      onClick={e => e.stopPropagation()}
+      maxLength={80}
+      placeholder="VD: đang ở câu 5, trang 3..."
+      className="flex-1 min-w-0 text-xs px-2.5 py-1.5 rounded-lg outline-none transition-colors"
+      style={{
+        background: '#FFFFFF',
+        border: '1px solid #E9E9E7',
+        color: '#1A1A1A',
+        minWidth: 0,
+      }}
+      onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+      onBlur2={undefined as any}
+    />
   );
 };
 
@@ -218,7 +190,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
     e.stopPropagation();
     setProgress(prev => {
       const cur = prev[lessonId] ?? { status: 'none', note: '', updatedAt: 0 };
-      const next = STATUS_CONFIG[cur.status].next;
+      const next: ProgressStatus = cur.status === 'done' ? 'none' : 'done';
       const updated = { ...prev, [lessonId]: { ...cur, status: next, updatedAt: Date.now() } };
       saveProgress(updated);
       return updated;
@@ -227,10 +199,8 @@ const ChapterView: React.FC<ChapterViewProps> = ({
 
   const saveNote = useCallback((lessonId: string, note: string) => {
     setProgress(prev => {
-      const cur = prev[lessonId] ?? { status: 'in_progress', note: '', updatedAt: 0 };
-      // Auto-set đang làm nếu chưa có trạng thái và có ghi chú
-      const status = cur.status === 'none' && note ? 'in_progress' : cur.status;
-      const updated = { ...prev, [lessonId]: { ...cur, note, status, updatedAt: Date.now() } };
+      const cur = prev[lessonId] ?? { status: 'none', note: '', updatedAt: 0 };
+      const updated = { ...prev, [lessonId]: { ...cur, note, updatedAt: Date.now() } };
       saveProgress(updated);
       return updated;
     });
@@ -266,7 +236,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
 
   // Progress summary
   const doneCount = lessons.filter(l => getLP(l.id).status === 'done').length;
-  const inProgressCount = lessons.filter(l => getLP(l.id).status === 'in_progress').length;
+  const inProgressCount = 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
