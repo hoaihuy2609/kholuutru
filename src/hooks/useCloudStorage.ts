@@ -341,11 +341,16 @@ export const useCloudStorage = () => {
         if (!TELEGRAM_TOKEN) throw new Error('Chưa cấu hình Telegram');
         setSyncProgress(1); // Bắt đầu: 1%
 
-        if (lessonsToSync.length === 0) {
-            throw new Error('Này bro, chưa có bài giảng nào để Sync đâu! Hãy thêm ít nhất 1 bài nhé.');
+        if (lessonsToSync.length === 0 && Object.keys(filesToSync).length === 0) {
+            throw new Error('Này bro, chưa có bài giảng hay tài liệu nào để Sync đâu! Hãy thêm ít nhất 1 bài nhé.');
         }
 
-        const chapterIds = Array.from(new Set(lessonsToSync.map(l => l.chapterId)));
+        // Lấy tất cả chapterId: từ lessons VÀ từ file cấp chương (filesToSync key = chapterId)
+        const lessonIds = new Set(lessonsToSync.map(l => l.id));
+        const lessonChapterIds = lessonsToSync.map(l => l.chapterId);
+        // Key trong filesToSync mà KHÔNG phải lessonId → là chapterId
+        const fileOnlyChapterIds = Object.keys(filesToSync).filter(k => !lessonIds.has(k));
+        const chapterIds = Array.from(new Set([...lessonChapterIds, ...fileOnlyChapterIds]));
         const chapterFileIds: Record<string, string> = {};
 
         // 1. Chuẩn bị các Blob dữ liệu và tính tổng dung lượng để track progress
@@ -355,8 +360,10 @@ export const useCloudStorage = () => {
         for (const chId of chapterIds) {
             const chLessons = lessonsToSync.filter(l => l.chapterId === chId);
             const chFiles: FileStorage = {};
+            // Bao gồm cả file cấp chương (key = chapterId) - "Trắc nghiệm", "Lý thuyết", v.v.
+            if (filesToSync[chId]) chFiles[chId] = filesToSync[chId];
             chLessons.forEach(l => { if (filesToSync[l.id]) chFiles[l.id] = filesToSync[l.id]; });
-            if (chLessons.length === 0) continue;
+            if (chLessons.length === 0 && !chFiles[chId]) continue;
 
             const payload = { chapterId: chId, lessons: chLessons, files: chFiles, syncedAt: Date.now() };
             const content = xorObfuscate(JSON.stringify(payload));
