@@ -266,13 +266,11 @@ export const useCloudStorage = () => {
         return false;
     };
 
-    // --- Telegram Cloud Sync: Fetch bài giảng theo grade (Tải toàn bộ các chương trong 1 lượt) ---
-    // --- Telegram Cloud Sync: Fetch bài giảng theo grade (Tải toàn bộ các chương trong 1 lượt) ---
+    // --- Telegram Cloud Sync: Fetch bài giảng theo grade ---
     const fetchLessonsFromGitHub = async (grade: number): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
-        console.log(`[CloudSync] Đang hỏi Google cho Lớp ${grade} tại URL: ${GOOGLE_SCRIPT_URL}`);
+        console.log(`[CloudSync] Đang hỏi Google cho Lớp ${grade}`);
 
-        // 1. Hỏi Google Sheets xem địa chỉ ID mới nhất của lớp này là gì
         try {
             const latestIndexRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_latest_index&grade=${grade}`);
             const latestIndexResult = await latestIndexRes.json();
@@ -280,53 +278,61 @@ export const useCloudStorage = () => {
             const indexFileId = latestIndexResult.file_id || localStorage.getItem(`pv_sync_file_id_${grade}`);
             if (!indexFileId) throw new Error(`Hệ thống chưa có dữ liệu cho Lớp ${grade}. Thầy vui lòng Sync trước nhé!`);
 
-            // 2. Tải file MỤC LỤC trước để biết có bao nhiêu chương cần kéo về
             const indexRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${indexFileId}`);
             const indexResult = await indexRes.json();
 
             if (!indexResult.success) {
-                console.error("[CloudSync] GAS Error:", indexResult.error);
                 throw new Error(indexResult.error || "Không thể tải Mục lục từ Telegram qua Google Script.");
             }
 
             const indexData = JSON.parse(xorDeobfuscate(indexResult.data));
-            const chapterFileIds = indexData.chapterFileIds as Record<string, string>;
 
             const currentLessons = await dbGet(STORAGE_LESSONS_KEY) || [];
             const currentFiles = await dbGet(STORAGE_FILES_KEY) || {};
-
             const newLessonsMap = new Map();
             currentLessons.forEach((l: Lesson) => newLessonsMap.set(l.id, l));
             const newFiles = { ...currentFiles };
-
-            // 3. Tải tất cả các Chương (Dùng Promise.all để tải song song cho nhanh)
-            const chapterIds = Object.keys(chapterFileIds);
-            const chapterPromises = chapterIds.map(async (chId) => {
-                const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${chapterFileIds[chId]}`);
-                const result = await res.json();
-                if (result.success) {
-                    return JSON.parse(xorDeobfuscate(result.data));
-                }
-                return null;
-            });
-
-            const allChaptersData = await Promise.all(chapterPromises);
             let totalLessonCount = 0;
             let totalFileCount = 0;
 
-            allChaptersData.forEach(chapterData => {
-                if (chapterData) {
-                    chapterData.lessons.forEach((l: Lesson) => newLessonsMap.set(l.id, l));
-                    Object.assign(newFiles, chapterData.files);
-                    totalLessonCount += chapterData.lessons.length;
-                    totalFileCount += Object.values(chapterData.files as FileStorage).flat().length;
-                }
-            });
+            // Helper: fetch 1 file từ Telegram qua GAS
+            const fetchOneFile = async (fileId: string) => {
+                const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${fileId}`);
+                const result = await res.json();
+                if (result.success) return JSON.parse(xorDeobfuscate(result.data));
+                return null;
+            };
+
+            // Helper: gộp dữ liệu từ 1 payload vào state
+            const mergePayload = (data: any) => {
+                if (!data) return;
+                (data.lessons || []).forEach((l: Lesson) => newLessonsMap.set(l.id, l));
+                Object.assign(newFiles, data.files || {});
+                totalLessonCount += (data.lessons || []).length;
+                totalFileCount += Object.values((data.files || {}) as FileStorage).flat().length;
+            };
+
+            // --- Lấy tất cả file IDs cần fetch ---
+            let allIds: string[] = [];
+            if (indexData.lessonFileIds) {
+                // Format mới V2: flat array
+                allIds = indexData.lessonFileIds as string[];
+            } else if (indexData.chapterFileIds) {
+                // Format cũ V1: { chId: fileId }
+                allIds = Object.values(indexData.chapterFileIds as Record<string, string>);
+            }
+
+            // Fetch song song theo batch 8 để tránh rate-limit
+            const BATCH = 8;
+            for (let i = 0; i < allIds.length; i += BATCH) {
+                const chunk = allIds.slice(i, i + BATCH);
+                const results = await Promise.all(chunk.map(fetchOneFile));
+                results.forEach(mergePayload);
+            }
 
             const uniqueLessons = Array.from(newLessonsMap.values()) as Lesson[];
             await dbSet(STORAGE_LESSONS_KEY, uniqueLessons);
             await dbSet(STORAGE_FILES_KEY, newFiles);
-
             setLessons(uniqueLessons);
             setStoredFiles(newFiles);
 
@@ -336,113 +342,103 @@ export const useCloudStorage = () => {
         }
     };
 
-    // --- Telegram Cloud Sync: Push bài giảng lên Telegram (TÁCH NHỎ THEO CHƯƠNG) ---
+    // --- Telegram Cloud Sync: Push lên Telegram (V2 — 1 file/lesson, tránh vượt 20MB) ---
     const syncToGitHub = async (grade: number, lessonsToSync: Lesson[], filesToSync: FileStorage): Promise<string> => {
         if (!TELEGRAM_TOKEN) throw new Error('Chưa cấu hình Telegram');
-        setSyncProgress(1); // Bắt đầu: 1%
+        setSyncProgress(1);
 
         if (lessonsToSync.length === 0 && Object.keys(filesToSync).length === 0) {
             throw new Error('Này bro, chưa có bài giảng hay tài liệu nào để Sync đâu! Hãy thêm ít nhất 1 bài nhé.');
         }
 
-        // Lấy tất cả chapterId: từ lessons VÀ từ file cấp chương (filesToSync key = chapterId)
+        // Xác định file cấp chương (key không phải lessonId)
         const lessonIds = new Set(lessonsToSync.map(l => l.id));
-        const lessonChapterIds = lessonsToSync.map(l => l.chapterId);
-        // Key trong filesToSync mà KHÔNG phải lessonId → là chapterId
         const fileOnlyChapterIds = Object.keys(filesToSync).filter(k => !lessonIds.has(k));
-        const chapterIds = Array.from(new Set([...lessonChapterIds, ...fileOnlyChapterIds]));
-        const chapterFileIds: Record<string, string> = {};
 
-        // 1. Chuẩn bị các Blob dữ liệu và tính tổng dung lượng để track progress
-        const chapterBlobs: { chId: string, blob: Blob }[] = [];
+        // Tạo danh sách payloads: 1 payload/lesson (+ riêng cho file cấp chương)
+        type PayloadEntry = { chapterId: string; lessons: Lesson[]; files: FileStorage };
+        const payloads: PayloadEntry[] = [];
+
+        for (const chId of fileOnlyChapterIds) {
+            if (filesToSync[chId]?.length) {
+                payloads.push({ chapterId: chId, lessons: [], files: { [chId]: filesToSync[chId] } });
+            }
+        }
+        for (const lesson of lessonsToSync) {
+            const lessonFiles: FileStorage = {};
+            if (filesToSync[lesson.id]?.length) lessonFiles[lesson.id] = filesToSync[lesson.id];
+            payloads.push({ chapterId: lesson.chapterId, lessons: [lesson], files: lessonFiles });
+        }
+
+        // Chuẩn bị blobs
+        const blobs: Blob[] = [];
         let totalUploadSize = 0;
-
-        for (const chId of chapterIds) {
-            const chLessons = lessonsToSync.filter(l => l.chapterId === chId);
-            const chFiles: FileStorage = {};
-            // Bao gồm cả file cấp chương (key = chapterId) - "Trắc nghiệm", "Lý thuyết", v.v.
-            if (filesToSync[chId]) chFiles[chId] = filesToSync[chId];
-            chLessons.forEach(l => { if (filesToSync[l.id]) chFiles[l.id] = filesToSync[l.id]; });
-            if (chLessons.length === 0 && !chFiles[chId]) continue;
-
-            const payload = { chapterId: chId, lessons: chLessons, files: chFiles, syncedAt: Date.now() };
-            const content = xorObfuscate(JSON.stringify(payload));
+        for (const p of payloads) {
+            const content = xorObfuscate(JSON.stringify({ ...p, syncedAt: Date.now() }));
             const blob = new Blob([content], { type: 'application/json' });
-            chapterBlobs.push({ chId, blob });
+            blobs.push(blob);
             totalUploadSize += blob.size;
         }
 
-        // 2. Gửi từng Chương và track progress thực tế
-        let totalBytesSentOverall = 0;
-        for (const { chId, blob } of chapterBlobs) {
+        // Upload từng blob & thu thập file_id
+        const lessonFileIds: string[] = [];
+        let totalBytesSent = 0;
+        for (let i = 0; i < blobs.length; i++) {
+            const blob = blobs[i];
+            const p = payloads[i];
+            const fileName = `g${grade}_${p.chapterId}_${p.lessons[0]?.id || 'ch'}.json`;
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM_CHAT_ID);
-            formData.append('document', blob, `grade${grade}_${chId}.json`);
+            formData.append('document', blob, fileName);
 
-            const chapterRes = await new Promise<any>((resolve, reject) => {
+            const res = await new Promise<any>((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`);
                 xhr.upload.onprogress = (e) => {
                     if (e.lengthComputable) {
-                        const currentSent = totalBytesSentOverall + e.loaded;
-                        const percent = Math.floor((currentSent / totalUploadSize) * 95);
-                        setSyncProgress(percent);
+                        const percent = Math.floor(((totalBytesSent + e.loaded) / totalUploadSize) * 93) + 1;
+                        setSyncProgress(Math.min(percent, 93));
                     }
                 };
                 xhr.onload = () => {
                     if (xhr.status === 200) resolve(JSON.parse(xhr.responseText));
-                    else reject(new Error(xhr.statusText));
+                    else reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText.slice(0, 200)}`));
                 };
                 xhr.onerror = () => reject(new Error("Network Error"));
                 xhr.send(formData);
             });
 
-            chapterFileIds[chId] = chapterRes.result.document.file_id;
-            totalBytesSentOverall += blob.size;
+            lessonFileIds.push(res.result.document.file_id);
+            totalBytesSent += blob.size;
         }
 
-        // 3. Gửi file Index cuối cùng
-        const indexPayload = { grade, chapterFileIds, updatedAt: Date.now() };
-        const indexContent = xorObfuscate(JSON.stringify(indexPayload));
-        const indexBlob = new Blob([indexContent], { type: 'application/json' });
-        const indexFormData = new FormData();
-        indexFormData.append('chat_id', TELEGRAM_CHAT_ID);
-        indexFormData.append('document', indexBlob, `index_grade${grade}.json`);
-        indexFormData.append('caption', `[INDEX] Lớp ${grade} - Đã tách thành ${chapterIds.length} tệp chương`);
+        // Gửi file Index V2
+        setSyncProgress(95);
+        const indexPayload = { grade, lessonFileIds, totalLessons: lessonsToSync.length, updatedAt: Date.now() };
+        const indexBlob = new Blob([xorObfuscate(JSON.stringify(indexPayload))], { type: 'application/json' });
+        const indexForm = new FormData();
+        indexForm.append('chat_id', TELEGRAM_CHAT_ID);
+        indexForm.append('document', indexBlob, `index_grade${grade}_v2.json`);
+        indexForm.append('caption', `[INDEX-V2] Lớp ${grade} — ${payloads.length} tệp`);
 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
         const indexRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
-            method: 'POST',
-            body: indexFormData
+            method: 'POST', body: indexForm
         });
+        if (!indexRes.ok) { setSyncProgress(0); throw new Error(`Lỗi upload Index: ${indexRes.statusText}`); }
 
-        if (indexRes.ok) {
-            const data = await indexRes.json();
-            const finalFileId = data.result.document.file_id;
+        const finalFileId = (await indexRes.json()).result.document.file_id;
 
-            // Ghi lại File ID này lên Google Sheets (Bỏ no-cors để Cốc Cốc không chặn)
-            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
-            console.log(`[CloudSync] Đang ghi đè ID mới lên Google Sheets...`);
+        const sheetRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=${grade}&file_id=${finalFileId}`);
+        if (!sheetRes.ok) throw new Error("Không thể ghi địa chỉ lên Google Sheets.");
+        const sheetResult = await sheetRes.json();
+        if (!sheetResult.success) throw new Error("Google Sheets từ chối lưu: " + (sheetResult.error || "Lỗi không xác định"));
 
-            const sheetRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=${grade}&file_id=${finalFileId}`);
-            if (!sheetRes.ok) {
-                throw new Error("Không thể ghi địa chỉ bài giảng lên Google Sheets. Bro hãy kiểm tra lại quyền truy cập của App Script nhé!");
-            }
-
-            const sheetResult = await sheetRes.json();
-            if (!sheetResult.success) {
-                throw new Error("Google Sheets từ chối lưu địa chỉ: " + (sheetResult.error || "Lỗi không xác định"));
-            }
-
-            localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
-            setSyncProgress(100);
-            setTimeout(() => setSyncProgress(0), 1000);
-            return finalFileId;
-        } else {
-            setSyncProgress(0);
-            throw new Error(`Lỗi upload Index: ${indexRes.statusText}`);
-        }
+        localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
+        setSyncProgress(100);
+        setTimeout(() => setSyncProgress(0), 1000);
+        return finalFileId;
     };
-
     const verifyAccess = async (): Promise<'ok' | 'kicked' | 'offline_expired'> => {
         const sdt = localStorage.getItem('pv_activated_sdt');
         const isCurrentlyActivated = localStorage.getItem(STORAGE_ACTIVATION_KEY) === 'true';
