@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 interface Student {
-    sdt: string;
+    sdt: string;       // luôn normalize thành string sau khi fetch
     name: string;
     machineId: string;
     key: string;
@@ -57,7 +57,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
             console.log("[Admin] Kết quả từ Google:", result);
 
             if (result.success && Array.isArray(result.data)) {
-                setStudents(result.data);
+                // Helper: chuyển giá trị null/undefined/falsy về '' tránh "null" string
+                const safe = (v: unknown): string => {
+                    if (v === null || v === undefined || v === 'null' || v === 'undefined') return '';
+                    return String(v).trim();
+                };
+                // Normalize toàn bộ fields - GSheets API có thể trả số cho sdt, null cho machineId
+                const normalized: Student[] = result.data
+                    .filter((row: unknown) => row && typeof row === 'object')
+                    .map((row: Record<string, unknown>) => ({
+                        sdt: safe(row.sdt),
+                        name: safe(row.name) || 'Học viên',
+                        machineId: safe(row.machineId),
+                        key: safe(row.key),
+                        status: safe(row.status) || 'pending',
+                        grade: row.grade !== undefined && row.grade !== null && row.grade !== '' ? Number(row.grade) : 12,
+                    }));
+                setStudents(normalized);
             } else {
                 console.warn("[Admin] Dữ liệu học sinh không phải Array hoặc fetch thất bại:", result);
                 setStudents([]);
