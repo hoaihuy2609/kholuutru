@@ -4,7 +4,7 @@ import {
     Users, UserPlus, Trash2, Search, RefreshCw,
     ShieldCheck, Monitor, Phone,
     TrendingUp, UserCheck, ShieldAlert, LayoutDashboard,
-    UserMinus, RotateCcw, Ban, ArrowLeft, X
+    UserMinus, RotateCcw, Ban, ArrowLeft, X, CloudUpload
 } from 'lucide-react';
 
 interface Student {
@@ -15,11 +15,12 @@ interface Student {
     status: string;
 }
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqtcHkPal4oAB0R0A6s2WmxsS6SOxsQefruSPZXEJm_c_Ivl6sW_HnqOVDxUuoAH-W/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1gPydkWrJLGmRPAxjEJQ3JCkWYRG3c67I28jmZvh6aiF5UqslfoHw4l24OHXKPMQj/exec";
 
 interface AdminDashboardProps {
     onBack: () => void;
     onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+    onOpenGitHubSync: () => void;
 }
 
 /* Shared inline input style */
@@ -34,11 +35,11 @@ const inputSt: React.CSSProperties = {
     outline: 'none',
 };
 
-const Loader2 = ({ className }: { className?: string }) => (
-    <RefreshCw className={`${className} animate-spin`} />
+const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+    <RefreshCw className={`${className} animate-spin`} style={style} />
 );
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, onOpenGitHubSync }) => {
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -190,6 +191,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast }) 
                         <UserCheck className="w-4 h-4" />
                         Thầy Huy Online
                     </div>
+                    <button
+                        onClick={onOpenGitHubSync}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+                        style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #44836133' }}
+                        title="Quản lý & Sync bài giảng lên GitHub"
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#D5E8DD'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#EAF3EE'}
+                    >
+                        <CloudUpload className="w-4 h-4" />
+                        <span className="hidden md:inline">Cloud Sync</span>
+                    </button>
                     <button
                         onClick={fetchStudents}
                         className="p-2 rounded-lg transition-colors"

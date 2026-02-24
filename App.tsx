@@ -13,6 +13,7 @@ import SettingsModal from './components/SettingsModal';
 import GuideModal from './components/GuideModal';
 import Chatbot from './components/Chatbot';
 import AdminDashboard from './components/AdminDashboard';
+import AdminGitHubSync from './components/AdminGitHubSync';
 
 interface ToastMessage {
   id: string;
@@ -61,6 +62,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [showGitHubSync, setShowGitHubSync] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const toggleAdmin = (status: boolean) => {
@@ -604,6 +606,17 @@ function App() {
       {showAdminDashboard && (
         <AdminDashboard
           onBack={() => setShowAdminDashboard(false)}
+          onShowToast={showToast}
+          onOpenGitHubSync={() => {
+            setShowAdminDashboard(false);
+            setShowGitHubSync(true);
+          }}
+        />
+      )}
+
+      {showGitHubSync && (
+        <AdminGitHubSync
+          onBack={() => setShowGitHubSync(false)}
           onShowToast={showToast}
         />
       )}

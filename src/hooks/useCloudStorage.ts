@@ -7,12 +7,57 @@ import { Lesson, StoredFile, FileStorage } from '../../types';
 const STORAGE_FILES_KEY = 'physivault_files';
 const STORAGE_LESSONS_KEY = 'physivault_lessons';
 const STORAGE_ACTIVATION_KEY = 'physivault_activated';
+const STORAGE_GRADE_KEY = 'physivault_grade';
 const DB_NAME = 'PhysiVaultDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'app_data';
 
 // --- System Security Salts ---
 const SYSTEM_SALT = "PHV_SECURITY_2026_BY_HUY"; // Chìa khóa hệ thống nội bộ
+
+// --- GitHub Cloud Sync Config ---
+// Các biến này được đọc từ .env.local
+const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
+const GITHUB_REPO = import.meta.env.VITE_GITHUB_REPO || ''; // format: "username/repo"
+const GITHUB_BRANCH = import.meta.env.VITE_GITHUB_BRANCH || 'main';
+
+// --- XOR Obfuscation for GitHub content ---
+const XOR_KEY = 'PHV2026';
+
+export const xorObfuscate = (data: string): string => {
+    // Encode UTF-8 string → bytes để tránh lỗi với ký tự tiếng Việt
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(data);
+    const keyBytes = encoder.encode(XOR_KEY);
+    const result = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) {
+        result[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
+    }
+    // Chuyển bytes → base64 an toàn
+    return btoa(String.fromCharCode(...result));
+};
+
+export const xorDeobfuscate = (encoded: string): string => {
+    try {
+        const encoder = new TextEncoder();
+        const keyBytes = encoder.encode(XOR_KEY);
+        // base64 → bytes
+        const binaryStr = atob(encoded);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+        }
+        // XOR ngược lại
+        const result = new Uint8Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) {
+            result[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
+        }
+        // Decode bytes → UTF-8 string
+        return new TextDecoder().decode(result);
+    } catch {
+        return encoded; // Nếu không phải XOR-encoded, trả về nguyên bản
+    }
+};
 
 // --- IndexedDB Helper ---
 const openDB = (): Promise<IDBDatabase> => {
@@ -202,16 +247,119 @@ export const useCloudStorage = () => {
         return Promise.resolve();
     };
 
-    const activateSystem = (key: string, sdt: string = ""): boolean => {
+    const activateSystem = (key: string, sdt: string = "", grade?: number): boolean => {
         const machineId = getMachineId();
         const expectedKey = generateActivationKey(machineId, sdt);
         if (key === expectedKey) {
             localStorage.setItem(STORAGE_ACTIVATION_KEY, 'true');
             if (sdt) localStorage.setItem('pv_activated_sdt', sdt);
+            if (grade) localStorage.setItem(STORAGE_GRADE_KEY, grade.toString());
             setIsActivated(true);
             return true;
         }
         return false;
+    };
+
+    // --- GitHub Cloud Sync: Fetch bài giảng theo grade ---
+    const fetchLessonsFromGitHub = async (grade: number): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
+        const fileName = `kho-${grade}.json`;
+        const rawUrl = GITHUB_REPO
+            ? `https://raw.githubusercontent.com/${GITHUB_REPO}/${GITHUB_BRANCH}/${fileName}`
+            : '';
+
+        if (!rawUrl) {
+            throw new Error('Chưa cấu hình GitHub Repo. Liên hệ Admin để được hỗ trợ.');
+        }
+
+        const response = await fetch(rawUrl + '?t=' + Date.now()); // Cache-bust
+        if (!response.ok) {
+            throw new Error(`Không tìm thấy dữ liệu cho Lớp ${grade} trên hệ thống.`);
+        }
+
+        const rawText = await response.text();
+
+        // Thử giải mã XOR, nếu thất bại thì parse trực tiếp
+        let data: { lessons: Lesson[]; files: FileStorage };
+        try {
+            const decoded = xorDeobfuscate(rawText);
+            data = JSON.parse(decoded);
+        } catch {
+            data = JSON.parse(rawText);
+        }
+
+        if (!data.lessons || !data.files) {
+            throw new Error('Dữ liệu từ GitHub không hợp lệ.');
+        }
+
+        // Merge vào IndexedDB (giữ nguyên bài giảng cũ, thêm mới)
+        const currentLessons = await dbGet(STORAGE_LESSONS_KEY) || [];
+        const currentFiles = await dbGet(STORAGE_FILES_KEY) || {};
+
+        const lessonMap = new Map();
+        currentLessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
+        data.lessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
+        const uniqueLessons = Array.from(lessonMap.values()) as Lesson[];
+
+        const mergedFiles = { ...currentFiles, ...data.files };
+
+        await dbSet(STORAGE_LESSONS_KEY, uniqueLessons);
+        await dbSet(STORAGE_FILES_KEY, mergedFiles);
+
+        setLessons(uniqueLessons);
+        setStoredFiles(mergedFiles);
+
+        return {
+            success: true,
+            lessonCount: data.lessons.length,
+            fileCount: Object.values(data.files).flat().length,
+        };
+    };
+
+    // --- GitHub Cloud Sync: Push bài giảng lên GitHub (Admin only) ---
+    const syncToGitHub = async (grade: number, lessonsToSync: Lesson[], filesToSync: FileStorage): Promise<void> => {
+        if (!GITHUB_TOKEN) throw new Error('Chưa cấu hình GitHub Token trong .env.local');
+        if (!GITHUB_REPO) throw new Error('Chưa cấu hình GitHub Repo trong .env.local');
+
+        const fileName = `kho-${grade}.json`;
+        const payload = { lessons: lessonsToSync, files: filesToSync, syncedAt: Date.now() };
+        const rawContent = JSON.stringify(payload);
+        // xorObfuscate đã trả về base64 string sẵn - dùng trực tiếp
+        const base64Content = xorObfuscate(rawContent);
+
+        // Kiểm tra file cũ để lấy SHA (cần để update)
+        const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${fileName}`;
+        let sha: string | undefined;
+
+        try {
+            const checkRes = await fetch(apiUrl, {
+                headers: { Authorization: `token ${GITHUB_TOKEN}` },
+            });
+            if (checkRes.ok) {
+                const checkData = await checkRes.json();
+                sha = checkData.sha;
+            }
+        } catch { /* File chưa tồn tại - OK */ }
+
+        const body: Record<string, unknown> = {
+            message: `[PhysiVault] Sync bài giảng Lớp ${grade} - ${new Date().toLocaleString('vi-VN')}`,
+            content: base64Content,
+            branch: GITHUB_BRANCH,
+        };
+        if (sha) body.sha = sha;
+
+        const res = await fetch(apiUrl, {
+            method: 'PUT',
+            headers: {
+                Authorization: `token ${GITHUB_TOKEN}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || `GitHub API error: ${res.status}`);
+        }
     };
 
     const verifyAccess = async (): Promise<'ok' | 'kicked' | 'offline_expired'> => {
@@ -221,7 +369,7 @@ export const useCloudStorage = () => {
         if (!isCurrentlyActivated || !sdt) return 'ok';
 
         const machineId = getMachineId();
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqtcHkPal4oAB0R0A6s2WmxsS6SOxsQefruSPZXEJm_c_Ivl6sW_HnqOVDxUuoAH-W/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1gPydkWrJLGmRPAxjEJQ3JCkWYRG3c67I28jmZvh6aiF5UqslfoHw4l24OHXKPMQj/exec";
         const OFFLINE_GRACE_PERIOD = 24 * 60 * 60 * 1000; // 24 giờ
 
         try {
@@ -267,7 +415,9 @@ export const useCloudStorage = () => {
         uploadFiles,
         deleteFile,
         activateSystem,
-        verifyAccess
+        verifyAccess,
+        fetchLessonsFromGitHub,
+        syncToGitHub,
     };
 };
 

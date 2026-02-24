@@ -1,9 +1,9 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone } from 'lucide-react';
+import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone, GraduationCap, CloudDownload, Loader2, RefreshCw } from 'lucide-react';
 import { useCloudStorage, exportData, importData, getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqtcHkPal4oAB0R0A6s2WmxsS6SOxsQefruSPZXEJm_c_Ivl6sW_HnqOVDxUuoAH-W/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1gPydkWrJLGmRPAxjEJQ3JCkWYRG3c67I28jmZvh6aiF5UqslfoHw4l24OHXKPMQj/exec";
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -28,18 +28,21 @@ const inputStyle: React.CSSProperties = {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowToast, isAdmin, onToggleAdmin, onOpenDashboard }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { lessons, storedFiles, isActivated, activateSystem } = useCloudStorage();
+    const { lessons, storedFiles, isActivated, activateSystem, fetchLessonsFromGitHub } = useCloudStorage();
     const [password, setPassword] = useState('');
     const [showPassInput, setShowPassInput] = useState(false);
 
     const [myMachineId, setMyMachineId] = useState('');
     const [studentKeyInput, setStudentKeyInput] = useState('');
     const [studentSdt, setStudentSdt] = useState('');
+    const [studentGrade, setStudentGrade] = useState<number>(12);
     const [adminTargetId, setAdminTargetId] = useState('');
     const [adminTargetSdt, setAdminTargetSdt] = useState('');
     const [studentName, setStudentName] = useState('');
     const [generatedKey, setGeneratedKey] = useState('');
     const [activationHistory, setActivationHistory] = useState<{ id: string; name: string; key: string; date: number }[]>([]);
+    const [isFetchingLessons, setIsFetchingLessons] = useState(false);
+    const [fetchResult, setFetchResult] = useState<{ lessonCount: number; fileCount: number } | null>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -81,15 +84,40 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         setAdminTargetSdt('');
     };
 
-    const handleActivate = () => {
+    const handleActivate = async () => {
         const sdt = studentSdt.trim();
         const key = studentKeyInput.trim();
         if (!sdt) { onShowToast('Vui lòng nhập Số điện thoại đã đăng ký!', 'warning'); return; }
-        if (activateSystem(key, sdt)) {
-            onShowToast('Kích hoạt hệ thống thành công!', 'success');
+        if (activateSystem(key, sdt, studentGrade)) {
+            onShowToast('Kích hoạt thành công! Đang tải bài giảng...', 'success');
             setStudentKeyInput('');
+            // Auto-fetch bài giảng từ GitHub
+            setIsFetchingLessons(true);
+            try {
+                const result = await fetchLessonsFromGitHub(studentGrade);
+                setFetchResult(result);
+                onShowToast(`✓ Đã nhận ${result.lessonCount} bài giảng từ hệ thống!`, 'success');
+            } catch (err: any) {
+                onShowToast(`Lưu ý: ${err.message}`, 'warning');
+            } finally {
+                setIsFetchingLessons(false);
+            }
         } else {
             onShowToast('Mã kích hoạt hoặc SĐT không khớp với máy này!', 'error');
+        }
+    };
+
+    const handleManualFetch = async () => {
+        const grade = parseInt(localStorage.getItem('physivault_grade') || '12');
+        setIsFetchingLessons(true);
+        try {
+            const result = await fetchLessonsFromGitHub(grade);
+            setFetchResult(result);
+            onShowToast(`✓ Đã tải ${result.lessonCount} bài giảng từ hệ thống!`, 'success');
+        } catch (err: any) {
+            onShowToast(`Lỗi tải bài giảng: ${err.message}`, 'error');
+        } finally {
+            setIsFetchingLessons(false);
         }
     };
 
@@ -317,6 +345,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
                             {/* Inputs */}
                             <div className="p-4 space-y-3" style={{ background: '#FAFAF9' }}>
+                                {/* Grade selector */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: '#AEACA8' }}>
+                                        <GraduationCap className="w-3 h-3" />
+                                        Bạn học lớp mấy?
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[10, 11, 12].map(g => (
+                                            <button
+                                                key={g}
+                                                onClick={() => setStudentGrade(g)}
+                                                className="py-2 text-sm font-semibold rounded-lg transition-all"
+                                                style={{
+                                                    background: studentGrade === g ? '#D9730D' : '#FFFFFF',
+                                                    color: studentGrade === g ? '#FFFFFF' : '#57564F',
+                                                    border: `1px solid ${studentGrade === g ? '#D9730D' : '#E9E9E7'}`,
+                                                }}
+                                            >
+                                                Lớp {g}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 {/* Phone */}
                                 <div className="relative">
                                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#AEACA8' }} />
@@ -358,14 +410,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                     </div>
                                     <button
                                         onClick={handleActivate}
-                                        className="px-5 text-sm font-semibold text-white rounded-lg transition-colors"
+                                        disabled={isFetchingLessons}
+                                        className="px-5 text-sm font-semibold text-white rounded-lg transition-colors disabled:opacity-70 flex items-center gap-2"
                                         style={{ background: '#D9730D' }}
-                                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#c4650b'}
+                                        onMouseEnter={e => !isFetchingLessons && ((e.currentTarget as HTMLElement).style.background = '#c4650b')}
                                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#D9730D'}
                                     >
-                                        Mở khóa
+                                        {isFetchingLessons ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Mở khóa'}
                                     </button>
                                 </div>
+
+                                {/* Fetch result */}
+                                {fetchResult && (
+                                    <div
+                                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs animate-fade-in"
+                                        style={{ background: '#EAF3EE', border: '1px solid #44836133', color: '#448361' }}
+                                    >
+                                        <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                                        <span>Đã nhận <b>{fetchResult.lessonCount} bài giảng</b> và <b>{fetchResult.fileCount} tài liệu</b> từ hệ thống!</span>
+                                    </div>
+                                )}
 
                                 {/* Machine ID */}
                                 <div className="flex items-center justify-between text-[10px]" style={{ color: '#AEACA8' }}>
@@ -375,6 +439,46 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                     </div>
                                     <span className="italic">* Nhập đúng SĐT để khớp với mã kích hoạt</span>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Cloud Sync section (Student, already activated) ── */}
+                    {!isAdmin && isActivated && (
+                        <div
+                            className="rounded-xl overflow-hidden"
+                            style={{ border: '1px solid #E9E9E7' }}
+                        >
+                            <div
+                                className="flex items-center gap-3 px-4 py-3"
+                                style={{ borderBottom: '1px solid #E9E9E7', borderLeft: '3px solid #448361' }}
+                            >
+                                <div className="p-2 rounded-lg" style={{ background: '#EAF3EE' }}>
+                                    <CloudDownload className="w-4 h-4" style={{ color: '#448361' }} />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Đồng bộ bài giảng</h4>
+                                    <p className="text-xs mt-0.5" style={{ color: '#787774' }}>Tải bài giảng mới nhất từ hệ thống về máy</p>
+                                </div>
+                            </div>
+                            <div className="p-4" style={{ background: '#FAFAF9' }}>
+                                <button
+                                    onClick={handleManualFetch}
+                                    disabled={isFetchingLessons}
+                                    className="w-full py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                                    style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #44836133' }}
+                                    onMouseEnter={e => !isFetchingLessons && ((e.currentTarget as HTMLElement).style.background = '#D5E8DD')}
+                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#EAF3EE'}
+                                >
+                                    {isFetchingLessons
+                                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang tải bài giảng...</>
+                                        : <><RefreshCw className="w-4 h-4" /> Tải bài giảng mới</>}
+                                </button>
+                                {fetchResult && (
+                                    <p className="text-xs text-center mt-2" style={{ color: '#448361' }}>
+                                        ✓ Đã nhận {fetchResult.lessonCount} bài · {fetchResult.fileCount} tài liệu
+                                    </p>
+                                )}
                             </div>
                         </div>
                     )}
