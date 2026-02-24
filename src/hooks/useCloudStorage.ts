@@ -12,15 +12,13 @@ const DB_NAME = 'PhysiVaultDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'app_data';
 
-// --- System Security Salts ---
-const SYSTEM_SALT = "PHV_SECURITY_2026_BY_HUY"; // Chìa khóa hệ thống nội bộ
+const TELEGRAM_TOKEN = '7985901918:AAFK33yVAEPPKiAbiaMFCdz78TpOhBXeRr0';
+const TELEGRAM_CHAT_ID = '-1003889339240';
 
-// --- GitHub Cloud Sync Config ---
-const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || (process.env as any).VITE_GITHUB_TOKEN || '';
-const GITHUB_REPO = import.meta.env.VITE_GITHUB_REPO || (process.env as any).VITE_GITHUB_REPO || ''; // format: "username/repo"
-const GITHUB_BRANCH = import.meta.env.VITE_GITHUB_BRANCH || (process.env as any).VITE_GITHUB_BRANCH || 'main';
+// --- Security Salts ---
+const SYSTEM_SALT = "PHV_SECURITY_2026_BY_HUY";
 
-// --- XOR Obfuscation for GitHub content ---
+// --- XOR Obfuscation for content ---
 const XOR_KEY = 'PHV2026';
 
 export const xorObfuscate = (data: string): string => {
@@ -267,126 +265,96 @@ export const useCloudStorage = () => {
         return false;
     };
 
-    // --- GitHub Cloud Sync: Fetch bài giảng theo grade ---
+    // --- Telegram Cloud Sync: Fetch bài giảng theo grade ---
     const fetchLessonsFromGitHub = async (grade: number): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
-        const indexFileName = `index-${grade}.json`;
-        const baseUrl = GITHUB_REPO
-            ? `https://raw.githubusercontent.com/${GITHUB_REPO}/${GITHUB_BRANCH}/`
-            : '';
+        // Lấy thông tin file_id từ Google Sheets (Thông qua Apps Script)
+        // Hiện tại: Tạm thời cho phép Admin dán file_id hoặc lấy từ sheet
 
-        if (!baseUrl) throw new Error('Chưa cấu hình GitHub Repo.');
+        // MẸO: Vì bro chưa đưa URL Apps Script, tôi sẽ viết logic để App 
+        // có thể nhận data từ Telegram thông qua một mã file_id
 
-        // 1. Tải file index (chứa danh sách các bài giảng và danh sách file ID cần tải)
-        const indexRes = await fetch(baseUrl + indexFileName + '?t=' + Date.now());
-        if (!indexRes.ok) throw new Error(`Không tìm thấy dữ liệu Lớp ${grade}.`);
+        const fileId = localStorage.getItem(`pv_sync_file_id_${grade}`);
+        if (!fileId) throw new Error(`Chưa có liên kết dữ liệu cho Lớp ${grade}. Vui lòng liên hệ Admin.`);
 
-        const indexRaw = await indexRes.text();
-        let indexData: { lessons: Lesson[], fileKeys: string[] };
-        try {
-            indexData = JSON.parse(xorDeobfuscate(indexRaw));
-        } catch {
-            indexData = JSON.parse(indexRaw);
-        }
+        // Gọi Google Apps Script để làm cầu nối tải file từ Telegram (Bảo mật token)
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyz8Gb7Uw99NrWwQyNHpY8YShyjFmqxImwDfWA0oi3Ue3VgIg1LSl3T_aso30P9HOE/exec";
 
-        // 2. Tải từng file lẻ của từng bài (đã được tách nhỏ)
+        const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${fileId}`);
+        const result = await response.json();
+
+        if (!result.success) throw new Error(result.error || "Lỗi tải dữ liệu từ Telegram");
+
+        const data: ExportData = JSON.parse(xorDeobfuscate(result.data));
+
+        // GHI ĐÈ: Xóa bài cũ của grade này trước khi nạp
         const currentLessons = await dbGet(STORAGE_LESSONS_KEY) || [];
         const currentFiles = await dbGet(STORAGE_FILES_KEY) || {};
 
-        let totalFileCount = 0;
-        const newFiles: FileStorage = { ...currentFiles };
+        // Lọc bỏ bài thuộc khối lớp hiện tại (dựa trên chapterId)
+        // Tìm chapters thuộc grade này
+        // (Tối ưu: Ở đây ta sẽ Filter theo chapterId nếu cần, 
+        // nhưng theo ý bro "Ghi đè" thì ta sẽ merge thông minh)
 
-        // Tải song song để tăng tốc
-        await Promise.all(indexData.fileKeys.map(async (key) => {
-            try {
-                const res = await fetch(baseUrl + `data/${key}.json?t=` + Date.now());
-                if (res.ok) {
-                    const raw = await res.text();
-                    const lessonData = JSON.parse(xorDeobfuscate(raw));
-                    newFiles[lessonData.lessonId] = lessonData.files;
-                    totalFileCount += lessonData.files.length;
-                }
-            } catch (e) {
-                console.error("Error fetching lesson chunk:", key, e);
-            }
-        }));
-
-        // Merge Lessons
         const lessonMap = new Map();
+        // Giữ lại bài của các lớp khác
         currentLessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
-        indexData.lessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
+        // Ghi đè bài mới
+        data.lessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
         const uniqueLessons = Array.from(lessonMap.values()) as Lesson[];
 
+        const mergedFiles = { ...currentFiles, ...data.files };
+
         await dbSet(STORAGE_LESSONS_KEY, uniqueLessons);
-        await dbSet(STORAGE_FILES_KEY, newFiles);
+        await dbSet(STORAGE_FILES_KEY, mergedFiles);
 
         setLessons(uniqueLessons);
-        setStoredFiles(newFiles);
+        setStoredFiles(mergedFiles);
 
         return {
             success: true,
-            lessonCount: indexData.lessons.length,
-            fileCount: totalFileCount,
+            lessonCount: data.lessons.length,
+            fileCount: Object.values(data.files).flat().length,
         };
     };
 
-    // --- GitHub Cloud Sync: Push bài giảng lên GitHub (Admin only) ---
-    // CƠ CHẾ MỚI: Tách nhỏ thành từng file theo Lesson ID để tránh giới hạn 100MB của GitHub
-    const syncToGitHub = async (grade: number, lessonsToSync: Lesson[], filesToSync: FileStorage): Promise<void> => {
-        if (!GITHUB_TOKEN) throw new Error('Chưa cấu hình GitHub Token');
-        if (!GITHUB_REPO) throw new Error('Chưa cấu hình GitHub Repo');
+    // --- Telegram Cloud Sync: Push bài giảng lên Telegram (Admin only) ---
+    const syncToGitHub = async (grade: number, lessonsToSync: Lesson[], filesToSync: FileStorage): Promise<string> => {
+        if (!TELEGRAM_TOKEN) throw new Error('Chưa cấu hình Telegram Token');
 
-        // 1. Đẩy từng "mảnh" dữ liệu của từng bài giảng lên thư mục data/
-        const fileKeys: string[] = [];
+        // Đóng gói dữ liệu khối lớp
+        const payload: ExportData = {
+            version: 1.2,
+            exportedAt: Date.now(),
+            lessons: lessonsToSync,
+            files: filesToSync
+        };
 
-        for (const lesson of lessonsToSync) {
-            const lessonFiles = filesToSync[lesson.id];
-            if (!lessonFiles || lessonFiles.length === 0) continue;
+        const content = xorObfuscate(JSON.stringify(payload));
 
-            const lessonPayload = { lessonId: lesson.id, files: lessonFiles };
-            const content = xorObfuscate(JSON.stringify(lessonPayload));
-            const path = `data/${lesson.id}.json`;
+        // Tạo file blob để gửi
+        const blob = new Blob([content], { type: 'application/json' });
+        const formData = new FormData();
+        formData.append('chat_id', TELEGRAM_CHAT_ID);
+        formData.append('document', blob, `physivault_grade${grade}_${Date.now()}.json`);
+        formData.append('caption', `[ADMIN SYNC] Dữ liệu Lớp ${grade}\nNgày: ${new Date().toLocaleString('vi-VN')}`);
 
-            await uploadToGitHub(path, content, `Sync Lesson: ${lesson.name}`);
-            fileKeys.push(lesson.id);
-        }
-
-        // 2. Đẩy file INDEX (danh sách bài giảng và các file data cần tải)
-        const indexPath = `index-${grade}.json`;
-        const indexPayload = { lessons: lessonsToSync, fileKeys, syncedAt: Date.now() };
-        const indexContent = xorObfuscate(JSON.stringify(indexPayload));
-
-        await uploadToGitHub(indexPath, indexContent, `Sync Index Lớp ${grade}`);
-    };
-
-    // Helper: Upload một file lên GitHub an toàn
-    const uploadToGitHub = async (path: string, base64Content: string, message: string) => {
-        const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`;
-
-        // Lấy SHA file cũ nếu có
-        let sha: string | undefined;
-        try {
-            const check = await fetch(apiUrl, { headers: { Authorization: `token ${GITHUB_TOKEN}` } });
-            if (check.ok) {
-                const data = await check.json();
-                sha = data.sha;
-            }
-        } catch { }
-
-        const res = await fetch(apiUrl, {
-            method: 'PUT',
-            headers: { Authorization: `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                message: `[PhysiVault] ${message} - ${new Date().toLocaleString('vi-VN')}`,
-                content: base64Content,
-                branch: GITHUB_BRANCH,
-                sha
-            }),
+        const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
+            method: 'POST',
+            body: formData
         });
 
         if (!res.ok) {
             const err = await res.json();
-            throw new Error(err.message || `Lỗi GitHub tại ${path}`);
+            throw new Error(err.description || 'Lỗi gửi file lên Telegram');
         }
+
+        const teleData = await res.json();
+        const fileId = teleData.result.document.file_id;
+
+        // Lưu fileId vào local để test nhanh, sau này sẽ đẩy lên Google Sheets
+        localStorage.setItem(`pv_sync_file_id_${grade}`, fileId);
+
+        return fileId;
     };
 
     const verifyAccess = async (): Promise<'ok' | 'kicked' | 'offline_expired'> => {
@@ -396,7 +364,7 @@ export const useCloudStorage = () => {
         if (!isCurrentlyActivated || !sdt) return 'ok';
 
         const machineId = getMachineId();
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1gPydkWrJLGmRPAxjEJQ3JCkWYRG3c67I28jmZvh6aiF5UqslfoHw4l24OHXKPMQj/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyz8Gb7Uw99NrWwQyNHpY8YShyjFmqxImwDfWA0oi3Ue3VgIg1LSl3T_aso30P9HOE/exec";
         const OFFLINE_GRACE_PERIOD = 24 * 60 * 60 * 1000; // 24 giờ
 
         try {

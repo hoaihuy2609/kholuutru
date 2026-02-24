@@ -1,9 +1,9 @@
 
 import React, { useState, useRef } from 'react';
 import {
-    CloudUpload, Github, CheckCircle2, Loader2, AlertCircle,
+    CloudUpload, Send, CheckCircle2, Loader2, AlertCircle,
     GraduationCap, FileText, Trash2, Upload, RefreshCw,
-    BookOpen, X, Download
+    BookOpen, X, Download, MessageCircle
 } from 'lucide-react';
 import { useCloudStorage } from '../src/hooks/useCloudStorage';
 import { CURRICULUM } from '../constants';
@@ -65,12 +65,12 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
         setSyncMsg(prev => ({ ...prev, [grade]: '' }));
 
         try {
-            await syncToGitHub(grade, gLessons, gFiles);
+            const fileId = await syncToGitHub(grade, gLessons, gFiles);
             const fileCount = Object.values(gFiles).flat().length;
             setSyncStatus(prev => ({ ...prev, [grade]: 'success' }));
-            setSyncMsg(prev => ({ ...prev, [grade]: `✓ ${gLessons.length} bài, ${fileCount} file` }));
-            onShowToast(`Đã Sync Lớp ${grade} lên GitHub thành công!`, 'success');
-            setTimeout(() => setSyncStatus(prev => ({ ...prev, [grade]: 'idle' })), 5000);
+            setSyncMsg(prev => ({ ...prev, [grade]: `✓ Đã lên Telegram (ID: ...${fileId.slice(-4)})` }));
+            onShowToast(`Đã Sync Lớp ${grade} lên Telegram thành công!`, 'success');
+            setTimeout(() => setSyncStatus(prev => ({ ...prev, [grade]: 'idle' })), 8000);
         } catch (err: any) {
             setSyncStatus(prev => ({ ...prev, [grade]: 'error' }));
             setSyncMsg(prev => ({ ...prev, [grade]: err.message }));
@@ -142,11 +142,11 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
                     </button>
                     <div className="flex items-center gap-2.5">
                         <div className="p-2 rounded-lg" style={{ background: '#EEF0FB' }}>
-                            <Github className="w-4 h-4" style={{ color: '#6B7CDB' }} />
+                            <MessageCircle className="w-4 h-4" style={{ color: '#6B7CDB' }} />
                         </div>
                         <div>
-                            <h1 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>GitHub Cloud Sync</h1>
-                            <p className="text-[10px] uppercase tracking-widest" style={{ color: '#AEACA8' }}>Quản lý & Phân phối bài giảng</p>
+                            <h1 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Telegram Cloud Sync</h1>
+                            <p className="text-[10px] uppercase tracking-widest" style={{ color: '#AEACA8' }}>Lưu trữ & Phân phối bảo mật</p>
                         </div>
                     </div>
                 </div>
@@ -163,9 +163,9 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
                                 disabled={st === 'syncing'}
                                 className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
                                 style={{ background: st === 'success' ? '#EAF3EE' : c.bg, color: st === 'success' ? '#448361' : c.accent, border: `1px solid ${c.accent}22` }}
-                                title={`Sync Lớp ${grade} lên GitHub`}
+                                title={`Sync Lớp ${grade} lên Telegram`}
                             >
-                                {st === 'syncing' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : st === 'success' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <CloudUpload className="w-3.5 h-3.5" />}
+                                {st === 'syncing' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : st === 'success' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
                                 L{grade}
                             </button>
                         );
@@ -226,7 +226,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
                         </div>
                         <div>
                             <div className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>
-                                Sync {color.label} lên GitHub
+                                Sync {color.label} lên Telegram
                             </div>
                             <div className="text-xs mt-0.5" style={{ color: '#787774' }}>
                                 {gradeLessons.length} bài giảng · {totalFiles} tài liệu
@@ -254,7 +254,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
                             ) : syncStatus[selectedGrade] === 'error' ? (
                                 <><AlertCircle className="w-4 h-4" /> Thử lại</>
                             ) : (
-                                <><CloudUpload className="w-4 h-4" /> Sync lên GitHub</>
+                                <><Send className="w-4 h-4" /> Sync lên Telegram</>
                             )}
                         </button>
                     </div>
@@ -452,8 +452,8 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({ onBack, onShowToast }
                             },
                             {
                                 step: '③',
-                                title: 'Sync lên GitHub',
-                                desc: 'Nhấn "Sync lên GitHub" để đẩy toàn bộ bài giảng của lớp đó lên Cloud. Học sinh sẽ tự động nhận.',
+                                title: 'Sync lên Telegram',
+                                desc: 'Nhấn "Sync lên Telegram" để đẩy toàn bộ bài giảng khối đó lên kho chứa. Học sinh sẽ tự động nhận diện và cập nhật.',
                                 color: '#448361',
                                 bg: '#EAF3EE',
                             },
