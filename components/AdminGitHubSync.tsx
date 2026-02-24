@@ -72,22 +72,32 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     const gradeData = CURRICULUM.find(g => g.level === selectedGrade);
     const gradeLessons = lessons.filter(l => gradeData?.chapters.map(c => c.id).includes(l.chapterId));
 
-    // Tổng hợp số file theo category cho toàn grade
+    // Tổng hợp số file theo category cho toàn grade (cả file cấp bài và cấp chương)
     const categorySummary = useMemo(() => {
         const counts: Record<string, number> = {};
         let uncategorized = 0;
         LESSON_CATEGORIES.forEach(cat => counts[cat] = 0);
+        // File cấp bài giảng
         gradeLessons.forEach(l => {
             (storedFiles[l.id] || []).forEach(f => {
                 if (f.category && LESSON_CATEGORIES.includes(f.category)) counts[f.category]++;
                 else uncategorized++;
             });
         });
+        // File cấp chương
+        gradeData?.chapters.forEach(ch => {
+            (storedFiles[ch.id] || []).forEach(f => {
+                if (f.category && LESSON_CATEGORIES.includes(f.category)) counts[f.category]++;
+                else uncategorized++;
+            });
+        });
         return { counts, uncategorized };
-    }, [gradeLessons, storedFiles]);
+    }, [gradeLessons, gradeData, storedFiles]);
 
     const gradeFiles: FileStorage = {};
     gradeLessons.forEach(l => { if (storedFiles[l.id]) gradeFiles[l.id] = storedFiles[l.id]; });
+    // ✅ Bao gồm file cấp chương trong tổng count
+    gradeData?.chapters.forEach(ch => { if (storedFiles[ch.id]?.length) gradeFiles[ch.id] = storedFiles[ch.id]; });
     const totalFiles = Object.values(gradeFiles).flat().length;
     const totalSize = Object.values(gradeFiles).flat().reduce((acc, f) => acc + f.size, 0);
 
@@ -96,7 +106,10 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
         if (!gData) return;
         const gLessons = lessons.filter(l => gData.chapters.map(c => c.id).includes(l.chapterId));
         const gFiles: FileStorage = {};
+        // Bao gồm file cấp bài giảng
         gLessons.forEach(l => { if (storedFiles[l.id]) gFiles[l.id] = storedFiles[l.id]; });
+        // ✅ Bao gồm file cấp chương (storedFiles[chapterId]) — trước đây bị bỏ sót!
+        gData.chapters.forEach(ch => { if (storedFiles[ch.id]?.length) gFiles[ch.id] = storedFiles[ch.id]; });
         if (gLessons.length === 0) { onShowToast(`Lớp ${grade} chưa có bài giảng nào!`, 'warning'); return; }
         setSyncStatus(prev => ({ ...prev, [grade]: 'syncing' }));
         setSyncMsg(prev => ({ ...prev, [grade]: '' }));
