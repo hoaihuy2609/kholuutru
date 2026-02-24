@@ -48,21 +48,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const [newStudent, setNewStudent] = useState({ sdt: '', name: '', grade: 12 });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const fetchStudents = async () => {
+    const refreshStudents = async () => {
         setLoading(true);
+        console.log("[Admin] Đang tải danh sách học sinh từ:", GOOGLE_SCRIPT_URL);
         try {
             const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=list`);
             const result = await response.json();
-            if (result.success) setStudents(result.data);
-            else onShowToast(result.msg || 'Lỗi lấy dữ liệu', 'error');
-        } catch {
-            onShowToast('Không thể kết nối với hệ thống quản lý', 'error');
+            console.log("[Admin] Kết quả từ Google:", result);
+
+            if (result.success && Array.isArray(result.data)) {
+                setStudents(result.data);
+            } else {
+                console.warn("[Admin] Dữ liệu học sinh không phải Array hoặc fetch thất bại:", result);
+                setStudents([]);
+            }
+        } catch (err) {
+            console.error("[Admin] Lỗi kết nối Google Script:", err);
+            setStudents([]);
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => { fetchStudents(); }, []);
+    useEffect(() => { refreshStudents(); }, []);
 
     const handleAddStudent = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -81,7 +89,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
             onShowToast('Đã gửi yêu cầu thêm học viên!', 'success');
             setIsAddModalOpen(false);
             setNewStudent({ sdt: '', name: '', grade: 12 });
-            setTimeout(fetchStudents, 2000);
+            setTimeout(refreshStudents, 2000);
         } catch {
             onShowToast('Lỗi khi thêm học viên', 'error');
         } finally {
@@ -94,7 +102,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         try {
             await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', sdt }) });
             onShowToast('Đã gửi yêu cầu xóa!', 'warning');
-            setTimeout(fetchStudents, 2000);
+            setTimeout(refreshStudents, 2000);
         } catch { onShowToast('Lỗi khi xóa học viên', 'error'); }
     };
 
@@ -103,7 +111,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         try {
             await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'kick', sdt }) });
             onShowToast(`Đã kick học viên ${name}!`, 'success');
-            setTimeout(fetchStudents, 2000);
+            setTimeout(refreshStudents, 2000);
         } catch { onShowToast('Lỗi khi kick học viên', 'error'); }
     };
 
@@ -112,7 +120,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         try {
             await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'unkick', sdt }) });
             onShowToast(`Đã mở khóa cho ${name}!`, 'success');
-            setTimeout(fetchStudents, 2000);
+            setTimeout(refreshStudents, 2000);
         } catch { onShowToast('Lỗi khi mở khóa học viên', 'error'); }
     };
 
@@ -209,7 +217,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                         <span className="hidden md:inline">Cloud Sync</span>
                     </button>
                     <button
-                        onClick={fetchStudents}
+                        onClick={refreshStudents}
                         className="p-2 rounded-lg transition-colors"
                         style={{ color: '#787774', border: '1px solid #E9E9E7', background: '#FFFFFF' }}
                         title="Tải lại dữ liệu"
