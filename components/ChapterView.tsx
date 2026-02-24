@@ -13,6 +13,15 @@ interface LessonProgress {
 type ProgressMap = Record<string, LessonProgress>;
 
 const STORAGE_KEY = 'physivault_lesson_progress';
+const SECTION_NOTE_KEY = 'physivault_section_notes';
+
+function loadSectionNotes(): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(SECTION_NOTE_KEY) || '{}'); }
+  catch { return {}; }
+}
+function saveSectionNotes(map: Record<string, string>) {
+  localStorage.setItem(SECTION_NOTE_KEY, JSON.stringify(map));
+}
 
 function loadProgress(): ProgressMap {
   try {
@@ -85,7 +94,6 @@ const InlineNote: React.FC<{
         minWidth: 0,
       }}
       onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
-      onBlur2={undefined as any}
     />
   );
 };
@@ -167,7 +175,16 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
   const [uploadCategory, setUploadCategory] = useState<string>('');
   const [progress, setProgress] = useState<ProgressMap>(loadProgress);
+  const [sectionNotes, setSectionNotes] = useState<Record<string, string>>(loadSectionNotes);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const saveSectionNote = useCallback((key: string, note: string) => {
+    setSectionNotes(prev => {
+      const updated = { ...prev, [key]: note };
+      saveSectionNotes(updated);
+      return updated;
+    });
+  }, []);
 
   // ── Answer Panel State ───────────────────────────────────────
   interface AnswerPanelState {
@@ -344,17 +361,58 @@ const ChapterView: React.FC<ChapterViewProps> = ({
     </div>
   );
 
+  /* ── Section Note Input ── */
+  const SectionNoteInput = ({ noteKey, accentColor }: { noteKey: string; accentColor: string }) => {
+    const [draft, setDraft] = useState(sectionNotes[noteKey] || '');
+
+    useEffect(() => { setDraft(sectionNotes[noteKey] || ''); }, [noteKey]);
+
+    const handleBlur = () => saveSectionNote(noteKey, draft.trim());
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); }
+      if (e.key === 'Escape') { setDraft(sectionNotes[noteKey] || ''); (e.currentTarget as HTMLInputElement).blur(); }
+    };
+
+    return (
+      <div className="relative">
+        <input
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          maxLength={40}
+          placeholder="FILE 1, CÂU 1"
+          className="text-xs px-2.5 py-1.5 rounded-md outline-none transition-colors w-32"
+          style={{
+            background: draft ? '#FFFFFF' : '#F1F0EC',
+            border: `1px solid ${draft ? accentColor + '60' : '#E9E9E7'}`,
+            color: '#1A1A1A',
+          }}
+          onFocus={e => { (e.currentTarget as HTMLElement).style.borderColor = accentColor; (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; }}
+          title="Ghi chú tiến độ (VD: FILE 1, CÂU 1)"
+        />
+        {draft && (
+          <span
+            className="absolute -top-1.5 -right-1.5 w-2 h-2 rounded-full"
+            style={{ background: accentColor }}
+            title="Đã có ghi chú"
+          />
+        )}
+      </div>
+    );
+  };
+
   /* ── Reusable category section ── */
   const CategorySection = ({
     title, description, icon: Icon, accentColor, accentBg,
     files, sortValue, onSortChange, uploadLabel, uploadCategory: cat,
-    showSort = false
+    showSort = false, noteKey,
   }: {
     title: string; description: string;
     icon: React.ElementType; accentColor: string; accentBg: string;
     files: StoredFile[]; sortValue?: string;
     onSortChange?: (v: any) => void; uploadLabel: string; uploadCategory: string;
-    showSort?: boolean;
+    showSort?: boolean; noteKey?: string;
   }) => (
     <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
       <div
@@ -371,6 +429,10 @@ const ChapterView: React.FC<ChapterViewProps> = ({
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          {/* Note input — chỉ học sinh thấy */}
+          {!isAdmin && noteKey && (
+            <SectionNoteInput noteKey={noteKey} accentColor={accentColor} />
+          )}
           {showSort && onSortChange && (
             <div className="relative">
               <select
@@ -665,6 +727,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
           uploadLabel="Tải bài Đúng/Sai"
           uploadCategory="Trắc nghiệm Đúng/Sai (Chương)"
           showSort
+          noteKey={`${chapter.id}__trueFalse`}
         />
 
         {/* ── Advanced Calculation ── */}
@@ -680,6 +743,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
           uploadLabel="Tải tài liệu nâng cao"
           uploadCategory="Bài tập Tính toán Nâng cao"
           showSort
+          noteKey={`${chapter.id}__advanced`}
         />
 
         <input
