@@ -271,51 +271,46 @@ function App() {
                 <div
                   key={chapter.id}
                   onClick={() => setCurrentChapterId(chapter.id)}
-                  className="rounded-2xl p-5 cursor-pointer group transition-all duration-200"
-                  style={{
-                    background: '#FFFFFF',
-                    border: '1px solid #E4E3E0',
-                    borderLeft: '3px solid #6B7CDB',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-                  }}
+                  className="rounded-xl p-5 cursor-pointer group transition-colors"
+                  style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
                   onMouseEnter={e => {
-                    (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(0,0,0,0.09)';
-                    (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                    (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
+                    (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
                   }}
                   onMouseLeave={e => {
-                    (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
-                    (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                    (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
+                    (e.currentTarget as HTMLElement).style.boxShadow = 'none';
                   }}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div
-                      className="p-2.5 rounded-xl"
-                      style={{ background: 'linear-gradient(135deg,#EEF0FB,#DDE2F7)' }}
+                      className="p-2.5 rounded-lg"
+                      style={{ background: '#EEF0FB' }}
                     >
                       <FolderOpen className="w-5 h-5" style={{ color: '#6B7CDB' }} />
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] uppercase tracking-wider font-medium" style={{ color: '#A8A5A0' }}>Bài học</div>
-                      <div className="text-lg font-bold" style={{ color: '#1A1A1A' }}>{chapterLessons.length}</div>
+                      <div className="text-[10px] uppercase tracking-wider" style={{ color: '#AEACA8' }}>Bài học</div>
+                      <div className="text-lg font-semibold" style={{ color: '#1A1A1A' }}>{chapterLessons.length}</div>
                     </div>
                   </div>
 
-                  <h3 className="font-bold text-sm mb-1 line-clamp-1" style={{ color: '#1A1A1A' }}>
+                  <h3 className="font-semibold text-sm mb-1 line-clamp-1" style={{ color: '#1A1A1A' }}>
                     {chapter.name}
                   </h3>
-                  <p className="text-xs leading-relaxed mb-4 line-clamp-2" style={{ color: '#6B6A65', minHeight: '2.5rem' }}>
+                  <p className="text-xs leading-relaxed mb-4 line-clamp-2" style={{ color: '#787774', minHeight: '2.5rem' }}>
                     {chapter.description}
                   </p>
 
                   <div
                     className="flex items-center justify-between pt-3 text-xs"
-                    style={{ borderTop: '1px solid #F0EFEB' }}
+                    style={{ borderTop: '1px solid #F1F0EC' }}
                   >
-                    <div className="flex items-center gap-1" style={{ color: '#A8A5A0' }}>
+                    <div className="flex items-center gap-1" style={{ color: '#AEACA8' }}>
                       <FileText className="w-3.5 h-3.5" />
                       <span>{chapterFileCount} tài liệu</span>
                     </div>
-                    <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" style={{ color: '#6B7CDB' }} />
+                    <ChevronRight className="w-4 h-4" style={{ color: '#CFCFCB' }} />
                   </div>
                 </div>
               );
@@ -548,7 +543,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen font-sans" style={{ background: '#F5F4F0', color: '#1A1A1A' }}>
+    <div className="min-h-screen font-sans" style={{ background: '#F7F6F3', color: '#1A1A1A' }}>
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
@@ -560,7 +555,7 @@ function App() {
       )}
 
       {/* Mobile Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 shadow-xl transform transition-transform duration-300 ease-out md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#E8E7E2', borderRight: '1px solid #D5D3CE' }}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 shadow-xl transform transition-transform duration-300 ease-out md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#F1F0EC', borderRight: '1px solid #E9E9E7' }}>
         <Sidebar
           currentGrade={currentGrade}
           onSelectGrade={(g) => {
@@ -650,7 +645,7 @@ function App() {
         {/* Mobile Header */}
         <header
           className="p-3.5 flex items-center justify-between md:hidden sticky top-0 z-30"
-          style={{ background: '#E8E7E2', borderBottom: '1px solid #D5D3CE', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}
+          style={{ background: '#F1F0EC', borderBottom: '1px solid #E9E9E7' }}
         >
           <div className="flex items-center gap-2.5">
             <button

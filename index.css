@@ -1,18 +1,18 @@
 /* ==================== CSS Variables ==================== */
 :root {
     /* ── Notion Warm Palette ── */
-    --bg: #F5F4F0;
+    --bg: #F7F6F3;
     --surface: #FFFFFF;
-    --sidebar-bg: #EDECEA;
-    --border: #E4E3E0;
-    --border-hover: #C8C7C2;
-    --hover-bg: #E8E7E3;
-    --active-bg: #DDDBD6;
+    --sidebar-bg: #F1F0EC;
+    --border: #E9E9E7;
+    --border-hover: #CFCFCB;
+    --hover-bg: #EBEBEA;
+    --active-bg: #E3E2DE;
 
     /* Text */
     --text-primary: #1A1A1A;
-    --text-secondary: #6B6A65;
-    --text-muted: #A8A5A0;
+    --text-secondary: #787774;
+    --text-muted: #AEACA8;
 
     /* Accent (use sparingly) */
     --accent-orange: #D9730D;
@@ -33,12 +33,12 @@
     --primary-700: #5a6bc9;
     --primary-900: #312e81;
 
-    --gray-50: #F5F4F0;
-    --gray-100: #EDECEA;
-    --gray-200: #E4E3E0;
-    --gray-300: #C8C7C2;
-    --gray-400: #A8A5A0;
-    --gray-500: #6B6A65;
+    --gray-50: #F7F6F3;
+    --gray-100: #F1F0EC;
+    --gray-200: #E9E9E7;
+    --gray-300: #CFCFCB;
+    --gray-400: #AEACA8;
+    --gray-500: #787774;
     --gray-600: #57564F;
     --gray-700: #3D3D38;
     --gray-800: #27272A;
@@ -48,11 +48,11 @@
     --warning: #D9730D;
     --error: #E03E3E;
 
-    /* Shadows — cải thiện depth */
-    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 2px 10px 0 rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 4px 20px 0 rgba(0, 0, 0, 0.10);
-    --shadow-xl: 0 8px 36px 0 rgba(0, 0, 0, 0.12);
+    /* Shadows — very subtle */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 2px 8px 0 rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 4px 16px 0 rgba(0, 0, 0, 0.08);
+    --shadow-xl: 0 8px 32px 0 rgba(0, 0, 0, 0.10);
 
     /* Transitions */
     --transition-fast: 120ms ease;
@@ -63,11 +63,11 @@
     --primary: #6B7CDB;
     --primary-hover: #5a6bc9;
     --primary-light: #EEF0FB;
-    --secondary: #6B6A65;
-    --background: #F5F4F0;
+    --secondary: #787774;
+    --background: #F7F6F3;
     --surface-glass: rgba(255, 255, 255, 0.95);
     --text-main: #1A1A1A;
-    --text-muted: #6B6A65;
+    --text-muted: #787774;
     --header-height: 4rem;
     --sidebar-width: 16rem;
 }

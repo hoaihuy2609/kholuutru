@@ -20,18 +20,18 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
   return (
     <div
       className={`w-64 h-full flex flex-col fixed left-0 top-0 z-10 ${className}`}
-      style={{ background: '#E8E7E2', borderRight: '1px solid #D5D3CE' }}
+      style={{ background: '#F1F0EC', borderRight: '1px solid #E9E9E7' }}
     >
-      {/* Logo — có accent line trên cùng */}
+      {/* Logo */}
       <div
         onClick={() => onSelectGrade(null)}
-        className="px-5 pt-5 pb-4 flex items-center gap-2.5 cursor-pointer group/logo"
-        style={{ borderBottom: '1px solid #D5D3CE' }}
+        className="p-5 flex items-center gap-2.5 cursor-pointer group/logo transition-colors"
+        style={{ borderBottom: '1px solid #E9E9E7' }}
         title="Quay về Trang tổng quan"
       >
         <div
           className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: 'linear-gradient(135deg, #6B7CDB, #9065B0)' }}
+          style={{ background: '#6B7CDB' }}
         >
           <Atom className="w-4 h-4 text-white" />
         </div>
@@ -43,7 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           >
             PhysiVault
           </h1>
-          <p className="text-[11px] leading-tight" style={{ color: '#A8A5A0' }}>
+          <p className="text-[11px] leading-tight" style={{ color: '#AEACA8' }}>
             Kho lưu trữ vật lý
           </p>
         </div>
@@ -55,20 +55,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         {/* Home */}
         <button
           onClick={() => onSelectGrade(null)}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left relative overflow-hidden"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
           style={{
-            background: currentGrade === null ? '#DDDBD6' : 'transparent',
+            background: currentGrade === null ? '#E3E2DE' : 'transparent',
             color: currentGrade === null ? '#1A1A1A' : '#57564F',
             fontWeight: currentGrade === null ? 500 : 400,
           }}
-          onMouseEnter={e => { if (currentGrade !== null) (e.currentTarget as HTMLElement).style.background = '#E0DED9'; }}
+          onMouseEnter={e => { if (currentGrade !== null) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
           onMouseLeave={e => { if (currentGrade !== null) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
-          {/* Left accent bar */}
-          {currentGrade === null && (
-            <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full" style={{ background: '#6B7CDB' }} />
-          )}
-          <Home className="w-4 h-4 shrink-0 ml-1" style={{ color: currentGrade === null ? '#6B7CDB' : '#A8A5A0' }} />
+          <Home className="w-4 h-4 shrink-0" style={{ color: currentGrade === null ? '#1A1A1A' : '#AEACA8' }} />
           Tổng quan
         </button>
 
@@ -77,16 +73,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           onClick={onOpenGuide}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
           style={{ color: '#57564F', fontWeight: 400 }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E0DED9'}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
         >
-          <BookOpen className="w-4 h-4 shrink-0 ml-1" style={{ color: '#A8A5A0' }} />
+          <BookOpen className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
           Hướng dẫn sử dụng
         </button>
 
         {/* Section label */}
         <div className="pt-4 pb-1 px-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#A8A5A0' }}>
+          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#AEACA8' }}>
             Khối Lớp
           </p>
         </div>
@@ -100,41 +96,37 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             <button
               key={grade}
               onClick={() => onSelectGrade(grade)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left relative overflow-hidden"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
               style={{
-                background: isSelected ? '#DDDBD6' : 'transparent',
+                background: isSelected ? '#E3E2DE' : 'transparent',
                 color: isSelected ? '#1A1A1A' : '#57564F',
                 fontWeight: isSelected ? 500 : 400,
               }}
-              onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#E0DED9'; }}
+              onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
               onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
-              {/* Left accent bar — màu theo khối lớp */}
-              {isSelected && (
-                <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full" style={{ background: dot }} />
-              )}
               <span
-                className="w-2 h-2 rounded-full shrink-0 ml-1"
-                style={{ background: dot, opacity: isSelected ? 1 : 0.45 }}
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ background: dot, opacity: isSelected ? 1 : 0.5 }}
               />
-              <Icon className="w-4 h-4 shrink-0" style={{ color: isSelected ? dot : '#A8A5A0' }} />
+              <Icon className="w-4 h-4 shrink-0" style={{ color: isSelected ? '#1A1A1A' : '#AEACA8' }} />
               {label}
             </button>
           );
         })}
       </nav>
 
-      {/* Settings */}
-      <div className="hidden md:block p-2 pt-1" style={{ borderTop: '1px solid #D5D3CE' }}>
+      {/* Settings — ẩn trên mobile (dùng gear icon ở header thay thế) */}
+      <div className="hidden md:block p-2" style={{ borderTop: '1px solid #E9E9E7' }}>
         <button
           id="tour-settings-btn"
           onClick={onOpenSettings}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors"
           style={{ color: '#57564F' }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E0DED9'}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
         >
-          <Settings className="w-4 h-4 shrink-0 ml-1" style={{ color: '#A8A5A0' }} />
+          <Settings className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
           Cài đặt &amp; Đồng bộ
         </button>
       </div>
