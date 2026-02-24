@@ -16,7 +16,6 @@ const STORE_NAME = 'app_data';
 const SYSTEM_SALT = "PHV_SECURITY_2026_BY_HUY"; // Chìa khóa hệ thống nội bộ
 
 // --- GitHub Cloud Sync Config ---
-// Các biến này được đọc từ .env.local
 const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || (process.env as any).VITE_GITHUB_TOKEN || '';
 const GITHUB_REPO = import.meta.env.VITE_GITHUB_REPO || (process.env as any).VITE_GITHUB_REPO || ''; // format: "username/repo"
 const GITHUB_BRANCH = import.meta.env.VITE_GITHUB_BRANCH || (process.env as any).VITE_GITHUB_BRANCH || 'main';
@@ -270,103 +269,123 @@ export const useCloudStorage = () => {
 
     // --- GitHub Cloud Sync: Fetch bài giảng theo grade ---
     const fetchLessonsFromGitHub = async (grade: number): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
-        const fileName = `kho-${grade}.json`;
-        const rawUrl = GITHUB_REPO
-            ? `https://raw.githubusercontent.com/${GITHUB_REPO}/${GITHUB_BRANCH}/${fileName}`
+        const indexFileName = `index-${grade}.json`;
+        const baseUrl = GITHUB_REPO
+            ? `https://raw.githubusercontent.com/${GITHUB_REPO}/${GITHUB_BRANCH}/`
             : '';
 
-        if (!rawUrl) {
-            throw new Error('Chưa cấu hình GitHub Repo. Liên hệ Admin để được hỗ trợ.');
-        }
+        if (!baseUrl) throw new Error('Chưa cấu hình GitHub Repo.');
 
-        const response = await fetch(rawUrl + '?t=' + Date.now()); // Cache-bust
-        if (!response.ok) {
-            throw new Error(`Không tìm thấy dữ liệu cho Lớp ${grade} trên hệ thống.`);
-        }
+        // 1. Tải file index (chứa danh sách các bài giảng và danh sách file ID cần tải)
+        const indexRes = await fetch(baseUrl + indexFileName + '?t=' + Date.now());
+        if (!indexRes.ok) throw new Error(`Không tìm thấy dữ liệu Lớp ${grade}.`);
 
-        const rawText = await response.text();
-
-        // Thử giải mã XOR, nếu thất bại thì parse trực tiếp
-        let data: { lessons: Lesson[]; files: FileStorage };
+        const indexRaw = await indexRes.text();
+        let indexData: { lessons: Lesson[], fileKeys: string[] };
         try {
-            const decoded = xorDeobfuscate(rawText);
-            data = JSON.parse(decoded);
+            indexData = JSON.parse(xorDeobfuscate(indexRaw));
         } catch {
-            data = JSON.parse(rawText);
+            indexData = JSON.parse(indexRaw);
         }
 
-        if (!data.lessons || !data.files) {
-            throw new Error('Dữ liệu từ GitHub không hợp lệ.');
-        }
-
-        // Merge vào IndexedDB (giữ nguyên bài giảng cũ, thêm mới)
+        // 2. Tải từng file lẻ của từng bài (đã được tách nhỏ)
         const currentLessons = await dbGet(STORAGE_LESSONS_KEY) || [];
         const currentFiles = await dbGet(STORAGE_FILES_KEY) || {};
 
+        let totalFileCount = 0;
+        const newFiles: FileStorage = { ...currentFiles };
+
+        // Tải song song để tăng tốc
+        await Promise.all(indexData.fileKeys.map(async (key) => {
+            try {
+                const res = await fetch(baseUrl + `data/${key}.json?t=` + Date.now());
+                if (res.ok) {
+                    const raw = await res.text();
+                    const lessonData = JSON.parse(xorDeobfuscate(raw));
+                    newFiles[lessonData.lessonId] = lessonData.files;
+                    totalFileCount += lessonData.files.length;
+                }
+            } catch (e) {
+                console.error("Error fetching lesson chunk:", key, e);
+            }
+        }));
+
+        // Merge Lessons
         const lessonMap = new Map();
         currentLessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
-        data.lessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
+        indexData.lessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
         const uniqueLessons = Array.from(lessonMap.values()) as Lesson[];
 
-        const mergedFiles = { ...currentFiles, ...data.files };
-
         await dbSet(STORAGE_LESSONS_KEY, uniqueLessons);
-        await dbSet(STORAGE_FILES_KEY, mergedFiles);
+        await dbSet(STORAGE_FILES_KEY, newFiles);
 
         setLessons(uniqueLessons);
-        setStoredFiles(mergedFiles);
+        setStoredFiles(newFiles);
 
         return {
             success: true,
-            lessonCount: data.lessons.length,
-            fileCount: Object.values(data.files).flat().length,
+            lessonCount: indexData.lessons.length,
+            fileCount: totalFileCount,
         };
     };
 
     // --- GitHub Cloud Sync: Push bài giảng lên GitHub (Admin only) ---
+    // CƠ CHẾ MỚI: Tách nhỏ thành từng file theo Lesson ID để tránh giới hạn 100MB của GitHub
     const syncToGitHub = async (grade: number, lessonsToSync: Lesson[], filesToSync: FileStorage): Promise<void> => {
-        if (!GITHUB_TOKEN) throw new Error('Chưa cấu hình GitHub Token trong .env.local');
-        if (!GITHUB_REPO) throw new Error('Chưa cấu hình GitHub Repo trong .env.local');
+        if (!GITHUB_TOKEN) throw new Error('Chưa cấu hình GitHub Token');
+        if (!GITHUB_REPO) throw new Error('Chưa cấu hình GitHub Repo');
 
-        const fileName = `kho-${grade}.json`;
-        const payload = { lessons: lessonsToSync, files: filesToSync, syncedAt: Date.now() };
-        const rawContent = JSON.stringify(payload);
-        // xorObfuscate đã trả về base64 string sẵn - dùng trực tiếp
-        const base64Content = xorObfuscate(rawContent);
+        // 1. Đẩy từng "mảnh" dữ liệu của từng bài giảng lên thư mục data/
+        const fileKeys: string[] = [];
 
-        // Kiểm tra file cũ để lấy SHA (cần để update)
-        const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${fileName}`;
+        for (const lesson of lessonsToSync) {
+            const lessonFiles = filesToSync[lesson.id];
+            if (!lessonFiles || lessonFiles.length === 0) continue;
+
+            const lessonPayload = { lessonId: lesson.id, files: lessonFiles };
+            const content = xorObfuscate(JSON.stringify(lessonPayload));
+            const path = `data/${lesson.id}.json`;
+
+            await uploadToGitHub(path, content, `Sync Lesson: ${lesson.name}`);
+            fileKeys.push(lesson.id);
+        }
+
+        // 2. Đẩy file INDEX (danh sách bài giảng và các file data cần tải)
+        const indexPath = `index-${grade}.json`;
+        const indexPayload = { lessons: lessonsToSync, fileKeys, syncedAt: Date.now() };
+        const indexContent = xorObfuscate(JSON.stringify(indexPayload));
+
+        await uploadToGitHub(indexPath, indexContent, `Sync Index Lớp ${grade}`);
+    };
+
+    // Helper: Upload một file lên GitHub an toàn
+    const uploadToGitHub = async (path: string, base64Content: string, message: string) => {
+        const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`;
+
+        // Lấy SHA file cũ nếu có
         let sha: string | undefined;
-
         try {
-            const checkRes = await fetch(apiUrl, {
-                headers: { Authorization: `token ${GITHUB_TOKEN}` },
-            });
-            if (checkRes.ok) {
-                const checkData = await checkRes.json();
-                sha = checkData.sha;
+            const check = await fetch(apiUrl, { headers: { Authorization: `token ${GITHUB_TOKEN}` } });
+            if (check.ok) {
+                const data = await check.json();
+                sha = data.sha;
             }
-        } catch { /* File chưa tồn tại - OK */ }
-
-        const body: Record<string, unknown> = {
-            message: `[PhysiVault] Sync bài giảng Lớp ${grade} - ${new Date().toLocaleString('vi-VN')}`,
-            content: base64Content,
-            branch: GITHUB_BRANCH,
-        };
-        if (sha) body.sha = sha;
+        } catch { }
 
         const res = await fetch(apiUrl, {
             method: 'PUT',
-            headers: {
-                Authorization: `token ${GITHUB_TOKEN}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body),
+            headers: { Authorization: `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: `[PhysiVault] ${message} - ${new Date().toLocaleString('vi-VN')}`,
+                content: base64Content,
+                branch: GITHUB_BRANCH,
+                sha
+            }),
         });
 
         if (!res.ok) {
-            const errData = await res.json();
-            throw new Error(errData.message || `GitHub API error: ${res.status}`);
+            const err = await res.json();
+            throw new Error(err.message || `Lỗi GitHub tại ${path}`);
         }
     };
 
