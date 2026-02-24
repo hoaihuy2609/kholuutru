@@ -228,8 +228,8 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
             {/* ── Main ── */}
             <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 custom-scrollbar">
 
-                {/* Grade Tabs */}
-                <div className="flex gap-2 flex-wrap">
+                {/* Grade Tabs — Segment Control */}
+                <div className="flex items-center p-1 rounded-xl gap-0.5" style={{ background: '#EBEBEA', width: 'fit-content' }}>
                     {[12, 11, 10].map(grade => {
                         const c = GRADE_COLORS[grade];
                         const gLessons = lessons.filter(l => CURRICULUM.find(g => g.level === grade)?.chapters.map(ch => ch.id).includes(l.chapterId));
@@ -237,13 +237,21 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                         const isActive = selectedGrade === grade;
                         return (
                             <button key={grade} onClick={() => setSelectedGrade(grade)}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-                                style={{ background: isActive ? c.accent : '#FFFFFF', color: isActive ? '#FFFFFF' : '#57564F', border: `1px solid ${isActive ? c.accent : '#E9E9E7'}`, boxShadow: isActive ? `0 2px 8px ${c.accent}30` : 'none' }}>
-                                <GraduationCap className="w-4 h-4" />
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all"
+                                style={{
+                                    background: isActive ? '#FFFFFF' : 'transparent',
+                                    color: isActive ? c.accent : '#787774',
+                                    boxShadow: isActive ? '0 1px 4px rgba(0,0,0,0.10)' : 'none',
+                                    fontWeight: isActive ? 600 : 400,
+                                }}>
+                                <GraduationCap className="w-3.5 h-3.5" />
                                 Lớp {grade}
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold"
-                                    style={{ background: isActive ? 'rgba(255,255,255,0.2)' : c.bg, color: isActive ? '#FFFFFF' : c.accent }}>
-                                    {gLessons.length} bài · {gFileCount} file
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md tabular-nums"
+                                    style={{
+                                        background: isActive ? c.bg : 'rgba(0,0,0,0.06)',
+                                        color: isActive ? c.accent : '#AEACA8',
+                                    }}>
+                                    {gLessons.length}b · {gFileCount}f
                                 </span>
                             </button>
                         );
