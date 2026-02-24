@@ -13,6 +13,7 @@ interface Student {
     machineId: string;
     key: string;
     status: string;
+    grade?: number;
 }
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw1gPydkWrJLGmRPAxjEJQ3JCkWYRG3c67I28jmZvh6aiF5UqslfoHw4l24OHXKPMQj/exec";
@@ -44,7 +45,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [newStudent, setNewStudent] = useState({ sdt: '', name: '' });
+    const [newStudent, setNewStudent] = useState({ sdt: '', name: '', grade: 12 });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const fetchStudents = async () => {
@@ -70,11 +71,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         try {
             await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: 'add', sdt: newStudent.sdt, name: newStudent.name })
+                body: JSON.stringify({
+                    action: 'add',
+                    sdt: newStudent.sdt,
+                    name: newStudent.name,
+                    grade: newStudent.grade
+                })
             });
             onShowToast('Đã gửi yêu cầu thêm học viên!', 'success');
             setIsAddModalOpen(false);
-            setNewStudent({ sdt: '', name: '' });
+            setNewStudent({ sdt: '', name: '', grade: 12 });
             setTimeout(fetchStudents, 2000);
         } catch {
             onShowToast('Lỗi khi thêm học viên', 'error');
@@ -271,11 +277,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr style={{ background: '#FAFAF9' }}>
-                                    {['Học viên', 'Số điện thoại', 'Mã máy (ID)', 'Mã kích hoạt', 'Trạng thái', 'Lệnh'].map((h, i) => (
+                                    {['Học viên', 'Lớp', 'Số điện thoại', 'Mã máy', 'Kích hoạt', 'Trạng thái', 'Quản lý'].map((h, i) => (
                                         <th
                                             key={h}
                                             className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider"
-                                            style={{ color: '#AEACA8', textAlign: i === 5 ? 'right' : 'left', borderBottom: '1px solid #E9E9E7' }}
+                                            style={{ color: '#AEACA8', textAlign: i === 6 ? 'right' : 'left', borderBottom: '1px solid #E9E9E7' }}
                                         >
                                             {h}
                                         </th>
@@ -333,6 +339,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                                             </p>
                                                         </div>
                                                     </div>
+                                                </td>
+                                                {/* Grade */}
+                                                <td className="px-5 py-4">
+                                                    <span
+                                                        className="px-2 py-1 rounded-md text-[10px] font-bold"
+                                                        style={{
+                                                            background: s.grade === 12 ? '#EEF0FB' : s.grade === 11 ? '#EAF3EE' : '#FFF3E8',
+                                                            color: s.grade === 12 ? '#6B7CDB' : s.grade === 11 ? '#448361' : '#D9730D'
+                                                        }}
+                                                    >
+                                                        Vật Lý {s.grade || 12}
+                                                    </span>
                                                 </td>
                                                 {/* Phone */}
                                                 <td className="px-5 py-4 font-mono text-sm" style={{ color: '#1A1A1A' }}>{s.sdt}</td>
@@ -475,6 +493,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                     />
                                 </div>
                             </div>
+                            {/* Grade Selection */}
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Khối lớp</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[12, 11, 10].map(g => (
+                                        <button
+                                            key={g}
+                                            type="button"
+                                            onClick={() => setNewStudent({ ...newStudent, grade: g })}
+                                            className="py-2 text-xs font-semibold rounded-lg border transition-all"
+                                            style={{
+                                                background: newStudent.grade === g ? '#6B7CDB' : '#FFFFFF',
+                                                color: newStudent.grade === g ? '#FFFFFF' : '#787774',
+                                                borderColor: newStudent.grade === g ? '#6B7CDB' : '#E9E9E7'
+                                            }}
+                                        >
+                                            Lớp {g}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* Phone */}
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Số điện thoại</label>
