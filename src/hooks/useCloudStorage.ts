@@ -269,7 +269,8 @@ export const useCloudStorage = () => {
     // --- Telegram Cloud Sync: Fetch bài giảng theo grade (Tải toàn bộ các chương trong 1 lượt) ---
     // --- Telegram Cloud Sync: Fetch bài giảng theo grade (Tải toàn bộ các chương trong 1 lượt) ---
     const fetchLessonsFromGitHub = async (grade: number): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzA2B0IMc7H1SIKDTpHlKwW37yqyWM2nvbVUo4yviPvzeeLwhrer0l5W-G2SwYvfQVq/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfWk8K8J34fw5ynCI00HrMeMW13o2YxOr0140GyhKbimabvAysm5CpjnX1DYVdq50x/exec";
+        console.log(`[CloudSync] Đang hỏi Google cho Lớp ${grade} tại URL: ${GOOGLE_SCRIPT_URL}`);
 
         // 1. Hỏi Google Sheets xem địa chỉ ID mới nhất của lớp này là gì
         try {
@@ -403,9 +404,15 @@ export const useCloudStorage = () => {
             const data = await indexRes.json();
             const finalFileId = data.result.document.file_id;
 
-            // Ghi lại File ID này lên Google Sheets để mọi người đều thấy
-            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzA2B0IMc7H1SIKDTpHlKwW37yqyWM2nvbVUo4yviPvzeeLwhrer0l5W-G2SwYvfQVq/exec";
-            try { await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=${grade}&file_id=${finalFileId}`); } catch (e) { }
+            // Ghi lại File ID này lên Google Sheets (Dùng mode no-cors để đảm bảo lệnh gửi đi được)
+            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfWk8K8J34fw5ynCI00HrMeMW13o2YxOr0140GyhKbimabvAysm5CpjnX1DYVdq50x/exec";
+            try {
+                await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=${grade}&file_id=${finalFileId}`, {
+                    mode: 'no-cors'
+                });
+            } catch (e) {
+                console.error("[CloudSync] Lỗi ghi ID lên Sheets:", e);
+            }
 
             localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
             setSyncProgress(100);
@@ -424,7 +431,7 @@ export const useCloudStorage = () => {
         if (!isCurrentlyActivated || !sdt) return 'ok';
 
         const machineId = getMachineId();
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzA2B0IMc7H1SIKDTpHlKwW37yqyWM2nvbVUo4yviPvzeeLwhrer0l5W-G2SwYvfQVq/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfWk8K8J34fw5ynCI00HrMeMW13o2YxOr0140GyhKbimabvAysm5CpjnX1DYVdq50x/exec";
         try {
             const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=check&sdt=${sdt}&machineId=${machineId}`);
             const result = await response.json();
