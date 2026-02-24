@@ -77,7 +77,7 @@ const InlineNote: React.FC<{
       onKeyDown={handleKeyDown}
       onClick={e => e.stopPropagation()}
       maxLength={80}
-      placeholder="VD: đang ở câu 5, trang 3..."
+      placeholder="TN ABCD, FILE 1, CÂU 1"
       className="flex-1 min-w-0 text-xs px-2.5 py-1.5 rounded-lg outline-none transition-colors"
       style={{
         background: '#FFFFFF',
