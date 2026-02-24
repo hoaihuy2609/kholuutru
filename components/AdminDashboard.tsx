@@ -124,15 +124,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         } catch { onShowToast('Lỗi khi mở khóa học viên', 'error'); }
     };
 
-    const filteredStudents = students.filter(s =>
-        s.sdt.includes(searchTerm) || s.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredStudents = (students || []).filter(s => {
+        if (!s) return false;
+        const sdt = s.sdt || '';
+        const name = s.name || '';
+        return sdt.includes(searchTerm) || name.toLowerCase().includes(searchTerm.toLowerCase());
+    });
 
     const stats = {
         total: students.length,
-        activated: students.filter(s => s.machineId && s.status !== 'KICKED').length,
-        pending: students.filter(s => !s.machineId && s.status !== 'KICKED').length,
-        kicked: students.filter(s => s.status === 'KICKED').length,
+        activated: students.filter(s => s && s.machineId && s.status !== 'KICKED').length,
+        pending: students.filter(s => s && !s.machineId && s.status !== 'KICKED').length,
+        kicked: students.filter(s => s && s.status === 'KICKED').length,
     };
 
     /* Stat card config */
@@ -299,7 +302,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={6} className="px-5 py-16 text-center">
+                                        <td colSpan={7} className="px-5 py-16 text-center">
                                             <div className="flex flex-col items-center gap-3">
                                                 <Loader2 className="w-8 h-8" style={{ color: '#6B7CDB' } as React.CSSProperties} />
                                                 <p className="text-sm" style={{ color: '#787774' }}>Đang nạp dữ liệu từ Google Sheets...</p>
@@ -308,7 +311,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                     </tr>
                                 ) : filteredStudents.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-5 py-16 text-center text-sm italic" style={{ color: '#AEACA8' }}>
+                                        <td colSpan={7} className="px-5 py-16 text-center text-sm italic" style={{ color: '#AEACA8' }}>
                                             Không tìm thấy học viên nào phù hợp.
                                         </td>
                                     </tr>
@@ -336,11 +339,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                                                 color: isKicked || s.machineId ? '#FFFFFF' : '#787774',
                                                             }}
                                                         >
-                                                            {isKicked ? <Ban className="w-4 h-4" /> : s.name.charAt(0).toUpperCase()}
+                                                            {isKicked ? <Ban className="w-4 h-4" /> : (s.name || 'H').charAt(0).toUpperCase()}
                                                         </div>
                                                         <div>
                                                             <p className="text-sm font-medium" style={{ color: isKicked ? '#E03E3E' : '#1A1A1A', textDecoration: isKicked ? 'line-through' : 'none' }}>
-                                                                {s.name}
+                                                                {s.name || 'Học sinh'}
                                                             </p>
                                                             <p className="text-[10px] uppercase tracking-tight" style={{ color: '#AEACA8' }}>
                                                                 {isKicked ? 'Đã bị kick' : s.machineId ? 'Đang hoạt động' : 'Chưa kích hoạt'}
