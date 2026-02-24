@@ -34,12 +34,15 @@ export const xorObfuscate = (data: string): string => {
         result[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
     }
 
-    // Sửa lỗi "Maximum call stack size exceeded" khi file quá lớn bằng cách dùng vòng lặp
-    let binary = '';
-    for (let i = 0; i < result.length; i++) {
-        binary += String.fromCharCode(result[i]);
+    // Tối ưu hiệu năng: Xử lý theo khối (chunking) để tránh treo trình duyệt và stack limit
+    const CHUNK_SIZE = 0x8000; // 32KB mỗi khối
+    let binaryParts: string[] = [];
+    for (let i = 0; i < result.length; i += CHUNK_SIZE) {
+        const chunk = result.subarray(i, i + CHUNK_SIZE);
+        // @ts-ignore - Dùng apply để chuyển chunk sang argument list một cách an toàn
+        binaryParts.push(String.fromCharCode.apply(null, chunk));
     }
-    return btoa(binary);
+    return btoa(binaryParts.join(''));
 };
 
 export const xorDeobfuscate = (encoded: string): string => {
