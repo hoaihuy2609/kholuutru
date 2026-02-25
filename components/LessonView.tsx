@@ -581,7 +581,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                   >
                     <span className="text-[10px] shrink-0 mt-px" style={{ color: '#F59E0B' }}>💡</span>
                     <p className="text-[10px] leading-relaxed" style={{ color: '#787774' }}>
-                      Có câu <span style={{ color: '#C7C4B8', fontWeight: 600 }}>tự luận</span>? Click vào{' '}
+                      Có câu <span style={{ color: '#C7C4B8', fontWeight: 600 }}>tự luận, đúng/sai</span>? Click vào{' '}
                       <span style={{ color: '#F59E0B', fontWeight: 700 }}>số câu</span> để chuyển sang ô gõ tự do.
                     </p>
                   </div>

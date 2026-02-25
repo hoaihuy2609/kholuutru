@@ -844,7 +844,7 @@ const ChapterView: React.FC<ChapterViewProps> = ({
                     <div className="flex items-start gap-1.5 rounded-lg px-2 py-1.5" style={{ background: '#2A2A2A', border: '1px solid #3B3B3B' }}>
                       <span className="text-[10px] shrink-0 mt-px" style={{ color: '#F59E0B' }}>💡</span>
                       <p className="text-[10px] leading-relaxed" style={{ color: '#787774' }}>
-                        Có câu <span style={{ color: '#C7C4B8', fontWeight: 600 }}>tự luận</span>? Click vào{' '}
+                        Có câu <span style={{ color: '#C7C4B8', fontWeight: 600 }}>tự luận, đúng/sai</span>? Click vào{' '}
                         <span style={{ color: '#F59E0B', fontWeight: 700 }}>số câu</span> để chuyển sang ô gõ tự do.
                       </p>
                     </div>
