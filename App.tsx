@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { GradeLevel, Lesson } from './types';
+import { GradeLevel, Lesson, Exam, ExamSubmission } from './types';
 import { CURRICULUM } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -19,6 +19,9 @@ import GuideModal from './components/GuideModal';
 import Chatbot from './components/Chatbot';
 import AdminDashboard from './components/AdminDashboard';
 import AdminGitHubSync from './components/AdminGitHubSync';
+import ExamListPage from './components/ExamListPage';
+import ExamView from './components/ExamView';
+import ExamResult from './components/ExamResult';
 
 interface ToastMessage {
   id: string;
@@ -33,7 +36,7 @@ function App() {
   const [autoCreateLesson, setAutoCreateLesson] = useState(false);
 
   // Replace local state with Cloud Storage hook
-  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress } = useCloudStorage();
+  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam } = useCloudStorage();
 
   const [isKicked, setIsKicked] = useState(false);
   const [isOfflineExpired, setIsOfflineExpired] = useState(false);
@@ -69,6 +72,10 @@ function App() {
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [showGitHubSync, setShowGitHubSync] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  // Exam state
+  const [showExamList, setShowExamList] = useState(false);
+  const [activeExam, setActiveExam] = useState<Exam | null>(null);
+  const [examSubmission, setExamSubmission] = useState<ExamSubmission | null>(null);
 
   const toggleAdmin = (status: boolean) => {
     setIsAdmin(status);
@@ -187,6 +194,39 @@ function App() {
 
   const renderContent = () => {
     const activeGradeData = currentGrade ? CURRICULUM.find((g) => g.level === currentGrade) : null;
+
+    // 0. Exam Result
+    if (activeExam && examSubmission) {
+      return (
+        <ExamResult
+          exam={activeExam}
+          submission={examSubmission}
+          onRetry={() => { setExamSubmission(null); }}
+          onBack={() => { setActiveExam(null); setExamSubmission(null); setShowExamList(true); }}
+        />
+      );
+    }
+
+    // 0b. Exam View
+    if (activeExam && !examSubmission) {
+      return (
+        <ExamView
+          exam={activeExam}
+          onBack={() => { setActiveExam(null); setShowExamList(true); }}
+          onSubmit={(sub) => setExamSubmission(sub)}
+        />
+      );
+    }
+
+    // 0c. Exam List
+    if (showExamList) {
+      return (
+        <ExamListPage
+          onLoadExams={loadExams}
+          onSelectExam={(exam) => { setActiveExam(exam); setExamSubmission(null); setShowExamList(false); }}
+        />
+      );
+    }
 
     // 1. Lesson View (Deepest level)
     if (currentLesson) {
@@ -562,6 +602,7 @@ function App() {
             setCurrentGrade(g);
             setCurrentChapterId(null);
             setCurrentLesson(null);
+            setShowExamList(false);
             setIsMobileMenuOpen(false);
           }}
           onOpenSettings={() => {
@@ -572,6 +613,16 @@ function App() {
             setIsGuideOpen(true);
             setIsMobileMenuOpen(false);
           }}
+          onOpenExamList={() => {
+            setShowExamList(true);
+            setActiveExam(null);
+            setExamSubmission(null);
+            setCurrentGrade(null);
+            setCurrentChapterId(null);
+            setCurrentLesson(null);
+            setIsMobileMenuOpen(false);
+          }}
+          showExamList={showExamList}
           className="w-full"
         />
       </div>
@@ -583,9 +634,19 @@ function App() {
           setCurrentGrade(g);
           setCurrentChapterId(null);
           setCurrentLesson(null);
+          setShowExamList(false);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
+        onOpenExamList={() => {
+          setShowExamList(true);
+          setActiveExam(null);
+          setExamSubmission(null);
+          setCurrentGrade(null);
+          setCurrentChapterId(null);
+          setCurrentLesson(null);
+        }}
+        showExamList={showExamList}
         className="hidden md:flex"
       />
 
@@ -621,6 +682,10 @@ function App() {
             setShowAdminDashboard(false);
             setShowGitHubSync(true);
           }}
+          onUploadExamPdf={uploadExamPdf}
+          onSaveExam={saveExam}
+          onDeleteExam={deleteExam}
+          onLoadExams={loadExams}
         />
       )}
 

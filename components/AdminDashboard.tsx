@@ -4,8 +4,10 @@ import {
     Users, UserPlus, Trash2, Search, RefreshCw,
     ShieldCheck, Monitor, Phone,
     TrendingUp, UserCheck, ShieldAlert, LayoutDashboard,
-    UserMinus, RotateCcw, Ban, ArrowLeft, X, CloudUpload
+    UserMinus, RotateCcw, Ban, ArrowLeft, X, CloudUpload, ClipboardList
 } from 'lucide-react';
+import ExamManager from './ExamManager';
+import { Exam } from '../types';
 
 interface Student {
     sdt: string;       // luôn normalize thành string sau khi fetch
@@ -22,6 +24,10 @@ interface AdminDashboardProps {
     onBack: () => void;
     onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void;
     onOpenGitHubSync: () => void;
+    onUploadExamPdf?: (file: File, onProgress: (pct: number) => void) => Promise<{ fileId: string; fileName: string }>;
+    onSaveExam?: (exams: Exam[]) => Promise<void>;
+    onDeleteExam?: (examId: string, allExams: Exam[]) => Promise<void>;
+    onLoadExams?: () => Promise<Exam[]>;
 }
 
 /* Shared inline input style */
@@ -40,7 +46,8 @@ const Loader2 = ({ className, style }: { className?: string; style?: React.CSSPr
     <RefreshCw className={`${className} animate-spin`} style={style} />
 );
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, onOpenGitHubSync }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, onOpenGitHubSync, onUploadExamPdf, onSaveExam, onDeleteExam, onLoadExams }) => {
+    const [activeTab, setActiveTab] = useState<'students' | 'exams'>('students');
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -217,6 +224,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     return (
         <div className="fixed inset-0 z-[60] flex flex-col font-sans overflow-hidden animate-fade-in" style={{ background: '#F7F6F3' }}>
 
+
             {/* ── Top nav ── */}
             <div className="flex items-center justify-between px-6 py-3.5" style={{ background: '#FFFFFF', borderBottom: '1px solid #E9E9E7' }}>
                 <div className="flex items-center gap-3">
@@ -272,230 +280,265 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                 </div>
             </div>
 
+            {/* ── Tab Bar ── */}
+            <div className="flex shrink-0 px-6 pt-2" style={{ borderBottom: '1px solid #E9E9E7', background: '#fff' }}>
+                {[
+                    { key: 'students', label: 'Học Sinh', icon: <Users className="w-4 h-4" /> },
+                    { key: 'exams', label: 'Đề Thi', icon: <ClipboardList className="w-4 h-4" /> },
+                ].map(tab => (
+                    <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key as any)}
+                        className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-all border-b-2"
+                        style={{
+                            borderColor: activeTab === tab.key ? '#6B7CDB' : 'transparent',
+                            color: activeTab === tab.key ? '#6B7CDB' : '#787774',
+                        }}
+                    >
+                        {tab.icon}{tab.label}
+                    </button>
+                ))}
+            </div>
+
             {/* ── Main scroll area ── */}
             <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6 custom-scrollbar">
 
-                {/* Stat cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {statCards.map((card) => (
-                        <div
-                            key={card.label}
-                            className="rounded-xl p-5 flex flex-col gap-3 transition-shadow"
-                            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', borderLeft: `3px solid ${card.accent}` }}
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>{card.label}</span>
-                                <div className="p-1.5 rounded-lg" style={{ background: card.bg, color: card.accent }}>
-                                    {card.icon}
-                                </div>
-                            </div>
-                            <div className="text-3xl font-bold" style={{ color: card.accent }}>{card.value}</div>
-                            <div>{card.sub}</div>
-                        </div>
-                    ))}
-                </div>
+                {/* ── Exam Tab ── */}
+                {activeTab === 'exams' && onUploadExamPdf && onSaveExam && onDeleteExam && onLoadExams && (
+                    <ExamManager
+                        onShowToast={onShowToast}
+                        onUploadExamPdf={onUploadExamPdf}
+                        onSaveExam={onSaveExam}
+                        onDeleteExam={onDeleteExam}
+                        onLoadExams={onLoadExams}
+                    />
+                )}
 
-                {/* Table section */}
-                <div className="rounded-xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
-                    {/* Table toolbar */}
-                    <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3" style={{ borderBottom: '1px solid #E9E9E7' }}>
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#AEACA8' }} />
-                            <input
-                                type="text"
-                                placeholder="Tìm theo tên hoặc SĐT..."
-                                value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                                style={{ ...inputSt, paddingLeft: '36px' }}
-                                onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
-                                onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
-                            />
-                        </div>
-                        <button
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-colors whitespace-nowrap"
-                            style={{ background: '#6B7CDB' }}
-                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#5a6bc9'}
-                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#6B7CDB'}
-                        >
-                            <UserPlus className="w-4 h-4" />
-                            Thêm học viên mới
-                        </button>
+                {/* ── Students Tab ── */}
+                {activeTab !== 'students' ? null : (<>
+
+                    {/* Stat cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {statCards.map((card) => (
+                            <div
+                                key={card.label}
+                                className="rounded-xl p-5 flex flex-col gap-3 transition-shadow"
+                                style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', borderLeft: `3px solid ${card.accent}` }}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>{card.label}</span>
+                                    <div className="p-1.5 rounded-lg" style={{ background: card.bg, color: card.accent }}>
+                                        {card.icon}
+                                    </div>
+                                </div>
+                                <div className="text-3xl font-bold" style={{ color: card.accent }}>{card.value}</div>
+                                <div>{card.sub}</div>
+                            </div>
+                        ))}
                     </div>
 
-                    {/* Table */}
-                    <div className="overflow-x-auto custom-scrollbar">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr style={{ background: '#FAFAF9' }}>
-                                    {['Học viên', 'Lớp', 'Số điện thoại', 'Mã máy', 'Kích hoạt', 'Trạng thái', 'Quản lý'].map((h, i) => (
-                                        <th
-                                            key={h}
-                                            className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider"
-                                            style={{ color: '#AEACA8', textAlign: i === 6 ? 'right' : 'left', borderBottom: '1px solid #E9E9E7' }}
-                                        >
-                                            {h}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={7} className="px-5 py-16 text-center">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <Loader2 className="w-8 h-8" style={{ color: '#6B7CDB' } as React.CSSProperties} />
-                                                <p className="text-sm" style={{ color: '#787774' }}>Đang nạp dữ liệu từ Google Sheets...</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : filteredStudents.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={7} className="px-5 py-16 text-center text-sm italic" style={{ color: '#AEACA8' }}>
-                                            Không tìm thấy học viên nào phù hợp.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredStudents.map((s, idx) => {
-                                        const isKicked = s.status === 'KICKED';
-                                        return (
-                                            <tr
-                                                key={idx}
-                                                style={{
-                                                    borderBottom: '1px solid #F1F0EC',
-                                                    background: isKicked ? '#FEF8F8' : 'transparent',
-                                                    opacity: isKicked ? 0.75 : 1,
-                                                }}
-                                                onMouseEnter={e => !isKicked && ((e.currentTarget as HTMLElement).style.background = '#FAFAF9')}
-                                                onMouseLeave={e => !isKicked && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+                    {/* Table section */}
+                    <div className="rounded-xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
+                        {/* Table toolbar */}
+                        <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3" style={{ borderBottom: '1px solid #E9E9E7' }}>
+                            <div className="relative flex-1 max-w-sm">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#AEACA8' }} />
+                                <input
+                                    type="text"
+                                    placeholder="Tìm theo tên hoặc SĐT..."
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    style={{ ...inputSt, paddingLeft: '36px' }}
+                                    onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+                                    onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
+                                />
+                            </div>
+                            <button
+                                onClick={() => setIsAddModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-colors whitespace-nowrap"
+                                style={{ background: '#6B7CDB' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#5a6bc9'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#6B7CDB'}
+                            >
+                                <UserPlus className="w-4 h-4" />
+                                Thêm học viên mới
+                            </button>
+                        </div>
+
+                        {/* Table */}
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr style={{ background: '#FAFAF9' }}>
+                                        {['Học viên', 'Lớp', 'Số điện thoại', 'Mã máy', 'Kích hoạt', 'Trạng thái', 'Quản lý'].map((h, i) => (
+                                            <th
+                                                key={h}
+                                                className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider"
+                                                style={{ color: '#AEACA8', textAlign: i === 6 ? 'right' : 'left', borderBottom: '1px solid #E9E9E7' }}
                                             >
-                                                {/* Student name */}
-                                                <td className="px-5 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div
-                                                            className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold shrink-0"
+                                                {h}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan={7} className="px-5 py-16 text-center">
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <Loader2 className="w-8 h-8" style={{ color: '#6B7CDB' } as React.CSSProperties} />
+                                                    <p className="text-sm" style={{ color: '#787774' }}>Đang nạp dữ liệu từ Google Sheets...</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : filteredStudents.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={7} className="px-5 py-16 text-center text-sm italic" style={{ color: '#AEACA8' }}>
+                                                Không tìm thấy học viên nào phù hợp.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredStudents.map((s, idx) => {
+                                            const isKicked = s.status === 'KICKED';
+                                            return (
+                                                <tr
+                                                    key={idx}
+                                                    style={{
+                                                        borderBottom: '1px solid #F1F0EC',
+                                                        background: isKicked ? '#FEF8F8' : 'transparent',
+                                                        opacity: isKicked ? 0.75 : 1,
+                                                    }}
+                                                    onMouseEnter={e => !isKicked && ((e.currentTarget as HTMLElement).style.background = '#FAFAF9')}
+                                                    onMouseLeave={e => !isKicked && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+                                                >
+                                                    {/* Student name */}
+                                                    <td className="px-5 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div
+                                                                className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold shrink-0"
+                                                                style={{
+                                                                    background: isKicked ? '#E03E3E' : s.machineId ? '#6B7CDB' : '#E9E9E7',
+                                                                    color: isKicked || s.machineId ? '#FFFFFF' : '#787774',
+                                                                }}
+                                                            >
+                                                                {isKicked ? <Ban className="w-4 h-4" /> : (s.name || 'H').charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-medium" style={{ color: isKicked ? '#E03E3E' : '#1A1A1A', textDecoration: isKicked ? 'line-through' : 'none' }}>
+                                                                    {s.name || 'Học sinh'}
+                                                                </p>
+                                                                <p className="text-[10px] uppercase tracking-tight" style={{ color: '#AEACA8' }}>
+                                                                    {isKicked ? 'Đã bị kick' : s.machineId ? 'Đang hoạt động' : 'Chưa kích hoạt'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    {/* Grade */}
+                                                    <td className="px-5 py-4">
+                                                        <span
+                                                            className="px-2 py-1 rounded-md text-[10px] font-bold"
                                                             style={{
-                                                                background: isKicked ? '#E03E3E' : s.machineId ? '#6B7CDB' : '#E9E9E7',
-                                                                color: isKicked || s.machineId ? '#FFFFFF' : '#787774',
+                                                                background: s.grade === 12 ? '#EEF0FB' : s.grade === 11 ? '#EAF3EE' : '#FFF3E8',
+                                                                color: s.grade === 12 ? '#6B7CDB' : s.grade === 11 ? '#448361' : '#D9730D'
                                                             }}
                                                         >
-                                                            {isKicked ? <Ban className="w-4 h-4" /> : (s.name || 'H').charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-medium" style={{ color: isKicked ? '#E03E3E' : '#1A1A1A', textDecoration: isKicked ? 'line-through' : 'none' }}>
-                                                                {s.name || 'Học sinh'}
-                                                            </p>
-                                                            <p className="text-[10px] uppercase tracking-tight" style={{ color: '#AEACA8' }}>
-                                                                {isKicked ? 'Đã bị kick' : s.machineId ? 'Đang hoạt động' : 'Chưa kích hoạt'}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                {/* Grade */}
-                                                <td className="px-5 py-4">
-                                                    <span
-                                                        className="px-2 py-1 rounded-md text-[10px] font-bold"
-                                                        style={{
-                                                            background: s.grade === 12 ? '#EEF0FB' : s.grade === 11 ? '#EAF3EE' : '#FFF3E8',
-                                                            color: s.grade === 12 ? '#6B7CDB' : s.grade === 11 ? '#448361' : '#D9730D'
-                                                        }}
-                                                    >
-                                                        Vật Lý {s.grade || 12}
-                                                    </span>
-                                                </td>
-                                                {/* Phone */}
-                                                <td className="px-5 py-4 font-mono text-sm" style={{ color: '#1A1A1A' }}>{s.sdt}</td>
-                                                {/* Machine ID */}
-                                                <td className="px-5 py-4">
-                                                    {s.machineId ? (
-                                                        <span
-                                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium"
-                                                            style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #44836122' }}
-                                                        >
-                                                            <Monitor className="w-3 h-3" />
-                                                            {s.machineId}
+                                                            Vật Lý {s.grade || 12}
                                                         </span>
-                                                    ) : (
-                                                        <span className="text-[10px] italic px-2 py-1 rounded" style={{ background: '#F1F0EC', color: '#AEACA8' }}>
-                                                            Chưa vào máy
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                {/* Key */}
-                                                <td className="px-5 py-4">
-                                                    {s.key ? (
-                                                        <span
-                                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium"
-                                                            style={{ background: '#EEF0FB', color: '#6B7CDB', border: '1px solid #6B7CDB22' }}
-                                                        >
-                                                            {s.key}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-xs" style={{ color: '#CFCFCB' }}>—</span>
-                                                    )}
-                                                </td>
-                                                {/* Status */}
-                                                <td className="px-5 py-4">
-                                                    {isKicked ? (
-                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium" style={{ background: '#FEF0F0', color: '#E03E3E', border: '1px solid #E03E3E22' }}>
-                                                            <Ban className="w-3 h-3" /> ĐÃ KICK
-                                                        </span>
-                                                    ) : s.machineId ? (
-                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium" style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #44836122' }}>
-                                                            <ShieldCheck className="w-3 h-3" /> Hoạt động
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium" style={{ background: '#FFF3E8', color: '#D9730D', border: '1px solid #D9730D22' }}>
-                                                            <ShieldAlert className="w-3 h-3" /> Chờ
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                {/* Actions */}
-                                                <td className="px-5 py-4">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        {isKicked ? (
-                                                            <button
-                                                                onClick={() => handleUnkickStudent(s.sdt, s.name)}
-                                                                className="p-2 rounded-lg transition-colors"
-                                                                style={{ color: '#CFCFCB' }}
-                                                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#448361'; (e.currentTarget as HTMLElement).style.background = '#EAF3EE'; }}
-                                                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                                                                title="Mở khóa học viên"
+                                                    </td>
+                                                    {/* Phone */}
+                                                    <td className="px-5 py-4 font-mono text-sm" style={{ color: '#1A1A1A' }}>{s.sdt}</td>
+                                                    {/* Machine ID */}
+                                                    <td className="px-5 py-4">
+                                                        {s.machineId ? (
+                                                            <span
+                                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium"
+                                                                style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #44836122' }}
                                                             >
-                                                                <RotateCcw className="w-4 h-4" />
-                                                            </button>
+                                                                <Monitor className="w-3 h-3" />
+                                                                {s.machineId}
+                                                            </span>
                                                         ) : (
+                                                            <span className="text-[10px] italic px-2 py-1 rounded" style={{ background: '#F1F0EC', color: '#AEACA8' }}>
+                                                                Chưa vào máy
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    {/* Key */}
+                                                    <td className="px-5 py-4">
+                                                        {s.key ? (
+                                                            <span
+                                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium"
+                                                                style={{ background: '#EEF0FB', color: '#6B7CDB', border: '1px solid #6B7CDB22' }}
+                                                            >
+                                                                {s.key}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-xs" style={{ color: '#CFCFCB' }}>—</span>
+                                                        )}
+                                                    </td>
+                                                    {/* Status */}
+                                                    <td className="px-5 py-4">
+                                                        {isKicked ? (
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium" style={{ background: '#FEF0F0', color: '#E03E3E', border: '1px solid #E03E3E22' }}>
+                                                                <Ban className="w-3 h-3" /> ĐÃ KICK
+                                                            </span>
+                                                        ) : s.machineId ? (
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium" style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #44836122' }}>
+                                                                <ShieldCheck className="w-3 h-3" /> Hoạt động
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium" style={{ background: '#FFF3E8', color: '#D9730D', border: '1px solid #D9730D22' }}>
+                                                                <ShieldAlert className="w-3 h-3" /> Chờ
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    {/* Actions */}
+                                                    <td className="px-5 py-4">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            {isKicked ? (
+                                                                <button
+                                                                    onClick={() => handleUnkickStudent(s.sdt, s.name)}
+                                                                    className="p-2 rounded-lg transition-colors"
+                                                                    style={{ color: '#CFCFCB' }}
+                                                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#448361'; (e.currentTarget as HTMLElement).style.background = '#EAF3EE'; }}
+                                                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                                                    title="Mở khóa học viên"
+                                                                >
+                                                                    <RotateCcw className="w-4 h-4" />
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => handleKickStudent(s.sdt, s.name)}
+                                                                    className="p-2 rounded-lg transition-colors"
+                                                                    style={{ color: '#CFCFCB' }}
+                                                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#D9730D'; (e.currentTarget as HTMLElement).style.background = '#FFF3E8'; }}
+                                                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                                                    title="Kick học viên"
+                                                                >
+                                                                    <UserMinus className="w-4 h-4" />
+                                                                </button>
+                                                            )}
                                                             <button
-                                                                onClick={() => handleKickStudent(s.sdt, s.name)}
+                                                                onClick={() => handleDeleteStudent(s.sdt)}
                                                                 className="p-2 rounded-lg transition-colors"
                                                                 style={{ color: '#CFCFCB' }}
-                                                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#D9730D'; (e.currentTarget as HTMLElement).style.background = '#FFF3E8'; }}
+                                                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#E03E3E'; (e.currentTarget as HTMLElement).style.background = '#FEF0F0'; }}
                                                                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                                                                title="Kick học viên"
+                                                                title="Xóa học viên"
                                                             >
-                                                                <UserMinus className="w-4 h-4" />
+                                                                <Trash2 className="w-4 h-4" />
                                                             </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => handleDeleteStudent(s.sdt)}
-                                                            className="p-2 rounded-lg transition-colors"
-                                                            style={{ color: '#CFCFCB' }}
-                                                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#E03E3E'; (e.currentTarget as HTMLElement).style.background = '#FEF0F0'; }}
-                                                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                                                            title="Xóa học viên"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                </>) /* end students tab */}
             </div>
 
             {/* ── Add Student Modal ── */}

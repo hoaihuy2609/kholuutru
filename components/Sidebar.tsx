@@ -1,5 +1,5 @@
 import React from 'react';
-import { Atom, Home, Settings, BookOpen, Zap, Activity } from 'lucide-react';
+import { Atom, Home, Settings, BookOpen, Zap, Activity, ClipboardList } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
@@ -7,10 +7,12 @@ interface SidebarProps {
   onSelectGrade: (grade: GradeLevel | null) => void;
   onOpenSettings?: () => void;
   onOpenGuide: () => void;
+  onOpenExamList?: () => void;
+  showExamList?: boolean;
   className?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, className }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, onOpenExamList, showExamList, className }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -79,6 +81,30 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           <BookOpen className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
           Hướng dẫn sử dụng
         </button>
+
+        {/* Thi Thử */}
+        {onOpenExamList && (
+          <button
+            onClick={() => { onOpenExamList(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+            style={{
+              background: showExamList ? '#E3E2DE' : 'transparent',
+              color: showExamList ? '#1A1A1A' : '#57564F',
+              fontWeight: showExamList ? 500 : 400,
+            }}
+            onMouseEnter={e => { if (!showExamList) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+            onMouseLeave={e => { if (!showExamList) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          >
+            <ClipboardList className="w-4 h-4 shrink-0" style={{ color: showExamList ? '#6B7CDB' : '#AEACA8' }} />
+            <span>Thi Thử</span>
+            <span
+              className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+              style={{ background: '#EEF0FB', color: '#6B7CDB' }}
+            >
+              NEW
+            </span>
+          </button>
+        )}
 
         {/* Section label */}
         <div className="pt-4 pb-1 px-3">

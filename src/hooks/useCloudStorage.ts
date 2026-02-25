@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import CryptoJS from 'crypto-js';
-import { Lesson, StoredFile, FileStorage } from '../../types';
+import { Lesson, StoredFile, FileStorage, Exam } from '../../types';
 
 // Storage Keys
 const STORAGE_FILES_KEY = 'physivault_files';
@@ -482,6 +482,93 @@ export const useCloudStorage = () => {
         }
     };
 
+    // ── Exam Functions ─────────────────────────────────────────
+
+    // Upload PDF lên Telegram, trả về file_id
+    const uploadExamPdf = async (file: File, onProgress?: (pct: number) => void): Promise<{ fileId: string; fileName: string }> => {
+        const formData = new FormData();
+        formData.append('chat_id', TELEGRAM_CHAT_ID);
+        formData.append('document', file, file.name);
+        formData.append('caption', `[EXAM-PDF] ${file.name}`);
+
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`);
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+            };
+            xhr.onload = () => {
+                const data = JSON.parse(xhr.responseText);
+                if (xhr.status === 200 && data.ok) {
+                    resolve({ fileId: data.result.document.file_id, fileName: file.name });
+                } else {
+                    reject(new Error(`Upload thất bại: ${xhr.responseText.slice(0, 100)}`));
+                }
+            };
+            xhr.onerror = () => reject(new Error('Lỗi mạng khi upload PDF'));
+            xhr.send(formData);
+        });
+    };
+
+    // Lưu danh sách đề thi lên Telegram + ghi file_id vào GAS
+    const saveExam = async (exams: Exam[]): Promise<void> => {
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
+        const content = xorObfuscate(JSON.stringify({ exams, savedAt: Date.now() }));
+        const blob = new Blob([content], { type: 'application/json' });
+
+        const formData = new FormData();
+        formData.append('chat_id', TELEGRAM_CHAT_ID);
+        formData.append('document', blob, 'exam_index.json');
+        formData.append('caption', `[EXAM-INDEX] ${exams.length} đề thi`);
+
+        const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
+            method: 'POST', body: formData
+        });
+        if (!res.ok) throw new Error('Upload exam index thất bại');
+        const data = await res.json();
+        const fileId = data.result.document.file_id;
+
+        // Ghi file_id vào GAS (dùng action riêng cho exam)
+        const sheetRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=0&file_id=${fileId}`);
+        if (!sheetRes.ok) throw new Error('Không thể ghi địa chỉ exam lên Google Sheets');
+        localStorage.setItem('pv_exam_index_file_id', fileId);
+
+        // Lưu local IndexedDB
+        await dbSet('physivault_exams', exams);
+    };
+
+    // Tải danh sách đề thi từ Telegram
+    const loadExams = async (): Promise<Exam[]> => {
+        // 1. Ưu tiên dùng cache local
+        const cached = await dbGet('physivault_exams');
+
+        // 2. Lấy file_id mới nhất từ GAS
+        try {
+            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
+            const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_latest_index&grade=0`);
+            const result = await res.json();
+            const fileId = result.file_id || localStorage.getItem('pv_exam_index_file_id');
+            if (!fileId) return cached || [];
+
+            const dataRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${fileId}`);
+            const dataResult = await dataRes.json();
+            if (!dataResult.success) return cached || [];
+
+            const parsed = JSON.parse(xorDeobfuscate(dataResult.data));
+            const exams: Exam[] = parsed.exams || [];
+            await dbSet('physivault_exams', exams);
+            return exams;
+        } catch {
+            return cached || [];
+        }
+    };
+
+    // Xóa 1 đề thi (cập nhật lại list)
+    const deleteExam = async (examId: string, allExams: Exam[]): Promise<void> => {
+        const updated = allExams.filter(e => e.id !== examId);
+        await saveExam(updated);
+    };
+
     return {
         lessons,
         storedFiles,
@@ -496,6 +583,10 @@ export const useCloudStorage = () => {
         fetchLessonsFromGitHub,
         syncToGitHub,
         syncProgress,
+        uploadExamPdf,
+        saveExam,
+        loadExams,
+        deleteExam,
     };
 };
 

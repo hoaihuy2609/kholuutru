@@ -34,3 +34,37 @@ export interface GradeData {
 }
 
 export type FileStorage = Record<string, StoredFile[]>; // Key is "lessonId" or "chapterId"
+
+// ── Exam (Thi Thử) Types ──────────────────────────────────────────
+
+export interface ExamTFAnswer {
+  a: 'D' | 'S' | '';
+  b: 'D' | 'S' | '';
+  c: 'D' | 'S' | '';
+  d: 'D' | 'S' | '';
+}
+
+export interface ExamAnswers {
+  mc: string[];          // 18 đáp án ABCD (index 0-17)
+  tf: ExamTFAnswer[];    // 4 câu Đúng/Sai (index 0-3)
+  sa: string[];          // 6 trả lời ngắn (index 0-5)
+}
+
+export interface Exam {
+  id: string;
+  title: string;
+  pdfTelegramFileId: string;  // file_id PDF trên Telegram
+  pdfFileName: string;        // tên file PDF gốc
+  duration: number;           // phút
+  createdAt: number;
+  answers: ExamAnswers;
+}
+
+export interface ExamSubmission {
+  examId: string;
+  mc: string[];           // đáp án học sinh chọn
+  tf: ExamTFAnswer[];     // đáp án học sinh chọn
+  sa: string[];           // trả lời ngắn học sinh
+  submittedAt: number;
+  timeTaken: number;      // giây
+}
