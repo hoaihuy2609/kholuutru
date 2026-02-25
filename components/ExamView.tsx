@@ -76,25 +76,62 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit }) => {
     const ACCENT = '#6B7CDB';
     const tf_keys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
 
-    // ── Load PDF from Telegram ──
+    // ── Load PDF from Telegram (via GAS proxy to avoid CORS) ──
     useEffect(() => {
         let objectUrl = '';
         const load = async () => {
             try {
-                // 1. Lấy download URL từ Telegram API
-                const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${exam.pdfTelegramFileId}`);
-                const data = await res.json();
-                if (!data.ok) throw new Error('Không lấy được link PDF');
-                const filePath = data.result.file_path;
-                const downloadUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${filePath}`;
+                // Bước 1: Lấy file_path từ Telegram Bot API (không bị CORS)
+                const metaRes = await fetch(
+                    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${exam.pdfTelegramFileId}`
+                );
+                const metaData = await metaRes.json();
+                if (!metaData.ok) throw new Error('Không lấy được link PDF từ Telegram');
+                const filePath = metaData.result.file_path;
 
-                // 2. Fetch binary rồi tạo Blob URL
-                const pdfRes = await fetch(downloadUrl);
-                const blob = await pdfRes.blob();
-                objectUrl = URL.createObjectURL(blob);
+                // Bước 2: Dùng GAS proxy để tải binary PDF (tránh CORS của file CDN)
+                const proxyUrl = `${GOOGLE_SCRIPT_URL}?action=proxy_pdf&file_path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(TELEGRAM_TOKEN)}`;
+                const pdfRes = await fetch(proxyUrl);
+
+                if (!pdfRes.ok) throw new Error(`GAS proxy trả về lỗi: ${pdfRes.status}`);
+
+                const contentType = pdfRes.headers.get('content-type') || '';
+
+                if (contentType.includes('application/json')) {
+                    // GAS trả về JSON với base64 data
+                    const json = await pdfRes.json();
+                    if (!json.success) throw new Error(json.error || 'GAS proxy thất bại');
+                    // base64 → Blob
+                    const base64 = json.data as string;
+                    const byteChars = atob(base64);
+                    const byteArr = new Uint8Array(byteChars.length);
+                    for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+                    const blob = new Blob([byteArr], { type: 'application/pdf' });
+                    objectUrl = URL.createObjectURL(blob);
+                } else {
+                    // GAS trả về binary trực tiếp
+                    const blob = await pdfRes.blob();
+                    objectUrl = URL.createObjectURL(blob);
+                }
+
                 setPdfUrl(objectUrl);
             } catch (err) {
-                console.error('Lỗi load PDF:', err);
+                console.error('[ExamView] Lỗi load PDF:', err);
+                // Fallback: thử dùng trực tiếp (có thể hoạt động trên một số trình duyệt)
+                try {
+                    const directRes = await fetch(
+                        `https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${exam.pdfTelegramFileId}`
+                    );
+                    const directData = await directRes.json();
+                    if (directData.ok) {
+                        const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${directData.result.file_path}`;
+                        const blobRes = await fetch(directUrl);
+                        const blob = await blobRes.blob();
+                        objectUrl = URL.createObjectURL(blob);
+                        setPdfUrl(objectUrl);
+                        return;
+                    }
+                } catch { /* ignore fallback error */ }
             } finally {
                 setPdfLoading(false);
             }
