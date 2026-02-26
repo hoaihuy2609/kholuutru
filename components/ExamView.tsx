@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Clock, ChevronLeft, Send, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Clock, ChevronLeft, Send, AlertTriangle, CheckCircle, RefreshCw, FileText } from 'lucide-react';
 import { Exam, ExamTFAnswer, ExamSubmission } from '../types';
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
@@ -202,9 +202,20 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit }) => {
                     <ChevronLeft className="w-4 h-4" /> Thoát
                 </button>
 
-                <div className="text-center min-w-0 px-4">
-                    <p className="font-semibold text-sm truncate" style={{ color: '#E5E5E4' }}>{exam.title}</p>
-                    <p className="text-[10px]" style={{ color: '#AEACA8' }}>{answeredCount}/{totalQ} câu đã làm</p>
+                <div className="text-center min-w-0 px-4 flex-1 flex flex-col items-center justify-center">
+                    <div className="flex items-center justify-center gap-2 max-w-full">
+                        <div className="w-6 h-6 rounded flex items-center justify-center shrink-0" style={{ background: '#3B3B3B' }}>
+                            <FileText className="w-3.5 h-3.5" style={{ color: '#E03E3E' }} />
+                        </div>
+                        <p className="font-semibold text-sm truncate" style={{ color: '#E5E5E4' }}>{exam.title}</p>
+                        <span
+                            className="hidden md:inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded shrink-0"
+                            style={{ background: '#3B3B3B', color: '#AEACA8' }}
+                        >
+                            Chỉ xem
+                        </span>
+                    </div>
+                    <p className="text-[10px] mt-0.5" style={{ color: '#AEACA8' }}>{answeredCount}/{totalQ} câu đã làm</p>
                 </div>
 
                 {/* Timer */}
