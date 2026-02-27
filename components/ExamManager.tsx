@@ -43,6 +43,7 @@ const StepDot = ({ n, current, label }: { n: number; current: number; label: str
 const ExamManager: React.FC<ExamManagerProps> = ({
     onShowToast, onUploadExamPdf, onSaveExam, onDeleteExam, onLoadExams
 }) => {
+    const [activeTab, setActiveTab] = useState<number>(12);
     const [exams, setExams] = useState<Exam[]>([]);
     const [loadingExams, setLoadingExams] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -89,70 +90,97 @@ const ExamManager: React.FC<ExamManagerProps> = ({
                 </button>
             </div>
 
+            {/* Tabs */}
+            <div className="flex items-center gap-2 border-b" style={{ borderColor: '#E9E9E7' }}>
+                {[12, 11, 10].map(grade => (
+                    <button
+                        key={grade}
+                        onClick={() => setActiveTab(grade)}
+                        className={`px-5 py-3 text-sm font-semibold transition-colors border-b-2`}
+                        style={{
+                            color: activeTab === grade ? ACCENT : '#787774',
+                            borderColor: activeTab === grade ? ACCENT : 'transparent',
+                            marginBottom: '-1px'
+                        }}
+                    >
+                        Lớp {grade}
+                    </button>
+                ))}
+            </div>
+
             {/* Exam List */}
             {loadingExams ? (
                 <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-6 h-6" style={{ color: ACCENT } as any} />
                     <span className="ml-2 text-sm" style={{ color: '#787774' }}>Đang tải...</span>
                 </div>
-            ) : exams.length === 0 ? (
-                <div className="text-center py-16 rounded-xl" style={{ border: '2px dashed #E9E9E7' }}>
-                    <ClipboardList className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
-                    <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có đề thi nào</p>
-                    <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Bấm "Tạo đề mới" để bắt đầu</p>
-                </div>
-            ) : (
-                <div className="grid gap-3">
-                    {exams.map(exam => (
-                        <div
-                            key={exam.id}
-                            className="rounded-xl p-4 flex items-center justify-between gap-4 transition-shadow"
-                            style={{ background: '#fff', border: '1px solid #E9E9E7' }}
-                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)'}
-                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = 'none'}
-                        >
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#EEF0FB' }}>
-                                    <FileText className="w-5 h-5" style={{ color: ACCENT }} />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="font-semibold text-sm truncate" style={{ color: '#1A1A1A' }}>{exam.title}</p>
-                                    <div className="flex items-center gap-3 mt-0.5">
-                                        <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: ACCENT, background: '#EEF0FB', padding: '2px 6px', borderRadius: '4px' }}>
-                                            Lớp {exam.grade || 12}
-                                        </span>
-                                        <span className="flex items-center gap-1 text-xs" style={{ color: '#AEACA8' }}>
-                                            <Clock className="w-3 h-3" />{exam.duration}'
-                                        </span>
-                                        <span className="text-xs" style={{ color: '#AEACA8' }}>
-                                            {new Date(exam.createdAt).toLocaleDateString('vi-VN')}
-                                        </span>
+            ) : (() => {
+                const filteredExams = exams.filter(e => (!e.grade && activeTab === 12) || e.grade === activeTab);
+
+                if (filteredExams.length === 0) {
+                    return (
+                        <div className="text-center py-16 rounded-xl" style={{ border: '2px dashed #E9E9E7' }}>
+                            <ClipboardList className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
+                            <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có đề thi nào cho Lớp {activeTab}</p>
+                            <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Bấm "Tạo đề mới" để bắt đầu</p>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="grid gap-3">
+                        {filteredExams.map(exam => (
+                            <div
+                                key={exam.id}
+                                className="rounded-xl p-4 flex items-center justify-between gap-4 transition-shadow"
+                                style={{ background: '#fff', border: '1px solid #E9E9E7' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = 'none'}
+                            >
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#EEF0FB' }}>
+                                        <FileText className="w-5 h-5" style={{ color: ACCENT }} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="font-semibold text-sm truncate" style={{ color: '#1A1A1A' }}>{exam.title}</p>
+                                        <div className="flex items-center gap-3 mt-0.5">
+                                            <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: ACCENT, background: '#EEF0FB', padding: '2px 6px', borderRadius: '4px' }}>
+                                                Lớp {exam.grade || 12}
+                                            </span>
+                                            <span className="flex items-center gap-1 text-xs" style={{ color: '#AEACA8' }}>
+                                                <Clock className="w-3 h-3" />{exam.duration}'
+                                            </span>
+                                            <span className="text-xs" style={{ color: '#AEACA8' }}>
+                                                {new Date(exam.createdAt).toLocaleDateString('vi-VN')}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-xs px-2 py-1 rounded-md font-medium" style={{ background: '#F0FDF4', color: '#16A34A' }}>
+                                        ✓ Có đáp án
+                                    </span>
+                                    <button
+                                        onClick={() => handleDeleteExam(exam.id, exam.title)}
+                                        className="p-2 rounded-lg transition-colors"
+                                        style={{ color: '#AEACA8' }}
+                                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FEF2F2'; (e.currentTarget as HTMLElement).style.color = '#E03E3E'; }}
+                                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#AEACA8'; }}
+                                        title="Xóa đề thi"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                                <span className="text-xs px-2 py-1 rounded-md font-medium" style={{ background: '#F0FDF4', color: '#16A34A' }}>
-                                    ✓ Có đáp án
-                                </span>
-                                <button
-                                    onClick={() => handleDeleteExam(exam.id, exam.title)}
-                                    className="p-2 rounded-lg transition-colors"
-                                    style={{ color: '#AEACA8' }}
-                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FEF2F2'; (e.currentTarget as HTMLElement).style.color = '#E03E3E'; }}
-                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#AEACA8'; }}
-                                    title="Xóa đề thi"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+                        ))}
+                    </div>
+                );
+            })()}
 
             {/* Create Modal */}
             {showCreateModal && (
                 <CreateExamModal
+                    initialGrade={activeTab}
                     onClose={() => setShowCreateModal(false)}
                     onSaved={handleSaved}
                     onShowToast={onShowToast}
@@ -167,6 +195,7 @@ const ExamManager: React.FC<ExamManagerProps> = ({
 
 // ── Create Exam Modal ──────────────────────────────────────────────
 interface CreateExamModalProps {
+    initialGrade: number;
     onClose: () => void;
     onSaved: (exam: Exam) => void;
     onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void;
@@ -176,12 +205,12 @@ interface CreateExamModalProps {
 }
 
 const CreateExamModal: React.FC<CreateExamModalProps> = ({
-    onClose, onSaved, onShowToast, onUploadExamPdf, onSaveExam, allExams
+    initialGrade, onClose, onSaved, onShowToast, onUploadExamPdf, onSaveExam, allExams
 }) => {
     const [step, setStep] = useState(1); // 1=Info+PDF, 2=Phần I, 3=Phần II, 4=Phần III
     const [title, setTitle] = useState('');
     const [duration, setDuration] = useState('50');
-    const [grade, setGrade] = useState(12);
+    const [grade, setGrade] = useState(initialGrade);
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [pdfProgress, setPdfProgress] = useState(0);
     const [pdfUploading, setPdfUploading] = useState(false);
