@@ -255,10 +255,23 @@ export const useCloudStorage = () => {
         return Promise.resolve();
     };
 
-    const activateSystem = (key: string, sdt: string = "", grade?: number): boolean => {
+    const activateSystem = async (key: string, sdt: string = "", grade?: number): Promise<boolean> => {
         const machineId = getMachineId();
         const expectedKey = generateActivationKey(machineId, sdt);
         if (key === expectedKey) {
+            let phoneStr = String(sdt).trim();
+            if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
+
+            try {
+                const { data, error } = await supabase.from('students').select('is_active').eq('phone', phoneStr).single();
+                if (error || !data || !data.is_active) {
+                    return false; // Student is kicked or doesn't exist
+                }
+            } catch (err) {
+                // If offline or network error, fallback to local activation if key is correct
+                console.warn("Supabase check failed during activation, falling back to local verification.");
+            }
+
             localStorage.setItem(STORAGE_ACTIVATION_KEY, 'true');
             if (sdt) localStorage.setItem('pv_activated_sdt', sdt);
             if (grade) localStorage.setItem(STORAGE_GRADE_KEY, grade.toString());
