@@ -14,7 +14,7 @@ interface SettingsModalProps {
     lessons: Lesson[];
     storedFiles: FileStorage;
     onActivateSystem: (key: string, sdt: string, grade?: number) => boolean;
-    onFetchLessons: (grade: number) => Promise<{ success: boolean; lessonCount: number; fileCount: number }>;
+    onFetchLessons: (grade: number, onProgress?: (pct: number) => void) => Promise<{ success: boolean; lessonCount: number; fileCount: number }>;
     onToggleAdmin: (status: boolean) => void;
     onOpenDashboard: () => void;
     onLoadExams: () => Promise<Exam[]>;
