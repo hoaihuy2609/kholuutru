@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Bot, User, RefreshCw, Copy, Check } from 'lucide-react';
-import { getMachineId } from '../src/hooks/useCloudStorage';
+import { getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
+import { supabase } from '../src/lib/supabase';
 
 const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
     <RefreshCw className={`${className} animate-spin`} style={style} />
@@ -13,8 +14,6 @@ interface Message {
     sender: 'bot' | 'user';
     timestamp: number;
 }
-
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
 
 const Chatbot: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -53,19 +52,27 @@ const Chatbot: React.FC = () => {
             setIsLoading(true);
             try {
                 const machineId = getMachineId();
-                // Chỉ dùng GET với action=check_student để Script biết cần làm gì
-                const url = `${GOOGLE_SCRIPT_URL}?action=check_student&sdt=${encodeURIComponent(userText)}&machineId=${encodeURIComponent(machineId)}`;
-                const realResponse = await fetch(url);
-                const result = await realResponse.json();
+                let phoneStr = String(userText).trim();
+                // Format before checking: Supabase currently expects phone numbers starting with '0' for active validation
+                if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
 
-                if (result.success && result.key) {
+                const { data, error } = await supabase
+                    .from('students')
+                    .select('is_active')
+                    .eq('phone', phoneStr)
+                    .single();
+
+                if (error || !data) {
+                    addMessage('Không tìm thấy thông tin của bạn. Bạn đã đóng học phí chưa nhỉ?', 'bot');
+                } else if (!data.is_active) {
+                    addMessage('Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ thầy Huy nhé.', 'bot');
+                } else {
+                    const key = generateActivationKey(machineId, userText);
                     addMessage('Xác thực thành công! Mã kích hoạt của bạn là:', 'bot');
-                    addMessage(result.key, 'bot');
+                    addMessage(key, 'bot');
                     addMessage('Bạn hãy copy mã này và dán vào phần "Mở khóa học viên" trong Cài đặt nhé.', 'bot');
                     localStorage.setItem('pv_pending_sdt', userText);
                     setStep('done');
-                } else {
-                    addMessage(result.msg || 'Không tìm thấy thông tin của bạn. Bạn đã đóng học phí chưa nhỉ?', 'bot');
                 }
             } catch {
                 addMessage('Có lỗi kết nối với "bộ não" của thầy Huy. Bạn thử nhắn lại SĐT xem sao nhé.', 'bot');
