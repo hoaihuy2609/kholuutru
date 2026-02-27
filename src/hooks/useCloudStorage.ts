@@ -1,5 +1,7 @@
+import { supabase } from '../lib/supabase';
 
 import { useState, useEffect } from 'react';
+import JSZip from 'jszip';
 import CryptoJS from 'crypto-js';
 import { Lesson, StoredFile, FileStorage, Exam } from '../../types';
 
@@ -267,25 +269,63 @@ export const useCloudStorage = () => {
     };
 
     // --- Telegram Cloud Sync: Fetch bài giảng theo grade ---
-    const fetchLessonsFromGitHub = async (grade: number): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
+    const fetchLessonsFromGitHub = async (grade: number, onProgress?: (pct: number) => void): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
         console.log(`[CloudSync] Đang hỏi Google cho Lớp ${grade}`);
 
         try {
-            const latestIndexRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_latest_index&grade=${grade}`);
-            const latestIndexResult = await latestIndexRes.json();
-
-            const indexFileId = latestIndexResult.file_id || localStorage.getItem(`pv_sync_file_id_${grade}`);
+            
+            let indexFileId = localStorage.getItem(`pv_sync_file_id_${grade}`);
+            try {
+                const { data, error } = await supabase
+                    .from('vault_index')
+                    .select('telegram_file_id')
+                    .eq('grade', grade)
+                    .single();
+                if (data && data.telegram_file_id) {
+                    indexFileId = data.telegram_file_id;
+                }
+            } catch (e) {
+                console.error("Lỗi lấy index từ Supabase", e);
+            }
             if (!indexFileId) throw new Error(`Hệ thống chưa có dữ liệu cho Lớp ${grade}. Thầy vui lòng Sync trước nhé!`);
 
-            const indexRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${indexFileId}`);
-            const indexResult = await indexRes.json();
+            // Dùng Public CORS Proxy để fetch trực tiếp file từ Telegram
+            const fetchViaPublicProxy = async (fileId: string): Promise<ArrayBuffer> => {
+                const maxRetries = 3;
+                let lastError = null;
+                for (let attempt = 0; attempt < maxRetries; attempt++) {
+                    try {
+                        // 1. Phân giải Path của File trực tiếp từ Telegram API (API này đã mở CORS sẵn)
+                        const pathRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${fileId}`);
+                        const pathResult = await pathRes.json();
 
-            if (!indexResult.success) {
-                throw new Error(indexResult.error || "Không thể tải Mục lục từ Telegram qua Google Script.");
-            }
+                        if (!pathResult.ok) {
+                            if (pathResult.error_code === 429) {
+                                await new Promise(resolve => setTimeout(resolve, (pathResult.parameters?.retry_after || 5) * 1000));
+                                continue;
+                            }
+                            throw new Error(`Lỗi cấp phép file trên Telegram: ${pathResult.description}`);
+                        }
 
-            const indexData = JSON.parse(xorDeobfuscate(indexResult.data));
+                        // 2. Tải File Natively qua CORS Proxy (do api.telegram.org/file chặn CORS)
+                        const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${pathResult.result.file_path}`;
+                        const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
+
+                        const fileRes = await fetch(proxyUrl);
+                        if (!fileRes.ok) throw new Error("Public Proxy từ chối tải file");
+                        return await fileRes.arrayBuffer();
+                    } catch (e: any) {
+                        lastError = e;
+                        await new Promise(r => setTimeout(r, 2000 + (attempt * 1000)));
+                    }
+                }
+                throw lastError || new Error("Lỗi tải cấu trúc dữ liệu, quá giới hạn thử lại");
+            };
+
+            const indexRaw = await fetchViaPublicProxy(indexFileId);
+            const indexStr = new TextDecoder().decode(indexRaw);
+            const indexData = JSON.parse(xorDeobfuscate(indexStr));
 
             const currentLessons = await dbGet(STORAGE_LESSONS_KEY) || [];
             const currentFiles = await dbGet(STORAGE_FILES_KEY) || {};
@@ -295,12 +335,11 @@ export const useCloudStorage = () => {
             let totalLessonCount = 0;
             let totalFileCount = 0;
 
-            // Helper: fetch 1 file từ Telegram qua GAS
+            // Helper: fetch 1 file JSON đơn lẻ từ Telegram qua Proxy
             const fetchOneFile = async (fileId: string) => {
-                const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${fileId}`);
-                const result = await res.json();
-                if (result.success) return JSON.parse(xorDeobfuscate(result.data));
-                return null;
+                const buf = await fetchViaPublicProxy(fileId);
+                const str = new TextDecoder().decode(buf);
+                return JSON.parse(xorDeobfuscate(str));
             };
 
             // Helper: gộp dữ liệu từ 1 payload vào state
@@ -314,7 +353,47 @@ export const useCloudStorage = () => {
 
             // --- Lấy tất cả file IDs cần fetch ---
             let allIds: string[] = [];
-            if (indexData.lessonFileIds) {
+            if (indexData.zipFileIds || indexData.zipFileId) {
+                // Format V3: Offline Archive ZIP (Có hỗ trợ chia nhỏ ZIP nếu > 20MB)
+                const zIds: string[] = indexData.zipFileIds || [indexData.zipFileId];
+                if (onProgress) onProgress(10);
+
+                // Tải file ZIP TỪNG FILE MỘT qua Public Proxy
+                let downloadedParts = 0;
+
+                for (let i = 0; i < zIds.length; i++) {
+                    const fileId = zIds[i];
+                    try {
+                        const arrayBuf = await fetchViaPublicProxy(fileId);
+                        const zip = new JSZip();
+
+                        const unzipped = await zip.loadAsync(arrayBuf); // Nạp thẳng mảng Byte (Binary)
+
+                        const filePromises: Promise<void>[] = [];
+                        unzipped.forEach((relativePath, fileObj) => {
+                            if (!fileObj.dir) {
+                                filePromises.push(
+                                    fileObj.async("string").then(content => {
+                                        let parsedData;
+                                        try { parsedData = JSON.parse(content); }
+                                        catch { parsedData = JSON.parse(xorDeobfuscate(content)); }
+                                        mergePayload(parsedData);
+                                    })
+                                );
+                            }
+                        });
+                        await Promise.all(filePromises);
+                    } catch (err: any) {
+                        console.error('Error fetching zip chunk with proxy:', err);
+                        throw new Error(`Tải đoạn dữ liệu thất bại. Vui lòng thử tải lại.`);
+                    }
+                    downloadedParts++;
+                    // Tiến độ tải từng file zip (10% -> 90%)
+                    if (onProgress) onProgress(Math.floor(10 + (downloadedParts / zIds.length) * 80));
+                }
+
+                if (onProgress) onProgress(90); // Finished merging 
+            } else if (indexData.lessonFileIds) {
                 // Format mới V2: flat array
                 allIds = indexData.lessonFileIds as string[];
             } else if (indexData.chapterFileIds) {
@@ -322,12 +401,14 @@ export const useCloudStorage = () => {
                 allIds = Object.values(indexData.chapterFileIds as Record<string, string>);
             }
 
-            // Fetch song song theo batch 8 để tránh rate-limit
-            const BATCH = 8;
-            for (let i = 0; i < allIds.length; i += BATCH) {
-                const chunk = allIds.slice(i, i + BATCH);
-                const results = await Promise.all(chunk.map(fetchOneFile));
-                results.forEach(mergePayload);
+            // Fetch song song theo batch 8 để tránh rate-limit (chỉ cho cấu trúc V1, V2 cũ)
+            if (allIds.length > 0) {
+                const BATCH = 8;
+                for (let i = 0; i < allIds.length; i += BATCH) {
+                    const chunk = allIds.slice(i, i + BATCH);
+                    const results = await Promise.all(chunk.map(fetchOneFile));
+                    results.forEach(mergePayload);
+                }
             }
 
             const uniqueLessons = Array.from(newLessonsMap.values()) as Lesson[];
@@ -414,29 +495,65 @@ export const useCloudStorage = () => {
             throw new Error('Quá 5 lần thử lại — Telegram đang bị giới hạn.');
         };
 
-        // Upload từng blob & thu thập file_id
-        const lessonFileIds: string[] = [];
-        let totalBytesSent = 0;
-        for (let i = 0; i < blobs.length; i++) {
-            const blob = blobs[i];
-            const p = payloads[i];
+        // --- V3 Zip Archive Chunking (Giới hạn tải xuống của Telegram File API là 20MB, ta chia 18MB một cục chưa nén) ---
+        const MAX_CHUNK_SIZE = 18 * 1024 * 1024;
+        const zipChunks: JSZip[] = [];
+        let currentZip = new JSZip();
+        let currentChunkSize = 0;
+
+        for (const p of payloads) {
+            const content = xorObfuscate(JSON.stringify({ ...p, syncedAt: Date.now() }));
             const fileName = `g${grade}_${p.chapterId}_${p.lessons[0]?.id || 'ch'}.json`;
-            const fileId = await uploadBlob(blob, fileName, (loaded) => {
-                const percent = Math.floor(((totalBytesSent + loaded) / totalUploadSize) * 93) + 1;
-                setSyncProgress(Math.min(percent, 93));
-            });
-            lessonFileIds.push(fileId);
-            totalBytesSent += blob.size;
+            const contentBytes = new Blob([content]).size;
+
+            if (currentChunkSize > 0 && currentChunkSize + contentBytes > MAX_CHUNK_SIZE) {
+                zipChunks.push(currentZip);
+                currentZip = new JSZip();
+                currentChunkSize = 0;
+            }
+
+            currentZip.file(fileName, content);
+            currentChunkSize += contentBytes;
+        }
+        if (currentChunkSize > 0) {
+            zipChunks.push(currentZip);
         }
 
-        // Gửi file Index V2
+        const zipBlobs: Blob[] = [];
+        // 1. Phân bổ 0% -> 20% cho việc nén ZIP
+        for (let i = 0; i < zipChunks.length; i++) {
+            const z = zipChunks[i];
+            const zipBlob = await z.generateAsync({ type: 'blob', compression: "DEFLATE", compressionOptions: { level: 6 } }, (meta) => {
+                const globalPercent = Math.floor(i * (20 / zipChunks.length) + meta.percent * (0.2 / zipChunks.length));
+                setSyncProgress(globalPercent);
+            });
+            zipBlobs.push(zipBlob);
+        }
+
+        const finalZipFileIds: string[] = [];
+        const totalZipSize = zipBlobs.reduce((acc, curr) => acc + curr.size, 0);
+        let currentUploadedSize = 0;
+
+        // 2. Phân bổ 20% -> 95% cho việc upload file
+        for (let i = 0; i < zipBlobs.length; i++) {
+            const zipBlob = zipBlobs[i];
+            const fileId = await uploadBlob(zipBlob, `vault_g${grade}_v3_part${i + 1}.zip`, (loaded) => {
+                const totalLoaded = currentUploadedSize + loaded;
+                const globalPercent = 20 + Math.floor((totalLoaded / totalZipSize) * 75);
+                setSyncProgress(Math.min(globalPercent, 95));
+            });
+            currentUploadedSize += zipBlob.size;
+            finalZipFileIds.push(fileId);
+        }
+
+        // Gửi file Index V3
         setSyncProgress(95);
-        const indexPayload = { grade, lessonFileIds, totalLessons: lessonsToSync.length, updatedAt: Date.now() };
+        const indexPayload = { grade, zipFileIds: finalZipFileIds, totalLessons: lessonsToSync.length, updatedAt: Date.now() };
         const indexBlob = new Blob([xorObfuscate(JSON.stringify(indexPayload))], { type: 'application/json' });
         const indexForm = new FormData();
         indexForm.append('chat_id', TELEGRAM_CHAT_ID);
-        indexForm.append('document', indexBlob, `index_grade${grade}_v2.json`);
-        indexForm.append('caption', `[INDEX-V2] Lớp ${grade} — ${payloads.length} tệp`);
+        indexForm.append('document', indexBlob, `index_grade${grade}_v3.json`);
+        indexForm.append('caption', `[INDEX-V3-ZIP] Lớp ${grade} | ${finalZipFileIds.length} phần`);
 
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
         const indexRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
@@ -446,10 +563,12 @@ export const useCloudStorage = () => {
 
         const finalFileId = (await indexRes.json()).result.document.file_id;
 
-        const sheetRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=${grade}&file_id=${finalFileId}`);
-        if (!sheetRes.ok) throw new Error("Không thể ghi địa chỉ lên Google Sheets.");
-        const sheetResult = await sheetRes.json();
-        if (!sheetResult.success) throw new Error("Google Sheets từ chối lưu: " + (sheetResult.error || "Lỗi không xác định"));
+        // Lưu vào Supabase thay vì Google Sheets
+        const { error: sbError } = await supabase
+            .from('vault_index')
+            .upsert({ grade, telegram_file_id: finalFileId, updated_at: Date.now() }, { onConflict: 'grade' });
+        
+        if (sbError) throw new Error("Supabase từ chối lưu: " + sbError.message);
 
         localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
         setSyncProgress(100);
@@ -528,9 +647,12 @@ export const useCloudStorage = () => {
         const data = await res.json();
         const fileId = data.result.document.file_id;
 
-        // Ghi file_id vào GAS (dùng action riêng cho exam)
-        const sheetRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=update_vault_index&grade=0&file_id=${fileId}`);
-        if (!sheetRes.ok) throw new Error('Không thể ghi địa chỉ exam lên Google Sheets');
+        // Ghi file_id vào Supabase
+        const { error: sbError } = await supabase
+            .from('vault_index')
+            .upsert({ grade: 0, telegram_file_id: fileId, updated_at: Date.now() }, { onConflict: 'grade' });
+        if (sbError) throw new Error('Không thể ghi địa chỉ exam lên Supabase');
+        
         localStorage.setItem('pv_exam_index_file_id', fileId);
 
         // Lưu local IndexedDB
@@ -544,17 +666,29 @@ export const useCloudStorage = () => {
 
         // 2. Lấy file_id mới nhất từ GAS
         try {
-            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
-            const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_latest_index&grade=0`);
-            const result = await res.json();
-            const fileId = result.file_id || localStorage.getItem('pv_exam_index_file_id');
+            const { data, error } = await supabase
+                .from('vault_index')
+                .select('telegram_file_id')
+                .eq('grade', 0)
+                .single();
+                
+            const fileId = data?.telegram_file_id || localStorage.getItem('pv_exam_index_file_id');
             if (!fileId) return cached || [];
 
-            const dataRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=get_vault_data&file_id=${fileId}`);
-            const dataResult = await dataRes.json();
-            if (!dataResult.success) return cached || [];
-
-            const parsed = JSON.parse(xorDeobfuscate(dataResult.data));
+            // Tải file index exam từ Telegram thay vì GAS
+            const pathRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${fileId}`);
+            const pathData = await pathRes.json();
+            if (!pathData.ok) return cached || [];
+            
+            const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${pathData.result.file_path}`;
+            const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
+            
+            const fileRes = await fetch(proxyUrl);
+            if (!fileRes.ok) return cached || [];
+            const arrayBuf = await fileRes.arrayBuffer();
+            const indexStr = new TextDecoder().decode(arrayBuf);
+            
+            const parsed = JSON.parse(xorDeobfuscate(indexStr));
             const exams: Exam[] = parsed.exams || [];
             await dbSet('physivault_exams', exams);
             return exams;

@@ -9,9 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.98.0",
     "@types/crypto-js": "^4.2.2",
     "crypto-js": "^4.2.0",
     "firebase": "^12.9.0",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.564.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"

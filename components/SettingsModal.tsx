@@ -1,3 +1,4 @@
+import { supabase } from '../src/lib/supabase';
 
 import React, { useRef, useState, useEffect } from 'react';
 import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone, GraduationCap, CloudDownload, Loader2, RefreshCw } from 'lucide-react';
@@ -47,6 +48,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     const [generatedKey, setGeneratedKey] = useState('');
     const [activationHistory, setActivationHistory] = useState<{ id: string; name: string; key: string; date: number }[]>([]);
     const [isFetchingLessons, setIsFetchingLessons] = useState(false);
+    const [fetchProgress, setFetchProgress] = useState(0);
     const [fetchResult, setFetchResult] = useState<{ lessonCount: number; fileCount: number } | null>(null);
 
     useEffect(() => {
@@ -93,19 +95,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         const sdt = studentSdt.trim();
         const key = studentKeyInput.trim();
         if (!sdt) { onShowToast('Vui lòng nhập Số điện thoại đã đăng ký!', 'warning'); return; }
-        if (onActivateSystem(key, sdt, studentGrade)) {
+        if (await onActivateSystem(key, sdt, studentGrade)) {
             onShowToast('Kích hoạt thành công! Đang tải bài giảng...', 'success');
             setStudentKeyInput('');
             // Auto-fetch bài giảng từ GitHub
             setIsFetchingLessons(true);
+            setFetchProgress(0);
             try {
-                const result = await onFetchLessons(studentGrade);
+                const result = await onFetchLessons(studentGrade, setFetchProgress);
                 setFetchResult(result);
                 onShowToast(`✓ Đã nhận ${result.lessonCount} bài giảng từ hệ thống!`, 'success');
             } catch (err: any) {
                 onShowToast(`Lưu ý: ${err.message}`, 'warning');
             } finally {
                 setIsFetchingLessons(false);
+                setFetchProgress(0);
             }
         } else {
             onShowToast('Mã kích hoạt hoặc SĐT không khớp với máy này!', 'error');
@@ -115,14 +119,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     const handleManualFetch = async () => {
         const grade = parseInt(localStorage.getItem('physivault_grade') || '12');
         setIsFetchingLessons(true);
+        setFetchProgress(0);
         try {
-            const result = await onFetchLessons(grade);
+            const result = await onFetchLessons(grade, setFetchProgress);
             setFetchResult(result);
-            onShowToast(`✓ Đã tải ${result.lessonCount} bài giảng từ hệ thống!`, 'success');
+            onShowToast(`✓ Đã tải và lưu kho khóa ngoại tuyến!`, 'success');
         } catch (err: any) {
             onShowToast(`Lỗi tải bài giảng: ${err.message}`, 'error');
         } finally {
             setIsFetchingLessons(false);
+            setTimeout(() => setFetchProgress(0), 1000);
         }
     };
 
@@ -416,12 +422,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                     <button
                                         onClick={handleActivate}
                                         disabled={isFetchingLessons}
-                                        className="px-5 text-sm font-semibold text-white rounded-lg transition-colors disabled:opacity-70 flex items-center gap-2"
-                                        style={{ background: '#D9730D' }}
+                                        className="px-5 text-sm font-semibold text-white rounded-lg transition-colors disabled:opacity-70 flex items-center justify-center gap-2 relative overflow-hidden shrink-0"
+                                        style={{ background: '#D9730D', minWidth: '110px' }}
                                         onMouseEnter={e => !isFetchingLessons && ((e.currentTarget as HTMLElement).style.background = '#c4650b')}
                                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#D9730D'}
                                     >
-                                        {isFetchingLessons ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Mở khóa'}
+                                        <div
+                                            className="absolute left-0 top-0 bottom-0 bg-black/20 transition-all duration-300 pointer-events-none"
+                                            style={{ width: `${fetchProgress}%` }}
+                                        />
+                                        {isFetchingLessons ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin relative z-10" />
+                                                <span className="relative z-10">{fetchProgress}%</span>
+                                            </>
+                                        ) : (
+                                            'Mở khóa'
+                                        )}
                                     </button>
                                 </div>
 
@@ -470,20 +487,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                 <button
                                     onClick={handleManualFetch}
                                     disabled={isFetchingLessons}
-                                    className="w-full py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                                    className="w-full py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-60 relative overflow-hidden"
                                     style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #44836133' }}
                                     onMouseEnter={e => !isFetchingLessons && ((e.currentTarget as HTMLElement).style.background = '#D5E8DD')}
-                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#EAF3EE'}
+                                    onMouseLeave={e => !isFetchingLessons && ((e.currentTarget as HTMLElement).style.background = '#EAF3EE')}
                                 >
-                                    {isFetchingLessons
-                                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang tải bài giảng...</>
-                                        : <><RefreshCw className="w-4 h-4" /> Tải bài giảng mới</>}
+                                    <div
+                                        className="absolute left-0 top-0 bottom-0 bg-[#448361]/15 transition-all duration-300 pointer-events-none"
+                                        style={{ width: `${fetchProgress}%` }}
+                                    />
+                                    {isFetchingLessons ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin relative z-10" />
+                                            <span className="relative z-10">Đang tải kho tài liệu về máy... {fetchProgress}%</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <RefreshCw className="w-4 h-4" />
+                                            Tải bài giảng mới
+                                        </>
+                                    )}
                                 </button>
-                                {fetchResult && (
-                                    <p className="text-xs text-center mt-2" style={{ color: '#448361' }}>
-                                        ✓ Đã nhận {fetchResult.lessonCount} bài · {fetchResult.fileCount} tài liệu
-                                    </p>
-                                )}
+                                <div className="mt-3 text-center text-xs" style={{ color: '#448361' }}>
+                                    ✓ Đã nhận {lessons.length} bài | Tải ngay kho ngoại tuyến để tối ưu hệ thống
+                                </div>
                             </div>
                         </div>
                     )}

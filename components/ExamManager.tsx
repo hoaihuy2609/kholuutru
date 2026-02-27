@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Trash2, Upload, FileText, Clock, ChevronLeft, ChevronRight, Save, X, Check, RefreshCw, ClipboardList } from 'lucide-react';
 import { Exam, ExamAnswers, ExamTFAnswer } from '../types';
 
-const Loader2 = ({ className }: { className?: string }) => (
-    <RefreshCw className={`${className} animate-spin`} />
+const Loader2 = ({ className, style }: { className?: string, style?: React.CSSProperties }) => (
+    <RefreshCw className={`${className} animate-spin`} style={style} />
 );
 
 interface ExamManagerProps {

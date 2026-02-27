@@ -1,3 +1,4 @@
+import { supabase } from '../src/lib/supabase';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -132,43 +133,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const handleDeleteStudent = async (sdt: string) => {
         if (!window.confirm(`Bạn có chắc muốn xóa học viên ${sdt} không?`)) return;
         try {
-            await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'delete', sdt })
-            });
-            onShowToast('Đã gửi yêu cầu xóa!', 'warning');
-            setTimeout(refreshStudents, 2000);
-        } catch { onShowToast('Lỗi khi xóa học viên', 'error'); }
+            const { error } = await supabase.from('students').delete().eq('phone', sdt);
+            if (error) throw error;
+            onShowToast('Đã xóa học viên!', 'warning');
+            setTimeout(refreshStudents, 500);
+        } catch (e: any) { onShowToast('Lỗi khi xóa học viên: ' + e.message, 'error'); }
     };
 
     const handleKickStudent = async (sdt: string, name: string) => {
         if (!window.confirm(`Bạn có chắc muốn KICK học viên "${name}" (${sdt}) không?\n\nHọc viên sẽ không thể truy cập tài liệu nữa.`)) return;
         try {
-            await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'kick', sdt })
-            });
+            const { error } = await supabase.from('students').update({ is_active: false }).eq('phone', sdt);
+            if (error) throw error;
             onShowToast(`Đã kick học viên ${name}!`, 'success');
-            setTimeout(refreshStudents, 2000);
-        } catch { onShowToast('Lỗi khi kick học viên', 'error'); }
+            setTimeout(refreshStudents, 500);
+        } catch (e:any) { onShowToast('Lỗi khi kick học viên: ' + e.message, 'error'); }
     };
 
     const handleUnkickStudent = async (sdt: string, name: string) => {
         if (!window.confirm(`Mở khóa cho học viên "${name}" (${sdt})?\n\nHọc viên sẽ cần kích hoạt lại từ đầu.`)) return;
         try {
-            await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'unkick', sdt })
-            });
+            const { error } = await supabase.from('students').update({ is_active: true, machine_id: null }).eq('phone', sdt);
+            if (error) throw error;
             onShowToast(`Đã mở khóa cho ${name}!`, 'success');
-            setTimeout(refreshStudents, 2000);
-        } catch { onShowToast('Lỗi khi mở khóa học viên', 'error'); }
+            setTimeout(refreshStudents, 500);
+        } catch (e: any) { onShowToast('Lỗi khi mở khóa học viên: ' + e.message, 'error'); }
     };
 
     const filteredStudents = (students || []).filter(s => {
@@ -387,7 +376,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                             <td colSpan={7} className="px-5 py-16 text-center">
                                                 <div className="flex flex-col items-center gap-3">
                                                     <Loader2 className="w-8 h-8" style={{ color: '#6B7CDB' } as React.CSSProperties} />
-                                                    <p className="text-sm" style={{ color: '#787774' }}>Đang nạp dữ liệu từ Google Sheets...</p>
+                                                    <p className="text-sm" style={{ color: '#787774' }}>Đang nạp dữ liệu từ Supabase...</p>
                                                 </div>
                                             </td>
                                         </tr>
