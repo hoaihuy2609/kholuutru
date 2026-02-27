@@ -118,8 +118,11 @@ const ExamManager: React.FC<ExamManagerProps> = ({
                                 <div className="min-w-0">
                                     <p className="font-semibold text-sm truncate" style={{ color: '#1A1A1A' }}>{exam.title}</p>
                                     <div className="flex items-center gap-3 mt-0.5">
+                                        <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: ACCENT, background: '#EEF0FB', padding: '2px 6px', borderRadius: '4px' }}>
+                                            Lớp {exam.grade || 12}
+                                        </span>
                                         <span className="flex items-center gap-1 text-xs" style={{ color: '#AEACA8' }}>
-                                            <Clock className="w-3 h-3" />{exam.duration} phút
+                                            <Clock className="w-3 h-3" />{exam.duration}'
                                         </span>
                                         <span className="text-xs" style={{ color: '#AEACA8' }}>
                                             {new Date(exam.createdAt).toLocaleDateString('vi-VN')}
@@ -178,6 +181,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
     const [step, setStep] = useState(1); // 1=Info+PDF, 2=Phần I, 3=Phần II, 4=Phần III
     const [title, setTitle] = useState('');
     const [duration, setDuration] = useState('50');
+    const [grade, setGrade] = useState(12);
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [pdfProgress, setPdfProgress] = useState(0);
     const [pdfUploading, setPdfUploading] = useState(false);
@@ -231,6 +235,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                 pdfTelegramFileId: pdfFileId,
                 pdfFileName,
                 duration: parseInt(duration),
+                grade,
                 createdAt: Date.now(),
                 answers,
             };
@@ -296,34 +301,45 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                                 />
                             </div>
 
-                            {/* Thời gian */}
-                            <div>
-                                <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>Thời gian làm bài (phút) *</label>
-                                <div className="flex items-center gap-3">
-                                    {[30, 45, 50, 60, 90].map(t => (
-                                        <button
-                                            key={t}
-                                            onClick={() => setDuration(t.toString())}
-                                            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
-                                            style={{
-                                                background: duration === t.toString() ? ACCENT : '#F1F0EC',
-                                                color: duration === t.toString() ? '#fff' : '#57564F',
-                                            }}
-                                        >{t}'</button>
-                                    ))}
-                                    <input
-                                        type="number"
-                                        value={duration}
-                                        onChange={e => setDuration(e.target.value)}
-                                        className="w-20 px-3 py-1.5 rounded-lg text-sm text-center outline-none"
-                                        style={{ border: '1.5px solid #E9E9E7', background: '#F7F6F3', color: '#1A1A1A' }}
-                                        min="1" max="180"
-                                        onFocus={e => (e.target as HTMLElement).style.borderColor = ACCENT}
-                                        onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
-                                    />
+                            {/* Thời gian + Lớp */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>Thời gian làm bài *</label>
+                                    <div className="flex items-center gap-2">
+                                        {[45, 50, 90].map(t => (
+                                            <button
+                                                key={t}
+                                                onClick={() => setDuration(t.toString())}
+                                                className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+                                                style={{ background: duration === t.toString() ? ACCENT : '#F1F0EC', color: duration === t.toString() ? '#fff' : '#57564F' }}
+                                            >{t}'</button>
+                                        ))}
+                                        <input
+                                            type="number"
+                                            value={duration}
+                                            onChange={e => setDuration(e.target.value)}
+                                            className="w-14 px-2 py-1.5 rounded-lg text-xs text-center outline-none"
+                                            style={{ border: '1.5px solid #E9E9E7', background: '#F7F6F3', color: '#1A1A1A' }}
+                                            min="1" max="180"
+                                            onFocus={e => (e.target as HTMLElement).style.borderColor = ACCENT}
+                                            onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>Khối lớp *</label>
+                                    <div className="flex items-center gap-2">
+                                        {[10, 11, 12].map(g => (
+                                            <button
+                                                key={g}
+                                                onClick={() => setGrade(g)}
+                                                className="flex-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+                                                style={{ background: grade === g ? ACCENT : '#F1F0EC', color: grade === g ? '#fff' : '#57564F' }}
+                                            >Lớp {g}</button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-
                             {/* Upload PDF */}
                             <div>
                                 <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>File đề thi (PDF) *</label>
@@ -473,6 +489,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                                 <p className="text-xs font-semibold mb-2" style={{ color: ACCENT }}>Tóm tắt đề thi</p>
                                 <div className="space-y-1 text-xs" style={{ color: '#57564F' }}>
                                     <div className="flex justify-between"><span>📋 Tên đề:</span><span className="font-medium">{title}</span></div>
+                                    <div className="flex justify-between"><span>📚 Khối:</span><span className="font-medium">Lớp {grade}</span></div>
                                     <div className="flex justify-between"><span>⏱️ Thời gian:</span><span className="font-medium">{duration} phút</span></div>
                                     <div className="flex justify-between"><span>I. Trắc nghiệm:</span><span className="font-medium">{answers.mc.filter(Boolean).length}/18 câu</span></div>
                                     <div className="flex justify-between"><span>II. Đúng/Sai:</span><span className="font-medium">{answers.tf.filter(t => t.a || t.b || t.c || t.d).length}/4 câu</span></div>

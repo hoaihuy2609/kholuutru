@@ -17,7 +17,14 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams }
         setLoading(true);
         try {
             const data = await onLoadExams();
-            setExams(data.sort((a, b) => b.createdAt - a.createdAt));
+            const studentGradeStr = localStorage.getItem('physivault_grade') || '12';
+            const studentGrade = parseInt(studentGradeStr, 10);
+
+            const filtered = data
+                .filter(e => !e.grade || e.grade === studentGrade) // Fallback !e.grade for backwards compatibility
+                .sort((a, b) => b.createdAt - a.createdAt);
+
+            setExams(filtered);
         } catch { /* silent */ }
         finally { setLoading(false); }
     };

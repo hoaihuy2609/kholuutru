@@ -56,6 +56,7 @@ export interface Exam {
   pdfTelegramFileId: string;  // file_id PDF trên Telegram
   pdfFileName: string;        // tên file PDF gốc
   duration: number;           // phút
+  grade: number;              // 10, 11, 12
   createdAt: number;
   answers: ExamAnswers;
 }
