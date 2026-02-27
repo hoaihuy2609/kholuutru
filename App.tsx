@@ -666,6 +666,7 @@ function App() {
           setShowAdminDashboard(true);
           setIsSettingsOpen(false);
         }}
+        onLoadExams={loadExams}
       />
 
       <GuideModal
