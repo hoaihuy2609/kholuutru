@@ -689,14 +689,21 @@ export const useCloudStorage = () => {
                 .single();
 
             const fileId = data?.telegram_file_id || localStorage.getItem('pv_exam_index_file_id');
+            const savedFileId = localStorage.getItem('pv_exam_index_file_id');
+
             if (!fileId) return cached || [];
 
-            // Tải file index exam từ Telegram
+            // Nếu dữ liệu local đã MỚI NHẤT -> Không cần cất công tải lại từ Proxy
+            if (fileId === savedFileId && cached && cached.length > 0) {
+                return cached;
+            }
+
+            // Tải file index exam từ Telegram (có file_id mới)
             const pathRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${fileId}`);
             const pathData = await pathRes.json();
             if (!pathData.ok) return cached || [];
 
-            const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${pathData.result.file_path}`;
+            const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${pathData.result.file_path}?t=${Date.now()}`;
             const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
 
             const fileRes = await fetch(proxyUrl);
@@ -707,6 +714,7 @@ export const useCloudStorage = () => {
             const parsed = JSON.parse(xorDeobfuscate(indexStr));
             const exams: Exam[] = parsed.exams || [];
             await dbSet('physivault_exams', exams);
+            localStorage.setItem('pv_exam_index_file_id', fileId); // Update local track state
             return exams;
         } catch {
             return cached || [];
