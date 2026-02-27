@@ -274,7 +274,7 @@ export const useCloudStorage = () => {
         console.log(`[CloudSync] Đang hỏi Google cho Lớp ${grade}`);
 
         try {
-            
+
             let indexFileId = localStorage.getItem(`pv_sync_file_id_${grade}`);
             try {
                 const { data, error } = await supabase
@@ -567,7 +567,7 @@ export const useCloudStorage = () => {
         const { error: sbError } = await supabase
             .from('vault_index')
             .upsert({ grade, telegram_file_id: finalFileId, updated_at: Date.now() }, { onConflict: 'grade' });
-        
+
         if (sbError) throw new Error("Supabase từ chối lưu: " + sbError.message);
 
         localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
@@ -582,11 +582,17 @@ export const useCloudStorage = () => {
         if (!isCurrentlyActivated || !sdt) return 'ok';
 
         const machineId = getMachineId();
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
         try {
-            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=check&sdt=${sdt}&machineId=${machineId}`);
-            const result = await response.json();
-            if (!result.success) {
+            let phoneStr = String(sdt).trim();
+            if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
+
+            const { data, error } = await supabase
+                .from('students')
+                .select('is_active, machine_id')
+                .eq('phone', phoneStr)
+                .single();
+
+            if (error || !data || !data.is_active || data.machine_id !== machineId) {
                 localStorage.removeItem(STORAGE_ACTIVATION_KEY);
                 setIsActivated(false);
                 return 'kicked';
@@ -652,7 +658,7 @@ export const useCloudStorage = () => {
             .from('vault_index')
             .upsert({ grade: 0, telegram_file_id: fileId, updated_at: Date.now() }, { onConflict: 'grade' });
         if (sbError) throw new Error('Không thể ghi địa chỉ exam lên Supabase');
-        
+
         localStorage.setItem('pv_exam_index_file_id', fileId);
 
         // Lưu local IndexedDB
@@ -671,7 +677,7 @@ export const useCloudStorage = () => {
                 .select('telegram_file_id')
                 .eq('grade', 0)
                 .single();
-                
+
             const fileId = data?.telegram_file_id || localStorage.getItem('pv_exam_index_file_id');
             if (!fileId) return cached || [];
 
@@ -679,15 +685,15 @@ export const useCloudStorage = () => {
             const pathRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${fileId}`);
             const pathData = await pathRes.json();
             if (!pathData.ok) return cached || [];
-            
+
             const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${pathData.result.file_path}`;
             const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
-            
+
             const fileRes = await fetch(proxyUrl);
             if (!fileRes.ok) return cached || [];
             const arrayBuf = await fileRes.arrayBuffer();
             const indexStr = new TextDecoder().decode(arrayBuf);
-            
+
             const parsed = JSON.parse(xorDeobfuscate(indexStr));
             const exams: Exam[] = parsed.exams || [];
             await dbSet('physivault_exams', exams);

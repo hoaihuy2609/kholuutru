@@ -75,13 +75,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         const key = generateActivationKey(targetId, sdt);
         setGeneratedKey(key);
         try {
-            await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'add', sdt, name: name || 'Học sinh tự tạo', machineId: targetId, key }),
-            });
-            onShowToast('Đã tạo mã và đồng bộ lên hệ thống!', 'success');
-        } catch {
-            onShowToast('Đã tạo mã nhưng lỗi đồng bộ lên Sheets (Kiểm tra lại Script)', 'warning');
+            let phoneStr = String(sdt).trim();
+            if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
+
+            const payload = {
+                phone: phoneStr,
+                name: name || 'Học sinh mới',
+                machine_id: targetId,
+                activation_key: key,
+                is_active: true
+            };
+
+            const { error } = await supabase.from('students').upsert(payload, { onConflict: 'phone' });
+            if (error) throw error;
+
+            onShowToast('Đã tạo mã và đồng bộ lên Supabase!', 'success');
+        } catch (err: any) {
+            onShowToast('Lỗi đồng bộ Supabase: ' + err.message, 'warning');
         }
         const filteredHistory = activationHistory.filter(h => h.id !== targetId);
         const newHistory = [{ id: targetId, name: name || 'Học sinh mới', key, date: Date.now() }, ...filteredHistory].slice(0, 50);

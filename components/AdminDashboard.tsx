@@ -58,36 +58,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
 
     const refreshStudents = async () => {
         setLoading(true);
-        console.log("[Admin] Đang tải danh sách học sinh từ:", GOOGLE_SCRIPT_URL);
+        console.log("[Admin] Đang tải danh sách học sinh từ Supabase...");
         try {
-            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=list`);
-            const result = await response.json();
-            console.log("[Admin] Kết quả từ Google:", result);
+            const { data, error } = await supabase.from('students').select('*').order('created_at', { ascending: false });
+            if (error) throw error;
 
-            if (result.success && Array.isArray(result.data)) {
-                // Helper: chuyển giá trị null/undefined/falsy về '' tránh "null" string
-                const safe = (v: unknown): string => {
-                    if (v === null || v === undefined || v === 'null' || v === 'undefined') return '';
-                    return String(v).trim();
-                };
-                // Normalize toàn bộ fields - GSheets API có thể trả số cho sdt, null cho machineId
-                const normalized: Student[] = result.data
-                    .filter((row: unknown) => row && typeof row === 'object')
-                    .map((row: Record<string, unknown>) => ({
-                        sdt: safe(row.sdt),
-                        name: safe(row.name) || 'Học viên',
-                        machineId: safe(row.machineId),
-                        key: safe(row.key),
-                        status: safe(row.status) || 'pending',
-                        grade: row.grade !== undefined && row.grade !== null && row.grade !== '' ? Number(row.grade) : 12,
-                    }));
-                setStudents(normalized);
-            } else {
-                console.warn("[Admin] Dữ liệu học sinh không phải Array hoặc fetch thất bại:", result);
-                setStudents([]);
-            }
+            const normalized: Student[] = (data || []).map(row => ({
+                sdt: row.phone || '',
+                name: row.name || 'Học viên',
+                machineId: row.machine_id || '',
+                key: row.activation_key || '',
+                status: row.is_active === false ? 'KICKED' : (row.machine_id ? 'ACTIVATED' : 'PENDING'),
+                grade: row.grade || 12,
+            }));
+            setStudents(normalized);
         } catch (err) {
-            console.error("[Admin] Lỗi kết nối Google Script:", err);
+            console.error("[Admin] Lỗi kết nối Supabase:", err);
             setStudents([]);
         } finally {
             setLoading(false);
@@ -100,31 +86,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         e.preventDefault();
         if (!newStudent.sdt || !newStudent.name) return;
         setIsSubmitting(true);
-        console.log("[Admin] Đang thêm học viên:", newStudent);
+        console.log("[Admin] Đang thêm học viên lên Supabase:", newStudent);
 
         try {
-            // Using 'no-cors' because Google Apps Script doesn't support OPTIONS preflight for POST with JSON
-            await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'add',
-                    sdt: newStudent.sdt,
-                    name: newStudent.name,
-                    grade: newStudent.grade
-                })
-            });
+            let phoneStr = String(newStudent.sdt).trim();
+            if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
 
-            onShowToast('Đã gửi yêu cầu thêm học viên!', 'success');
+            const { error } = await supabase.from('students').insert([{
+                phone: phoneStr,
+                name: newStudent.name.trim(),
+                grade: newStudent.grade,
+                is_active: true
+            }]);
+
+            if (error) throw error;
+
+            onShowToast('Đã thêm học viên lên Supabase!', 'success');
             setIsAddModalOpen(false);
             setNewStudent({ sdt: '', name: '', grade: 12 });
-
-            // Wait slightly longer and then refresh to allow Google Sheets to update
-            setTimeout(refreshStudents, 2500);
-        } catch (err) {
+            refreshStudents();
+        } catch (err: any) {
             console.error("[Admin] Lỗi khi thêm:", err);
-            onShowToast('Lỗi khi kết nối hệ thống', 'error');
+            onShowToast('Lỗi Supabase: ' + err.message, 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -147,7 +130,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
             if (error) throw error;
             onShowToast(`Đã kick học viên ${name}!`, 'success');
             setTimeout(refreshStudents, 500);
-        } catch (e:any) { onShowToast('Lỗi khi kick học viên: ' + e.message, 'error'); }
+        } catch (e: any) { onShowToast('Lỗi khi kick học viên: ' + e.message, 'error'); }
     };
 
     const handleUnkickStudent = async (sdt: string, name: string) => {
