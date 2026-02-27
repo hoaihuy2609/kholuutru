@@ -262,11 +262,14 @@ export const useCloudStorage = () => {
             let phoneStr = String(sdt).trim();
             if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
 
+            let dbGrade = grade;
+
             try {
-                const { data, error } = await supabase.from('students').select('is_active').eq('phone', phoneStr).single();
+                const { data, error } = await supabase.from('students').select('is_active, grade').eq('phone', phoneStr).single();
                 if (error || !data || !data.is_active) {
                     return false; // Student is kicked or doesn't exist
                 }
+                if (data.grade) dbGrade = data.grade;
             } catch (err) {
                 // If offline or network error, fallback to local activation if key is correct
                 console.warn("Supabase check failed during activation, falling back to local verification.");
@@ -274,7 +277,7 @@ export const useCloudStorage = () => {
 
             localStorage.setItem(STORAGE_ACTIVATION_KEY, 'true');
             if (sdt) localStorage.setItem('pv_activated_sdt', sdt);
-            if (grade) localStorage.setItem(STORAGE_GRADE_KEY, grade.toString());
+            if (dbGrade) localStorage.setItem(STORAGE_GRADE_KEY, dbGrade.toString());
             setIsActivated(true);
             return true;
         }

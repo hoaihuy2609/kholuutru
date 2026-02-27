@@ -40,7 +40,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     const [myMachineId, setMyMachineId] = useState('');
     const [studentKeyInput, setStudentKeyInput] = useState('');
     const [studentSdt, setStudentSdt] = useState('');
-    const [studentGrade, setStudentGrade] = useState<number>(12);
+    const [adminTargetGrade, setAdminTargetGrade] = useState<number>(12);
     const [adminTargetId, setAdminTargetId] = useState('');
     const [adminTargetSdt, setAdminTargetSdt] = useState('');
     const [studentName, setStudentName] = useState('');
@@ -83,7 +83,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                 machine_id: targetId,
                 activation_key: key,
                 is_active: true,
-                device_limit: 1
+                device_limit: 1,
+                grade: adminTargetGrade
             };
 
             const { error } = await supabase.from('students').upsert(payload, { onConflict: 'phone' });
@@ -105,14 +106,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         const sdt = studentSdt.trim();
         const key = studentKeyInput.trim();
         if (!sdt) { onShowToast('Vui lòng nhập Số điện thoại đã đăng ký!', 'warning'); return; }
-        if (await onActivateSystem(key, sdt, studentGrade)) {
+        if (await onActivateSystem(key, sdt)) {
             onShowToast('Kích hoạt thành công! Đang tải bài giảng...', 'success');
             setStudentKeyInput('');
             // Auto-fetch bài giảng từ GitHub
             setIsFetchingLessons(true);
             setFetchProgress(0);
             try {
-                const result = await onFetchLessons(studentGrade, setFetchProgress);
+                const fetchedGrade = parseInt(localStorage.getItem('physivault_grade') || '12');
+                const result = await onFetchLessons(fetchedGrade, setFetchProgress);
                 setFetchResult(result);
                 const exams = await onLoadExams();
                 onShowToast(`✓ Đã nhận ${result.lessonCount} bài giảng và ${exams.length} đề thi từ hệ thống!`, 'success');
@@ -368,30 +370,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
 
                             {/* Inputs */}
                             <div className="p-4 space-y-3" style={{ background: '#FAFAF9' }}>
-                                {/* Grade selector */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: '#AEACA8' }}>
-                                        <GraduationCap className="w-3 h-3" />
-                                        Bạn học lớp mấy?
-                                    </label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {[10, 11, 12].map(g => (
-                                            <button
-                                                key={g}
-                                                onClick={() => setStudentGrade(g)}
-                                                className="py-2 text-sm font-semibold rounded-lg transition-all"
-                                                style={{
-                                                    background: studentGrade === g ? '#D9730D' : '#FFFFFF',
-                                                    color: studentGrade === g ? '#FFFFFF' : '#57564F',
-                                                    border: `1px solid ${studentGrade === g ? '#D9730D' : '#E9E9E7'}`,
-                                                }}
-                                            >
-                                                Lớp {g}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
                                 {/* Phone */}
                                 <div className="relative">
                                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#AEACA8' }} />
@@ -578,8 +556,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                             />
                                         </div>
                                     </div>
+                                    {/* Grade Selection */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Khối lớp</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {[12, 11, 10].map(g => (
+                                                <button
+                                                    key={g}
+                                                    type="button"
+                                                    onClick={() => setAdminTargetGrade(g)}
+                                                    className="py-2 text-xs font-semibold rounded-lg border transition-all"
+                                                    style={{
+                                                        background: adminTargetGrade === g ? '#6B7CDB' : '#FFFFFF',
+                                                        color: adminTargetGrade === g ? '#FFFFFF' : '#787774',
+                                                        borderColor: adminTargetGrade === g ? '#6B7CDB' : '#E9E9E7'
+                                                    }}
+                                                >
+                                                    Lớp {g}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                     {/* Machine ID */}
-                                    <div className="space-y-1.5 md:col-span-2">
+                                    <div className="space-y-1.5">
                                         <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>
                                             Mã máy học sinh (ID)
                                         </label>
