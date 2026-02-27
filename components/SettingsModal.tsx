@@ -3,9 +3,7 @@ import { supabase } from '../src/lib/supabase';
 import React, { useRef, useState, useEffect } from 'react';
 import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone, GraduationCap, CloudDownload, Loader2, RefreshCw } from 'lucide-react';
 import { exportData, importData, getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
-import { Lesson, FileStorage } from '../types';
-
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
+import { Lesson, FileStorage, Exam } from '../types';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -19,6 +17,7 @@ interface SettingsModalProps {
     onFetchLessons: (grade: number) => Promise<{ success: boolean; lessonCount: number; fileCount: number }>;
     onToggleAdmin: (status: boolean) => void;
     onOpenDashboard: () => void;
+    onLoadExams: () => Promise<Exam[]>;
 }
 
 /* ── Tiny shared input style ── */
@@ -33,7 +32,7 @@ const inputStyle: React.CSSProperties = {
     width: '100%',
 };
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowToast, isAdmin, isActivated, lessons, storedFiles, onActivateSystem, onFetchLessons, onToggleAdmin, onOpenDashboard }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowToast, isAdmin, isActivated, lessons, storedFiles, onActivateSystem, onFetchLessons, onToggleAdmin, onOpenDashboard, onLoadExams }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [password, setPassword] = useState('');
     const [showPassInput, setShowPassInput] = useState(false);
@@ -115,7 +114,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
             try {
                 const result = await onFetchLessons(studentGrade, setFetchProgress);
                 setFetchResult(result);
-                onShowToast(`✓ Đã nhận ${result.lessonCount} bài giảng từ hệ thống!`, 'success');
+                const exams = await onLoadExams();
+                onShowToast(`✓ Đã nhận ${result.lessonCount} bài giảng và ${exams.length} đề thi từ hệ thống!`, 'success');
             } catch (err: any) {
                 onShowToast(`Lưu ý: ${err.message}`, 'warning');
             } finally {
@@ -134,7 +134,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         try {
             const result = await onFetchLessons(grade, setFetchProgress);
             setFetchResult(result);
-            onShowToast(`✓ Đã tải và lưu kho khóa ngoại tuyến!`, 'success');
+            const exams = await onLoadExams();
+            onShowToast(`✓ Đã tải kho bài giảng kho và ${exams.length} đề thi mới nhất!`, 'success');
         } catch (err: any) {
             onShowToast(`Lỗi tải bài giảng: ${err.message}`, 'error');
         } finally {

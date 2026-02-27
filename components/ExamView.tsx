@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Clock, ChevronLeft, Send, AlertTriangle, CheckCircle, RefreshCw, FileText } from 'lucide-react';
 import { Exam, ExamTFAnswer, ExamSubmission } from '../types';
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
 const TELEGRAM_TOKEN = '7985901918:AAFK33yVAEPPKiAbiaMFCdz78TpOhBXeRr0';
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -89,30 +88,15 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit }) => {
                 if (!metaData.ok) throw new Error('Không lấy được link PDF từ Telegram');
                 const filePath = metaData.result.file_path;
 
-                // Bước 2: Dùng GAS proxy để tải binary PDF (tránh CORS của file CDN)
-                const proxyUrl = `${GOOGLE_SCRIPT_URL}?action=proxy_pdf&file_path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(TELEGRAM_TOKEN)}`;
+                // Bước 2: Dùng Public Proxy để tải binary PDF (tránh CORS của file CDN)
+                const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${filePath}`;
+                const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
                 const pdfRes = await fetch(proxyUrl);
 
-                if (!pdfRes.ok) throw new Error(`GAS proxy trả về lỗi: ${pdfRes.status}`);
+                if (!pdfRes.ok) throw new Error(`Proxy trả về lỗi: ${pdfRes.status}`);
 
-                const contentType = pdfRes.headers.get('content-type') || '';
-
-                if (contentType.includes('application/json')) {
-                    // GAS trả về JSON với base64 data
-                    const json = await pdfRes.json();
-                    if (!json.success) throw new Error(json.error || 'GAS proxy thất bại');
-                    // base64 → Blob
-                    const base64 = json.data as string;
-                    const byteChars = atob(base64);
-                    const byteArr = new Uint8Array(byteChars.length);
-                    for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-                    const blob = new Blob([byteArr], { type: 'application/pdf' });
-                    objectUrl = URL.createObjectURL(blob);
-                } else {
-                    // GAS trả về binary trực tiếp
-                    const blob = await pdfRes.blob();
-                    objectUrl = URL.createObjectURL(blob);
-                }
+                const blob = await pdfRes.blob();
+                objectUrl = URL.createObjectURL(blob);
 
                 setPdfUrl(objectUrl);
             } catch (err) {

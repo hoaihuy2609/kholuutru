@@ -19,8 +19,6 @@ interface Student {
     grade?: number;
 }
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
-
 interface AdminDashboardProps {
     onBack: () => void;
     onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void;

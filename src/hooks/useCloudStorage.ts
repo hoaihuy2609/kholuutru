@@ -283,8 +283,7 @@ export const useCloudStorage = () => {
 
     // --- Telegram Cloud Sync: Fetch bài giảng theo grade ---
     const fetchLessonsFromGitHub = async (grade: number, onProgress?: (pct: number) => void): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
-        console.log(`[CloudSync] Đang hỏi Google cho Lớp ${grade}`);
+        console.log(`[CloudSync] Đang truy vấn Supabase cho Lớp ${grade}`);
 
         try {
 
@@ -568,7 +567,6 @@ export const useCloudStorage = () => {
         indexForm.append('document', indexBlob, `index_grade${grade}_v3.json`);
         indexForm.append('caption', `[INDEX-V3-ZIP] Lớp ${grade} | ${finalZipFileIds.length} phần`);
 
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
         const indexRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
             method: 'POST', body: indexForm
         });
@@ -648,9 +646,8 @@ export const useCloudStorage = () => {
         });
     };
 
-    // Lưu danh sách đề thi lên Telegram + ghi file_id vào GAS
+    // Lưu danh sách đề thi lên Telegram + ghi file_id vào Supabase
     const saveExam = async (exams: Exam[]): Promise<void> => {
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
         const content = xorObfuscate(JSON.stringify({ exams, savedAt: Date.now() }));
         const blob = new Blob([content], { type: 'application/json' });
 
@@ -683,7 +680,7 @@ export const useCloudStorage = () => {
         // 1. Ưu tiên dùng cache local
         const cached = await dbGet('physivault_exams');
 
-        // 2. Lấy file_id mới nhất từ GAS
+        // 2. Lấy file_id mới nhất từ Supabase
         try {
             const { data, error } = await supabase
                 .from('vault_index')
@@ -694,7 +691,7 @@ export const useCloudStorage = () => {
             const fileId = data?.telegram_file_id || localStorage.getItem('pv_exam_index_file_id');
             if (!fileId) return cached || [];
 
-            // Tải file index exam từ Telegram thay vì GAS
+            // Tải file index exam từ Telegram
             const pathRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${fileId}`);
             const pathData = await pathRes.json();
             if (!pathData.ok) return cached || [];
