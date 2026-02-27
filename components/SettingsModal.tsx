@@ -83,7 +83,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                 name: name || 'Học sinh mới',
                 machine_id: targetId,
                 activation_key: key,
-                is_active: true
+                is_active: true,
+                device_limit: 1
             };
 
             const { error } = await supabase.from('students').upsert(payload, { onConflict: 'phone' });

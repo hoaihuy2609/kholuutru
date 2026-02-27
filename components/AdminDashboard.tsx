@@ -96,7 +96,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                 phone: phoneStr,
                 name: newStudent.name.trim(),
                 grade: newStudent.grade,
-                is_active: true
+                is_active: true,
+                activation_key: '',
+                machine_id: '',
+                device_limit: 1
             }]);
 
             if (error) throw error;
@@ -136,7 +139,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const handleUnkickStudent = async (sdt: string, name: string) => {
         if (!window.confirm(`Mở khóa cho học viên "${name}" (${sdt})?\n\nHọc viên sẽ cần kích hoạt lại từ đầu.`)) return;
         try {
-            const { error } = await supabase.from('students').update({ is_active: true, machine_id: null }).eq('phone', sdt);
+            const { error } = await supabase.from('students').update({ is_active: true, machine_id: '', activation_key: '' }).eq('phone', sdt);
             if (error) throw error;
             onShowToast(`Đã mở khóa cho ${name}!`, 'success');
             setTimeout(refreshStudents, 500);
