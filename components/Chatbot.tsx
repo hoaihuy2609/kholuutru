@@ -58,7 +58,7 @@ const Chatbot: React.FC = () => {
 
                 const { data, error } = await supabase
                     .from('students')
-                    .select('is_active')
+                    .select('is_active, machine_id')
                     .eq('phone', phoneStr)
                     .single();
 
@@ -66,7 +66,22 @@ const Chatbot: React.FC = () => {
                     addMessage('Không tìm thấy thông tin của bạn. Bạn đã đóng học phí chưa nhỉ?', 'bot');
                 } else if (!data.is_active) {
                     addMessage('Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ thầy Huy nhé.', 'bot');
+                } else if (data.machine_id && data.machine_id !== machineId) {
+                    addMessage('Số điện thoại này đã được nhận mã trên một thiết bị khác. Vui lòng liên hệ thầy Huy để đổi thiết bị nhé!', 'bot');
                 } else {
+                    if (!data.machine_id) {
+                        const { error: updateError } = await supabase
+                            .from('students')
+                            .update({ machine_id: machineId })
+                            .eq('phone', phoneStr);
+
+                        if (updateError) {
+                            addMessage('Có lỗi khi lưu thông tin thiết bị. Hãy thử lại nha.', 'bot');
+                            setIsLoading(false);
+                            return;
+                        }
+                    }
+
                     const key = generateActivationKey(machineId, userText);
                     addMessage('Xác thực thành công! Mã kích hoạt của bạn là:', 'bot');
                     addMessage(key, 'bot');
