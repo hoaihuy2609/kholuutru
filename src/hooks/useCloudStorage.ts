@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useState, useEffect } from 'react';
 import JSZip from 'jszip';
 import CryptoJS from 'crypto-js';
-import { Lesson, StoredFile, FileStorage, Exam } from '../../types';
+import { Lesson, StoredFile, FileStorage, Exam, StudyPlanItem } from '../../types';
 
 // Storage Keys
 const STORAGE_FILES_KEY = 'physivault_files';
@@ -795,6 +795,77 @@ export const useCloudStorage = () => {
         }
     };
 
+    // ── Study Planner Functions ──────────────────────────────────
+    const getStudyPlans = async () => {
+        const sdtStr = localStorage.getItem('pv_activated_sdt');
+        if (!sdtStr) return [];
+        let normalizedPhone = sdtStr.trim();
+        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
+            normalizedPhone = '0' + normalizedPhone;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('study_plans')
+                .select('*')
+                .eq('student_phone', normalizedPhone)
+                .order('due_date', { ascending: true });
+            if (error) throw error;
+            return data as StudyPlanItem[];
+        } catch (e) {
+            console.error('Lỗi tải kế hoạch:', e);
+            return [];
+        }
+    };
+
+    const saveStudyPlan = async (taskName: string, dueDate: string, examId?: string, examTitle?: string, color: string = '#6B7CDB') => {
+        const sdtStr = localStorage.getItem('pv_activated_sdt');
+        if (!sdtStr) return null;
+        let normalizedPhone = sdtStr.trim();
+        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
+            normalizedPhone = '0' + normalizedPhone;
+        }
+
+        try {
+            const { data, error } = await supabase.from('study_plans').insert({
+                student_phone: normalizedPhone,
+                task_name: taskName,
+                due_date: dueDate,
+                exam_id: examId,
+                exam_title: examTitle,
+                color: color
+            }).select().single();
+
+            if (error) throw error;
+            return data as StudyPlanItem;
+        } catch (e) {
+            console.error('Lỗi tạo kế hoạch:', e);
+            return null;
+        }
+    };
+
+    const updateStudyPlan = async (id: string, updates: Partial<StudyPlanItem>) => {
+        try {
+            const { error } = await supabase.from('study_plans').update(updates).eq('id', id);
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('Lỗi cập nhật kế hoạch:', e);
+            return false;
+        }
+    };
+
+    const deleteStudyPlan = async (id: string) => {
+        try {
+            const { error } = await supabase.from('study_plans').delete().eq('id', id);
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('Lỗi xóa kế hoạch:', e);
+            return false;
+        }
+    };
+
     return {
         lessons,
         storedFiles,
@@ -815,6 +886,10 @@ export const useCloudStorage = () => {
         deleteExam,
         saveExamResult,
         getExamHistory,
+        getStudyPlans,
+        saveStudyPlan,
+        updateStudyPlan,
+        deleteStudyPlan,
     };
 };
 

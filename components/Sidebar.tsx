@@ -11,10 +11,12 @@ interface SidebarProps {
   showExamList?: boolean;
   onOpenContactBook?: () => void;
   showContactBook?: boolean;
+  onOpenStudyPlanner?: () => void;
+  showStudyPlanner?: boolean;
   className?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, onOpenExamList, showExamList, onOpenContactBook, showContactBook, className }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, className }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -128,6 +130,30 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
               style={{ background: '#FFF7ED', color: '#D9730D' }}
             >
               HOT
+            </span>
+          </button>
+        )}
+
+        {/* Lịch trình (Study Planner) */}
+        {onOpenStudyPlanner && (
+          <button
+            onClick={() => { onOpenStudyPlanner(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+            style={{
+              background: showStudyPlanner ? '#E3E2DE' : 'transparent',
+              color: showStudyPlanner ? '#1A1A1A' : '#57564F',
+              fontWeight: showStudyPlanner ? 500 : 400,
+            }}
+            onMouseEnter={e => { if (!showStudyPlanner) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+            onMouseLeave={e => { if (!showStudyPlanner) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          >
+            <ClipboardList className="w-4 h-4 shrink-0" style={{ color: showStudyPlanner ? '#448361' : '#AEACA8' }} />
+            <span>Mục Tiêu &amp; Lịch Trình</span>
+            <span
+              className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+              style={{ background: '#EDFDF5', color: '#448361' }}
+            >
+              NEW
             </span>
           </button>
         )}

@@ -82,3 +82,14 @@ export interface ExamResultRecord {
   submitted_at: string;
   grade: number;
 }
+
+export interface StudyPlanItem {
+  id: string;
+  student_phone: string;
+  task_name: string;
+  is_completed: boolean;
+  due_date: string; // YYYY-MM-DD
+  exam_id?: string; // Optional attached exam
+  exam_title?: string;
+  color: string;
+}

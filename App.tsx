@@ -23,6 +23,7 @@ import ExamListPage from './components/ExamListPage';
 import ExamView, { calcScore } from './components/ExamView';
 import ExamResult from './components/ExamResult';
 import ContactBook from './components/ContactBook';
+import StudyPlanner from './components/StudyPlanner';
 
 interface ToastMessage {
   id: string;
@@ -76,6 +77,7 @@ function App() {
   // Exam state
   const [showExamList, setShowExamList] = useState(false);
   const [showContactBook, setShowContactBook] = useState(false);
+  const [showStudyPlanner, setShowStudyPlanner] = useState(false);
   const [activeExam, setActiveExam] = useState<Exam | null>(null);
   const [examSubmission, setExamSubmission] = useState<ExamSubmission | null>(null);
 
@@ -240,6 +242,24 @@ function App() {
         <ContactBook
           isAdmin={isAdmin}
           onLoadHistory={getExamHistory}
+        />
+      );
+    }
+
+    // 0e. Study Planner
+    if (showStudyPlanner) {
+      return (
+        <StudyPlanner
+          onLoadPlans={useCloudStorage().getStudyPlans}
+          onLoadExams={loadExams}
+          onSavePlan={useCloudStorage().saveStudyPlan}
+          onUpdatePlan={useCloudStorage().updateStudyPlan}
+          onDeletePlan={useCloudStorage().deleteStudyPlan}
+          onGoToExam={(exam) => {
+            setActiveExam(exam);
+            setExamSubmission(null);
+            setShowStudyPlanner(false);
+          }}
         />
       );
     }
@@ -620,6 +640,7 @@ function App() {
             setCurrentLesson(null);
             setShowExamList(false);
             setShowContactBook(false);
+            setShowStudyPlanner(false);
             setIsMobileMenuOpen(false);
           }}
           onOpenSettings={() => {
@@ -633,6 +654,7 @@ function App() {
           onOpenExamList={() => {
             setShowExamList(true);
             setShowContactBook(false);
+            setShowStudyPlanner(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
@@ -643,6 +665,18 @@ function App() {
           onOpenContactBook={() => {
             setShowContactBook(true);
             setShowExamList(false);
+            setShowStudyPlanner(false);
+            setActiveExam(null);
+            setExamSubmission(null);
+            setCurrentGrade(null);
+            setCurrentChapterId(null);
+            setCurrentLesson(null);
+            setIsMobileMenuOpen(false);
+          }}
+          onOpenStudyPlanner={() => {
+            setShowStudyPlanner(true);
+            setShowContactBook(false);
+            setShowExamList(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
@@ -652,6 +686,7 @@ function App() {
           }}
           showExamList={showExamList}
           showContactBook={showContactBook}
+          showStudyPlanner={showStudyPlanner}
           className="w-full"
         />
       </div>
@@ -665,12 +700,14 @@ function App() {
           setCurrentLesson(null);
           setShowExamList(false);
           setShowContactBook(false);
+          setShowStudyPlanner(false);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
         onOpenExamList={() => {
           setShowExamList(true);
           setShowContactBook(false);
+          setShowStudyPlanner(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
@@ -680,6 +717,17 @@ function App() {
         onOpenContactBook={() => {
           setShowContactBook(true);
           setShowExamList(false);
+          setShowStudyPlanner(false);
+          setActiveExam(null);
+          setExamSubmission(null);
+          setCurrentGrade(null);
+          setCurrentChapterId(null);
+          setCurrentLesson(null);
+        }}
+        onOpenStudyPlanner={() => {
+          setShowStudyPlanner(true);
+          setShowContactBook(false);
+          setShowExamList(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
@@ -688,6 +736,7 @@ function App() {
         }}
         showExamList={showExamList}
         showContactBook={showContactBook}
+        showStudyPlanner={showStudyPlanner}
         className="hidden md:flex"
       />
 
