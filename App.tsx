@@ -38,7 +38,7 @@ function App() {
   const [autoCreateLesson, setAutoCreateLesson] = useState(false);
 
   // Replace local state with Cloud Storage hook
-  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory } = useCloudStorage();
+  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory, getStudyPlans, saveStudyPlan, updateStudyPlan, deleteStudyPlan } = useCloudStorage();
 
   const [isKicked, setIsKicked] = useState(false);
   const [isOfflineExpired, setIsOfflineExpired] = useState(false);
@@ -250,11 +250,11 @@ function App() {
     if (showStudyPlanner) {
       return (
         <StudyPlanner
-          onLoadPlans={useCloudStorage().getStudyPlans}
+          onLoadPlans={getStudyPlans}
           onLoadExams={loadExams}
-          onSavePlan={useCloudStorage().saveStudyPlan}
-          onUpdatePlan={useCloudStorage().updateStudyPlan}
-          onDeletePlan={useCloudStorage().deleteStudyPlan}
+          onSavePlan={saveStudyPlan}
+          onUpdatePlan={updateStudyPlan}
+          onDeletePlan={deleteStudyPlan}
           onGoToExam={(exam) => {
             setActiveExam(exam);
             setExamSubmission(null);
