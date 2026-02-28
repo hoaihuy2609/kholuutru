@@ -20,8 +20,9 @@ import Chatbot from './components/Chatbot';
 import AdminDashboard from './components/AdminDashboard';
 import AdminGitHubSync from './components/AdminGitHubSync';
 import ExamListPage from './components/ExamListPage';
-import ExamView from './components/ExamView';
+import ExamView, { calcScore } from './components/ExamView';
 import ExamResult from './components/ExamResult';
+import ContactBook from './components/ContactBook';
 
 interface ToastMessage {
   id: string;
@@ -36,7 +37,7 @@ function App() {
   const [autoCreateLesson, setAutoCreateLesson] = useState(false);
 
   // Replace local state with Cloud Storage hook
-  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam } = useCloudStorage();
+  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory } = useCloudStorage();
 
   const [isKicked, setIsKicked] = useState(false);
   const [isOfflineExpired, setIsOfflineExpired] = useState(false);
@@ -74,6 +75,7 @@ function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   // Exam state
   const [showExamList, setShowExamList] = useState(false);
+  const [showContactBook, setShowContactBook] = useState(false);
   const [activeExam, setActiveExam] = useState<Exam | null>(null);
   const [examSubmission, setExamSubmission] = useState<ExamSubmission | null>(null);
 
@@ -213,7 +215,11 @@ function App() {
         <ExamView
           exam={activeExam}
           onBack={() => { setActiveExam(null); setShowExamList(true); }}
-          onSubmit={(sub) => setExamSubmission(sub)}
+          onSubmit={(sub) => {
+            setExamSubmission(sub);
+            const score = calcScore(sub, activeExam.answers);
+            saveExamResult(activeExam, score.total, 28, score.correctCount);
+          }}
         />
       );
     }
@@ -224,6 +230,16 @@ function App() {
         <ExamListPage
           onLoadExams={loadExams}
           onSelectExam={(exam) => { setActiveExam(exam); setExamSubmission(null); setShowExamList(false); }}
+        />
+      );
+    }
+
+    // 0d. Contact Book (Exam History)
+    if (showContactBook) {
+      return (
+        <ContactBook
+          isAdmin={isAdmin}
+          onLoadHistory={getExamHistory}
         />
       );
     }
@@ -603,6 +619,7 @@ function App() {
             setCurrentChapterId(null);
             setCurrentLesson(null);
             setShowExamList(false);
+            setShowContactBook(false);
             setIsMobileMenuOpen(false);
           }}
           onOpenSettings={() => {
@@ -615,6 +632,17 @@ function App() {
           }}
           onOpenExamList={() => {
             setShowExamList(true);
+            setShowContactBook(false);
+            setActiveExam(null);
+            setExamSubmission(null);
+            setCurrentGrade(null);
+            setCurrentChapterId(null);
+            setCurrentLesson(null);
+            setIsMobileMenuOpen(false);
+          }}
+          onOpenContactBook={() => {
+            setShowContactBook(true);
+            setShowExamList(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
@@ -623,6 +651,7 @@ function App() {
             setIsMobileMenuOpen(false);
           }}
           showExamList={showExamList}
+          showContactBook={showContactBook}
           className="w-full"
         />
       </div>
@@ -635,11 +664,22 @@ function App() {
           setCurrentChapterId(null);
           setCurrentLesson(null);
           setShowExamList(false);
+          setShowContactBook(false);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
         onOpenExamList={() => {
           setShowExamList(true);
+          setShowContactBook(false);
+          setActiveExam(null);
+          setExamSubmission(null);
+          setCurrentGrade(null);
+          setCurrentChapterId(null);
+          setCurrentLesson(null);
+        }}
+        onOpenContactBook={() => {
+          setShowContactBook(true);
+          setShowExamList(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
@@ -647,6 +687,7 @@ function App() {
           setCurrentLesson(null);
         }}
         showExamList={showExamList}
+        showContactBook={showContactBook}
         className="hidden md:flex"
       />
 

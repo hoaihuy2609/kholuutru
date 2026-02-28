@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle, XCircle, Minus, RotateCcw, Home, Clock, Award } from 'lucide-react';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { Exam, ExamSubmission, ExamTFAnswer } from '../types';
 import { calcScore } from './ExamView';
 
@@ -43,6 +44,12 @@ const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBa
                     : { label: 'Cần cố gắng', color: '#E03E3E', bg: '#FEF2F2', emoji: '💪' };
 
     const ACCENT = '#6B7CDB';
+
+    const radarData = [
+        { subject: 'T.Nghiệm ABCD', score: Math.round((score.mc / 4.5) * 100), fullMark: 100 },
+        { subject: 'Đúng / Sai', score: Math.round((score.tf / 4.0) * 100), fullMark: 100 },
+        { subject: 'Trả lời ngắn', score: Math.round((score.sa / 1.5) * 100), fullMark: 100 },
+    ];
 
     return (
         <div className="fixed inset-0 z-40 overflow-y-auto" style={{ background: '#F7F6F3' }}>
@@ -90,9 +97,31 @@ const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBa
                         </div>
 
                         {/* Time */}
-                        <div className="flex items-center justify-center gap-1.5 text-xs" style={{ color: '#AEACA8' }}>
+                        <div className="flex items-center justify-center gap-1.5 text-xs pb-2" style={{ color: '#AEACA8' }}>
                             <Clock className="w-3.5 h-3.5" />
                             Thời gian làm bài: {formatTime(submission.timeTaken)}
+                        </div>
+
+                        {/* ── Radar Chart (Phân tích sức mạnh) ── */}
+                        <div style={{ width: '100%', height: 260, marginTop: '20px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
+                                    <PolarGrid stroke="#E9E9E7" />
+                                    <PolarAngleAxis
+                                        dataKey="subject"
+                                        tick={{ fill: '#787774', fontSize: 11, fontWeight: 600 }}
+                                    />
+                                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                                    <Radar
+                                        name="Điểm số (%)"
+                                        dataKey="score"
+                                        stroke={ACCENT}
+                                        fill={ACCENT}
+                                        fillOpacity={0.4}
+                                        isAnimationActive={true}
+                                    />
+                                </RadarChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
                 </div>

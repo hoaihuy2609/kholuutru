@@ -69,3 +69,16 @@ export interface ExamSubmission {
   submittedAt: number;
   timeTaken: number;      // giây
 }
+
+export interface ExamResultRecord {
+  id: string;
+  student_phone: string;
+  student_name: string;
+  exam_id: string;
+  exam_title: string;
+  score: number;
+  total_questions: number;
+  correct_answers: number;
+  submitted_at: string;
+  grade: number;
+}

@@ -9,10 +9,12 @@ interface SidebarProps {
   onOpenGuide: () => void;
   onOpenExamList?: () => void;
   showExamList?: boolean;
+  onOpenContactBook?: () => void;
+  showContactBook?: boolean;
   className?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, onOpenExamList, showExamList, className }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, onOpenExamList, showExamList, onOpenContactBook, showContactBook, className }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -102,6 +104,30 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
               style={{ background: '#EEF0FB', color: '#6B7CDB' }}
             >
               NEW
+            </span>
+          </button>
+        )}
+
+        {/* Sổ liên lạc */}
+        {onOpenContactBook && (
+          <button
+            onClick={() => { onOpenContactBook(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+            style={{
+              background: showContactBook ? '#E3E2DE' : 'transparent',
+              color: showContactBook ? '#1A1A1A' : '#57564F',
+              fontWeight: showContactBook ? 500 : 400,
+            }}
+            onMouseEnter={e => { if (!showContactBook) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+            onMouseLeave={e => { if (!showContactBook) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          >
+            <Atom className="w-4 h-4 shrink-0" style={{ color: showContactBook ? '#D9730D' : '#AEACA8' }} />
+            <span>Sổ liên lạc</span>
+            <span
+              className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+              style={{ background: '#FFF7ED', color: '#D9730D' }}
+            >
+              HOT
             </span>
           </button>
         )}

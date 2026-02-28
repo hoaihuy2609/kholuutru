@@ -730,6 +730,71 @@ export const useCloudStorage = () => {
         await saveExam(updated);
     };
 
+    // Lưu kết quả bài thi
+    const saveExamResult = async (
+        exam: Exam,
+        score: number,
+        totalQuestions: number,
+        correctAnswers: number
+    ): Promise<void> => {
+        const sdtStr = localStorage.getItem('pv_activated_sdt');
+        if (!sdtStr) return; // Không lưu nếu không có SĐT
+        let normalizedPhone = sdtStr.trim();
+        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
+            normalizedPhone = '0' + normalizedPhone;
+        }
+
+        // Lấy tên và lớp học sinh
+        let studentName = 'Học sinh';
+        let grade = exam.grade;
+        try {
+            const { data } = await supabase
+                .from('students')
+                .select('name, grade')
+                .eq('phone', normalizedPhone)
+                .single();
+            if (data?.name) studentName = data.name;
+            if (data?.grade) grade = data.grade;
+        } catch (e) {
+            console.error('Không lấy được thông tin học sinh', e);
+        }
+
+        try {
+            const { error } = await supabase.from('exam_results').insert({
+                student_phone: normalizedPhone,
+                student_name: studentName,
+                exam_id: exam.id,
+                exam_title: exam.title,
+                score,
+                total_questions: totalQuestions,
+                correct_answers: correctAnswers,
+                submitted_at: new Date().toISOString(),
+                grade: grade
+            });
+            if (error) {
+                console.error('Lỗi Insert Supabase:', error);
+            }
+        } catch (e) {
+            console.error('Lỗi khi lưu kết quả bài thi:', e);
+        }
+    };
+
+    // Lấy lịch sử làm bài (nếu phone trống -> lấy tất cả cho Admin)
+    const getExamHistory = async (phoneFilter?: string) => {
+        try {
+            let query = supabase.from('exam_results').select('*').order('submitted_at', { ascending: false });
+            if (phoneFilter) {
+                query = query.eq('student_phone', phoneFilter);
+            }
+            const { data, error } = await query;
+            if (error) throw error;
+            return data;
+        } catch (e) {
+            console.error('Lỗi khi lấy lịch sử làm bài:', e);
+            return [];
+        }
+    };
+
     return {
         lessons,
         storedFiles,
@@ -748,6 +813,8 @@ export const useCloudStorage = () => {
         saveExam,
         loadExams,
         deleteExam,
+        saveExamResult,
+        getExamHistory,
     };
 };
 
