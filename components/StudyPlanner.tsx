@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, CheckSquare, Plus, Trash2, ChevronLeft, ChevronRight, Check, Send } from 'lucide-react';
+import { Calendar, CheckSquare, Plus, Trash2, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { StudyPlanItem } from '../types';
 
 interface StudyPlannerProps {
@@ -20,10 +20,12 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
     const [plans, setPlans] = useState<StudyPlanItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [currentMonthView, setCurrentMonthView] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
     // New task state
     const [newTaskName, setNewTaskName] = useState('');
     const [newTaskColor, setNewTaskColor] = useState(COLORS[1]);
+    const [isAddingTask, setIsAddingTask] = useState(false);
 
     useEffect(() => {
         fetchPlans();
@@ -41,21 +43,38 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
         return (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 10);
     };
 
-    const getDaysArray = (start: Date, daysToAdd: number = 7) => {
-        const arr = [];
-        for (let i = 0; i < daysToAdd; i++) {
-            const d = new Date(start);
-            d.setDate(start.getDate() + i - 3); // 3 days ago till 3 days ahead
-            arr.push(d);
+    const getCalendarDays = (monthStart: Date) => {
+        const year = monthStart.getFullYear();
+        const month = monthStart.getMonth();
+        const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 is Sun
+        const offset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; // Mon = 0, Sun = 6
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        const daysArray = [];
+        // Prev month padding
+        const prevMonthDays = new Date(year, month, 0).getDate();
+        for (let i = offset - 1; i >= 0; i--) {
+            daysArray.push({ date: new Date(year, month - 1, prevMonthDays - i), isCurrentMonth: false });
         }
-        return arr;
+        // Current month
+        for (let i = 1; i <= daysInMonth; i++) {
+            daysArray.push({ date: new Date(year, month, i), isCurrentMonth: true });
+        }
+        // Next month padding (make it 6 rows = 42 days total)
+        const remaining = 42 - daysArray.length;
+        for (let i = 1; i <= remaining; i++) {
+            daysArray.push({ date: new Date(year, month + 1, i), isCurrentMonth: false });
+        }
+        return daysArray;
     };
 
     const todayStr = toISODate(new Date());
     const selectedStr = toISODate(selectedDate);
-    const days = getDaysArray(selectedDate, 7);
+    const calendarDays = getCalendarDays(currentMonthView);
 
     const currentPlans = plans.filter(p => p.due_date === selectedStr);
+    const incompletePlans = currentPlans.filter(p => !p.is_completed);
+    const completedPlans = currentPlans.filter(p => p.is_completed);
 
     const handleAddTask = async (e?: React.FormEvent) => {
         e?.preventDefault();
@@ -70,6 +89,7 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
         if (newTask) {
             setPlans(prev => [...prev, newTask]);
             setNewTaskName('');
+            setIsAddingTask(false);
         } else {
             alert("Lỗi: Không thể lưu kế hoạch. Vui lòng kiểm tra lại kết nối hoặc CSDL!");
         }
@@ -80,192 +100,255 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
         setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_completed: updated } : p));
         const success = await onUpdatePlan(plan.id, { is_completed: updated });
         if (!success) {
-            // rollback
             setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_completed: !updated } : p));
         }
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
         setPlans(prev => prev.filter(p => p.id !== id));
         await onDeletePlan(id);
     };
 
+    const formatMonthYear = (d: Date) => {
+        return `Tháng ${d.getMonth() + 1}, ${d.getFullYear()}`;
+    };
 
-
-    const getDayName = (d: Date) => {
-        const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-        return days[d.getDay()];
+    const handleNextMonth = () => setCurrentMonthView(new Date(currentMonthView.getFullYear(), currentMonthView.getMonth() + 1, 1));
+    const handlePrevMonth = () => setCurrentMonthView(new Date(currentMonthView.getFullYear(), currentMonthView.getMonth() - 1, 1));
+    const handleJumpToToday = () => {
+        const today = new Date();
+        setSelectedDate(today);
+        setCurrentMonthView(new Date(today.getFullYear(), today.getMonth(), 1));
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-
+        <div className="max-w-6xl mx-auto space-y-6 pt-2 pb-10">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-semibold mb-1" style={{ color: '#1A1A1A' }}>
+                <h1 className="text-3xl font-bold mb-1" style={{ color: '#37352f' }}>
                     Mục Tiêu &amp; Lịch Trình
                 </h1>
-                <p className="text-sm" style={{ color: '#787774' }}>Lên kế hoạch học tập, đính kèm bài thi và theo dõi tiến độ mỗi ngày.</p>
+                <p className="text-[15px] opacity-70" style={{ color: '#37352f' }}>Thêm nhiệm vụ và theo dõi tiến độ mỗi ngày.</p>
             </div>
 
-            {/* Timeline Calendar */}
-            <div
-                className="rounded-2xl p-4 md:p-6"
-                style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}
-            >
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: '#AEACA8' }}>
-                        Lịch trình 7 ngày
-                    </h2>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d); }}
-                            className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
-                        >
-                            <ChevronLeft className="w-4 h-4 text-gray-500" />
-                        </button>
-                        <button
-                            onClick={() => setSelectedDate(new Date())}
-                            className="text-[11px] font-semibold px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                        >Hôm nay
-                        </button>
-                        <button
-                            onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d); }}
-                            className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
-                        >
-                            <ChevronRight className="w-4 h-4 text-gray-500" />
-                        </button>
+            <div className="flex flex-col md:flex-row gap-10 items-start mt-8">
+                {/* LEFT COLUMN: MINI CALENDAR */}
+                <div className="w-full md:w-80 flex-shrink-0">
+                    <div className="sticky top-6">
+                        {/* Month Header */}
+                        <div className="flex items-center justify-between mb-4 px-1">
+                            <h2 className="text-[15px] font-semibold" style={{ color: '#37352f' }}>
+                                {formatMonthYear(currentMonthView)}
+                            </h2>
+                            <div className="flex items-center gap-1">
+                                <button onClick={handlePrevMonth} className="p-1 rounded text-gray-500 hover:bg-gray-100 transition-colors">
+                                    <ChevronLeft className="w-4 h-4" />
+                                </button>
+                                <button onClick={handleJumpToToday} className="text-[12px] font-semibold px-2 py-0.5 rounded text-gray-600 hover:bg-gray-100 transition-colors mx-1">
+                                    Hôm nay
+                                </button>
+                                <button onClick={handleNextMonth} className="p-1 rounded text-gray-500 hover:bg-gray-100 transition-colors">
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Calendar Grid */}
+                        <div className="w-full">
+                            {/* Days of week */}
+                            <div className="grid grid-cols-7 gap-1 mb-2">
+                                {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => (
+                                    <div key={day} className="text-center text-[11px] font-semibold text-gray-400 py-1">
+                                        {day}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Days */}
+                            <div className="grid grid-cols-7 gap-1">
+                                {calendarDays.map((dObj, i) => {
+                                    const dateStr = toISODate(dObj.date);
+                                    const isSelected = dateStr === selectedStr;
+                                    const isToday = dateStr === todayStr;
+                                    const dayPlans = plans.filter(p => p.due_date === dateStr);
+                                    const hasTasks = dayPlans.length > 0;
+                                    const allDone = hasTasks && dayPlans.every(p => p.is_completed);
+
+                                    return (
+                                        <button
+                                            key={i}
+                                            onClick={() => setSelectedDate(dObj.date)}
+                                            className={`
+                                                relative w-full aspect-square flex flex-col items-center justify-center rounded-lg cursor-pointer transition-colors
+                                                ${isSelected ? 'bg-red-500 shadow-sm' : 'hover:bg-gray-50'}
+                                            `}
+                                        >
+                                            <span
+                                                className={`text-[13px] ${isSelected ? 'text-white' : (isToday ? 'text-red-500 font-semibold' : (!dObj.isCurrentMonth ? 'text-gray-300' : 'text-[#37352f]'))}`}
+                                                style={{ fontWeight: isSelected ? 600 : (isToday ? 600 : 400) }}
+                                            >
+                                                {dObj.date.getDate()}
+                                            </span>
+                                            {/* Dot for tasks */}
+                                            {hasTasks && (
+                                                <span className={`w-1 h-1 rounded-full absolute bottom-1.5 ${isSelected ? 'bg-white' : (allDone ? 'bg-gray-300' : 'bg-[#37352f]')}`} />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex justify-between items-center overflow-x-auto hide-scrollbar gap-2 pb-2">
-                    {days.map((d, i) => {
-                        const dateStr = toISODate(d);
-                        const isSelected = dateStr === selectedStr;
-                        const isToday = dateStr === todayStr;
 
-                        return (
-                            <button
-                                key={i}
-                                onClick={() => setSelectedDate(d)}
-                                className={`flex-1 min-w-[64px] flex flex-col items-center justify-center p-3 rounded-xl transition-all ${isSelected ? 'shadow-sm translate-y-[-2px]' : 'hover:bg-gray-50 opacity-70'
-                                    }`}
-                                style={{
-                                    background: isSelected ? '#1A1A1A' : 'transparent',
-                                    color: isSelected ? '#FFFFFF' : '#1A1A1A',
-                                    border: isSelected ? '1px solid #1A1A1A' : '1px solid transparent',
-                                }}
-                            >
-                                <span className="text-[10px] uppercase font-semibold mb-1 opacity-80">
-                                    {isToday ? 'Hôm nay' : getDayName(d)}
+                {/* RIGHT COLUMN: TASK LIST */}
+                <div className="w-full md:flex-1">
+                    <div className="mb-6">
+                        <h3 className="text-[26px] font-bold" style={{ color: '#37352f' }}>
+                            {selectedDate.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                        </h3>
+                        {/* Minimalist Progress Line */}
+                        {currentPlans.length > 0 && (
+                            <div className="mt-4 flex items-center gap-3">
+                                <span className="text-[13px] font-medium text-gray-500 whitespace-nowrap">
+                                    {currentPlans.filter(p => p.is_completed).length} / {currentPlans.length} hoàn thành
                                 </span>
-                                <span className="text-lg font-bold">
-                                    {d.getDate()}
-                                </span>
-                                {/* Dots indicating tasks */}
-                                <div className="flex gap-0.5 mt-1.5 h-1">
-                                    {plans.filter(p => p.due_date === dateStr).slice(0, 3).map((p, idx) => (
-                                        <span key={idx} className="w-1 h-1 rounded-full" style={{ backgroundColor: isSelected ? '#FFFFFF' : p.color || '#6B7CDB' }} />
-                                    ))}
+                                <div className="flex-1 h-[3px] bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-emerald-500 transition-all duration-500"
+                                        style={{ width: `${(currentPlans.filter(p => p.is_completed).length / currentPlans.length) * 100}%` }}
+                                    />
                                 </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
+                            </div>
+                        )}
+                    </div>
 
-            {/* Tasks List */}
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Nhiệm vụ trong ngày</h3>
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: '#F1F0EC', color: '#57564F' }}>
-                        {currentPlans.filter(p => p.is_completed).length} / {currentPlans.length} hoàn thành
-                    </span>
-                </div>
+                    {loading ? (
+                        <div className="py-20 text-gray-400 text-sm">Đang tải kế hoạch...</div>
+                    ) : (
+                        <div className="space-y-1">
+                            {/* Incomplete Tasks */}
+                            {incompletePlans.map(plan => {
+                                const colorObj = COLORS.find(c => c.value === plan.color) || COLORS[1];
 
-                {loading ? (
-                    <div className="text-center py-10 text-gray-500 text-sm">Đang tải kế hoạch...</div>
-                ) : currentPlans.length > 0 ? (
-                    <div className="space-y-3">
-                        {currentPlans.map(plan => {
-                            const colorObj = COLORS.find(c => c.value === plan.color) || COLORS[1];
-
-                            return (
-                                <div
-                                    key={plan.id}
-                                    className={`group relative flex items-start gap-4 p-4 rounded-xl transition-all ${plan.is_completed ? 'opacity-60' : ''}`}
-                                    style={{
-                                        background: '#FFFFFF',
-                                        border: `1px solid ${plan.is_completed ? '#E9E9E7' : colorObj.value + '40'}`,
-                                        borderLeft: `4px solid ${plan.is_completed ? '#E9E9E7' : colorObj.value}`,
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                                    }}
-                                >
-                                    {/* Checkbox */}
-                                    <button
-                                        onClick={() => handleToggleComplete(plan)}
-                                        className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5 transition-colors border ${plan.is_completed ? 'bg-gray-200 border-gray-300' : 'bg-white border-gray-300 hover:border-gray-400'}`}
+                                return (
+                                    <div
+                                        key={plan.id}
+                                        className="group relative flex items-center justify-between px-2 py-2 rounded-md hover:bg-[#F2F1EE] transition-colors"
                                     >
-                                        {plan.is_completed && <Check className="w-3.5 h-3.5 text-gray-600" />}
-                                    </button>
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            {/* Checkbox */}
+                                            <button
+                                                onClick={() => handleToggleComplete(plan)}
+                                                className="w-[16px] h-[16px] rounded-[4px] flex items-center justify-center shrink-0 transition-colors border bg-transparent border-gray-400 hover:border-gray-600"
+                                            >
+                                            </button>
 
-                                    {/* Content */}
-                                    <div className="flex-1 min-w-0">
-                                        <p className={`text-sm font-medium ${plan.is_completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                                            {plan.task_name}
-                                        </p>
+                                            {/* Content */}
+                                            <p className="text-[15px] leading-snug truncate text-[#37352F] flex-1">
+                                                {plan.task_name}
+                                            </p>
+
+                                            {/* Pill Badge */}
+                                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border whitespace-nowrap shrink-0 opacity-80" style={{ backgroundColor: colorObj.bg, color: colorObj.value, borderColor: colorObj.value + '40' }}>
+                                                {colorObj.label}
+                                            </span>
+                                        </div>
+
+                                        {/* Delete btn */}
+                                        <button
+                                            onClick={(e) => handleDelete(plan.id, e)}
+                                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:bg-gray-200 hover:text-red-500 transition-colors rounded shrink-0 ml-2"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+
+                            {/* Completed Tasks */}
+                            {completedPlans.length > 0 && (
+                                <div className="mt-8 mb-4 border-t border-gray-100 pt-4">
+                                    <h4 className="text-[12px] font-semibold text-gray-400 uppercase tracking-wider pl-2 mb-2">Đã hoàn thành</h4>
+                                    {completedPlans.map(plan => {
+                                        return (
+                                            <div
+                                                key={plan.id}
+                                                className="group relative flex items-center justify-between px-2 py-2 rounded-md hover:bg-[#F2F1EE] transition-colors opacity-70"
+                                            >
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    {/* Checkbox */}
+                                                    <button
+                                                        onClick={() => handleToggleComplete(plan)}
+                                                        className="w-[16px] h-[16px] rounded-[4px] flex items-center justify-center shrink-0 transition-colors border bg-gray-200 border-gray-300 hover:bg-gray-300"
+                                                    >
+                                                        <Check className="w-3 h-3 text-gray-500" strokeWidth={4} />
+                                                    </button>
+
+                                                    {/* Content */}
+                                                    <p className="text-[15px] leading-snug truncate text-gray-400 line-through flex-1">
+                                                        {plan.task_name}
+                                                    </p>
+                                                </div>
+
+                                                {/* Delete btn */}
+                                                <button
+                                                    onClick={(e) => handleDelete(plan.id, e)}
+                                                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:bg-gray-200 hover:text-red-500 transition-colors rounded shrink-0 ml-2"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Add Task Area */}
+                            {!isAddingTask ? (
+                                <button
+                                    onClick={() => setIsAddingTask(true)}
+                                    className="flex items-center gap-2 px-2 py-2.5 w-full text-left text-[14px] text-gray-400 hover:text-gray-600 hover:bg-[#F2F1EE] rounded-md transition-colors mt-1"
+                                >
+                                    <Plus className="w-4 h-4 ml-0.5" />
+                                    <span>Thêm nhiệm vụ mới...</span>
+                                </button>
+                            ) : (
+                                <form onSubmit={handleAddTask} className="flex items-center gap-2 px-1 py-1 mt-1 bg-white border border-[#E9E9E7] rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        value={newTaskName}
+                                        onChange={(e) => setNewTaskName(e.target.value)}
+                                        placeholder="Nhấn Enter để lưu..."
+                                        className="flex-1 bg-transparent border-none focus:ring-0 text-[14px] px-2 py-1.5 text-[#37352F] placeholder:text-gray-400 outline-none"
+                                    />
+
+                                    {/* Color Picker */}
+                                    <div className="flex items-center gap-1.5 px-2 border-l border-gray-100">
+                                        {COLORS.map(c => (
+                                            <div
+                                                key={c.id}
+                                                onClick={() => setNewTaskColor(c)}
+                                                className={`w-4 h-4 rounded-full cursor-pointer flex items-center justify-center transition-transform ${newTaskColor.id === c.id ? 'scale-110 shadow-sm ring-2 ring-offset-1' : 'hover:scale-110'}`}
+                                                style={{ backgroundColor: c.value, '--tw-ring-color': c.value } as any}
+                                            />
+                                        ))}
                                     </div>
 
-                                    {/* Delete btn */}
                                     <button
-                                        onClick={() => handleDelete(plan.id)}
-                                        className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-md hover:bg-red-50"
+                                        type="button"
+                                        onClick={() => setIsAddingTask(false)}
+                                        className="px-2 py-1.5 text-[12px] font-medium text-gray-500 hover:bg-gray-100 rounded mr-1"
                                     >
-                                        <Trash2 className="w-4 h-4" />
+                                        Hủy
                                     </button>
-                                </div>
-                            );
-                        })}
-                    </div>
-                ) : (
-                    <div className="text-center py-10 px-4 rounded-xl" style={{ border: '1px dashed #CFCFCB', background: '#FFFFFF' }}>
-                        <CheckSquare className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                        <p className="text-sm font-medium text-gray-900">Chưa có nhiệm vụ nào</p>
-                        <p className="text-xs text-gray-500 mt-1">Bắt đầu lên kế hoạch cho hôm nay để tăng năng suất!</p>
-                    </div>
-                )}
-
-                {/* Add Task Input */}
-                <div className="mt-4 p-2.5 bg-white rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all shadow-sm">
-                    <form onSubmit={handleAddTask} className="flex items-center gap-2">
-                        <div className="p-2 text-indigo-600 bg-indigo-50 rounded-lg">
-                            <Plus className="w-4 h-4" />
+                                </form>
+                            )}
                         </div>
-                        <input
-                            type="text"
-                            value={newTaskName}
-                            onChange={(e) => setNewTaskName(e.target.value)}
-                            placeholder="Thêm nhiệm vụ mới..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 text-sm px-1 py-1"
-                        />
-
-                        {/* Color Picker */}
-                        <div className="flex items-center gap-1 border-l border-gray-200 pl-2">
-                            {COLORS.map(c => (
-                                <div
-                                    key={c.id}
-                                    onClick={() => setNewTaskColor(c)}
-                                    className={`w-5 h-5 rounded-full cursor-pointer flex items-center justify-center transition-transform ${newTaskColor.id === c.id ? 'scale-110 ring-2 ring-offset-1' : 'hover:scale-110'}`}
-                                    style={{ backgroundColor: c.value, '--tw-ring-color': c.value } as any}
-                                />
-                            ))}
-                        </div>
-
-                        {/* Send Button */}
-                        <button type="submit" disabled={!newTaskName.trim()} className={`ml-1 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${newTaskName.trim() ? 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700 cursor-pointer' : 'bg-gray-100 border-gray-100 text-gray-400 cursor-not-allowed'}`}>
-                            <Send className="w-3.5 h-3.5" />
-                        </button>
-                    </form>
+                    )}
                 </div>
             </div>
         </div>
