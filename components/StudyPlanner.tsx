@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, CheckSquare, Plus, Trash2, Paperclip, ChevronLeft, ChevronRight, Check } from 'lucide-react';
-import { StudyPlanItem, Exam } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Calendar, CheckSquare, Plus, Trash2, Paperclip, ChevronLeft, ChevronRight, Check, FileText, Send } from 'lucide-react';
+import { StudyPlanItem, Exam, Lesson, StoredFile, FileStorage } from '../types';
 
 interface StudyPlannerProps {
+    storedFiles: FileStorage;
+    lessons: Lesson[];
     onLoadPlans: () => Promise<StudyPlanItem[]>;
     onLoadExams: () => Promise<Exam[]>;
-    onSavePlan: (taskName: string, dueDate: string, examId?: string, examTitle?: string, color?: string) => Promise<StudyPlanItem | null>;
+    onSavePlan: (taskName: string, dueDate: string, examId?: string, examTitle?: string, color?: string, fileId?: string, fileName?: string, fileUrl?: string) => Promise<StudyPlanItem | null>;
     onUpdatePlan: (id: string, updates: Partial<StudyPlanItem>) => Promise<boolean>;
     onDeletePlan: (id: string) => Promise<boolean>;
     onGoToExam: (exam: Exam) => void;
@@ -18,7 +20,7 @@ const COLORS = [
     { id: 'yellow', value: '#D9730D', label: 'Lưu ý', bg: '#FFF7ED' },
 ];
 
-const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onLoadExams, onSavePlan, onUpdatePlan, onDeletePlan, onGoToExam }) => {
+const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onLoadExams, onSavePlan, onUpdatePlan, onDeletePlan, onGoToExam, storedFiles, lessons }) => {
     const [plans, setPlans] = useState<StudyPlanItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -27,10 +29,20 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onLoadExams, o
     const [newTaskName, setNewTaskName] = useState('');
     const [newTaskColor, setNewTaskColor] = useState(COLORS[1]);
 
-    // Attach exam modal
+    // Attach exam/doc modal
     const [showExamModal, setShowExamModal] = useState(false);
+    const [attachTab, setAttachTab] = useState<'exam' | 'doc'>('exam');
     const [availableExams, setAvailableExams] = useState<Exam[]>([]);
     const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
+    const [selectedDoc, setSelectedDoc] = useState<StoredFile | null>(null);
+
+    // Compute flat list of all docs
+    const allDocs = useMemo(() => {
+        return Object.entries(storedFiles || {}).flatMap(([targetId, files]) => {
+            const lesson = lessons?.find(l => l.id === targetId);
+            return (files as StoredFile[]).map(f => ({ ...f, lessonName: lesson?.name || 'Thư mục khác' }));
+        });
+    }, [storedFiles, lessons]);
 
     useEffect(() => {
         fetchPlans();
@@ -73,13 +85,17 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onLoadExams, o
             selectedStr,
             selectedExam?.id,
             selectedExam?.title,
-            newTaskColor.value
+            newTaskColor.value,
+            selectedDoc?.id,
+            selectedDoc?.name,
+            selectedDoc?.url
         );
 
         if (newTask) {
             setPlans(prev => [...prev, newTask]);
             setNewTaskName('');
             setSelectedExam(null);
+            setSelectedDoc(null);
         }
     };
 
@@ -247,6 +263,15 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onLoadExams, o
                                                 <span className="text-[10px] ml-1 bg-indigo-50 text-indigo-700 font-medium px-1.5 py-0.5 rounded">Vào Thi</span>
                                             </div>
                                         )}
+                                        {plan.file_id && (
+                                            <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-emerald-200 rounded-lg shadow-sm text-xs text-gray-600 cursor-pointer hover:bg-emerald-50"
+                                                onClick={() => { if (plan.file_url) window.open(plan.file_url, '_blank'); }}
+                                            >
+                                                <FileText className="w-3 h-3 text-emerald-500" />
+                                                <span>Tài liệu: <span className="font-semibold" style={{ color: '#448361' }}>{plan.file_name || 'Đã liên kết tài liệu'}</span></span>
+                                                <span className="text-[10px] ml-1 bg-emerald-100 text-emerald-700 font-medium px-1.5 py-0.5 rounded">Mở File</span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Delete btn */}
@@ -269,11 +294,11 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onLoadExams, o
                 )}
 
                 {/* Add Task Input */}
-                <div className="mt-4 p-2 bg-white rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all">
+                <div className="mt-4 p-2.5 bg-white rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300 transition-all shadow-sm">
                     <form onSubmit={handleAddTask} className="flex items-center gap-2">
-                        <button type="submit" className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+                        <div className="p-2 text-indigo-600 bg-indigo-50 rounded-lg">
                             <Plus className="w-4 h-4" />
-                        </button>
+                        </div>
                         <input
                             type="text"
                             value={newTaskName}
@@ -298,49 +323,95 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onLoadExams, o
                         <button
                             type="button"
                             onClick={openExamModal}
-                            className={`ml-1 flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${selectedExam ? 'bg-indigo-50 border-indigo-200 text-indigo-700 cursor-pointer line-clamp-1 max-w-[120px]' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}
+                            className={`ml-1 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${(selectedExam || selectedDoc) ? 'bg-indigo-50 border-indigo-200 text-indigo-700 cursor-pointer line-clamp-1 max-w-[150px]' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}
                         >
                             <Paperclip className="w-3.5 h-3.5 shrink-0" />
-                            {selectedExam ? <span className="truncate">{selectedExam.title}</span> : 'Gắn đề'}
+                            <span className="truncate font-medium">{selectedExam ? selectedExam.title : selectedDoc ? selectedDoc.name : 'Đính kèm'}</span>
+                        </button>
+
+                        {/* Send Button */}
+                        <button type="submit" disabled={!newTaskName.trim()} className={`ml-1 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${newTaskName.trim() ? 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700 cursor-pointer' : 'bg-gray-100 border-gray-100 text-gray-400 cursor-not-allowed'}`}>
+                            <Send className="w-3.5 h-3.5" />
                         </button>
                     </form>
                 </div>
             </div>
 
-            {/* Exam Selection Modal */}
+            {/* Exam/Doc Selection Modal */}
             {showExamModal && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40">
                     <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-fade-in flex flex-col max-h-[80vh]">
-                        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+                        <div className="p-4 border-b border-gray-100 flex flex-col gap-3 bg-gray-50">
                             <div>
-                                <h3 className="font-semibold text-gray-900">Đính kèm bài thi</h3>
-                                <p className="text-[11px] text-gray-500">Chọn bài thi từ thư viện để gắn vào nhiệm vụ</p>
+                                <h3 className="font-semibold text-gray-900">Tính năng Đính kèm</h3>
+                                <p className="text-[11px] text-gray-500">Chọn đề thi hoặc tài liệu để gắn vào nhiệm vụ</p>
+                            </div>
+                            {/* Tabs */}
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setAttachTab('exam')}
+                                    className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${attachTab === 'exam' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                                >Đề Thi thử</button>
+                                <button
+                                    onClick={() => setAttachTab('doc')}
+                                    className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${attachTab === 'doc' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                                >Kho Tài liệu</button>
                             </div>
                         </div>
                         <div className="p-2 overflow-y-auto flex-1 bg-white">
-                            {availableExams.length > 0 ? (
-                                <div className="space-y-1">
-                                    {availableExams.map(ex => (
-                                        <div
-                                            key={ex.id}
-                                            onClick={() => {
-                                                setSelectedExam(ex);
-                                                setShowExamModal(false);
-                                            }}
-                                            className="px-3 py-2.5 flex items-start gap-2 hover:bg-indigo-50 rounded-xl cursor-pointer transition-colors"
-                                        >
-                                            <div className="mt-0.5 bg-indigo-100 p-1 rounded-md text-indigo-600">
-                                                <Calendar className="w-4 h-4" />
+                            {attachTab === 'exam' && (
+                                availableExams.length > 0 ? (
+                                    <div className="space-y-1">
+                                        {availableExams.map(ex => (
+                                            <div
+                                                key={ex.id}
+                                                onClick={() => {
+                                                    setSelectedExam(ex);
+                                                    setSelectedDoc(null);
+                                                    setShowExamModal(false);
+                                                }}
+                                                className="px-3 py-2.5 flex items-start gap-2 hover:bg-indigo-50 rounded-xl cursor-pointer transition-colors"
+                                            >
+                                                <div className="mt-0.5 bg-indigo-100 p-1 rounded-md text-indigo-600">
+                                                    <Calendar className="w-4 h-4" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-gray-900">{ex.title}</p>
+                                                    <p className="text-xs text-gray-500">Lớp {ex.grade} • {ex.duration} phút</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-900">{ex.title}</p>
-                                                <p className="text-xs text-gray-500">Lớp {ex.grade} • {ex.duration} phút</p>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="p-6 text-center text-gray-500 text-sm">Chưa có bài thi nào có sẵn.</div>
+                                )
+                            )}
+                            {attachTab === 'doc' && (
+                                allDocs.length > 0 ? (
+                                    <div className="space-y-1">
+                                        {allDocs.map((doc: any) => (
+                                            <div
+                                                key={doc.id}
+                                                onClick={() => {
+                                                    setSelectedDoc(doc);
+                                                    setSelectedExam(null);
+                                                    setShowExamModal(false);
+                                                }}
+                                                className="px-3 py-2.5 flex items-start gap-2 hover:bg-emerald-50 rounded-xl cursor-pointer transition-colors"
+                                            >
+                                                <div className="mt-0.5 bg-emerald-100 p-1 rounded-md text-emerald-600">
+                                                    <FileText className="w-4 h-4" />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-sm font-medium text-gray-900 truncate">{doc.name}</p>
+                                                    <p className="text-xs text-emerald-600 opacity-80 truncate">{doc.lessonName}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="p-6 text-center text-gray-500 text-sm">Chưa có bài thi nào có sẵn.</div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="p-6 text-center text-gray-500 text-sm">Chưa có tài liệu nào trong kho.</div>
+                                )
                             )}
                         </div>
                         <div className="p-4 border-t border-gray-100 flex justify-end">

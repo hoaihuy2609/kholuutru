@@ -260,6 +260,8 @@ function App() {
             setExamSubmission(null);
             setShowStudyPlanner(false);
           }}
+          lessons={lessons}
+          storedFiles={storedFiles}
         />
       );
     }
