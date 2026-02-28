@@ -837,7 +837,7 @@ function App() {
         ))}
       </div>
       {/* Chatbot Component - Only show on Dashboard (Overview) */}
-      {!currentGrade && !showAdminDashboard && <Chatbot />}
+      {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && <Chatbot />}
     </div>
   );
 }
