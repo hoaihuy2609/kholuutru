@@ -251,17 +251,9 @@ function App() {
       return (
         <StudyPlanner
           onLoadPlans={getStudyPlans}
-          onLoadExams={loadExams}
           onSavePlan={saveStudyPlan}
           onUpdatePlan={updateStudyPlan}
           onDeletePlan={deleteStudyPlan}
-          onGoToExam={(exam) => {
-            setActiveExam(exam);
-            setExamSubmission(null);
-            setShowStudyPlanner(false);
-          }}
-          lessons={lessons}
-          storedFiles={storedFiles}
         />
       );
     }

@@ -818,7 +818,7 @@ export const useCloudStorage = () => {
         }
     };
 
-    const saveStudyPlan = async (taskName: string, dueDate: string, examId?: string, examTitle?: string, color: string = '#6B7CDB', fileId?: string, fileName?: string, fileUrl?: string) => {
+    const saveStudyPlan = async (taskName: string, dueDate: string, color: string = '#6B7CDB') => {
         const sdtStr = localStorage.getItem('pv_activated_sdt');
         if (!sdtStr) return null;
         let normalizedPhone = sdtStr.trim();
@@ -831,11 +831,6 @@ export const useCloudStorage = () => {
                 student_phone: normalizedPhone,
                 task_name: taskName,
                 due_date: dueDate,
-                exam_id: examId,
-                exam_title: examTitle,
-                file_id: fileId,
-                file_name: fileName,
-                file_url: fileUrl,
                 color: color
             }).select().single();
 

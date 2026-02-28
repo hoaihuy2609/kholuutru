@@ -89,10 +89,5 @@ export interface StudyPlanItem {
   task_name: string;
   is_completed: boolean;
   due_date: string; // YYYY-MM-DD
-  exam_id?: string; // Optional attached exam
-  exam_title?: string;
-  file_id?: string; // Optional attached document
-  file_name?: string;
-  file_url?: string;
   color: string;
 }
