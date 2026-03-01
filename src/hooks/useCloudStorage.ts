@@ -916,6 +916,18 @@ export const useCloudStorage = () => {
         }
     };
 
+    // Xóa thông báo (Dành cho Admin)
+    const deleteNotification = async (notificationId: string): Promise<boolean> => {
+        try {
+            const { error } = await supabase.from('notifications').delete().eq('id', notificationId);
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('Lỗi xóa thông báo:', e);
+            return false;
+        }
+    };
+
     // Kiểm tra học sinh này đã fetch thông báo nào rồi (trả về Set các notification_id đã fetch)
     const getFetchedNotificationIds = async (): Promise<Set<string>> => {
         const sdtStr = localStorage.getItem('pv_activated_sdt');
@@ -962,6 +974,7 @@ export const useCloudStorage = () => {
         updateStudyPlan,
         deleteStudyPlan,
         getNotifications,
+        deleteNotification,
         markNotificationFetched,
         getFetchedNotificationIds,
     };

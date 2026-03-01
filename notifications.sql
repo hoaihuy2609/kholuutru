@@ -21,10 +21,11 @@ CREATE TABLE IF NOT EXISTS notification_fetches (
     UNIQUE(notification_id, student_phone)
 );
 
--- RLS: Cho phép đọc notifications (học sinh cần đọc)
+-- RLS: Cho phép đọc notifications (học sinh cần đọc), cho phép insert, delete (Admin/Hệ thống cần thao tác)
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow read notifications" ON notifications FOR SELECT USING (true);
 CREATE POLICY "Allow insert notifications" ON notifications FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow delete notifications" ON notifications FOR DELETE USING (true);
 
 -- RLS: Cho phép học sinh insert fetch record của chính mình
 ALTER TABLE notification_fetches ENABLE ROW LEVEL SECURITY;

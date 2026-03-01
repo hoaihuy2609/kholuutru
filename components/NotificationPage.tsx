@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, BellOff, CloudDownload, CheckCircle2, RefreshCw, Clock } from 'lucide-react';
+import { Bell, BellOff, CloudDownload, CheckCircle2, RefreshCw, Clock, Trash2 } from 'lucide-react';
 import { NotificationItem } from '../types';
 
 interface NotificationPageProps {
@@ -8,6 +8,8 @@ interface NotificationPageProps {
     onMarkFetched: (notifId: string) => Promise<boolean>;
     onFetchLessons: (grade: number, onProgress?: (pct: number) => void) => Promise<{ success: boolean; lessonCount: number; fileCount: number }>;
     onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+    isAdmin?: boolean;
+    onDeleteNotification?: (notifId: string) => Promise<boolean>;
 }
 
 const ACCENT = '#6B7CDB';
@@ -39,6 +41,8 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
     onMarkFetched,
     onFetchLessons,
     onShowToast,
+    isAdmin,
+    onDeleteNotification,
 }) => {
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [fetchedIds, setFetchedIds] = useState<Set<string>>(new Set());
@@ -84,6 +88,23 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
         } finally {
             setFetchingId(null);
             setFetchProgress(0);
+        }
+    };
+
+    const handleDelete = async (notifId: string) => {
+        if (!isAdmin || !onDeleteNotification) return;
+        if (!window.confirm("Thầy có chắc muốn xóa thông báo này chứ?")) return;
+
+        try {
+            const ok = await onDeleteNotification(notifId);
+            if (ok) {
+                setNotifications(prev => prev.filter(n => n.id !== notifId));
+                onShowToast("Đã xóa thông báo", "success");
+            } else {
+                onShowToast("Lỗi khi xóa thông báo", "error");
+            }
+        } catch (e: any) {
+            onShowToast(`Lỗi: ${e.message}`, "error");
         }
     };
 
@@ -165,7 +186,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                         return (
                             <div
                                 key={notif.id}
-                                className="rounded-2xl overflow-hidden transition-all"
+                                className="rounded-2xl overflow-hidden transition-all group"
                                 style={{
                                     background: '#fff',
                                     border: `1px solid ${isFetched ? '#E9E9E7' : '#C7CEFF'}`,
@@ -233,6 +254,17 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                                 <span className="text-xs">{formatRelativeTime(notif.created_at)}</span>
                                             </div>
                                         </div>
+
+                                        {/* Nút Xóa (Dành cho Admin) */}
+                                        {isAdmin && (
+                                            <button
+                                                onClick={() => handleDelete(notif.id)}
+                                                className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all ml-auto hover:bg-red-50"
+                                                title="Xóa thông báo"
+                                            >
+                                                <Trash2 className="w-4 h-4 text-red-500" />
+                                            </button>
+                                        )}
                                     </div>
 
                                     {/* Fetch Button Area */}

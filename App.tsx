@@ -38,8 +38,7 @@ function App() {
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
   const [autoCreateLesson, setAutoCreateLesson] = useState(false);
 
-  // Replace local state with Cloud Storage hook
-  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory, getStudyPlans, saveStudyPlan, updateStudyPlan, deleteStudyPlan, getNotifications, markNotificationFetched, getFetchedNotificationIds } = useCloudStorage();
+  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory, getStudyPlans, saveStudyPlan, updateStudyPlan, deleteStudyPlan, getNotifications, deleteNotification, markNotificationFetched, getFetchedNotificationIds } = useCloudStorage();
 
   const [isKicked, setIsKicked] = useState(false);
   const [isOfflineExpired, setIsOfflineExpired] = useState(false);
@@ -290,6 +289,8 @@ function App() {
           onMarkFetched={markNotificationFetched}
           onFetchLessons={fetchLessonsFromGitHub}
           onShowToast={showToast}
+          isAdmin={isAdmin}
+          onDeleteNotification={deleteNotification}
         />
       );
     }
