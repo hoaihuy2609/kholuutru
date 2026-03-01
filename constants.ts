@@ -26,12 +26,14 @@ export const CURRICULUM: GradeData[] = [
     title: "Vật Lý 10",
     chapters: [
       { id: "10-1", name: "Chương 1: Mở đầu", description: "Giới thiệu về vật lý, sai số trong phép đo." },
-      { id: "10-2", name: "Chương 2: Động học", description: "Chuyển động thẳng, chuyển động biến đổi đều." },
-      { id: "10-3", name: "Chương 3: Động lực học", description: "Ba định luật Newton, các lực cơ học." },
-      { id: "10-4", name: "Chương 4: Năng lượng, công, công suất", description: "Động năng, thế năng, định luật bảo toàn cơ năng." },
-      { id: "10-5", name: "Chương 5: Động lượng", description: "Động lượng, định luật bảo toàn động lượng." },
-      { id: "10-6", name: "Chương 6: Chuyển động tròn", description: "Chuyển động tròn đều, lực hướng tâm." },
-      { id: "10-7", name: "Chương 7: Biến dạng của vật rắn. Áp suất chất lỏng", description: "Đàn hồi, định luật Hooke, áp suất thủy tĩnh." },
+      { id: "10-2", name: "Chương 2: Mô tả chuyển động", description: "Các đại lượng đặc trưng của chuyển động." },
+      { id: "10-3", name: "Chương 3: Chuyển động biến đổi", description: "Gia tốc, chuyển động thẳng biến đổi đều, rơi tự do." },
+      { id: "10-4", name: "Chương 4: Ba định luật Newton. Một số lực trong thực tiễn", description: "Các định luật Newton, lực ma sát, lực cản." },
+      { id: "10-5", name: "Chương 5: Moment lực. Điều kiện cân bằng", description: "Moment lực, quy tắc moment, ngẫu lực." },
+      { id: "10-6", name: "Chương 6: Năng lượng, công, công suất", description: "Động năng, thế năng, định luật bảo toàn cơ năng." },
+      { id: "10-7", name: "Chương 7: Động lượng", description: "Động lượng, xung lượng của lực, định luật bảo toàn động lượng." },
+      { id: "10-8", name: "Chương 8: Chuyển động tròn", description: "Chuyển động tròn đều, lực hướng tâm." },
+      { id: "10-9", name: "Chương 9: Biến dạng của vật rắn. Áp suất chất lỏng", description: "Biến dạng cơ, sức căng bề mặt, áp suất thủy tĩnh." },
     ]
   }
 ];
