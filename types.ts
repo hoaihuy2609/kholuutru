@@ -91,3 +91,20 @@ export interface StudyPlanItem {
   due_date: string; // YYYY-MM-DD
   color: string;
 }
+
+// ── Notification (Thông Báo) Types ───────────────────────────────
+
+export interface NotificationItem {
+  id: string;
+  message: string;
+  grade: number;           // 10, 11, 12
+  fetch_enabled: boolean;
+  created_at: string;
+}
+
+export interface NotificationFetch {
+  id: string;
+  notification_id: string;
+  student_phone: string;
+  fetched_at: string;
+}

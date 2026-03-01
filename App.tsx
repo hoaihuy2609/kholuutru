@@ -24,6 +24,7 @@ import ExamView, { calcScore } from './components/ExamView';
 import ExamResult from './components/ExamResult';
 import ContactBook from './components/ContactBook';
 import StudyPlanner from './components/StudyPlanner';
+import NotificationPage from './components/NotificationPage';
 
 interface ToastMessage {
   id: string;
@@ -38,7 +39,7 @@ function App() {
   const [autoCreateLesson, setAutoCreateLesson] = useState(false);
 
   // Replace local state with Cloud Storage hook
-  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory, getStudyPlans, saveStudyPlan, updateStudyPlan, deleteStudyPlan } = useCloudStorage();
+  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory, getStudyPlans, saveStudyPlan, updateStudyPlan, deleteStudyPlan, getNotifications, markNotificationFetched, getFetchedNotificationIds } = useCloudStorage();
 
   const [isKicked, setIsKicked] = useState(false);
   const [isOfflineExpired, setIsOfflineExpired] = useState(false);
@@ -64,6 +65,26 @@ function App() {
     return () => clearInterval(interval);
   }, [isActivated]);
 
+  // ── Tính unread notification badge ──
+  React.useEffect(() => {
+    if (!isActivated) return;
+    const loadUnread = async () => {
+      try {
+        const grade = parseInt(localStorage.getItem('physivault_grade') || '12', 10);
+        const [notifs, fetched] = await Promise.all([
+          getNotifications(grade),
+          getFetchedNotificationIds(),
+        ]);
+        const unread = notifs.filter(n => n.fetch_enabled && !fetched.has(n.id)).length;
+        setNotificationUnreadCount(unread);
+      } catch { /* silent */ }
+    };
+    loadUnread();
+    // Reload badge count mỗi 2 phút
+    const interval = setInterval(loadUnread, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [isActivated]);
+
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     return localStorage.getItem('physivault_is_admin') === 'true';
   });
@@ -80,6 +101,8 @@ function App() {
   const [showStudyPlanner, setShowStudyPlanner] = useState(false);
   const [activeExam, setActiveExam] = useState<Exam | null>(null);
   const [examSubmission, setExamSubmission] = useState<ExamSubmission | null>(null);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
 
   const toggleAdmin = (status: boolean) => {
     setIsAdmin(status);
@@ -254,6 +277,19 @@ function App() {
           onSavePlan={saveStudyPlan}
           onUpdatePlan={updateStudyPlan}
           onDeletePlan={deleteStudyPlan}
+        />
+      );
+    }
+
+    // 0f. Notification Page
+    if (showNotification) {
+      return (
+        <NotificationPage
+          onGetNotifications={getNotifications}
+          onGetFetchedIds={getFetchedNotificationIds}
+          onMarkFetched={markNotificationFetched}
+          onFetchLessons={fetchLessonsFromGitHub}
+          onShowToast={showToast}
         />
       );
     }
@@ -635,6 +671,7 @@ function App() {
             setShowExamList(false);
             setShowContactBook(false);
             setShowStudyPlanner(false);
+            setShowNotification(false);
             setIsMobileMenuOpen(false);
           }}
           onOpenSettings={() => {
@@ -671,6 +708,19 @@ function App() {
             setShowStudyPlanner(true);
             setShowContactBook(false);
             setShowExamList(false);
+            setShowNotification(false);
+            setActiveExam(null);
+            setExamSubmission(null);
+            setCurrentGrade(null);
+            setCurrentChapterId(null);
+            setCurrentLesson(null);
+            setIsMobileMenuOpen(false);
+          }}
+          onOpenNotification={() => {
+            setShowNotification(true);
+            setShowStudyPlanner(false);
+            setShowContactBook(false);
+            setShowExamList(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
@@ -681,6 +731,8 @@ function App() {
           showExamList={showExamList}
           showContactBook={showContactBook}
           showStudyPlanner={showStudyPlanner}
+          showNotification={showNotification}
+          notificationUnreadCount={notificationUnreadCount}
           className="w-full"
         />
       </div>
@@ -695,6 +747,7 @@ function App() {
           setShowExamList(false);
           setShowContactBook(false);
           setShowStudyPlanner(false);
+          setShowNotification(false);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
@@ -722,6 +775,18 @@ function App() {
           setShowStudyPlanner(true);
           setShowContactBook(false);
           setShowExamList(false);
+          setShowNotification(false);
+          setActiveExam(null);
+          setExamSubmission(null);
+          setCurrentGrade(null);
+          setCurrentChapterId(null);
+          setCurrentLesson(null);
+        }}
+        onOpenNotification={() => {
+          setShowNotification(true);
+          setShowStudyPlanner(false);
+          setShowContactBook(false);
+          setShowExamList(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
@@ -731,6 +796,8 @@ function App() {
         showExamList={showExamList}
         showContactBook={showContactBook}
         showStudyPlanner={showStudyPlanner}
+        showNotification={showNotification}
+        notificationUnreadCount={notificationUnreadCount}
         className="hidden md:flex"
       />
 
@@ -837,7 +904,7 @@ function App() {
         ))}
       </div>
       {/* Chatbot Component - Only show on Dashboard (Overview) */}
-      {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && <Chatbot />}
+      {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && !showNotification && <Chatbot />}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useState, useEffect } from 'react';
 import JSZip from 'jszip';
 import CryptoJS from 'crypto-js';
-import { Lesson, StoredFile, FileStorage, Exam, StudyPlanItem } from '../../types';
+import { Lesson, StoredFile, FileStorage, Exam, StudyPlanItem, NotificationItem } from '../../types';
 
 // Storage Keys
 const STORAGE_FILES_KEY = 'physivault_files';
@@ -587,6 +587,19 @@ export const useCloudStorage = () => {
         localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
         setSyncProgress(100);
         setTimeout(() => setSyncProgress(0), 1000);
+
+        // ── Auto-tạo Thông Báo sau Sync thành công ──
+        try {
+            const gradeLabel = grade === 12 ? 'Lớp 12' : grade === 11 ? 'Lớp 11' : 'Lớp 10';
+            await supabase.from('notifications').insert({
+                message: `Thầy vừa cập nhật tài liệu mới cho ${gradeLabel}! Hãy bấm nút bên dưới để tải về ngay nhé.`,
+                grade,
+                fetch_enabled: true,
+            });
+        } catch (notifErr) {
+            console.error('[Notification] Không tạo được thông báo:', notifErr);
+        }
+
         return finalFileId;
     };
     const verifyAccess = async (): Promise<'ok' | 'kicked' | 'offline_expired'> => {
@@ -864,6 +877,66 @@ export const useCloudStorage = () => {
         }
     };
 
+    // ── Notification Functions ────────────────────────────────
+
+    // Lấy danh sách thông báo theo lớp của học sinh
+    const getNotifications = async (grade: number): Promise<NotificationItem[]> => {
+        try {
+            const { data, error } = await supabase
+                .from('notifications')
+                .select('*')
+                .eq('grade', grade)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            return (data || []) as NotificationItem[];
+        } catch (e) {
+            console.error('Lỗi tải thông báo:', e);
+            return [];
+        }
+    };
+
+    // Đánh dấu học sinh này đã fetch thông báo
+    const markNotificationFetched = async (notificationId: string): Promise<boolean> => {
+        const sdtStr = localStorage.getItem('pv_activated_sdt');
+        if (!sdtStr) return false;
+        let normalizedPhone = sdtStr.trim();
+        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
+            normalizedPhone = '0' + normalizedPhone;
+        }
+        try {
+            const { error } = await supabase.from('notification_fetches').insert({
+                notification_id: notificationId,
+                student_phone: normalizedPhone,
+            });
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('Lỗi đánh dấu fetch:', e);
+            return false;
+        }
+    };
+
+    // Kiểm tra học sinh này đã fetch thông báo nào rồi (trả về Set các notification_id đã fetch)
+    const getFetchedNotificationIds = async (): Promise<Set<string>> => {
+        const sdtStr = localStorage.getItem('pv_activated_sdt');
+        if (!sdtStr) return new Set();
+        let normalizedPhone = sdtStr.trim();
+        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
+            normalizedPhone = '0' + normalizedPhone;
+        }
+        try {
+            const { data, error } = await supabase
+                .from('notification_fetches')
+                .select('notification_id')
+                .eq('student_phone', normalizedPhone);
+            if (error) throw error;
+            return new Set((data || []).map((r: any) => r.notification_id));
+        } catch (e) {
+            console.error('Lỗi tải danh sách đã fetch:', e);
+            return new Set();
+        }
+    };
+
     return {
         lessons,
         storedFiles,
@@ -888,6 +961,9 @@ export const useCloudStorage = () => {
         saveStudyPlan,
         updateStudyPlan,
         deleteStudyPlan,
+        getNotifications,
+        markNotificationFetched,
+        getFetchedNotificationIds,
     };
 };
 

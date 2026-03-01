@@ -15,5 +15,14 @@ File này lưu trữ kế hoạch khắc phục 3 rủi ro lớn trong hệ th�
     *   Trước khi ghi đè `telegram_file_id` mới lên Supabase, hãy Query (Select) để lấy `telegram_file_id` CŨ.
     *   Sau khi lưu thành công File mới, dùng lệnh Telegram API `deleteMessage` thông qua Bot để xóa luôn cái tin nhắn chứa File cũ đi. Kho lưu trữ của thầy sẽ luôn sạch bóng!
 
+## Tính Năng 4: Hệ Thống Thông Báo & Cập Nhật Dữ Liệu Cho Học Sinh
+*   **Mục tiêu:** Giúp học sinh cập nhật liên tục các tài liệu/bài thi mới thay vì chỉ lấy được 1 lần sau khi mở khóa. Đồng thời nhận được thông báo khi thầy giáo có đề mới.
+*   **Giải pháp chi tiết:**
+    *   **Cơ sở dữ liệu (Supabase):** Tạo bảng `notifications` (chứa `id`, `message`, `created_at`). Mỗi khi Admin đăng File mới & Sync Telegram thì thêm 1 Row thông báo vào bảng này.
+    *   **Giao diện Học sinh (Frontend):** 
+        1. Thêm biểu tượng **Cái chuông 🔔** (khi có thông báo mới hiển thị chấm đỏ).
+        2. Thêm nút **Cập nhật dữ liệu** (Refresh / Lấy bài mới). Nút này gọi lại API lấy file từ Telegram về thiết bị, bổ sung thêm cho kho thư viện của học sinh.
+    *   **Luồng chạy:** Admin có bài học mới -> Sync -> Hệ thống tạo Thông báo -> Học sinh hiện chuông đỏ -> Học sinh bấm nút Cập nhật bài học (Gọi gọi bài về) -> Tài liệu mới hiện ra trong kho.
+
 ---
 *Ghi chép này chờ được thực thi trong phiên làm việc kế tiếp. Vui lòng không xóa.*

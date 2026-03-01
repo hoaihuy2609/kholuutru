@@ -1,5 +1,5 @@
 import React from 'react';
-import { Atom, Home, Settings, BookOpen, Zap, Activity, ClipboardList } from 'lucide-react';
+import { Atom, Home, Settings, BookOpen, Zap, Activity, ClipboardList, Bell } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
@@ -13,10 +13,13 @@ interface SidebarProps {
   showContactBook?: boolean;
   onOpenStudyPlanner?: () => void;
   showStudyPlanner?: boolean;
+  onOpenNotification?: () => void;
+  showNotification?: boolean;
+  notificationUnreadCount?: number;
   className?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, className }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, className }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -155,6 +158,42 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             >
               NEW
             </span>
+          </button>
+        )}
+
+        {/* Thông Báo */}
+        {onOpenNotification && (
+          <button
+            onClick={() => { onOpenNotification(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+            style={{
+              background: showNotification ? '#E3E2DE' : 'transparent',
+              color: showNotification ? '#1A1A1A' : '#57564F',
+              fontWeight: showNotification ? 500 : 400,
+            }}
+            onMouseEnter={e => { if (!showNotification) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+            onMouseLeave={e => { if (!showNotification) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          >
+            <div className="relative shrink-0">
+              <Bell className="w-4 h-4" style={{ color: showNotification ? '#E03E3E' : '#AEACA8' }} />
+              {(notificationUnreadCount ?? 0) > 0 && (
+                <span
+                  className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] font-black"
+                  style={{ background: '#E03E3E', color: '#fff', lineHeight: 1 }}
+                >
+                  {notificationUnreadCount! > 9 ? '9+' : notificationUnreadCount}
+                </span>
+              )}
+            </div>
+            <span>Thông Báo</span>
+            {(notificationUnreadCount ?? 0) > 0 && (
+              <span
+                className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{ background: '#FEF2F2', color: '#E03E3E' }}
+              >
+                {notificationUnreadCount} MỚI
+              </span>
+            )}
           </button>
         )}
 
