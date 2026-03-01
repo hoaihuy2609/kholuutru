@@ -683,29 +683,31 @@ function App() {
             setIsGuideOpen(true);
             setIsMobileMenuOpen(false);
           }}
-          onOpenExamList={() => {
+          onOpenExamList={(isActivated || isAdmin) ? () => {
             setShowExamList(true);
             setShowContactBook(false);
             setShowStudyPlanner(false);
+            setShowNotification(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
             setCurrentChapterId(null);
             setCurrentLesson(null);
             setIsMobileMenuOpen(false);
-          }}
-          onOpenContactBook={() => {
+          } : undefined}
+          onOpenContactBook={(isActivated || isAdmin) ? () => {
             setShowContactBook(true);
             setShowExamList(false);
             setShowStudyPlanner(false);
+            setShowNotification(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
             setCurrentChapterId(null);
             setCurrentLesson(null);
             setIsMobileMenuOpen(false);
-          }}
-          onOpenStudyPlanner={() => {
+          } : undefined}
+          onOpenStudyPlanner={(isActivated || isAdmin) ? () => {
             setShowStudyPlanner(true);
             setShowContactBook(false);
             setShowExamList(false);
@@ -716,8 +718,8 @@ function App() {
             setCurrentChapterId(null);
             setCurrentLesson(null);
             setIsMobileMenuOpen(false);
-          }}
-          onOpenNotification={() => {
+          } : undefined}
+          onOpenNotification={(isActivated || isAdmin) ? () => {
             setShowNotification(true);
             setShowStudyPlanner(false);
             setShowContactBook(false);
@@ -728,7 +730,7 @@ function App() {
             setCurrentChapterId(null);
             setCurrentLesson(null);
             setIsMobileMenuOpen(false);
-          }}
+          } : undefined}
           showExamList={showExamList}
           showContactBook={showContactBook}
           showStudyPlanner={showStudyPlanner}
@@ -752,27 +754,29 @@ function App() {
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
-        onOpenExamList={() => {
+        onOpenExamList={(isActivated || isAdmin) ? () => {
           setShowExamList(true);
           setShowContactBook(false);
           setShowStudyPlanner(false);
+          setShowNotification(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
           setCurrentChapterId(null);
           setCurrentLesson(null);
-        }}
-        onOpenContactBook={() => {
+        } : undefined}
+        onOpenContactBook={(isActivated || isAdmin) ? () => {
           setShowContactBook(true);
           setShowExamList(false);
           setShowStudyPlanner(false);
+          setShowNotification(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
           setCurrentChapterId(null);
           setCurrentLesson(null);
-        }}
-        onOpenStudyPlanner={() => {
+        } : undefined}
+        onOpenStudyPlanner={(isActivated || isAdmin) ? () => {
           setShowStudyPlanner(true);
           setShowContactBook(false);
           setShowExamList(false);
@@ -782,8 +786,8 @@ function App() {
           setCurrentGrade(null);
           setCurrentChapterId(null);
           setCurrentLesson(null);
-        }}
-        onOpenNotification={() => {
+        } : undefined}
+        onOpenNotification={(isActivated || isAdmin) ? () => {
           setShowNotification(true);
           setShowStudyPlanner(false);
           setShowContactBook(false);
@@ -793,7 +797,7 @@ function App() {
           setCurrentGrade(null);
           setCurrentChapterId(null);
           setCurrentLesson(null);
-        }}
+        } : undefined}
         showExamList={showExamList}
         showContactBook={showContactBook}
         showStudyPlanner={showStudyPlanner}
