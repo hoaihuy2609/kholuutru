@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Award, RefreshCw, Calendar, CheckCircle, Target, Activity } from 'lucide-react';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine } from 'recharts';
+import { BookOpenCheck, RefreshCw, Calendar, CheckCircle, Target, TrendingUp, TrendingDown, Minus, Flame, Trophy, Hash } from 'lucide-react';
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine, CartesianGrid } from 'recharts';
 import { ExamResultRecord } from '../types';
 
 interface ContactBookProps {
@@ -8,15 +8,12 @@ interface ContactBookProps {
     onLoadHistory: (phone?: string) => Promise<ExamResultRecord[]>;
 }
 
-const ACCENT = '#6B7CDB';
-
 const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => {
     const [history, setHistory] = useState<ExamResultRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<'history' | 'analytics'>('history');
 
-    // Target goal state
     const [targetScore, setTargetScore] = useState<number>(() => {
         const saved = localStorage.getItem('pv_target_score');
         return saved ? parseFloat(saved) : 8.0;
@@ -29,7 +26,6 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
             let phoneToQuery = undefined;
             if (!isAdmin && sdtStr) {
                 let normalizedPhone = sdtStr.trim();
-                // Match normalized phone check string length and leading 0 if needed
                 if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
                     normalizedPhone = '0' + normalizedPhone;
                 }
@@ -49,9 +45,9 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
     };
 
     const getScoreColor = (score: number) => {
-        if (score >= 8) return { color: '#16A34A', bg: '#F0FDF4' };
-        if (score >= 5) return { color: '#D9730D', bg: '#FFF7ED' };
-        return { color: '#E03E3E', bg: '#FEF2F2' };
+        if (score >= 8) return '#448361';
+        if (score >= 5) return '#D9730D';
+        return '#E03E3E';
     };
 
     const handleTargetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,7 +69,7 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
         );
     });
 
-    // Analytics Data Prep
+    // Analytics
     const chartData = [...history].sort((a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime()).map((r, i) => ({
         index: i + 1,
         title: r.exam_title,
@@ -85,155 +81,184 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
         ? history.reduce((acc, curr) => acc + curr.score, 0) / history.length
         : 0;
 
-    let recentTrendLabel = "0.0";
-    let isPositiveTrend = true;
+    let trendDiff = 0;
     if (chartData.length >= 6) {
         const last3 = chartData.slice(-3);
         const prev3 = chartData.slice(-6, -3);
         const avgLast3 = last3.reduce((acc, c) => acc + c.score, 0) / 3;
         const avgPrev3 = prev3.reduce((acc, c) => acc + c.score, 0) / 3;
-        const diff = avgLast3 - avgPrev3;
-        recentTrendLabel = (diff > 0 ? "+" : "") + diff.toFixed(2);
-        isPositiveTrend = diff >= 0;
+        trendDiff = avgLast3 - avgPrev3;
     } else if (chartData.length >= 2) {
-        const diff = chartData[chartData.length - 1].score - chartData[chartData.length - 2].score;
-        recentTrendLabel = (diff > 0 ? "+" : "") + diff.toFixed(2);
-        isPositiveTrend = diff >= 0;
+        trendDiff = chartData[chartData.length - 1].score - chartData[chartData.length - 2].score;
     }
 
     const maxScore = history.length > 0 ? Math.max(...history.map(r => r.score)) : 0;
     let streak = 0;
     for (let i = chartData.length - 1; i >= 0; i--) {
-        if (chartData[i].score >= targetScore) {
-            streak++;
-        } else {
-            break;
-        }
+        if (chartData[i].score >= targetScore) streak++;
+        else break;
     }
 
+    const TrendIcon = trendDiff > 0 ? TrendingUp : trendDiff < 0 ? TrendingDown : Minus;
+
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-5 animate-fade-in">
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                    <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: '#1A1A1A' }}>
-                        <Award className="w-6 h-6" style={{ color: ACCENT }} />
+                    <h1 className="text-xl font-semibold flex items-center gap-2" style={{ color: '#1A1A1A' }}>
+                        <BookOpenCheck className="w-5 h-5" style={{ color: '#787774' }} />
                         Sổ liên lạc
                     </h1>
-                    <p className="text-sm mt-1" style={{ color: '#787774' }}>
-                        {isAdmin ? 'Quản lý kết quả thi của tất cả học sinh' : 'Xem lại lịch sử và kết quả các bài thi đã làm'}
+                    <p className="text-sm mt-0.5" style={{ color: '#AEACA8' }}>
+                        {isAdmin ? 'Quản lý kết quả thi của tất cả học sinh' : 'Lịch sử và tiến trình học tập'}
                     </p>
                 </div>
                 <button
                     onClick={load}
                     disabled={loading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all"
-                    style={{ color: '#57564F', background: '#F1F0EC' }}
-                    title="Tải lại danh sách"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all"
+                    style={{ color: '#57564F', background: '#F1F0EC', border: '1px solid #E9E9E7' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
                 >
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                     Tải lại
                 </button>
             </div>
 
-            {/* Tabs */}
-            <div className="flex p-1 rounded-xl w-fit" style={{ background: '#E9E9E7' }}>
+            {/* Tabs — Notion style segmented control */}
+            <div className="flex gap-0" style={{ borderBottom: '1px solid #E9E9E7' }}>
                 <button
                     onClick={() => setActiveTab('history')}
-                    className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                    className="px-4 py-2 text-sm font-medium transition-all relative"
                     style={{
-                        background: activeTab === 'history' ? '#fff' : 'transparent',
-                        color: activeTab === 'history' ? '#1A1A1A' : '#787774',
-                        boxShadow: activeTab === 'history' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
+                        color: activeTab === 'history' ? '#1A1A1A' : '#AEACA8',
                     }}
                 >
                     Nhật ký bài làm
+                    {activeTab === 'history' && (
+                        <span className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: '#1A1A1A' }} />
+                    )}
                 </button>
                 <button
                     onClick={() => setActiveTab('analytics')}
-                    className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                    className="px-4 py-2 text-sm font-medium transition-all relative"
                     style={{
-                        background: activeTab === 'analytics' ? '#fff' : 'transparent',
-                        color: activeTab === 'analytics' ? '#1A1A1A' : '#787774',
-                        boxShadow: activeTab === 'analytics' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
+                        color: activeTab === 'analytics' ? '#1A1A1A' : '#AEACA8',
                     }}
                 >
-                    Phân tích năng lực 🚀
+                    Phân tích
+                    {activeTab === 'analytics' && (
+                        <span className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: '#1A1A1A' }} />
+                    )}
                 </button>
             </div>
 
             {/* --- TAB: HISTORY --- */}
             {activeTab === 'history' && (
-                <div className="space-y-4 animate-fade-in">
+                <div className="space-y-3 animate-fade-in">
+                    {/* Search + count */}
                     {isAdmin && (
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                             <input
                                 type="text"
                                 placeholder="Tìm theo tên, SĐT hoặc bài thi..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="flex-1 px-4 py-2.5 rounded-xl text-sm transition-colors outline-none"
+                                className="flex-1 px-3 py-2 rounded-md text-sm transition-colors outline-none"
                                 style={{ background: '#fff', border: '1px solid #E9E9E7', color: '#1A1A1A' }}
+                                onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB'}
+                                onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
                             />
-                            <div className="px-4 py-2.5 rounded-xl text-sm font-semibold" style={{ background: '#EEF0FB', color: ACCENT }}>
-                                Tổng số bài thi: {history.length}
-                            </div>
+                            <span className="text-xs font-medium px-2.5 py-1.5 rounded-md" style={{ background: '#F1F0EC', color: '#787774' }}>
+                                {history.length} bài thi
+                            </span>
                         </div>
                     )}
 
                     {loading ? (
                         <div className="flex items-center justify-center py-16">
-                            <RefreshCw className="w-6 h-6 animate-spin" style={{ color: ACCENT }} />
-                            <span className="ml-2 text-sm" style={{ color: '#787774' }}>Đang tải dữ liệu...</span>
+                            <RefreshCw className="w-5 h-5 animate-spin" style={{ color: '#AEACA8' }} />
+                            <span className="ml-2 text-sm" style={{ color: '#AEACA8' }}>Đang tải dữ liệu...</span>
                         </div>
                     ) : filteredHistory.length === 0 ? (
-                        <div className="text-center py-16 rounded-2xl" style={{ border: '2px dashed #E9E9E7' }}>
-                            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
-                                <span className="text-xl">🏆</span>
+                        <div className="text-center py-16">
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
+                                <BookOpenCheck className="w-5 h-5" style={{ color: '#AEACA8' }} />
                             </div>
-                            <p className="font-semibold" style={{ color: '#57564F' }}>Chưa có bài thi nào phù hợp</p>
+                            <p className="text-sm font-medium" style={{ color: '#57564F' }}>Chưa có bài thi nào</p>
+                            <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Kết quả sẽ hiển thị ở đây sau khi hoàn thành bài thi</p>
                         </div>
                     ) : (
-                        <div className="grid gap-4">
-                            {filteredHistory.map((record) => {
-                                const style = getScoreColor(record.score);
+                        /* Table-style list */
+                        <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #E9E9E7' }}>
+                            {/* Table header */}
+                            <div
+                                className="hidden md:grid items-center px-4 py-2 text-[11px] font-semibold uppercase tracking-wider"
+                                style={{
+                                    gridTemplateColumns: isAdmin ? '1fr 140px 100px 80px' : '1fr 100px 80px',
+                                    background: '#F7F6F3',
+                                    color: '#AEACA8',
+                                    borderBottom: '1px solid #E9E9E7'
+                                }}
+                            >
+                                <span>Bài thi</span>
+                                {isAdmin && <span>Học sinh</span>}
+                                <span className="text-center">Kết quả</span>
+                                <span className="text-right">Điểm</span>
+                            </div>
+
+                            {/* Table rows */}
+                            {filteredHistory.map((record, idx) => {
+                                const scoreColor = getScoreColor(record.score);
                                 return (
                                     <div
                                         key={record.id}
-                                        className="rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:shadow-md"
-                                        style={{ background: '#fff', border: '1px solid #E9E9E7' }}
+                                        className="md:grid items-center px-4 py-3 transition-colors flex flex-col md:flex-row gap-2 md:gap-0"
+                                        style={{
+                                            gridTemplateColumns: isAdmin ? '1fr 140px 100px 80px' : '1fr 100px 80px',
+                                            background: '#fff',
+                                            borderBottom: idx < filteredHistory.length - 1 ? '1px solid #F1F0EC' : 'none',
+                                        }}
+                                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FAFAF9'}
+                                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#fff'}
                                     >
-                                        <div className="space-y-1.5 flex-1 min-w-0">
-                                            <h3 className="font-bold text-base leading-tight truncate" style={{ color: '#1A1A1A' }}>
+                                        {/* Exam title + date */}
+                                        <div className="min-w-0">
+                                            <div className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }}>
                                                 {record.exam_title}
-                                            </h3>
-                                            <div className="flex flex-wrap items-center gap-3 text-sm" style={{ color: '#787774' }}>
-                                                {isAdmin && (
-                                                    <span className="font-medium" style={{ color: '#57564F' }}>
-                                                        👤 {record.student_name} ({record.student_phone})
-                                                    </span>
-                                                )}
-                                                <span className="flex items-center gap-1 text-xs">
-                                                    <Calendar className="w-3.5 h-3.5" />
-                                                    {formatDate(record.submitted_at)}
-                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1 mt-0.5 text-xs" style={{ color: '#AEACA8' }}>
+                                                <Calendar className="w-3 h-3" />
+                                                {formatDate(record.submitted_at)}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-6 shrink-0 pt-3 md:pt-0 border-t md:border-0" style={{ borderColor: '#F1F0EC' }}>
-                                            <div className="text-center">
-                                                <div className="text-xs font-semibold uppercase tracking-wider mb-0.5" style={{ color: '#AEACA8' }}>Số câu</div>
-                                                <div className="flex items-center gap-1 font-medium text-sm" style={{ color: '#57564F' }}>
-                                                    <CheckCircle className="w-3.5 h-3.5" style={{ color: '#16A34A' }} />
-                                                    {record.correct_answers}/{record.total_questions}
-                                                </div>
+
+                                        {/* Student (admin only) */}
+                                        {isAdmin && (
+                                            <div className="text-xs" style={{ color: '#787774' }}>
+                                                <div className="font-medium truncate">{record.student_name}</div>
+                                                <div style={{ color: '#AEACA8' }}>{record.student_phone}</div>
                                             </div>
-                                            <div
-                                                className="w-16 h-16 rounded-2xl flex flex-col items-center justify-center shrink-0 border"
-                                                style={{ background: style.bg, borderColor: style.color, color: style.color }}
+                                        )}
+
+                                        {/* Correct answers */}
+                                        <div className="text-center">
+                                            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded" style={{ background: '#F7F6F3', color: '#57564F' }}>
+                                                <CheckCircle className="w-3 h-3" style={{ color: '#448361' }} />
+                                                {record.correct_answers}/{record.total_questions}
+                                            </span>
+                                        </div>
+
+                                        {/* Score */}
+                                        <div className="text-right">
+                                            <span
+                                                className="text-sm font-bold tabular-nums"
+                                                style={{ color: scoreColor }}
                                             >
-                                                <div className="text-lg font-black leading-none">{record.score.toFixed(2)}</div>
-                                                <div className="text-[10px] font-bold uppercase tracking-wider mt-0.5">Điểm</div>
-                                            </div>
+                                                {record.score.toFixed(2)}
+                                            </span>
                                         </div>
                                     </div>
                                 );
@@ -245,31 +270,82 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
 
             {/* --- TAB: ANALYTICS --- */}
             {activeTab === 'analytics' && (
-                <div className="space-y-6 animate-fade-in">
+                <div className="space-y-4 animate-fade-in">
                     {loading ? (
                         <div className="flex items-center justify-center py-16">
-                            <RefreshCw className="w-6 h-6 animate-spin" style={{ color: ACCENT }} />
-                            <span className="ml-2 text-sm" style={{ color: '#787774' }}>Đang tải phân tích...</span>
+                            <RefreshCw className="w-5 h-5 animate-spin" style={{ color: '#AEACA8' }} />
+                            <span className="ml-2 text-sm" style={{ color: '#AEACA8' }}>Đang tải phân tích...</span>
                         </div>
                     ) : history.length === 0 ? (
-                        <div className="text-center py-16 rounded-2xl" style={{ border: '2px dashed #E9E9E7' }}>
-                            <p className="font-semibold" style={{ color: '#57564F' }}>Chưa có dữ liệu để phân tích</p>
-                            <p className="text-sm mt-1" style={{ color: '#AEACA8' }}>Hãy làm thêm bài thi để mở khoá tính năng này nhé!</p>
+                        <div className="text-center py-16">
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
+                                <TrendingUp className="w-5 h-5" style={{ color: '#AEACA8' }} />
+                            </div>
+                            <p className="text-sm font-medium" style={{ color: '#57564F' }}>Chưa có dữ liệu để phân tích</p>
+                            <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Hãy hoàn thành bài thi để mở khoá phân tích</p>
                         </div>
                     ) : (
                         <>
-                            {/* Target Setter */}
-                            <div className="p-5 rounded-2xl flex flex-wrap items-center justify-between gap-4" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#FFF7ED' }}>
-                                        <Target className="w-5 h-5" style={{ color: '#D9730D' }} />
+                            {/* Compact summary bar */}
+                            <div
+                                className="grid grid-cols-2 md:grid-cols-4 gap-px rounded-lg overflow-hidden"
+                                style={{ background: '#E9E9E7', border: '1px solid #E9E9E7' }}
+                            >
+                                {/* Avg Score */}
+                                <div className="p-4 flex flex-col" style={{ background: '#fff' }}>
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                        <Trophy className="w-3.5 h-3.5" style={{ color: '#AEACA8' }} />
+                                        <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: '#AEACA8' }}>Trung bình</span>
                                     </div>
-                                    <div>
-                                        <h3 className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>Mục tiêu hiện tại 🎯</h3>
-                                        <p className="text-xs mt-0.5" style={{ color: '#787774' }}>Vượt mức này để gia tăng chuỗi liên tiếp</p>
-                                    </div>
+                                    <span className="text-2xl font-bold tabular-nums" style={{ color: '#1A1A1A' }}>{avgScore.toFixed(2)}</span>
+                                    <span className="text-[11px] mt-1" style={{ color: '#AEACA8' }}>{history.length} bài thi</span>
                                 </div>
+
+                                {/* Trend */}
+                                <div className="p-4 flex flex-col" style={{ background: '#fff' }}>
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                        <TrendIcon className="w-3.5 h-3.5" style={{ color: '#AEACA8' }} />
+                                        <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: '#AEACA8' }}>Phong độ</span>
+                                    </div>
+                                    <span className="text-2xl font-bold tabular-nums" style={{ color: trendDiff >= 0 ? '#448361' : '#E03E3E' }}>
+                                        {trendDiff > 0 ? '+' : ''}{trendDiff.toFixed(2)}
+                                    </span>
+                                    <span className="text-[11px] mt-1" style={{ color: '#AEACA8' }}>so với đợt trước</span>
+                                </div>
+
+                                {/* Streak */}
+                                <div className="p-4 flex flex-col" style={{ background: '#fff' }}>
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                        <Flame className="w-3.5 h-3.5" style={{ color: '#AEACA8' }} />
+                                        <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: '#AEACA8' }}>Chuỗi</span>
+                                    </div>
+                                    <span className="text-2xl font-bold tabular-nums" style={{ color: '#1A1A1A' }}>
+                                        {streak} <span className="text-sm font-medium" style={{ color: '#787774' }}>bài</span>
+                                    </span>
+                                    <span className="text-[11px] mt-1" style={{ color: '#AEACA8' }}>đạt mục tiêu liên tiếp</span>
+                                </div>
+
+                                {/* Max */}
+                                <div className="p-4 flex flex-col" style={{ background: '#fff' }}>
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                        <Hash className="w-3.5 h-3.5" style={{ color: '#AEACA8' }} />
+                                        <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: '#AEACA8' }}>Cao nhất</span>
+                                    </div>
+                                    <span className="text-2xl font-bold tabular-nums" style={{ color: '#1A1A1A' }}>{maxScore.toFixed(2)}</span>
+                                    <span className="text-[11px] mt-1" style={{ color: '#AEACA8' }}>điểm đỉnh cao</span>
+                                </div>
+                            </div>
+
+                            {/* Target setter — inline, minimal */}
+                            <div
+                                className="flex items-center justify-between px-4 py-3 rounded-lg"
+                                style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}
+                            >
                                 <div className="flex items-center gap-2">
+                                    <Target className="w-4 h-4" style={{ color: '#787774' }} />
+                                    <span className="text-sm" style={{ color: '#57564F' }}>Mục tiêu điểm số</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
                                     <input
                                         type="number"
                                         step="0.5"
@@ -277,88 +353,79 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                                         max="10"
                                         value={targetScore}
                                         onChange={handleTargetChange}
-                                        className="w-20 px-3 py-2 text-center font-bold text-lg rounded-xl border-2 focus:outline-none transition-colors"
-                                        style={{ borderColor: '#E9E9E7', color: '#D9730D', background: '#FFF7ED' }}
-                                        onFocus={e => (e.target as HTMLElement).style.borderColor = '#D9730D'}
+                                        className="w-16 px-2 py-1 text-center font-semibold text-sm rounded-md border focus:outline-none transition-colors"
+                                        style={{ borderColor: '#E9E9E7', color: '#1A1A1A', background: '#fff' }}
+                                        onFocus={e => (e.target as HTMLElement).style.borderColor = '#CFCFCB'}
                                         onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
                                     />
-                                    <span className="text-sm font-bold" style={{ color: '#AEACA8' }}>Điểm</span>
+                                    <span className="text-xs" style={{ color: '#AEACA8' }}>điểm</span>
                                 </div>
                             </div>
 
-                            {/* Stat Cards */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="p-5 rounded-2xl" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                    <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#787774' }}>🏆 Điểm trung bình</div>
-                                    <div className="text-3xl font-black" style={{ color: '#1A1A1A' }}>{avgScore.toFixed(2)}</div>
-                                    <div className="text-xs font-medium mt-1" style={{ color: '#AEACA8' }}>Tổng cộng {history.length} bài thi</div>
+                            {/* Chart — clean, monochrome */}
+                            <div className="p-5 rounded-lg" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-medium" style={{ color: '#1A1A1A' }}>Biểu đồ tiến trình</h3>
+                                    <span className="text-[11px]" style={{ color: '#AEACA8' }}>Từ cũ → mới</span>
                                 </div>
-
-                                <div className="p-5 rounded-2xl" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                    <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#787774' }}>🚀 Phong độ dạo này</div>
-                                    <div className="text-3xl font-black" style={{ color: isPositiveTrend ? '#16A34A' : '#E03E3E' }}>
-                                        {recentTrendLabel}
-                                    </div>
-                                    <div className="text-xs font-medium mt-1" style={{ color: '#AEACA8' }}>So với đợt thi trước</div>
-                                </div>
-
-                                <div className="p-5 rounded-2xl" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                    <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#787774' }}>🔥 Chuỗi phá đảo</div>
-                                    <div className="text-3xl font-black" style={{ color: '#D9730D' }}>
-                                        {streak} <span className="text-base font-bold">bài</span>
-                                    </div>
-                                    <div className="text-xs font-medium mt-1" style={{ color: '#AEACA8' }}>
-                                        Đỉnh cao: {maxScore.toFixed(2)} đ
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Sparkline Chart */}
-                            <div className="p-5 rounded-2xl space-y-4" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                <div className="flex items-center gap-2">
-                                    <Activity className="w-5 h-5" style={{ color: ACCENT }} />
-                                    <h3 className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>Bản đồ học tập (Từ cũ tới mới)</h3>
-                                </div>
-                                <div style={{ width: '100%', height: '250px', marginTop: '16px' }}>
+                                <div style={{ width: '100%', height: '220px' }}>
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                                        <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor={ACCENT} stopOpacity={0.3} />
-                                                    <stop offset="95%" stopColor={ACCENT} stopOpacity={0} />
+                                                    <stop offset="5%" stopColor="#1A1A1A" stopOpacity={0.08} />
+                                                    <stop offset="95%" stopColor="#1A1A1A" stopOpacity={0} />
                                                 </linearGradient>
                                             </defs>
-                                            <XAxis dataKey="index" hide />
-                                            <YAxis domain={[0, 10]} hide />
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F0EC" vertical={false} />
+                                            <XAxis dataKey="index" tick={{ fontSize: 11, fill: '#AEACA8' }} axisLine={{ stroke: '#E9E9E7' }} tickLine={false} />
+                                            <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: '#AEACA8' }} axisLine={false} tickLine={false} />
                                             <Tooltip
-                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                                labelStyle={{ color: '#787774', fontSize: '12px', marginBottom: '4px' }}
-                                                itemStyle={{ color: '#1A1A1A', fontSize: '14px', fontWeight: 'bold' }}
-                                                formatter={(val: number) => [`${val.toFixed(2)} điểm`, 'Đạt']}
+                                                contentStyle={{
+                                                    borderRadius: '8px',
+                                                    border: '1px solid #E9E9E7',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                                    fontSize: '13px',
+                                                    background: '#fff',
+                                                }}
+                                                labelStyle={{ color: '#AEACA8', fontSize: '11px', marginBottom: '4px' }}
+                                                itemStyle={{ color: '#1A1A1A', fontWeight: 600 }}
+                                                formatter={(val: number) => [`${val.toFixed(2)} điểm`, '']}
                                                 labelFormatter={(index: number) => {
                                                     const point = chartData.find(d => d.index === Number(index));
                                                     return point ? point.title : '';
                                                 }}
                                             />
-                                            <ReferenceLine y={targetScore} stroke="#E03E3E" strokeDasharray="3 3" />
+                                            <ReferenceLine
+                                                y={targetScore}
+                                                stroke="#E03E3E"
+                                                strokeDasharray="4 4"
+                                                strokeOpacity={0.5}
+                                            />
                                             <Area
                                                 type="monotone"
                                                 dataKey="score"
-                                                stroke={ACCENT}
-                                                strokeWidth={3}
+                                                stroke="#1A1A1A"
+                                                strokeWidth={2}
                                                 fillOpacity={1}
                                                 fill="url(#colorScore)"
+                                                dot={{ r: 3, fill: '#1A1A1A', strokeWidth: 0 }}
+                                                activeDot={{ r: 5, fill: '#1A1A1A', strokeWidth: 2, stroke: '#fff' }}
                                                 isAnimationActive={true}
                                             />
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 </div>
-                                <div className="flex items-center justify-between text-[10px] uppercase tracking-wider font-semibold" style={{ color: '#AEACA8' }}>
-                                    <span>← Sơ khai</span>
-                                    <span className="flex items-center gap-1">
-                                        <span className="w-4 h-0.5 inline-block" style={{ background: '#E03E3E' }} /> Đường mục tiêu ({targetScore} đ)
+                                {/* Legend */}
+                                <div className="flex items-center gap-4 mt-3 text-[11px]" style={{ color: '#AEACA8' }}>
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="w-3 h-0.5 inline-block rounded" style={{ background: '#1A1A1A' }} />
+                                        Điểm số
                                     </span>
-                                    <span>HIỆN TẠI →</span>
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="w-3 h-0.5 inline-block rounded" style={{ background: '#E03E3E', opacity: 0.5 }} />
+                                        Mục tiêu ({targetScore}đ)
+                                    </span>
                                 </div>
                             </div>
                         </>

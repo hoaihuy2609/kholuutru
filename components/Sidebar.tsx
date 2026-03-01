@@ -1,5 +1,5 @@
 import React from 'react';
-import { Atom, Home, Settings, BookOpen, Zap, Activity, ClipboardList, Bell } from 'lucide-react';
+import { Atom, Home, Settings, BookOpen, BookOpenCheck, Zap, Activity, ClipboardList, Bell } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
@@ -126,14 +126,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             onMouseEnter={e => { if (!showContactBook) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
             onMouseLeave={e => { if (!showContactBook) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
-            <Atom className="w-4 h-4 shrink-0" style={{ color: showContactBook ? '#D9730D' : '#AEACA8' }} />
+            <BookOpenCheck className="w-4 h-4 shrink-0" style={{ color: showContactBook ? '#1A1A1A' : '#AEACA8' }} />
             <span>Sổ liên lạc</span>
-            <span
-              className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-              style={{ background: '#FFF7ED', color: '#D9730D' }}
-            >
-              HOT
-            </span>
           </button>
         )}
 
