@@ -383,8 +383,8 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
 
                             {/* Chart */}
                             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
-                                <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', borderLeft: `3px solid ${ACCENT}`, background: ACCENT_LIGHT }}>
-                                    <h3 className="text-sm font-semibold" style={{ color: ACCENT }}>Biểu đồ tiến trình</h3>
+                                <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', borderLeft: `3px solid #059669`, background: '#ECFDF5' }}>
+                                    <h3 className="text-sm font-semibold" style={{ color: '#059669' }}>Biểu đồ tiến trình</h3>
                                     <p className="text-xs mt-0.5" style={{ color: '#AEACA8' }}>Từ cũ → mới nhất</p>
                                 </div>
                                 <div className="p-4">
@@ -393,8 +393,8 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                                             <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                                                 <defs>
                                                     <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor={ACCENT} stopOpacity={0.2} />
-                                                        <stop offset="95%" stopColor={ACCENT} stopOpacity={0} />
+                                                        <stop offset="5%" stopColor="#059669" stopOpacity={0.2} />
+                                                        <stop offset="95%" stopColor="#059669" stopOpacity={0} />
                                                     </linearGradient>
                                                 </defs>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F0EC" vertical={false} />
@@ -420,12 +420,12 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                                                 <Area
                                                     type="linear"
                                                     dataKey="score"
-                                                    stroke={ACCENT}
+                                                    stroke="#059669"
                                                     strokeWidth={2}
                                                     fillOpacity={1}
                                                     fill="url(#colorScore)"
-                                                    dot={{ r: 3, fill: ACCENT, strokeWidth: 0 }}
-                                                    activeDot={{ r: 5, fill: ACCENT, strokeWidth: 2, stroke: '#fff' }}
+                                                    dot={{ r: 3, fill: '#059669', strokeWidth: 0 }}
+                                                    activeDot={{ r: 5, fill: '#059669', strokeWidth: 2, stroke: '#fff' }}
                                                     isAnimationActive={true}
                                                 />
                                             </AreaChart>
@@ -433,7 +433,7 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                                     </div>
                                     <div className="flex items-center gap-4 mt-3 text-[11px]" style={{ color: '#AEACA8' }}>
                                         <span className="flex items-center gap-1.5">
-                                            <span className="w-3 h-0.5 inline-block rounded" style={{ background: ACCENT }} />
+                                            <span className="w-3 h-0.5 inline-block rounded" style={{ background: '#059669' }} />
                                             Điểm số
                                         </span>
                                         <span className="flex items-center gap-1.5">
