@@ -314,15 +314,27 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                                 </div>
 
                                 {/* Streak */}
-                                <div className="p-4 flex flex-col" style={{ background: '#fff' }}>
-                                    <div className="flex items-center gap-1.5 mb-2">
-                                        <Flame className="w-3.5 h-3.5" style={{ color: '#AEACA8' }} />
-                                        <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: '#AEACA8' }}>Chuỗi</span>
+                                <div className="p-4 flex flex-col relative overflow-hidden group" style={{ background: '#fff' }}>
+                                    {/* Nền highlight mờ mờ khi có chuỗi */}
+                                    {streak > 0 && <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-transparent opacity-50 pointer-events-none" />}
+                                    <div className="flex items-center gap-1.5 mb-2 relative z-10">
+                                        <Flame
+                                            className="w-4 h-4 transition-all duration-700 ease-out"
+                                            style={{
+                                                color: streak > 0 ? '#F97316' : '#AEACA8',
+                                                filter: streak > 0 ? 'drop-shadow(0 0 5px rgba(249, 115, 22, 0.5))' : 'none',
+                                                transform: streak > 0 ? 'scale(1.1)' : 'scale(1)',
+                                                fill: streak >= 3 ? '#F97316' : 'none' // Nếu chuỗi >= 3 bài thì tô full màu rực luôn
+                                            }}
+                                        />
+                                        <span className="text-[11px] font-medium uppercase tracking-wider relative z-10" style={{ color: streak > 0 ? '#EA580C' : '#AEACA8' }}>
+                                            Chuỗi
+                                        </span>
                                     </div>
-                                    <span className="text-2xl font-bold tabular-nums" style={{ color: '#1A1A1A' }}>
+                                    <span className="text-2xl font-bold tabular-nums relative z-10" style={{ color: streak > 0 ? '#EA580C' : '#1A1A1A' }}>
                                         {streak} <span className="text-sm font-medium" style={{ color: '#787774' }}>bài</span>
                                     </span>
-                                    <span className="text-[11px] mt-1" style={{ color: '#AEACA8' }}>đạt mục tiêu liên tiếp</span>
+                                    <span className="text-[11px] mt-1 relative z-10" style={{ color: '#AEACA8' }}>đạt mục tiêu liên tiếp</span>
                                 </div>
 
                                 {/* Max */}
@@ -373,8 +385,8 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                                         <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#1A1A1A" stopOpacity={0.08} />
-                                                    <stop offset="95%" stopColor="#1A1A1A" stopOpacity={0} />
+                                                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.25} />
+                                                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                                                 </linearGradient>
                                             </defs>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#F1F0EC" vertical={false} />
@@ -405,12 +417,12 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                                             <Area
                                                 type="monotone"
                                                 dataKey="score"
-                                                stroke="#1A1A1A"
+                                                stroke="#10B981"
                                                 strokeWidth={2}
                                                 fillOpacity={1}
                                                 fill="url(#colorScore)"
-                                                dot={{ r: 3, fill: '#1A1A1A', strokeWidth: 0 }}
-                                                activeDot={{ r: 5, fill: '#1A1A1A', strokeWidth: 2, stroke: '#fff' }}
+                                                dot={{ r: 3, fill: '#10B981', strokeWidth: 0 }}
+                                                activeDot={{ r: 5, fill: '#10B981', strokeWidth: 2, stroke: '#fff' }}
                                                 isAnimationActive={true}
                                             />
                                         </AreaChart>
@@ -419,7 +431,7 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                                 {/* Legend */}
                                 <div className="flex items-center gap-4 mt-3 text-[11px]" style={{ color: '#AEACA8' }}>
                                     <span className="flex items-center gap-1.5">
-                                        <span className="w-3 h-0.5 inline-block rounded" style={{ background: '#1A1A1A' }} />
+                                        <span className="w-3 h-0.5 inline-block rounded" style={{ background: '#10B981' }} />
                                         Điểm số
                                     </span>
                                     <span className="flex items-center gap-1.5">

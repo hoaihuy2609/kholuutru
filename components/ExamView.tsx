@@ -372,14 +372,18 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit }) => {
                     </div>
 
                     {/* Submit Button */}
-                    <div className="p-4 shrink-0" style={{ borderTop: '1px solid #2D2D2D' }}>
+                    <div className="p-4 shrink-0" style={{ borderTop: '1px solid #2D2D2D', background: '#1c1c1c' }}>
                         <button
                             onClick={() => setShowConfirm(true)}
                             disabled={submitted}
-                            className="w-full py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                            style={{ background: '#E03E3E', color: '#fff' }}
-                            onMouseEnter={e => { if (!submitted) (e.currentTarget as HTMLElement).style.background = '#c5302d'; }}
-                            onMouseLeave={e => { if (!submitted) (e.currentTarget as HTMLElement).style.background = '#E03E3E'; }}
+                            className="w-full py-3 rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                            style={{
+                                background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+                                color: '#fff',
+                                boxShadow: '0 4px 14px rgba(220, 38, 38, 0.15)'
+                            }}
+                            onMouseEnter={e => { if (!submitted) { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(220, 38, 38, 0.35)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; } }}
+                            onMouseLeave={e => { if (!submitted) { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(220, 38, 38, 0.15)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; } }}
                         >
                             <Send className="w-4 h-4" />
                             Nộp Bài
