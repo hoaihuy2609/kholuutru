@@ -883,7 +883,6 @@ function App() {
         <main className="flex-1 p-4 md:p-8 lg:p-10 max-w-7xl mx-auto w-full">
           <div
             key={`${showExamList}-${showContactBook}-${showStudyPlanner}-${showNotification}-${currentGrade}-${currentChapterId}-${currentLesson?.id}-${activeExam?.id}`}
-            className="animate-page-enter"
           >
             {renderContent()}
           </div>

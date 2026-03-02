@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Clock, ChevronLeft, Send, AlertTriangle, CheckCircle, RefreshCw, FileText } from 'lucide-react';
 import { Exam, ExamTFAnswer, ExamSubmission } from '../types';
 
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
 const TELEGRAM_TOKEN = '7985901918:AAFK33yVAEPPKiAbiaMFCdz78TpOhBXeRr0';
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -14,15 +15,10 @@ const emptySA = () => Array(6).fill('');
 
 // Score calculator
 export const calcScore = (submission: ExamSubmission, answers: Exam['answers']) => {
-    let correctCount = 0;
-
     // Phần I: trắc nghiệm
     let mcScore = 0;
     submission.mc.forEach((ans, i) => {
-        if (ans && answers.mc[i] && ans === answers.mc[i]) {
-            mcScore += 0.25;
-            correctCount++;
-        }
+        if (ans && answers.mc[i] && ans === answers.mc[i]) mcScore += 0.25;
     });
 
     // Phần II: đúng/sai
@@ -30,24 +26,18 @@ export const calcScore = (submission: ExamSubmission, answers: Exam['answers']) 
     const tfKeys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
     submission.tf.forEach((stuTF, qi) => {
         const corTF = answers.tf[qi];
-        const cCount = tfKeys.filter(k => stuTF[k] && corTF[k] && stuTF[k] === corTF[k]).length;
-        if (cCount === 1) tfScore += 0.1;
-        else if (cCount === 2) tfScore += 0.25;
-        else if (cCount === 3) tfScore += 0.5;
-        else if (cCount === 4) {
-            tfScore += 1.0;
-            correctCount++; // Chỉ tính 1 câu đúng khi đúng cả 4 ý
-        }
+        const correctCount = tfKeys.filter(k => stuTF[k] && corTF[k] && stuTF[k] === corTF[k]).length;
+        if (correctCount === 1) tfScore += 0.1;
+        else if (correctCount === 2) tfScore += 0.25;
+        else if (correctCount === 3) tfScore += 0.5;
+        else if (correctCount === 4) tfScore += 1.0;
     });
 
     // Phần III: trả lời ngắn
     let saScore = 0;
     submission.sa.forEach((ans, i) => {
         const correct = answers.sa[i];
-        if (ans && correct && normalizeSA(ans) === normalizeSA(correct)) {
-            saScore += 0.25;
-            correctCount++;
-        }
+        if (ans && correct && normalizeSA(ans) === normalizeSA(correct)) saScore += 0.25;
     });
 
     return {
@@ -55,7 +45,6 @@ export const calcScore = (submission: ExamSubmission, answers: Exam['answers']) 
         tf: Math.round(tfScore * 100) / 100,
         sa: Math.round(saScore * 100) / 100,
         total: Math.round((mcScore + tfScore + saScore) * 100) / 100,
-        correctCount,
     };
 };
 
@@ -100,15 +89,30 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit }) => {
                 if (!metaData.ok) throw new Error('Không lấy được link PDF từ Telegram');
                 const filePath = metaData.result.file_path;
 
-                // Bước 2: Dùng Public Proxy để tải binary PDF (tránh CORS của file CDN)
-                const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${filePath}`;
-                const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
+                // Bước 2: Dùng GAS proxy để tải binary PDF (tránh CORS của file CDN)
+                const proxyUrl = `${GOOGLE_SCRIPT_URL}?action=proxy_pdf&file_path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(TELEGRAM_TOKEN)}`;
                 const pdfRes = await fetch(proxyUrl);
 
-                if (!pdfRes.ok) throw new Error(`Proxy trả về lỗi: ${pdfRes.status}`);
+                if (!pdfRes.ok) throw new Error(`GAS proxy trả về lỗi: ${pdfRes.status}`);
 
-                const blob = await pdfRes.blob();
-                objectUrl = URL.createObjectURL(blob);
+                const contentType = pdfRes.headers.get('content-type') || '';
+
+                if (contentType.includes('application/json')) {
+                    // GAS trả về JSON với base64 data
+                    const json = await pdfRes.json();
+                    if (!json.success) throw new Error(json.error || 'GAS proxy thất bại');
+                    // base64 → Blob
+                    const base64 = json.data as string;
+                    const byteChars = atob(base64);
+                    const byteArr = new Uint8Array(byteChars.length);
+                    for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+                    const blob = new Blob([byteArr], { type: 'application/pdf' });
+                    objectUrl = URL.createObjectURL(blob);
+                } else {
+                    // GAS trả về binary trực tiếp
+                    const blob = await pdfRes.blob();
+                    objectUrl = URL.createObjectURL(blob);
+                }
 
                 setPdfUrl(objectUrl);
             } catch (err) {
@@ -372,18 +376,14 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit }) => {
                     </div>
 
                     {/* Submit Button */}
-                    <div className="p-4 shrink-0" style={{ borderTop: '1px solid #2D2D2D', background: '#1c1c1c' }}>
+                    <div className="p-4 shrink-0" style={{ borderTop: '1px solid #2D2D2D' }}>
                         <button
                             onClick={() => setShowConfirm(true)}
                             disabled={submitted}
-                            className="w-full py-3 rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                            style={{
-                                background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
-                                color: '#fff',
-                                boxShadow: '0 4px 14px rgba(220, 38, 38, 0.15)'
-                            }}
-                            onMouseEnter={e => { if (!submitted) { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(220, 38, 38, 0.35)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; } }}
-                            onMouseLeave={e => { if (!submitted) { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(220, 38, 38, 0.15)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; } }}
+                            className="w-full py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                            style={{ background: '#E03E3E', color: '#fff' }}
+                            onMouseEnter={e => { if (!submitted) (e.currentTarget as HTMLElement).style.background = '#c5302d'; }}
+                            onMouseLeave={e => { if (!submitted) (e.currentTarget as HTMLElement).style.background = '#E03E3E'; }}
                         >
                             <Send className="w-4 h-4" />
                             Nộp Bài
@@ -416,31 +416,15 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit }) => {
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setShowConfirm(false)}
-                                    className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 active:scale-95"
+                                    className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors"
                                     style={{ background: '#333', color: '#E5E5E4' }}
-                                    onMouseEnter={e => {
-                                        (e.currentTarget as HTMLElement).style.background = '#444';
-                                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
-                                    }}
-                                    onMouseLeave={e => {
-                                        (e.currentTarget as HTMLElement).style.background = '#333';
-                                        (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                                    }}
+                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#444'}
+                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#333'}
                                 >Tiếp tục làm</button>
                                 <button
                                     onClick={() => { setShowConfirm(false); handleSubmitFinal(); }}
-                                    className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 active:scale-95"
-                                    style={{ background: '#E03E3E', color: '#fff', boxShadow: '0 4px 12px rgba(224, 62, 62, 0.2)' }}
-                                    onMouseEnter={e => {
-                                        (e.currentTarget as HTMLElement).style.background = '#EF4444';
-                                        (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 16px rgba(224, 62, 62, 0.35)';
-                                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
-                                    }}
-                                    onMouseLeave={e => {
-                                        (e.currentTarget as HTMLElement).style.background = '#E03E3E';
-                                        (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(224, 62, 62, 0.2)';
-                                        (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                                    }}
+                                    className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
+                                    style={{ background: '#E03E3E', color: '#fff' }}
                                 >Nộp bài</button>
                             </div>
                         </div>
