@@ -809,15 +809,16 @@ export const useCloudStorage = () => {
     };
 
     // Lấy bảng xếp hạng tổng hợp theo khối (trung bình điểm, tối thiểu MIN_EXAMS bài)
-    const getLeaderboard = async (minExams: number = 1): Promise<{ name: string; phone: string; avgScore: number; examCount: number }[][]> => {
+    const getLeaderboard = async (minExams: number = 1): Promise<{ name: string; phone: string; avgScore: number; examCount: number; recentScores: number[]; bestScore: number }[][]> => {
         try {
             const { data, error } = await supabase
                 .from('exam_results')
-                .select('student_phone, student_name, score, grade');
+                .select('student_phone, student_name, score, grade, submitted_at')
+                .order('submitted_at', { ascending: true });
             if (error) throw error;
             if (!data || data.length === 0) return [[], [], []];
 
-            // Nhóm theo (grade, phone)
+            // Nhóm theo (grade, phone), giữ thứ tự thời gian
             const map: Record<string, { name: string; phone: string; grade: number; scores: number[] }> = {};
             for (const r of data) {
                 const key = `${r.grade}__${r.student_phone}`;
@@ -825,12 +826,14 @@ export const useCloudStorage = () => {
                 map[key].scores.push(r.score);
             }
 
-            const byGrade: Record<number, { name: string; phone: string; avgScore: number; examCount: number }[]> = { 10: [], 11: [], 12: [] };
+            const byGrade: Record<number, { name: string; phone: string; avgScore: number; examCount: number; recentScores: number[]; bestScore: number }[]> = { 10: [], 11: [], 12: [] };
             for (const entry of Object.values(map)) {
                 if (entry.scores.length < minExams) continue;
                 const avg = entry.scores.reduce((a, b) => a + b, 0) / entry.scores.length;
+                const best = Math.max(...entry.scores);
+                const recent = entry.scores.slice(-6); // lấy 6 bài gần nhất cho sparkline
                 if (byGrade[entry.grade]) {
-                    byGrade[entry.grade].push({ name: entry.name, phone: entry.phone, avgScore: avg, examCount: entry.scores.length });
+                    byGrade[entry.grade].push({ name: entry.name, phone: entry.phone, avgScore: avg, examCount: entry.scores.length, recentScores: recent, bestScore: best });
                 }
             }
 
