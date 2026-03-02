@@ -416,15 +416,31 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit }) => {
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setShowConfirm(false)}
-                                    className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                                    className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 active:scale-95"
                                     style={{ background: '#333', color: '#E5E5E4' }}
-                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#444'}
-                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#333'}
+                                    onMouseEnter={e => {
+                                        (e.currentTarget as HTMLElement).style.background = '#444';
+                                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+                                    }}
+                                    onMouseLeave={e => {
+                                        (e.currentTarget as HTMLElement).style.background = '#333';
+                                        (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                                    }}
                                 >Tiếp tục làm</button>
                                 <button
                                     onClick={() => { setShowConfirm(false); handleSubmitFinal(); }}
-                                    className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
-                                    style={{ background: '#E03E3E', color: '#fff' }}
+                                    className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 active:scale-95"
+                                    style={{ background: '#E03E3E', color: '#fff', boxShadow: '0 4px 12px rgba(224, 62, 62, 0.2)' }}
+                                    onMouseEnter={e => {
+                                        (e.currentTarget as HTMLElement).style.background = '#EF4444';
+                                        (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 16px rgba(224, 62, 62, 0.35)';
+                                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+                                    }}
+                                    onMouseLeave={e => {
+                                        (e.currentTarget as HTMLElement).style.background = '#E03E3E';
+                                        (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(224, 62, 62, 0.2)';
+                                        (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                                    }}
                                 >Nộp bài</button>
                             </div>
                         </div>

@@ -15,7 +15,6 @@ const Loader2 = ({ className, style }: { className?: string; style?: React.CSSPr
 );
 
 import SettingsModal from './components/SettingsModal';
-import GuideModal from './components/GuideModal';
 import Chatbot from './components/Chatbot';
 import AdminDashboard from './components/AdminDashboard';
 import AdminGitHubSync from './components/AdminGitHubSync';
@@ -90,7 +89,6 @@ function App() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [showGitHubSync, setShowGitHubSync] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -679,10 +677,6 @@ function App() {
             setIsSettingsOpen(true);
             setIsMobileMenuOpen(false);
           }}
-          onOpenGuide={() => {
-            setIsGuideOpen(true);
-            setIsMobileMenuOpen(false);
-          }}
           onOpenExamList={(isActivated || isAdmin) ? () => {
             setShowExamList(true);
             setShowContactBook(false);
@@ -753,7 +747,6 @@ function App() {
           setShowNotification(false);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenGuide={() => setIsGuideOpen(true)}
         onOpenExamList={(isActivated || isAdmin) ? () => {
           setShowExamList(true);
           setShowContactBook(false);
@@ -825,11 +818,6 @@ function App() {
         onLoadExams={loadExams}
       />
 
-      <GuideModal
-        isOpen={isGuideOpen}
-        onClose={() => setIsGuideOpen(false)}
-        isAdmin={isAdmin}
-      />
 
       {showAdminDashboard && (
         <AdminDashboard

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
     X, CheckCircle2, Settings, ShieldCheck, ChevronRight, ChevronLeft,
     MessageCircle, Bot, Send, Copy, Check, User, Phone,
-    KeyRound, ShieldAlert, Monitor, Unlock, Upload, Lock
+    KeyRound, ShieldAlert, Monitor, Unlock, Upload, Lock, CloudDownload, Bell, RefreshCw
 } from 'lucide-react';
 
 interface GuideModalProps {
@@ -39,9 +39,9 @@ const steps = [
     },
     {
         id: 4,
-        label: 'Nhập học liệu',
-        shortDesc: 'Upload file bài giảng từ thầy',
-        icon: Upload,
+        label: 'Tải học liệu',
+        shortDesc: 'Tài liệu tự động tải qua Thông Báo',
+        icon: CloudDownload,
         color: '#9065B0',
         bg: '#F3ECF8',
     },
@@ -226,12 +226,12 @@ const StepDescription: React.FC<{ step: typeof steps[0]; stepIndex: number }> = 
             ],
         },
         {
-            title: 'Nhập học liệu từ thầy',
+            title: 'Tài học liệu tự động',
             bullets: [
-                'Sau khi kích hoạt, mục "Nhập học liệu mới" sẽ được mở khóa',
-                'Nhấn nút "Chọn file bài giảng từ thầy (.json)"',
-                'Chọn file .json do thầy Huy cung cấp trên thiết bị của bạn',
-                'Xác nhận để hệ thống tự động nạp toàn bộ bài giảng',
+                'Sau khi kích hoạt, vào mục "Thông Báo" trên thanh bên trái',
+                'Khi thầy đăng tài liệu mới, thông báo sẽ xuất hiện tại đây',
+                'Nhấn nút "Lấy bài về" trong thông báo',
+                'Hệ thống tự động tải toàn bộ bài giảng mới về thiết bị — không cần file .json',
             ],
         },
     ];
@@ -289,9 +289,9 @@ const StepDescription: React.FC<{ step: typeof steps[0]; stepIndex: number }> = 
             )}
             {stepIndex === 3 && (
                 <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#F3ECF8] border border-[#9065B0]/20">
-                    <ShieldAlert className="w-3.5 h-3.5 text-[#9065B0] shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#9065B0] shrink-0 mt-0.5" />
                     <p className="text-[11px] text-[#9065B0] leading-relaxed font-medium">
-                        File .json do <strong>thầy Huy cung cấp</strong> chứa toàn bộ bài giảng. Không tự tạo file này.
+                        Tài liệu được tải trực tiếp từ server của thầy Huy. Không cần cài đặt hay upload file thủ công.
                     </p>
                 </div>
             )}
@@ -549,72 +549,63 @@ const SimulationView: React.FC<{ stepIndex: number }> = ({ stepIndex }) => {
                         </div>
                     )}
 
-                    {/* ── Step 4: Upload / Import flow ── */}
+                    {/* ── Step 4: Notification cloud sync flow ── */}
                     {stepIndex === 3 && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[1px] z-20">
                             <div className="w-[310px] bg-white rounded-[12px] shadow-2xl border border-[#E9E9E7] overflow-hidden animate-scale-in flex flex-col">
                                 {/* Modal header */}
-                                <div className="px-4 py-3 border-b border-[#E9E9E7] flex items-center justify-between">
-                                    <span className="text-[11px] font-semibold text-[#1A1A1A]">Cài đặt &amp; Bảo mật Hệ thống</span>
+                                <div className="px-4 py-3 border-b border-[#E9E9E7] flex items-center justify-between" style={{ borderTop: '3px solid #E03E3E' }}>
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1 rounded-md bg-[#FEF2F2]">
+                                            <Bell className="w-3 h-3 text-[#E03E3E]" />
+                                        </div>
+                                        <span className="text-[11px] font-semibold text-[#1A1A1A]">Thông Báo</span>
+                                    </div>
                                     <X className="w-3 h-3 text-[#787774]" />
                                 </div>
 
                                 {/* Body */}
-                                <div className="p-3.5 space-y-3">
-                                    {/* Import section highlight */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#1A1A1A]">
-                                            <Upload className="w-3.5 h-3.5 text-[#9065B0]" />
-                                            Nhập học liệu mới
+                                <div className="p-3.5 space-y-2.5">
+                                    <div className="rounded-lg overflow-hidden border border-[#E9E9E7]">
+                                        <div className="px-3 py-2" style={{ borderLeft: '3px solid #6B7CDB', background: '#F7F6F3' }}>
+                                            <div className="text-[10px] font-semibold text-[#1A1A1A]">Thầy đã cập nhật bài giảng mới!</div>
+                                            <div className="text-[9px] text-[#AEACA8] mt-0.5">Vài phút trước</div>
                                         </div>
-                                        {/* Upload button — highlighted / pulsing */}
-                                        <div
-                                            className="w-full py-3 rounded-lg flex items-center justify-center gap-1.5 text-[11px] font-semibold animate-pulse"
-                                            style={{
-                                                background: '#F3ECF8',
-                                                color: '#9065B0',
-                                                border: '2px solid #9065B0',
-                                                boxShadow: '0 0 0 4px rgba(144,101,176,0.1)',
-                                            }}
-                                        >
-                                            <Upload className="w-3.5 h-3.5" />
-                                            Chọn file bài giảng từ thầy (.json)
-                                        </div>
-                                    </div>
+                                        <div className="px-3 py-2.5 space-y-2 bg-white">
+                                            {/* Download button — pulsing */}
+                                            <div
+                                                className="w-full py-2 rounded-lg flex items-center justify-center gap-1.5 text-[10px] font-bold animate-pulse"
+                                                style={{
+                                                    background: '#EEF0FB',
+                                                    color: '#6B7CDB',
+                                                    border: '2px solid #6B7CDB',
+                                                    boxShadow: '0 0 0 3px rgba(107,124,219,0.12)',
+                                                }}
+                                            >
+                                                <CloudDownload className="w-3.5 h-3.5" />
+                                                Lấy bài về
+                                            </div>
 
-                                    {/* File selected state */}
-                                    <div
-                                        className="rounded-lg p-2.5 flex items-center gap-2.5"
-                                        style={{ background: '#F3ECF8', border: '1px solid #9065B033' }}
-                                    >
-                                        <div
-                                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                                            style={{ background: '#9065B0' }}
-                                        >
-                                            <Upload className="w-4 h-4 text-white" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <div className="text-[10px] font-bold text-[#1A1A1A] truncate">baiGiang_VatLy_2025.json</div>
-                                            <div className="text-[9px] text-[#9065B0] mt-0.5">Đang nhập dữ liệu...</div>
-                                            {/* Progress bar */}
-                                            <div className="mt-1.5 h-1 rounded-full bg-[#E9E9E7] overflow-hidden">
-                                                <div
-                                                    className="h-full rounded-full"
-                                                    style={{ width: '70%', background: '#9065B0' }}
-                                                />
+                                            {/* Progress */}
+                                            <div className="rounded-lg p-2 flex items-center gap-2" style={{ background: '#F3ECF8', border: '1px solid #9065B033' }}>
+                                                <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: '#9065B0' }}>
+                                                    <RefreshCw className="w-3 h-3 text-white animate-spin" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-[9px] font-bold text-[#9065B0]">Đang tải tài liệu...</div>
+                                                    <div className="mt-1 h-1 rounded-full bg-[#E9E9E7] overflow-hidden">
+                                                        <div className="h-full rounded-full" style={{ width: '65%', background: 'linear-gradient(90deg, #9065B0, #C4A0DA)' }} />
+                                                    </div>
+                                                </div>
+                                                <span className="text-[9px] font-bold text-[#9065B0]">65%</span>
+                                            </div>
+
+                                            {/* Success */}
+                                            <div className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg" style={{ background: '#EAF3EE', border: '1px solid #44836133' }}>
+                                                <CheckCircle2 className="w-3 h-3 text-[#448361] shrink-0" />
+                                                <p className="text-[9px] font-semibold" style={{ color: '#448361' }}>Cập nhật xong — tải lại trang để xem!</p>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    {/* Success tip */}
-                                    <div
-                                        className="flex items-center gap-2 px-3 py-2.5 rounded-lg"
-                                        style={{ background: '#EAF3EE', border: '1px solid #44836133' }}
-                                    >
-                                        <CheckCircle2 className="w-3.5 h-3.5 text-[#448361] shrink-0" />
-                                        <p className="text-[9px] leading-relaxed font-semibold" style={{ color: '#448361' }}>
-                                            Nhập xong — tải lại trang để xem bài giảng!
-                                        </p>
                                     </div>
                                 </div>
 

@@ -84,14 +84,18 @@ const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBa
                         {/* Breakdown */}
                         <div className="grid grid-cols-3 gap-3 pt-2">
                             {[
-                                { label: 'Trắc nghiệm', score: score.mc, max: 4.5, color: ACCENT, bg: '#EEF0FB' },
-                                { label: 'Đúng/Sai', score: score.tf, max: 4.0, color: '#7C4FAE', bg: '#F5F3FF' },
-                                { label: 'Trả lời ngắn', score: score.sa, max: 1.5, color: '#D9730D', bg: '#FFF7ED' },
+                                { label: 'Trắc nghiệm', score: score.mc, max: 4.5, color: ACCENT, bg: '#EEF0FB', hoverBg: '#E2E6FF', border: '#D6DEFD' },
+                                { label: 'Đúng/Sai', score: score.tf, max: 4.0, color: '#7C4FAE', bg: '#F5F3FF', hoverBg: '#EBE2F4', border: '#E7DDF0' },
+                                { label: 'Trả lời ngắn', score: score.sa, max: 1.5, color: '#D9730D', bg: '#FFF7ED', hoverBg: '#FFEDD5', border: '#FDE0B4' },
                             ].map(s => (
-                                <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: s.bg }}>
-                                    <div className="text-xl font-bold" style={{ color: s.color }}>{s.score.toFixed(2)}</div>
-                                    <div className="text-[10px] mt-0.5" style={{ color: '#787774' }}>{s.label}</div>
-                                    <div className="text-[10px]" style={{ color: '#AEACA8' }}>/ {s.max}đ</div>
+                                <div key={s.label} className="rounded-xl p-3 text-center transition-all duration-300 transform hover:-translate-y-1 hover:shadow-sm"
+                                    style={{ background: s.bg, border: `1px solid ${s.border}` }}
+                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = s.hoverBg; }}
+                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = s.bg; }}
+                                >
+                                    <div className="text-xl font-bold transition-transform duration-300" style={{ color: s.color }}>{s.score.toFixed(2)}</div>
+                                    <div className="text-[10.5px] font-semibold mt-1 uppercase tracking-wide opacity-80" style={{ color: s.color }}>{s.label}</div>
+                                    <div className="text-[10px] font-medium" style={{ color: '#AEACA8' }}>tối đa {s.max}đ</div>
                                 </div>
                             ))}
                         </div>
@@ -261,21 +265,31 @@ const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBa
                 </div>
 
                 {/* ── Actions ── */}
-                <div className="flex gap-3 pb-8">
+                <div className="flex gap-4 pb-8">
                     <button
                         onClick={onBack}
-                        className="flex-1 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                        className="flex-1 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-300 active:scale-95 group hover:-translate-y-[1px]"
                         style={{ background: '#F1F0EC', color: '#57564F' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#E9E9E7'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#F1F0EC'; }}
                     >
-                        <Home className="w-4 h-4" />
+                        <Home className="w-4 h-4 transition-transform group-hover:scale-110" />
                         Về trang chủ
                     </button>
                     <button
                         onClick={onRetry}
-                        className="flex-1 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                        style={{ background: ACCENT, color: '#fff' }}
+                        className="flex-1 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-300 active:scale-95 group hover:-translate-y-[1px]"
+                        style={{ background: ACCENT, color: '#fff', boxShadow: '0 4px 12px rgba(107,124,219,0.2)' }}
+                        onMouseEnter={e => {
+                            (e.currentTarget as HTMLElement).style.background = '#5566CC';
+                            (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(107,124,219,0.4)';
+                        }}
+                        onMouseLeave={e => {
+                            (e.currentTarget as HTMLElement).style.background = ACCENT;
+                            (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(107,124,219,0.2)';
+                        }}
                     >
-                        <RotateCcw className="w-4 h-4" />
+                        <RotateCcw className="w-4 h-4 transition-transform group-hover:-rotate-90" />
                         Làm lại
                     </button>
                 </div>

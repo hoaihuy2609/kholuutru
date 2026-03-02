@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Target, CheckSquare, Plus, Trash2, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { Calendar as CalendarIcon, Target, Plus, Trash2, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { StudyPlanItem } from '../types';
 
 interface StudyPlannerProps {
@@ -10,28 +10,26 @@ interface StudyPlannerProps {
 }
 
 const COLORS = [
-    { id: 'red', value: '#E03E3E', label: 'Quan trọng', bg: '#FEF2F2' },
-    { id: 'blue', value: '#6B7CDB', label: 'Bình thường', bg: '#EEF0FB' },
-    { id: 'green', value: '#10B981', label: 'Ôn tập', bg: '#EDFDF5' },
-    { id: 'yellow', value: '#D9730D', label: 'Lưu ý', bg: '#FFF7ED' },
+    { id: 'red', value: '#E03E3E', label: 'Quan trọng', bg: '#FEF2F2', border: '#FECACA' },
+    { id: 'blue', value: '#6B7CDB', label: 'Bình thường', bg: '#EEF0FB', border: '#C7CEFF' },
+    { id: 'green', value: '#448361', label: 'Ôn tập', bg: '#EAF3EE', border: '#A7D7BC' },
+    { id: 'yellow', value: '#D9730D', label: 'Lưu ý', bg: '#FFF3E8', border: '#F5C796' },
 ];
 
-const ACCENT = '#6B7CDB';
+const ACCENT = '#448361';
+const ACCENT_LIGHT = '#EAF3EE';
+const ACCENT_BORDER = '#A7D7BC';
 
 const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, onUpdatePlan, onDeletePlan }) => {
     const [plans, setPlans] = useState<StudyPlanItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [currentMonthView, setCurrentMonthView] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-
-    // New task state
     const [newTaskName, setNewTaskName] = useState('');
     const [newTaskColor, setNewTaskColor] = useState(COLORS[1]);
     const [isAddingTask, setIsAddingTask] = useState(false);
 
-    useEffect(() => {
-        fetchPlans();
-    }, []);
+    useEffect(() => { fetchPlans(); }, []);
 
     const fetchPlans = async () => {
         setLoading(true);
@@ -41,28 +39,24 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
     };
 
     const toISODate = (d: Date) => {
-        const tzOffset = d.getTimezoneOffset() * 60000; // offset in milliseconds
+        const tzOffset = d.getTimezoneOffset() * 60000;
         return (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 10);
     };
 
     const getCalendarDays = (monthStart: Date) => {
         const year = monthStart.getFullYear();
         const month = monthStart.getMonth();
-        const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 is Sun
-        const offset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; // Mon = 0, Sun = 6
+        const firstDayOfMonth = new Date(year, month, 1).getDay();
+        const offset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
         const daysInMonth = new Date(year, month + 1, 0).getDate();
-
         const daysArray = [];
-        // Prev month padding
         const prevMonthDays = new Date(year, month, 0).getDate();
         for (let i = offset - 1; i >= 0; i--) {
             daysArray.push({ date: new Date(year, month - 1, prevMonthDays - i), isCurrentMonth: false });
         }
-        // Current month
         for (let i = 1; i <= daysInMonth; i++) {
             daysArray.push({ date: new Date(year, month, i), isCurrentMonth: true });
         }
-        // Next month padding (make it 6 rows = 42 days total)
         const remaining = 42 - daysArray.length;
         for (let i = 1; i <= remaining; i++) {
             daysArray.push({ date: new Date(year, month + 1, i), isCurrentMonth: false });
@@ -73,7 +67,6 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
     const todayStr = toISODate(new Date());
     const selectedStr = toISODate(selectedDate);
     const calendarDays = getCalendarDays(currentMonthView);
-
     const currentPlans = plans.filter(p => p.due_date === selectedStr);
     const incompletePlans = currentPlans.filter(p => !p.is_completed);
     const completedPlans = currentPlans.filter(p => p.is_completed);
@@ -81,13 +74,7 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
     const handleAddTask = async (e?: React.FormEvent) => {
         e?.preventDefault();
         if (!newTaskName.trim()) return;
-
-        const newTask = await onSavePlan(
-            newTaskName.trim(),
-            selectedStr,
-            newTaskColor.value
-        );
-
+        const newTask = await onSavePlan(newTaskName.trim(), selectedStr, newTaskColor.value);
         if (newTask) {
             setPlans(prev => [...prev, newTask]);
             setNewTaskName('');
@@ -101,9 +88,7 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
         const updated = !plan.is_completed;
         setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_completed: updated } : p));
         const success = await onUpdatePlan(plan.id, { is_completed: updated });
-        if (!success) {
-            setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_completed: !updated } : p));
-        }
+        if (!success) setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, is_completed: !updated } : p));
     };
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -112,10 +97,7 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
         await onDeletePlan(id);
     };
 
-    const formatMonthYear = (d: Date) => {
-        return `Tháng ${d.getMonth() + 1}, ${d.getFullYear()}`;
-    };
-
+    const formatMonthYear = (d: Date) => `Tháng ${d.getMonth() + 1}, ${d.getFullYear()}`;
     const handleNextMonth = () => setCurrentMonthView(new Date(currentMonthView.getFullYear(), currentMonthView.getMonth() + 1, 1));
     const handlePrevMonth = () => setCurrentMonthView(new Date(currentMonthView.getFullYear(), currentMonthView.getMonth() - 1, 1));
     const handleJumpToToday = () => {
@@ -125,55 +107,71 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
     };
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 pt-2 pb-10 animate-fade-in">
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-8">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #EEF0FB 0%, #E2E8F4 100%)', border: '1px solid #D1D9F9' }}>
-                    <Target className="w-6 h-6" style={{ color: ACCENT }} />
+        <div className="space-y-6 animate-fade-in pb-10">
+
+            {/* ── Header ── */}
+            <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: ACCENT_LIGHT }}>
+                    <Target className="w-5 h-5" style={{ color: ACCENT }} />
                 </div>
                 <div>
-                    <h1 className="text-[26px] font-bold tracking-tight" style={{ color: '#1A1A1A' }}>
-                        Mục Tiêu &amp; Lịch Trình
-                    </h1>
-                    <p className="text-sm font-medium mt-1" style={{ color: '#787774' }}>Lên kế hoạch, chinh phục mục tiêu mỗi ngày.</p>
+                    <h1 className="text-2xl font-semibold" style={{ color: '#1A1A1A' }}>Mục Tiêu & Lịch Trình</h1>
+                    <p className="text-sm mt-0.5" style={{ color: '#787774' }}>Lên kế hoạch, chinh phục mục tiêu mỗi ngày.</p>
                 </div>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-10 items-start mt-8">
-                {/* LEFT COLUMN: MINI CALENDAR */}
-                <div className="w-full md:w-80 flex-shrink-0">
-                    <div className="sticky top-6">
-                        {/* Month Header */}
-                        <div className="flex items-center justify-between mb-4 px-1">
-                            <h2 className="text-[15px] font-semibold" style={{ color: '#37352f' }}>
-                                {formatMonthYear(currentMonthView)}
-                            </h2>
+            {/* ── Main layout ── */}
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+
+                {/* ── LEFT: CALENDAR ── */}
+                <div className="w-full md:w-72 flex-shrink-0">
+                    <div className="sticky top-6 rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
+                        {/* Calendar header */}
+                        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', background: '#F7F6F3' }}>
+                            <span className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>{formatMonthYear(currentMonthView)}</span>
                             <div className="flex items-center gap-1">
-                                <button onClick={handlePrevMonth} className="p-1 rounded text-gray-500 hover:bg-gray-100 transition-colors">
-                                    <ChevronLeft className="w-4 h-4" />
+                                <button
+                                    onClick={handlePrevMonth}
+                                    className="p-1.5 rounded-md transition-colors"
+                                    style={{ color: '#787774' }}
+                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                                >
+                                    <ChevronLeft className="w-3.5 h-3.5" />
                                 </button>
-                                <button onClick={handleJumpToToday} className="text-[12px] font-semibold px-2 py-0.5 rounded text-gray-600 hover:bg-gray-100 transition-colors mx-1">
+                                <button
+                                    onClick={handleJumpToToday}
+                                    className="text-[11px] font-semibold px-2 py-0.5 rounded-md transition-colors"
+                                    style={{ color: ACCENT }}
+                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = ACCENT_LIGHT}
+                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                                >
                                     Hôm nay
                                 </button>
-                                <button onClick={handleNextMonth} className="p-1 rounded text-gray-500 hover:bg-gray-100 transition-colors">
-                                    <ChevronRight className="w-4 h-4" />
+                                <button
+                                    onClick={handleNextMonth}
+                                    className="p-1.5 rounded-md transition-colors"
+                                    style={{ color: '#787774' }}
+                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                                >
+                                    <ChevronRight className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         </div>
 
-                        {/* Calendar Grid */}
-                        <div className="w-full">
+                        {/* Calendar grid */}
+                        <div className="p-3">
                             {/* Days of week */}
-                            <div className="grid grid-cols-7 gap-1 mb-2">
+                            <div className="grid grid-cols-7 gap-0.5 mb-1">
                                 {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => (
-                                    <div key={day} className="text-center text-[11px] font-semibold text-gray-400 py-1">
+                                    <div key={day} className="text-center text-[10px] font-semibold py-1" style={{ color: '#AEACA8' }}>
                                         {day}
                                     </div>
                                 ))}
                             </div>
-
                             {/* Days */}
-                            <div className="grid grid-cols-7 gap-1">
+                            <div className="grid grid-cols-7 gap-0.5">
                                 {calendarDays.map((dObj, i) => {
                                     const dateStr = toISODate(dObj.date);
                                     const isSelected = dateStr === selectedStr;
@@ -186,50 +184,79 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
                                         <button
                                             key={i}
                                             onClick={() => setSelectedDate(dObj.date)}
-                                            className={`
-                                                relative w-full aspect-square flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all duration-300
-                                                ${isSelected ? 'shadow-md scale-105' : 'hover:bg-[#F7F6F3] hover:scale-105 active:scale-95'}
-                                            `}
+                                            className="relative aspect-square flex flex-col items-center justify-center rounded-lg cursor-pointer transition-all duration-200 active:scale-95"
                                             style={{
-                                                background: isSelected ? `linear-gradient(135deg, ${ACCENT}, #8AA0F5)` : 'transparent',
-                                                border: isSelected ? 'none' : '1px solid transparent'
+                                                background: isSelected ? ACCENT : isToday ? ACCENT_LIGHT : 'transparent',
+                                                border: isSelected ? 'none' : isToday ? `1px solid ${ACCENT}40` : '1px solid transparent',
+                                            }}
+                                            onMouseEnter={e => {
+                                                if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#F7F6F3';
+                                            }}
+                                            onMouseLeave={e => {
+                                                if (!isSelected) (e.currentTarget as HTMLElement).style.background = isToday ? ACCENT_LIGHT : 'transparent';
                                             }}
                                         >
                                             <span
-                                                className={`text-[13px] z-10 transition-colors ${isSelected ? 'text-white' : (isToday ? 'text-indigo-600' : (!dObj.isCurrentMonth ? 'text-gray-300' : 'text-[#37352f]'))}`}
-                                                style={{ fontWeight: isSelected ? 700 : (isToday ? 700 : 500) }}
+                                                className="text-[12px] leading-none"
+                                                style={{
+                                                    color: isSelected ? '#fff' : isToday ? ACCENT : !dObj.isCurrentMonth ? '#CFCFCB' : '#1A1A1A',
+                                                    fontWeight: isSelected || isToday ? 700 : 500,
+                                                }}
                                             >
                                                 {dObj.date.getDate()}
                                             </span>
-                                            {/* Dot for tasks */}
                                             {hasTasks && (
-                                                <span className={`w-1.5 h-1.5 rounded-full absolute bottom-1.5 z-10 transition-all ${isSelected ? 'bg-white shadow-[0_0_4px_rgba(255,255,255,0.8)]' : (allDone ? 'bg-emerald-400' : 'bg-indigo-400')}`} />
+                                                <span
+                                                    className="w-1 h-1 rounded-full absolute bottom-1"
+                                                    style={{ background: isSelected ? '#fff' : allDone ? '#10B981' : ACCENT }}
+                                                />
                                             )}
                                         </button>
                                     );
                                 })}
                             </div>
                         </div>
+
+                        {/* Legend */}
+                        <div className="px-3 pb-3 flex items-center gap-3 text-[10px]" style={{ color: '#AEACA8' }}>
+                            <span className="flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: ACCENT }} />
+                                Có nhiệm vụ
+                            </span>
+                            <span className="flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: '#448361' }} />
+                                Hoàn thành
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-
-                {/* RIGHT COLUMN: TASK LIST */}
+                {/* ── RIGHT: TASK LIST ── */}
                 <div className="w-full md:flex-1">
-                    <div className="mb-6">
-                        <h3 className="text-[26px] font-bold" style={{ color: '#37352f' }}>
-                            {selectedDate.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                        </h3>
-                        {/* Minimalist Progress Line */}
+                    {/* Date heading */}
+                    <div className="mb-4">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded" style={{ background: '#EEF0FB', color: ACCENT }}>
+                                <CalendarIcon className="w-3 h-3 inline mr-1" />
+                                {selectedDate.toLocaleDateString('vi-VN', { weekday: 'long' })}
+                            </span>
+                        </div>
+                        <h2 className="text-2xl font-semibold" style={{ color: '#1A1A1A' }}>
+                            {selectedDate.toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </h2>
+                        {/* Progress bar */}
                         {currentPlans.length > 0 && (
-                            <div className="mt-4 flex items-center gap-3">
-                                <span className="text-[13px] font-medium text-gray-500 whitespace-nowrap">
-                                    {currentPlans.filter(p => p.is_completed).length} / {currentPlans.length} hoàn thành
+                            <div className="mt-3 flex items-center gap-3">
+                                <span className="text-[13px] font-medium whitespace-nowrap" style={{ color: '#787774' }}>
+                                    {currentPlans.filter(p => p.is_completed).length}/{currentPlans.length} hoàn thành
                                 </span>
-                                <div className="flex-1 h-[3px] bg-gray-100 rounded-full overflow-hidden">
+                                <div className="flex-1 h-[3px] rounded-full overflow-hidden" style={{ background: '#E9E9E7' }}>
                                     <div
-                                        className="h-full bg-emerald-500 transition-all duration-500"
-                                        style={{ width: `${(currentPlans.filter(p => p.is_completed).length / currentPlans.length) * 100}%` }}
+                                        className="h-full rounded-full transition-all duration-500"
+                                        style={{
+                                            width: `${(currentPlans.filter(p => p.is_completed).length / currentPlans.length) * 100}%`,
+                                            background: '#448361'
+                                        }}
                                     />
                                 </div>
                             </div>
@@ -237,56 +264,62 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
                     </div>
 
                     {loading ? (
-                        <div className="py-20 text-gray-400 text-sm">Đang tải kế hoạch...</div>
+                        <div className="flex items-center justify-center py-16">
+                            <span className="text-sm" style={{ color: '#AEACA8' }}>Đang tải kế hoạch...</span>
+                        </div>
                     ) : (
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                             {/* Incomplete Tasks */}
+                            {incompletePlans.length === 0 && completedPlans.length === 0 && (
+                                <div className="rounded-xl py-10 text-center" style={{ border: '1px dashed #E9E9E7' }}>
+                                    <CalendarIcon className="w-8 h-8 mx-auto mb-2" style={{ color: '#CFCFCB' }} />
+                                    <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có nhiệm vụ nào</p>
+                                    <p className="text-xs mt-0.5" style={{ color: '#AEACA8' }}>Bấm "+" để thêm nhiệm vụ mới</p>
+                                </div>
+                            )}
+
                             {incompletePlans.map(plan => {
                                 const colorObj = COLORS.find(c => c.value === plan.color) || COLORS[1];
-
                                 return (
                                     <div
                                         key={plan.id}
-                                        className="group relative flex items-center justify-between px-3 py-3 rounded-xl transition-all duration-300 ease-out cursor-default"
-                                        style={{ background: '#fff', border: '1px solid #E9E9E7', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}
+                                        className="group flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200"
+                                        style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
                                         onMouseEnter={e => {
-                                            (e.currentTarget as HTMLElement).style.borderColor = '#C7CEFF';
-                                            (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(107,124,219,0.08)';
-                                            (e.currentTarget as HTMLElement).style.transform = 'translateX(4px)';
+                                            (e.currentTarget as HTMLElement).style.borderColor = colorObj.border;
+                                            (e.currentTarget as HTMLElement).style.background = colorObj.bg;
                                         }}
                                         onMouseLeave={e => {
                                             (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
-                                            (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 2px rgba(0,0,0,0.02)';
-                                            (e.currentTarget as HTMLElement).style.transform = 'translateX(0)';
+                                            (e.currentTarget as HTMLElement).style.background = '#FFFFFF';
                                         }}
                                     >
-                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            {/* Checkbox */}
-                                            <button
-                                                onClick={() => handleToggleComplete(plan)}
-                                                className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all border bg-transparent hover:scale-110 active:scale-95"
-                                                style={{ borderColor: colorObj.value, color: colorObj.value }}
-                                            >
-                                                {/* Empty but colored border */}
-                                            </button>
+                                        {/* Checkbox */}
+                                        <button
+                                            onClick={() => handleToggleComplete(plan)}
+                                            className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all hover:scale-110 active:scale-95"
+                                            style={{ border: `2px solid ${colorObj.value}`, background: 'transparent' }}
+                                        />
 
-                                            {/* Content */}
-                                            <p className="text-[15px] leading-snug truncate font-medium flex-1 transition-colors" style={{ color: '#1A1A1A' }}>
-                                                {plan.task_name}
-                                            </p>
+                                        {/* Content */}
+                                        <p className="text-sm font-medium flex-1 truncate" style={{ color: '#1A1A1A' }}>
+                                            {plan.task_name}
+                                        </p>
 
-                                            {/* Pill Badge */}
-                                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap shrink-0 transition-opacity" style={{ backgroundColor: colorObj.bg, color: colorObj.value, borderColor: colorObj.value + '40' }}>
-                                                {colorObj.label}
-                                            </span>
-                                        </div>
+                                        {/* Tag */}
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0" style={{ background: colorObj.bg, color: colorObj.value, border: `1px solid ${colorObj.border}` }}>
+                                            {colorObj.label}
+                                        </span>
 
-                                        {/* Delete btn */}
+                                        {/* Delete */}
                                         <button
                                             onClick={(e) => handleDelete(plan.id, e)}
-                                            className="opacity-0 group-hover:opacity-100 p-1.5 ml-2 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all rounded-lg shrink-0 active:scale-90"
+                                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all active:scale-90"
+                                            style={{ color: '#AEACA8' }}
+                                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FEF2F2'; (e.currentTarget as HTMLElement).style.color = '#E03E3E'; }}
+                                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#AEACA8'; }}
                                         >
-                                            <Trash2 className="w-4 h-4" />
+                                            <Trash2 className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 );
@@ -294,90 +327,112 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
 
                             {/* Completed Tasks */}
                             {completedPlans.length > 0 && (
-                                <div className="mt-8 mb-4 border-t border-gray-100 pt-4">
-                                    <h4 className="text-[12px] font-semibold text-gray-400 uppercase tracking-wider pl-2 mb-2">Đã hoàn thành</h4>
-                                    {completedPlans.map(plan => {
-                                        return (
-                                            <div
-                                                key={plan.id}
-                                                className="group relative flex items-center justify-between px-3 py-3 rounded-xl transition-all duration-300"
-                                                style={{ background: '#FAF9F7', border: '1px dashed #E9E9E7', opacity: 0.8 }}
+                                <div className="mt-6">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="flex-1 h-px" style={{ background: '#E9E9E7' }} />
+                                        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Đã hoàn thành</span>
+                                        <div className="flex-1 h-px" style={{ background: '#E9E9E7' }} />
+                                    </div>
+                                    {completedPlans.map(plan => (
+                                        <div
+                                            key={plan.id}
+                                            className="group flex items-center gap-3 px-3 py-3 rounded-xl transition-colors mb-1.5"
+                                            style={{ background: '#FAFAF9', border: '1px solid #F1F0EC' }}
+                                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FAFAF9'}
+                                        >
+                                            <button
+                                                onClick={() => handleToggleComplete(plan)}
+                                                className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all hover:scale-110 active:scale-95"
+                                                style={{ background: '#448361', border: '2px solid #448361' }}
                                             >
-                                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    {/* Checkbox */}
-                                                    <button
-                                                        onClick={() => handleToggleComplete(plan)}
-                                                        className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all border shadow-sm hover:scale-110 active:scale-95"
-                                                        style={{ background: '#10B981', borderColor: '#10B981' }}
-                                                    >
-                                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={4} />
-                                                    </button>
-
-                                                    {/* Content */}
-                                                    <p className="text-[15px] leading-snug truncate line-through flex-1 font-medium" style={{ color: '#AEACA8' }}>
-                                                        {plan.task_name}
-                                                    </p>
-                                                </div>
-
-                                                {/* Delete btn */}
-                                                <button
-                                                    onClick={(e) => handleDelete(plan.id, e)}
-                                                    className="opacity-0 group-hover:opacity-100 p-1.5 ml-2 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all rounded-lg shrink-0 active:scale-90"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
+                                                <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                                            </button>
+                                            <p className="text-sm font-medium flex-1 truncate line-through" style={{ color: '#AEACA8' }}>
+                                                {plan.task_name}
+                                            </p>
+                                            <button
+                                                onClick={(e) => handleDelete(plan.id, e)}
+                                                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all active:scale-90"
+                                                style={{ color: '#AEACA8' }}
+                                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FEF2F2'; (e.currentTarget as HTMLElement).style.color = '#E03E3E'; }}
+                                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#AEACA8'; }}
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
 
-                            {/* Add Task Area */}
+                            {/* Add Task */}
                             {!isAddingTask ? (
                                 <button
                                     onClick={() => setIsAddingTask(true)}
-                                    className="flex items-center gap-2 px-3 py-3 w-full text-left text-[14px] font-medium rounded-xl transition-all border border-transparent hover:bg-[#EEF0FB] hover:border-[#D1D9F9] mt-2 group"
-                                    style={{ color: ACCENT }}
+                                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-colors mt-2"
+                                    style={{ color: ACCENT, border: `1px dashed ${ACCENT_BORDER}`, background: 'transparent' }}
+                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = ACCENT_LIGHT; (e.currentTarget as HTMLElement).style.borderStyle = 'solid'; }}
+                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderStyle = 'dashed'; }}
                                 >
-                                    <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white border border-[#D1D9F9] group-hover:scale-110 transition-transform">
-                                        <Plus className="w-3.5 h-3.5" />
+                                    <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: ACCENT_LIGHT, border: `1px solid ${ACCENT_BORDER}` }}>
+                                        <Plus className="w-3 h-3" style={{ color: ACCENT }} />
                                     </div>
-                                    <span>Thêm nhiệm vụ mới...</span>
+                                    Thêm nhiệm vụ mới...
                                 </button>
                             ) : (
-                                <form onSubmit={handleAddTask} className="flex items-center gap-2 px-2 py-2 mt-2 bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border" style={{ borderColor: '#D1D9F9' }}>
+                                <form
+                                    onSubmit={handleAddTask}
+                                    className="flex items-center gap-2 p-2 mt-2 rounded-xl"
+                                    style={{ background: '#FFFFFF', border: `1px solid ${ACCENT}`, boxShadow: `0 0 0 3px ${ACCENT}20` }}
+                                >
                                     <input
                                         type="text"
                                         autoFocus
                                         value={newTaskName}
                                         onChange={(e) => setNewTaskName(e.target.value)}
                                         placeholder="Tên nhiệm vụ (nhấn Enter để lưu)..."
-                                        className="flex-1 bg-transparent border-none focus:ring-0 text-[14px] px-2 py-1.5 font-medium placeholder:text-gray-400 outline-none"
+                                        className="flex-1 bg-transparent border-none text-sm px-2 py-1 font-medium outline-none"
                                         style={{ color: '#1A1A1A' }}
                                     />
-
-                                    {/* Color Picker */}
-                                    <div className="flex items-center gap-2 px-3 border-l" style={{ borderColor: '#E9E9E7' }}>
+                                    {/* Color pickers */}
+                                    <div className="flex items-center gap-1.5 px-2" style={{ borderLeft: '1px solid #E9E9E7' }}>
                                         {COLORS.map(c => (
-                                            <div
+                                            <button
                                                 key={c.id}
+                                                type="button"
                                                 onClick={() => setNewTaskColor(c)}
-                                                className={`w-5 h-5 rounded-full cursor-pointer flex items-center justify-center transition-all duration-300 ${newTaskColor.id === c.id ? 'scale-110 ring-2 ring-offset-2' : 'hover:scale-110 opacity-60 hover:opacity-100'}`}
-                                                style={{ backgroundColor: c.value, '--tw-ring-color': c.value } as any}
+                                                className="w-4 h-4 rounded-full transition-all duration-200"
+                                                style={{
+                                                    background: c.value,
+                                                    outline: newTaskColor.id === c.id ? `2px solid ${c.value}` : 'none',
+                                                    outlineOffset: '2px',
+                                                    transform: newTaskColor.id === c.id ? 'scale(1.15)' : 'scale(1)',
+                                                    opacity: newTaskColor.id === c.id ? 1 : 0.5,
+                                                }}
                                             />
                                         ))}
                                     </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsAddingTask(false)}
-                                        className="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ml-1 active:scale-95"
-                                        style={{ background: '#F7F6F3', color: '#787774' }}
-                                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#E9E9E7'; (e.currentTarget as HTMLElement).style.color = '#1A1A1A'; }}
-                                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#F7F6F3'; (e.currentTarget as HTMLElement).style.color = '#787774'; }}
-                                    >
-                                        Hủy
-                                    </button>
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            type="submit"
+                                            className="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors text-white active:scale-95"
+                                            style={{ background: ACCENT }}
+                                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#357a52'}
+                                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ACCENT}
+                                        >
+                                            Lưu
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsAddingTask(false)}
+                                            className="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors active:scale-95"
+                                            style={{ background: '#F1F0EC', color: '#787774' }}
+                                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#E9E9E7'; (e.currentTarget as HTMLElement).style.color = '#1A1A1A'; }}
+                                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#F1F0EC'; (e.currentTarget as HTMLElement).style.color = '#787774'; }}
+                                        >
+                                            Hủy
+                                        </button>
+                                    </div>
                                 </form>
                             )}
                         </div>

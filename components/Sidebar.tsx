@@ -1,12 +1,11 @@
 import React from 'react';
-import { Atom, Home, Settings, BookOpen, BookOpenCheck, Zap, Activity, ClipboardList, Bell } from 'lucide-react';
+import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
   currentGrade: GradeLevel | null;
   onSelectGrade: (grade: GradeLevel | null) => void;
   onOpenSettings?: () => void;
-  onOpenGuide: () => void;
   onOpenExamList?: () => void;
   showExamList?: boolean;
   onOpenContactBook?: () => void;
@@ -19,7 +18,7 @@ interface SidebarProps {
   className?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenGuide, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, className }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, className }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -77,17 +76,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           Tổng quan
         </button>
 
-        {/* Guide */}
-        <button
-          onClick={onOpenGuide}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
-          style={{ color: '#57564F', fontWeight: 400 }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-        >
-          <BookOpen className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
-          Hướng dẫn sử dụng
-        </button>
 
         {/* Thi Thử */}
         {onOpenExamList && (
@@ -95,8 +83,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             onClick={() => { onOpenExamList(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
             style={{
-              background: showExamList ? '#E3E2DE' : 'transparent',
-              color: showExamList ? '#1A1A1A' : '#57564F',
+              background: showExamList ? '#EEF0FB' : 'transparent',
+              color: showExamList ? '#6B7CDB' : '#57564F',
               fontWeight: showExamList ? 500 : 400,
             }}
             onMouseEnter={e => { if (!showExamList) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
@@ -104,12 +92,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           >
             <ClipboardList className="w-4 h-4 shrink-0" style={{ color: showExamList ? '#6B7CDB' : '#AEACA8' }} />
             <span>Thi Thử</span>
-            <span
-              className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-              style={{ background: '#EEF0FB', color: '#6B7CDB' }}
-            >
-              NEW
-            </span>
           </button>
         )}
 
@@ -119,14 +101,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             onClick={() => { onOpenContactBook(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
             style={{
-              background: showContactBook ? '#E3E2DE' : 'transparent',
-              color: showContactBook ? '#1A1A1A' : '#57564F',
+              background: showContactBook ? '#F3ECF8' : 'transparent',
+              color: showContactBook ? '#9065B0' : '#57564F',
               fontWeight: showContactBook ? 500 : 400,
             }}
             onMouseEnter={e => { if (!showContactBook) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
             onMouseLeave={e => { if (!showContactBook) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
-            <BookOpenCheck className="w-4 h-4 shrink-0" style={{ color: showContactBook ? '#1A1A1A' : '#AEACA8' }} />
+            <BookOpenCheck className="w-4 h-4 shrink-0" style={{ color: showContactBook ? '#9065B0' : '#AEACA8' }} />
             <span>Sổ liên lạc</span>
           </button>
         )}
@@ -137,8 +119,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             onClick={() => { onOpenStudyPlanner(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
             style={{
-              background: showStudyPlanner ? '#E3E2DE' : 'transparent',
-              color: showStudyPlanner ? '#1A1A1A' : '#57564F',
+              background: showStudyPlanner ? '#EAF3EE' : 'transparent',
+              color: showStudyPlanner ? '#448361' : '#57564F',
               fontWeight: showStudyPlanner ? 500 : 400,
             }}
             onMouseEnter={e => { if (!showStudyPlanner) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
@@ -146,12 +128,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           >
             <ClipboardList className="w-4 h-4 shrink-0" style={{ color: showStudyPlanner ? '#448361' : '#AEACA8' }} />
             <span>Mục Tiêu &amp; Lịch Trình</span>
-            <span
-              className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-              style={{ background: '#EDFDF5', color: '#448361' }}
-            >
-              NEW
-            </span>
           </button>
         )}
 
@@ -161,8 +137,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             onClick={() => { onOpenNotification(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
             style={{
-              background: showNotification ? '#E3E2DE' : 'transparent',
-              color: showNotification ? '#1A1A1A' : '#57564F',
+              background: showNotification ? '#FEF2F2' : 'transparent',
+              color: showNotification ? '#E03E3E' : '#57564F',
               fontWeight: showNotification ? 500 : 400,
             }}
             onMouseEnter={e => { if (!showNotification) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}

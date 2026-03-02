@@ -42,9 +42,9 @@ interface AdminGitHubSyncProps {
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
 const GRADE_COLORS: Record<number, { accent: string; bg: string; label: string }> = {
-    12: { accent: '#6B7CDB', bg: '#EEF0FB', label: 'Vật Lý 12' },
-    11: { accent: '#448361', bg: '#EAF3EE', label: 'Vật Lý 11' },
-    10: { accent: '#D9730D', bg: '#FFF3E8', label: 'Vật Lý 10' },
+    12: { accent: '#9065B0', bg: '#F3ECF8', label: 'Vật Lý 12' },
+    11: { accent: '#6B7CDB', bg: '#EEF0FB', label: 'Vật Lý 11' },
+    10: { accent: '#448361', bg: '#EAF3EE', label: 'Vật Lý 10' },
 };
 
 const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
