@@ -197,7 +197,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                 style={{
                                     borderBottom: idx < notifications.length - 1 ? '1px solid #F1F0EC' : 'none',
                                     opacity: isFetched ? 0.75 : 1,
-                                    borderLeft: isNew ? '3px solid #6B7CDB' : '3px solid transparent',
+                                    borderLeft: isNew ? `3px solid ${ACCENT}` : '3px solid transparent',
                                 }}
                                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FAFAF9'}
                                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
@@ -206,7 +206,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                     {/* Icon */}
                                     <div
                                         className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                                        style={{ background: isFetched ? '#EAF3EE' : '#EEF0FB' }}
+                                        style={{ background: isFetched ? '#EAF3EE' : ACCENT_LIGHT }}
                                     >
                                         {isFetched
                                             ? <CheckCircle2 className="w-4.5 h-4.5" style={{ color: '#448361', width: 18, height: 18 }} />
@@ -220,7 +220,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                             {!isFetched && notif.fetch_enabled && (
                                                 <span
                                                     className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider"
-                                                    style={{ background: '#EEF0FB', color: ACCENT }}
+                                                    style={{ background: ACCENT_LIGHT, color: ACCENT }}
                                                 >
                                                     Mới
                                                 </span>
@@ -263,10 +263,10 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                                             </div>
                                                             <span className="text-xs font-bold" style={{ color: ACCENT }}>{fetchProgress}%</span>
                                                         </div>
-                                                        <div className="h-1 rounded-full overflow-hidden" style={{ background: '#EEF0FB' }}>
+                                                        <div className="h-1 rounded-full overflow-hidden" style={{ background: ACCENT_LIGHT }}>
                                                             <div
                                                                 className="h-full rounded-full transition-all duration-300"
-                                                                style={{ width: `${fetchProgress}%`, background: `linear-gradient(90deg, ${ACCENT}, #93ACFF)` }}
+                                                                style={{ width: `${fetchProgress}%`, background: `linear-gradient(90deg, ${ACCENT}99, ${ACCENT})` }}
                                                             />
                                                         </div>
                                                     </div>
@@ -280,7 +280,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                                             color: canFetch ? '#fff' : '#AEACA8',
                                                             cursor: canFetch ? 'pointer' : 'not-allowed',
                                                         }}
-                                                        onMouseEnter={e => { if (canFetch) (e.currentTarget as HTMLElement).style.background = '#5a6bc9'; }}
+                                                        onMouseEnter={e => { if (canFetch) (e.currentTarget as HTMLElement).style.background = '#c93232'; }}
                                                         onMouseLeave={e => { if (canFetch) (e.currentTarget as HTMLElement).style.background = ACCENT; }}
                                                     >
                                                         <CloudDownload className="w-3.5 h-3.5" />
