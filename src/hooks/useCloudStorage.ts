@@ -808,6 +808,41 @@ export const useCloudStorage = () => {
         }
     };
 
+    // Lấy bảng xếp hạng tổng hợp theo khối (trung bình điểm, tối thiểu MIN_EXAMS bài)
+    const getLeaderboard = async (minExams: number = 1): Promise<{ name: string; phone: string; avgScore: number; examCount: number }[][]> => {
+        try {
+            const { data, error } = await supabase
+                .from('exam_results')
+                .select('student_phone, student_name, score, grade');
+            if (error) throw error;
+            if (!data || data.length === 0) return [[], [], []];
+
+            // Nhóm theo (grade, phone)
+            const map: Record<string, { name: string; phone: string; grade: number; scores: number[] }> = {};
+            for (const r of data) {
+                const key = `${r.grade}__${r.student_phone}`;
+                if (!map[key]) map[key] = { name: r.student_name || 'Ẩn danh', phone: r.student_phone, grade: r.grade, scores: [] };
+                map[key].scores.push(r.score);
+            }
+
+            const byGrade: Record<number, { name: string; phone: string; avgScore: number; examCount: number }[]> = { 10: [], 11: [], 12: [] };
+            for (const entry of Object.values(map)) {
+                if (entry.scores.length < minExams) continue;
+                const avg = entry.scores.reduce((a, b) => a + b, 0) / entry.scores.length;
+                if (byGrade[entry.grade]) {
+                    byGrade[entry.grade].push({ name: entry.name, phone: entry.phone, avgScore: avg, examCount: entry.scores.length });
+                }
+            }
+
+            // Sort desc và lấy top 5 mỗi khối
+            const top = (arr: typeof byGrade[10]) => arr.sort((a, b) => b.avgScore - a.avgScore).slice(0, 5);
+            return [top(byGrade[10]), top(byGrade[11]), top(byGrade[12])];
+        } catch (e) {
+            console.error('Lỗi khi lấy leaderboard:', e);
+            return [[], [], []];
+        }
+    };
+
     // ── Study Planner Functions ──────────────────────────────────
     const getStudyPlans = async () => {
         const sdtStr = localStorage.getItem('pv_activated_sdt');
@@ -969,6 +1004,7 @@ export const useCloudStorage = () => {
         deleteExam,
         saveExamResult,
         getExamHistory,
+        getLeaderboard,
         getStudyPlans,
         saveStudyPlan,
         updateStudyPlan,

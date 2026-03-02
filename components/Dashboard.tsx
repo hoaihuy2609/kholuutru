@@ -1,13 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GradeLevel } from '../types';
 import { CURRICULUM } from '../constants';
-import { FileText, Folder, Quote, Atom, Zap, Activity } from 'lucide-react';
+import { FileText, Folder, Quote, Atom, Zap, Activity, Trophy, ChevronLeft, ChevronRight, Medal } from 'lucide-react';
 import CountdownTimer from './CountdownTimer';
+
+interface LeaderEntry {
+  name: string;
+  phone: string;
+  avgScore: number;
+  examCount: number;
+}
 
 interface DashboardProps {
   onSelectGrade: (grade: GradeLevel) => void;
   fileCounts: Record<string, number>;
   isAdmin: boolean;
+  onLoadLeaderboard: () => Promise<LeaderEntry[][]>;
 }
 
 const EinsteinQuotes = [
@@ -24,7 +32,254 @@ const gradeConfig: Record<string, { icon: React.ElementType; dot: string; label:
   [GradeLevel.Grade10]: { icon: Activity, dot: '#448361', label: 'Lớp 10' },
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmin }) => {
+// Slide config: mỗi slide tương ứng 1 khối lớp
+const SLIDES = [
+  { grade: 10, label: 'Lớp 10', color: '#448361', bg: '#EAF3EE', border: '#C5DECC', idx: 0 },
+  { grade: 11, label: 'Lớp 11', color: '#6B7CDB', bg: '#EEF0FB', border: '#C5CBEF', idx: 1 },
+  { grade: 12, label: 'Lớp 12', color: '#9065B0', bg: '#F3ECF8', border: '#D8BFE8', idx: 2 },
+];
+
+const RANK_MEDAL = [
+  { icon: '🥇', color: '#D4A017', bg: '#FFFBEB', border: '#FDE68A' },
+  { icon: '🥈', color: '#6B7280', bg: '#F9FAFB', border: '#D1D5DB' },
+  { icon: '🥉', color: '#B45309', bg: '#FFF7ED', border: '#FED7AA' },
+];
+
+// Hàm che số điện thoại
+const maskPhone = (phone: string) => {
+  if (!phone || phone.length < 6) return phone;
+  return phone.slice(0, 4) + '****' + phone.slice(-2);
+};
+
+interface LeaderboardSliderProps {
+  onLoad: () => Promise<LeaderEntry[][]>;
+}
+
+const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
+  const [data, setData] = useState<LeaderEntry[][]>([[], [], []]);
+  const [slide, setSlide] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [animating, setAnimating] = useState(false);
+  const [direction, setDirection] = useState<'left' | 'right'>('right');
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    onLoad().then(res => {
+      if (mounted) { setData(res || [[], [], []]); setLoading(false); }
+    }).catch(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, []);
+
+  const goTo = useCallback((next: number, dir: 'left' | 'right') => {
+    if (animating) return;
+    setDirection(dir);
+    setAnimating(true);
+    setTimeout(() => {
+      setSlide(next);
+      setAnimating(false);
+    }, 280);
+  }, [animating]);
+
+  const prev = () => {
+    const next = (slide + 2) % 3;
+    goTo(next, 'left');
+    resetTimer();
+  };
+
+  const next = () => {
+    const nextSlide = (slide + 1) % 3;
+    goTo(nextSlide, 'right');
+    resetTimer();
+  };
+
+  const resetTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setSlide(s => {
+        const nextSlide = (s + 1) % 3;
+        setDirection('right');
+        setAnimating(true);
+        setTimeout(() => setAnimating(false), 280);
+        return nextSlide;
+      });
+    }, 5000);
+  };
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setDirection('right');
+      setAnimating(true);
+      setTimeout(() => {
+        setSlide(s => (s + 1) % 3);
+        setAnimating(false);
+      }, 280);
+    }, 5000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  const cfg = SLIDES[slide];
+  const list = data[cfg.idx] || [];
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden flex flex-col"
+      style={{
+        border: '1px solid #E9E9E7',
+        background: '#FFFFFF',
+        minHeight: '240px',
+        position: 'relative',
+      }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{
+          background: cfg.bg,
+          borderBottom: `1px solid ${cfg.border}`,
+          borderLeft: `3px solid ${cfg.color}`,
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <Trophy className="w-4 h-4" style={{ color: cfg.color }} />
+          <span className="text-sm font-semibold" style={{ color: cfg.color }}>
+            Bảng Vàng Vinh Danh
+          </span>
+        </div>
+        {/* Dots + Arrows */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={prev}
+            className="w-6 h-6 rounded-md flex items-center justify-center transition-all"
+            style={{ background: 'transparent', border: `1px solid ${cfg.border}`, color: cfg.color }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = cfg.border; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+          <div className="flex items-center gap-1">
+            {SLIDES.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => { goTo(i, i > slide ? 'right' : 'left'); resetTimer(); }}
+                className="rounded-full transition-all duration-300"
+                style={{
+                  width: i === slide ? '16px' : '6px',
+                  height: '6px',
+                  background: i === slide ? cfg.color : '#D8D8D4',
+                }}
+              />
+            ))}
+          </div>
+          <button
+            onClick={next}
+            className="w-6 h-6 rounded-md flex items-center justify-center transition-all"
+            style={{ background: 'transparent', border: `1px solid ${cfg.border}`, color: cfg.color }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = cfg.border; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Grade label badge */}
+      <div className="px-4 pt-3 pb-0">
+        <span
+          className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+          style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: cfg.color }} />
+          {cfg.label}
+        </span>
+      </div>
+
+      {/* Content area */}
+      <div
+        className="flex-1 px-4 py-3 overflow-hidden"
+        style={{
+          transition: animating ? 'opacity 0.28s ease, transform 0.28s ease' : 'none',
+          opacity: animating ? 0 : 1,
+          transform: animating
+            ? `translateX(${direction === 'right' ? '-12px' : '12px'})`
+            : 'translateX(0)',
+        }}
+      >
+        {loading ? (
+          <div className="flex flex-col gap-2.5">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="w-6 h-6 rounded-full" style={{ background: '#F1F0EC' }} />
+                <div className="flex-1 h-3 rounded" style={{ background: '#F1F0EC' }} />
+                <div className="w-10 h-3 rounded" style={{ background: '#F1F0EC' }} />
+              </div>
+            ))}
+          </div>
+        ) : list.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <Medal className="w-7 h-7 mb-2" style={{ color: '#CFCFCB' }} />
+            <p className="text-xs font-medium" style={{ color: '#AEACA8' }}>Chưa có dữ liệu</p>
+            <p className="text-[11px] mt-0.5" style={{ color: '#CFCFCB' }}>
+              Hoàn thành bài thi để lên bảng vàng!
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {list.map((entry, i) => {
+              const medal = RANK_MEDAL[i];
+              return (
+                <div
+                  key={entry.phone}
+                  className="flex items-center gap-3 py-1.5 px-2.5 rounded-lg transition-colors"
+                  style={{
+                    background: i < 3 ? medal.bg : 'transparent',
+                    border: i < 3 ? `1px solid ${medal.border}` : '1px solid transparent',
+                  }}
+                >
+                  {/* Rank */}
+                  {i < 3 ? (
+                    <span className="text-base shrink-0 w-6 text-center">{medal.icon}</span>
+                  ) : (
+                    <span
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+                      style={{ background: '#F1F0EC', color: '#AEACA8' }}
+                    >
+                      {i + 1}
+                    </span>
+                  )}
+
+                  {/* Name + phone */}
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="text-sm font-semibold truncate"
+                      style={{ color: i < 3 ? medal.color : '#1A1A1A' }}
+                    >
+                      {entry.name}
+                    </div>
+                    <div className="text-[11px]" style={{ color: '#AEACA8' }}>
+                      {maskPhone(entry.phone)} · {entry.examCount} bài
+                    </div>
+                  </div>
+
+                  {/* Score */}
+                  <div
+                    className="text-sm font-bold tabular-nums shrink-0"
+                    style={{ color: i < 3 ? medal.color : cfg.color }}
+                  >
+                    {entry.avgScore.toFixed(2)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard }) => {
   const [quote, setQuote] = useState('');
 
   useEffect(() => {
@@ -151,19 +406,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
             </div>
           </div>
 
-          {/* Right: Einstein portrait */}
+          {/* Right: Leaderboard Slider (thay Einstein) */}
           <div className="hidden md:block">
-            <div
-              className="rounded-xl overflow-hidden"
-              style={{ border: '1px solid #E9E9E7', aspectRatio: '4/3' }}
-            >
-              <img
-                src="/einstein.png"
-                alt="Albert Einstein"
-                className="w-full h-full object-cover"
-                style={{ filter: 'saturate(0.9) brightness(1.02)' }}
-              />
-            </div>
+            <LeaderboardSlider onLoad={onLoadLeaderboard} />
           </div>
         </div>
       </div>
