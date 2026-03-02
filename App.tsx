@@ -648,6 +648,7 @@ function App() {
           <div className="text-center mt-6">
             <p className="text-[10px] uppercase tracking-[0.2em] font-bold" style={{ color: '#CFCFCB' }}>
               PhysiVault · Security System
+            </p>
           </div>
         </div>
       </div>
@@ -816,10 +817,6 @@ function App() {
         } : undefined}
         showExamList={showExamList}
         showContactBook={showContactBook}
-        showStudyPlanner={showStudyPlanner}
-        showNotification={showNotification}
-        notificationUnreadCount={notificationUnreadCount}
-        isAdmin={isAdmin}
         showStudyPlanner={showStudyPlanner}
         showNotification={showNotification}
         notificationUnreadCount={notificationUnreadCount}
