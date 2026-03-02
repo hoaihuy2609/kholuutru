@@ -418,7 +418,7 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                                                 />
                                                 <ReferenceLine y={targetScore} stroke="#E03E3E" strokeDasharray="4 4" strokeOpacity={0.5} />
                                                 <Area
-                                                    type="monotone"
+                                                    type="linear"
                                                     dataKey="score"
                                                     stroke="#10B981"
                                                     strokeWidth={2}
