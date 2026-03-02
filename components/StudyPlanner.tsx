@@ -16,12 +16,9 @@ const COLORS = [
     { id: 'yellow', value: '#D9730D', label: 'Lưu ý', bg: '#FFF3E8', border: '#F5C796' },
 ];
 
-// ── Teal / Cyan palette ──
-const ACCENT = '#0D9488';           // teal-600
-const ACCENT_DARK = '#0F766E';      // teal-700
-const ACCENT_LIGHT = '#F0FDFA';     // teal-50
-const ACCENT_MID = '#99F6E4';       // teal-200
-const ACCENT_BORDER = '#5EEAD4';    // teal-300
+const ACCENT = '#448361';
+const ACCENT_LIGHT = '#EAF3EE';
+const ACCENT_BORDER = '#A7D7BC';
 
 const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, onUpdatePlan, onDeletePlan }) => {
     const [plans, setPlans] = useState<StudyPlanItem[]>([]);
@@ -114,14 +111,11 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
 
             {/* ── Header ── */}
             <div className="flex items-center gap-3">
-                <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: 'linear-gradient(135deg, #2DD4BF 0%, #0D9488 100%)', boxShadow: '0 4px 12px rgba(13,148,136,0.35)' }}
-                >
-                    <Target className="w-5 h-5 text-white" />
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: ACCENT_LIGHT }}>
+                    <Target className="w-5 h-5" style={{ color: ACCENT }} />
                 </div>
                 <div>
-                    <h1 className="text-2xl font-bold" style={{ color: '#1A1A1A' }}>Mục Tiêu &amp; Lịch Trình</h1>
+                    <h1 className="text-2xl font-semibold" style={{ color: '#1A1A1A' }}>Mục Tiêu & Lịch Trình</h1>
                     <p className="text-sm mt-0.5" style={{ color: '#787774' }}>Lên kế hoạch, chinh phục mục tiêu mỗi ngày.</p>
                 </div>
             </div>
@@ -131,9 +125,9 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
 
                 {/* ── LEFT: CALENDAR ── */}
                 <div className="w-full md:w-72 flex-shrink-0">
-                    <div className="sticky top-6 rounded-2xl overflow-hidden" style={{ border: '1px solid #CCFBF1', background: '#FFFFFF', boxShadow: '0 2px 12px rgba(13,148,136,0.08)' }}>
+                    <div className="sticky top-6 rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
                         {/* Calendar header */}
-                        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #CCFBF1', background: 'linear-gradient(90deg, #F0FDFA, #CCFBF1)' }}>
+                        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', background: '#F7F6F3' }}>
                             <span className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>{formatMonthYear(currentMonthView)}</span>
                             <div className="flex items-center gap-1">
                                 <button
@@ -192,9 +186,8 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
                                             onClick={() => setSelectedDate(dObj.date)}
                                             className="relative aspect-square flex flex-col items-center justify-center rounded-lg cursor-pointer transition-all duration-200 active:scale-95"
                                             style={{
-                                                background: isSelected ? 'linear-gradient(135deg, #2DD4BF, #0D9488)' : isToday ? ACCENT_LIGHT : 'transparent',
+                                                background: isSelected ? ACCENT : isToday ? ACCENT_LIGHT : 'transparent',
                                                 border: isSelected ? 'none' : isToday ? `1px solid ${ACCENT}40` : '1px solid transparent',
-                                                boxShadow: isSelected ? '0 2px 8px rgba(13,148,136,0.35)' : 'none',
                                             }}
                                             onMouseEnter={e => {
                                                 if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#F7F6F3';
@@ -243,7 +236,7 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
                     {/* Date heading */}
                     <div className="mb-4">
                         <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full" style={{ background: 'linear-gradient(135deg, #CCFBF1, #99F6E4)', color: ACCENT_DARK }}>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded" style={{ background: '#EEF0FB', color: ACCENT }}>
                                 <CalendarIcon className="w-3 h-3 inline mr-1" />
                                 {selectedDate.toLocaleDateString('vi-VN', { weekday: 'long' })}
                             </span>
@@ -254,15 +247,15 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
                         {/* Progress bar */}
                         {currentPlans.length > 0 && (
                             <div className="mt-3 flex items-center gap-3">
-                                <span className="text-[13px] font-semibold whitespace-nowrap" style={{ color: ACCENT_DARK }}>
+                                <span className="text-[13px] font-medium whitespace-nowrap" style={{ color: '#787774' }}>
                                     {currentPlans.filter(p => p.is_completed).length}/{currentPlans.length} hoàn thành
                                 </span>
-                                <div className="flex-1 h-[4px] rounded-full overflow-hidden" style={{ background: ACCENT_MID }}>
+                                <div className="flex-1 h-[3px] rounded-full overflow-hidden" style={{ background: '#E9E9E7' }}>
                                     <div
                                         className="h-full rounded-full transition-all duration-500"
                                         style={{
                                             width: `${(currentPlans.filter(p => p.is_completed).length / currentPlans.length) * 100}%`,
-                                            background: 'linear-gradient(90deg, #2DD4BF, #0D9488)'
+                                            background: '#448361'
                                         }}
                                     />
                                 </div>
@@ -390,7 +383,7 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
                                 <form
                                     onSubmit={handleAddTask}
                                     className="flex items-center gap-2 p-2 mt-2 rounded-xl"
-                                    style={{ background: '#FFFFFF', border: `1.5px solid ${ACCENT}`, boxShadow: `0 0 0 3px ${ACCENT}20` }}
+                                    style={{ background: '#FFFFFF', border: `1px solid ${ACCENT}`, boxShadow: `0 0 0 3px ${ACCENT}20` }}
                                 >
                                     <input
                                         type="text"
@@ -422,10 +415,10 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
                                     <div className="flex items-center gap-1.5">
                                         <button
                                             type="submit"
-                                            className="px-4 py-1.5 text-xs font-bold rounded-xl transition-all text-white active:scale-95"
-                                            style={{ background: 'linear-gradient(135deg, #2DD4BF, #0D9488)', boxShadow: '0 2px 8px rgba(13,148,136,0.35)' }}
-                                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(13,148,136,0.45)'}
-                                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(13,148,136,0.35)'}
+                                            className="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors text-white active:scale-95"
+                                            style={{ background: ACCENT }}
+                                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#357a52'}
+                                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ACCENT}
                                         >
                                             Lưu
                                         </button>

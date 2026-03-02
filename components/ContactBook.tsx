@@ -8,12 +8,9 @@ interface ContactBookProps {
     onLoadHistory: (phone?: string) => Promise<ExamResultRecord[]>;
 }
 
-// ── Rose / Pink palette ──
-const ACCENT = '#E11D48';           // rose-600
-const ACCENT_DARK = '#BE123C';      // rose-700
-const ACCENT_LIGHT = '#FFF1F2';     // rose-50
-const ACCENT_MID = '#FECDD3';       // rose-200
-const ACCENT_BORDER = '#FDA4AF';    // rose-300
+const ACCENT = '#9065B0';
+const ACCENT_LIGHT = '#F3ECF8';
+const ACCENT_BORDER = '#D8BFE8';
 
 const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => {
     const [history, setHistory] = useState<ExamResultRecord[]>([]);
@@ -118,14 +115,11 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
             {/* ── Header ── */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)', boxShadow: '0 4px 12px rgba(225,29,72,0.35)' }}
-                    >
-                        <BookOpenCheck className="w-5 h-5 text-white" />
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: ACCENT_LIGHT }}>
+                        <BookOpenCheck className="w-5 h-5" style={{ color: ACCENT }} />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold" style={{ color: '#1A1A1A' }}>Sổ Liên Lạc</h1>
+                        <h1 className="text-2xl font-semibold" style={{ color: '#1A1A1A' }}>Sổ Liên Lạc</h1>
                         <p className="text-sm mt-0.5" style={{ color: '#787774' }}>
                             {isAdmin ? 'Quản lý kết quả thi của tất cả học sinh' : 'Lịch sử và tiến trình học tập'}
                         </p>
@@ -145,17 +139,19 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
             </div>
 
             {/* ── Tabs ── */}
-            <div className="flex items-center gap-1 p-1 rounded-xl w-fit" style={{ background: '#F1F0EC', border: '1px solid #E9E9E7' }}>
+            <div className="flex items-center gap-2 border-b" style={{ borderColor: '#E9E9E7' }}>
                 {(['history', 'analytics'] as const).map(tab => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className="px-5 py-2 text-sm font-bold rounded-lg transition-all duration-200"
-                        style={
-                            activeTab === tab
-                                ? { background: 'linear-gradient(135deg, #FB7185, #E11D48)', color: '#fff', boxShadow: '0 2px 8px rgba(225,29,72,0.40)' }
-                                : { color: '#787774', background: 'transparent' }
-                        }
+                        className="px-5 py-2.5 text-sm font-semibold transition-colors border-b-2"
+                        style={{
+                            color: activeTab === tab ? ACCENT : '#787774',
+                            borderColor: activeTab === tab ? ACCENT : 'transparent',
+                            marginBottom: '-1px',
+                        }}
+                        onMouseEnter={e => { if (activeTab !== tab) (e.currentTarget as HTMLElement).style.color = ACCENT; }}
+                        onMouseLeave={e => { if (activeTab !== tab) (e.currentTarget as HTMLElement).style.color = '#787774'; }}
                     >
                         {tab === 'history' ? 'Nhật ký bài làm' : 'Phân tích'}
                     </button>
@@ -200,15 +196,15 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                             </div>
                         </div>
                     ) : (
-                        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
                             {/* Table header */}
                             <div
-                                className="hidden md:grid items-center px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider"
+                                className="hidden md:grid items-center px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider"
                                 style={{
                                     gridTemplateColumns: isAdmin ? '1fr 150px 110px 80px' : '1fr 110px 80px',
-                                    background: 'linear-gradient(90deg, #FFF1F2, #FFE4E6)',
-                                    color: ACCENT_DARK,
-                                    borderBottom: '1px solid #FECDD3',
+                                    background: ACCENT_LIGHT,
+                                    color: '#787774',
+                                    borderBottom: '1px solid #E9E9E7',
                                     borderLeft: `3px solid ${ACCENT}`,
                                 }}
                             >
@@ -299,9 +295,9 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                     ) : (
                         <>
                             {/* Stats grid */}
-                            <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #FECDD3', background: '#FFFFFF', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                                <div className="px-4 py-3" style={{ borderBottom: '1px solid #FECDD3', borderLeft: `3px solid ${ACCENT}`, background: 'linear-gradient(90deg, #FFF1F2, #FFE4E6)' }}>
-                                    <h3 className="text-sm font-bold" style={{ color: ACCENT_DARK }}>Tổng quan</h3>
+                            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
+                                <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', borderLeft: `3px solid ${ACCENT}`, background: ACCENT_LIGHT }}>
+                                    <h3 className="text-sm font-semibold" style={{ color: ACCENT }}>Tổng quan</h3>
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0" style={{ borderColor: '#F1F0EC' }}>
                                     {/* Avg Score */}
@@ -386,10 +382,10 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                             </div>
 
                             {/* Chart */}
-                            <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #FECDD3', background: '#FFFFFF', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                                <div className="px-4 py-3" style={{ borderBottom: '1px solid #FECDD3', borderLeft: `3px solid ${ACCENT}`, background: 'linear-gradient(90deg, #FFF1F2, #FFE4E6)' }}>
-                                    <h3 className="text-sm font-bold" style={{ color: ACCENT_DARK }}>Biểu đồ tiến trình</h3>
-                                    <p className="text-xs mt-0.5" style={{ color: '#BE123C', opacity: 0.7 }}>Từ cũ → mới nhất</p>
+                            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
+                                <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', borderLeft: `3px solid ${ACCENT}`, background: ACCENT_LIGHT }}>
+                                    <h3 className="text-sm font-semibold" style={{ color: ACCENT }}>Biểu đồ tiến trình</h3>
+                                    <p className="text-xs mt-0.5" style={{ color: '#AEACA8' }}>Từ cũ → mới nhất</p>
                                 </div>
                                 <div className="p-4">
                                     <div style={{ width: '100%', height: '220px' }}>
