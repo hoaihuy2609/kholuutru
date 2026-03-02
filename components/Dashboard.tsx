@@ -144,7 +144,7 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
         <div className="flex items-center gap-2">
           <Trophy className="w-4 h-4" style={{ color: cfg.color }} />
           <span className="text-sm font-semibold" style={{ color: cfg.color }}>
-            Bảng Vàng Vinh Danh
+            Bảng Xếp Hạng
           </span>
         </div>
         {/* Dots + Arrows */}
