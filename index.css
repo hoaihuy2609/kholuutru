@@ -229,6 +229,42 @@ body {
     }
 }
 
+@keyframes flame-flicker {
+
+    0%,
+    100% {
+        transform: scale(1) rotate(-3deg);
+        filter: drop-shadow(0 0 3px rgba(249, 115, 22, 0.6));
+    }
+
+    25% {
+        transform: scale(1.15) rotate(2deg);
+        filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.9));
+    }
+
+    50% {
+        transform: scale(1.05) rotate(-1deg);
+        filter: drop-shadow(0 0 5px rgba(249, 115, 22, 0.7));
+    }
+
+    75% {
+        transform: scale(1.2) rotate(3deg);
+        filter: drop-shadow(0 0 10px rgba(249, 115, 22, 1));
+    }
+}
+
+@keyframes page-enter {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* ==================== Animation Utility Classes ==================== */
 .animate-fade-in {
     animation: fadeIn 0.25s ease forwards;
@@ -256,6 +292,14 @@ body {
 
 .animate-pulse-slow {
     animation: pulse 4s ease-in-out infinite;
+}
+
+.animate-flame {
+    animation: flame-flicker 0.8s ease-in-out infinite;
+}
+
+.animate-page-enter {
+    animation: page-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Skeleton loader */

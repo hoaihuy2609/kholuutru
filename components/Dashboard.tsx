@@ -32,6 +32,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
   }, []);
 
   const totalFiles = Object.values(fileCounts).reduce((a: number, b: number) => a + b, 0);
+  const totalChapters = CURRICULUM.reduce((acc, g) => acc + g.chapters.length, 0);
 
   return (
     <div className="space-y-8 animate-fade-in pb-10">
@@ -143,7 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
               >
                 <Folder className="w-4 h-4" style={{ color: '#448361' }} />
                 <div>
-                  <div className="text-xl font-semibold" style={{ color: '#1A1A1A' }}>15+</div>
+                  <div className="text-xl font-semibold" style={{ color: '#1A1A1A' }}>{totalChapters}</div>
                   <div className="text-[10px] uppercase tracking-wide" style={{ color: '#AEACA8' }}>Chương học</div>
                 </div>
               </div>

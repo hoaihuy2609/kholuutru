@@ -327,11 +327,11 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                                         {streak > 0 && <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(135deg, #FFF3E8 0%, transparent 70%)' }} />}
                                         <div className="flex items-center gap-1.5 mb-2 relative z-10">
                                             <Flame
-                                                className="w-4 h-4 transition-all duration-500"
+                                                className={`w-4 h-4 transition-all duration-500 ${streak > 0 ? 'animate-flame' : ''}`}
                                                 style={{
-                                                    color: streak > 0 ? '#F97316' : '#AEACA8',
-                                                    filter: streak > 0 ? 'drop-shadow(0 0 4px rgba(249,115,22,0.5))' : 'none',
-                                                    fill: streak >= 3 ? '#F97316' : 'none',
+                                                    color: streak >= 3 ? '#EF4444' : streak > 0 ? '#F97316' : '#AEACA8',
+                                                    fill: streak >= 3 ? '#EF4444' : streak >= 1 ? '#F97316' : 'none',
+                                                    opacity: streak >= 3 ? 1 : streak > 0 ? 0.9 : 0.5,
                                                 }}
                                             />
                                             <span className="text-[11px] font-semibold uppercase tracking-wider relative z-10" style={{ color: streak > 0 ? '#EA580C' : '#AEACA8' }}>
