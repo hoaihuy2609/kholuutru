@@ -18,6 +18,7 @@ interface DashboardProps {
   fileCounts: Record<string, number>;
   isAdmin: boolean;
   onLoadLeaderboard: () => Promise<LeaderEntry[][]>;
+  previewMode?: GradeLevel | null;
 }
 
 const EinsteinQuotes = [
@@ -342,7 +343,7 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────
 
-const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard, previewMode }) => {
   const [quote, setQuote] = useState('');
 
   useEffect(() => {
@@ -436,9 +437,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
           </div>
 
           {/* Right: Leaderboard Slider */}
-          <div className="hidden md:block">
-            <LeaderboardSlider onLoad={onLoadLeaderboard} />
-          </div>
+          {!previewMode && (
+            <div className="hidden md:block">
+              <LeaderboardSlider onLoad={onLoadLeaderboard} />
+            </div>
+          )}
         </div>
       </div>
 
@@ -452,8 +455,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
           <div className="flex-1 h-px" style={{ background: '#E9E9E7' }} />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-          {CURRICULUM.map((grade) => {
+        <div className={`grid grid-cols-1 ${previewMode ? 'sm:grid-cols-1 max-w-sm' : 'sm:grid-cols-3'} gap-3 md:gap-4`}>
+          {(previewMode ? CURRICULUM.filter(g => g.level === previewMode) : CURRICULUM).map((grade) => {
             const config = gradeConfig[grade.level] ?? { icon: FileText, dot: '#AEACA8', label: grade.title };
             const { icon: Icon, dot } = config;
             return (

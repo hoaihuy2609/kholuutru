@@ -16,9 +16,12 @@ interface SidebarProps {
   showNotification?: boolean;
   notificationUnreadCount?: number;
   className?: string;
+  isAdmin?: boolean;
+  previewMode?: GradeLevel | null;
+  onSetPreviewMode?: (mode: GradeLevel | null) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, className }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, className, isAdmin, previewMode, onSetPreviewMode }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -96,7 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         )}
 
         {/* Sổ liên lạc */}
-        {onOpenContactBook && (
+        {!previewMode && onOpenContactBook && (
           <button
             onClick={() => { onOpenContactBook(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
@@ -114,7 +117,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         )}
 
         {/* Lịch trình (Study Planner) */}
-        {onOpenStudyPlanner && (
+        {!previewMode && onOpenStudyPlanner && (
           <button
             onClick={() => { onOpenStudyPlanner(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
@@ -132,7 +135,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         )}
 
         {/* Thông Báo */}
-        {onOpenNotification && (
+        {!previewMode && onOpenNotification && (
           <button
             onClick={() => { onOpenNotification(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
@@ -175,7 +178,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         </div>
 
         {/* Grade items */}
-        {[GradeLevel.Grade12, GradeLevel.Grade11, GradeLevel.Grade10].map((grade) => {
+        {/* Grade items */}
+        {(previewMode ? [previewMode] : [GradeLevel.Grade12, GradeLevel.Grade11, GradeLevel.Grade10]).map((grade) => {
           const isSelected = currentGrade === grade;
           const { icon: Icon, label, dot } = gradeConfig[grade];
 
@@ -203,20 +207,59 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         })}
       </nav>
 
-      {/* Settings — ẩn trên mobile (dùng gear icon ở header thay thế) */}
-      <div className="hidden md:block p-2" style={{ borderTop: '1px solid #E9E9E7' }}>
-        <button
-          id="tour-settings-btn"
-          onClick={onOpenSettings}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors"
-          style={{ color: '#57564F' }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-        >
-          <Settings className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
-          Cài đặt &amp; Đồng bộ
-        </button>
-      </div>
+      {/* Admin Panel & Settings */}
+      {isAdmin && (
+        <div className="hidden md:block p-3" style={{ borderTop: '1px solid #E9E9E7' }}>
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-[#AEACA8] mb-2 px-1">
+            Quản trị viên
+          </div>
+
+          <div className="space-y-1 mb-3">
+            <label className="text-[11px] font-medium text-[#787774] px-1">Xem với tư cách:</label>
+            <select
+              className="w-full bg-[#FFFFFF] border border-[#E9E9E7] rounded-md px-2 py-1.5 text-sm text-[#1A1A1A] outline-none transition-colors focus:border-[#6B7CDB]"
+              value={previewMode || 'admin'}
+              onChange={(e) => onSetPreviewMode && onSetPreviewMode(e.target.value === 'admin' ? null : Number(e.target.value) as GradeLevel)}
+            >
+              <option value="admin">Admin (Mặc định)</option>
+              <option value={GradeLevel.Grade12}>Học sinh Lớp 12</option>
+              <option value={GradeLevel.Grade11}>Học sinh Lớp 11</option>
+              <option value={GradeLevel.Grade10}>Học sinh Lớp 10</option>
+            </select>
+          </div>
+
+          {!previewMode && (
+            <button
+              id="tour-settings-btn"
+              onClick={onOpenSettings}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors"
+              style={{ color: '#57564F' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+            >
+              <Settings className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
+              Cài đặt &amp; Đồng bộ
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Settings for normal user */}
+      {!isAdmin && (
+        <div className="hidden md:block p-2" style={{ borderTop: '1px solid #E9E9E7' }}>
+          <button
+            id="tour-settings-btn"
+            onClick={onOpenSettings}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors"
+            style={{ color: '#57564F' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+          >
+            <Settings className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
+            Cài đặt &amp; Đồng bộ
+          </button>
+        </div>
+      )}
     </div>
   );
 };

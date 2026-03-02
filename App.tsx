@@ -101,6 +101,10 @@ function App() {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
 
+  // --- PREVENT OVERLAPPING STATES ---
+  const [previewMode, setPreviewMode] = useState<GradeLevel | null>(null);
+  const effectiveIsAdmin = isAdmin && !previewMode;
+
   const toggleAdmin = (status: boolean) => {
     setIsAdmin(status);
     localStorage.setItem('physivault_is_admin', status ? 'true' : 'false');
@@ -236,6 +240,8 @@ function App() {
       return (
         <ExamView
           exam={activeExam}
+          isPreviewMode={!!previewMode}
+          onShowToast={showToast}
           onBack={() => { setActiveExam(null); setShowExamList(true); }}
           onSubmit={(sub) => {
             setExamSubmission(sub);
@@ -250,6 +256,8 @@ function App() {
     if (showExamList) {
       return (
         <ExamListPage
+          isAdmin={isAdmin} // true admin status needed to see all exams when not previewing
+          previewMode={previewMode}
           onLoadExams={loadExams}
           onSelectExam={(exam) => { setActiveExam(exam); setExamSubmission(null); setShowExamList(false); }}
         />
@@ -260,7 +268,7 @@ function App() {
     if (showContactBook) {
       return (
         <ContactBook
-          isAdmin={isAdmin}
+          isAdmin={effectiveIsAdmin}
           onLoadHistory={getExamHistory}
         />
       );
@@ -287,7 +295,7 @@ function App() {
           onMarkFetched={markNotificationFetched}
           onFetchLessons={fetchLessonsFromGitHub}
           onShowToast={showToast}
-          isAdmin={isAdmin}
+          isAdmin={effectiveIsAdmin}
           onDeleteNotification={deleteNotification}
         />
       );
@@ -300,7 +308,7 @@ function App() {
         <LessonView
           lesson={currentLesson}
           files={lessonFiles}
-          isAdmin={isAdmin}
+          isAdmin={effectiveIsAdmin}
           onBack={() => setCurrentLesson(null)}
           onUpload={handleUpload}
           onDelete={(fileId) => handleDeleteFile(fileId, currentLesson.id)}
@@ -319,7 +327,7 @@ function App() {
           chapter={chapter!}
           lessons={chapterLessons}
           chapterFiles={chapterFiles}
-          isAdmin={isAdmin}
+          isAdmin={effectiveIsAdmin}
           autoCreate={autoCreateLesson}
           onBack={() => {
             setCurrentChapterId(null);
@@ -435,7 +443,7 @@ function App() {
       );
     }
 
-    return <Dashboard onSelectGrade={setCurrentGrade} fileCounts={getFileCounts} isAdmin={isAdmin} onLoadLeaderboard={getLeaderboard} />;
+    return <Dashboard onSelectGrade={setCurrentGrade} fileCounts={getFileCounts} isAdmin={effectiveIsAdmin} onLoadLeaderboard={getLeaderboard} previewMode={previewMode} />;
   };
 
   // === KICKED SCREEN ===
@@ -650,6 +658,32 @@ function App() {
   return (
     <div className="min-h-screen font-sans" style={{ background: '#F7F6F3', color: '#1A1A1A' }}>
 
+      {/* Global Preview Mode Banner */}
+      {previewMode && (
+        <div className="px-4 py-2.5 flex items-center justify-between sticky top-0 z-[100] shadow-md transition-all animate-slide-in"
+          style={{ background: '#D9730D', color: '#FFFFFF' }}>
+          <div className="flex items-center gap-2">
+            <span className="font-bold flex items-center gap-2 text-sm tracking-wide shrink-0">
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              XEM TRƯỚC
+            </span>
+            <span className="hidden sm:inline-block mx-2 opacity-50">|</span>
+            <span className="text-sm">
+              Giao diện của Học sinh <strong className="font-bold">{previewMode === GradeLevel.Grade12 ? 'Lớp 12' : previewMode === GradeLevel.Grade11 ? 'Lớp 11' : 'Lớp 10'}</strong>
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setPreviewMode(null);
+            }}
+            className="px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 hover:shadow flex items-center shrink-0"
+            style={{ background: '#FFFFFF', color: '#D9730D' }}
+          >
+            Thoát chế độ
+          </button>
+        </div>
+      )}
+
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div
@@ -730,6 +764,9 @@ function App() {
           showStudyPlanner={showStudyPlanner}
           showNotification={showNotification}
           notificationUnreadCount={notificationUnreadCount}
+          isAdmin={isAdmin}
+          previewMode={previewMode}
+          onSetPreviewMode={(mode) => setPreviewMode(mode)}
           className="w-full"
         />
       </div>
@@ -796,6 +833,19 @@ function App() {
         showStudyPlanner={showStudyPlanner}
         showNotification={showNotification}
         notificationUnreadCount={notificationUnreadCount}
+        isAdmin={isAdmin}
+        previewMode={previewMode}
+        onSetPreviewMode={(mode) => {
+          setPreviewMode(mode);
+          if (mode) {
+            // When switching modes, optionally unset active inner screens
+            setShowContactBook(false);
+            setShowStudyPlanner(false);
+            setShowNotification(false);
+            setCurrentChapterId(null);
+            setCurrentLesson(null);
+          }
+        }}
         className="hidden md:flex"
       />
 

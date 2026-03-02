@@ -5,15 +5,22 @@ import { Exam } from '../types';
 interface ExamListPageProps {
     onSelectExam: (exam: Exam) => void;
     onLoadExams: () => Promise<Exam[]>;
+    isAdmin?: boolean;
+    previewMode?: number | null;
 }
 
 const ACCENT = '#6B7CDB';
 
-const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams }) => {
+const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, isAdmin, previewMode }) => {
     const [exams, setExams] = useState<Exam[]>([]);
     const [loading, setLoading] = useState(true);
-    const [studentGrade] = useState(() => parseInt(localStorage.getItem('physivault_grade') || '12', 10));
+    const [localStudentGrade] = useState(() => parseInt(localStorage.getItem('physivault_grade') || '12', 10));
+    const studentGrade = previewMode || localStudentGrade;
     const [activeTab, setActiveTab] = useState<number>(studentGrade);
+
+    useEffect(() => {
+        if (previewMode) setActiveTab(previewMode);
+    }, [previewMode]);
 
     const load = async () => {
         setLoading(true);
@@ -104,7 +111,7 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams }
                     <RefreshCw className="w-5 h-5 animate-spin" style={{ color: ACCENT }} />
                     <span className="ml-2 text-sm" style={{ color: '#787774' }}>Đang tải đề thi...</span>
                 </div>
-            ) : activeTab !== studentGrade ? (
+            ) : (!isAdmin || previewMode) && activeTab !== studentGrade ? (
                 <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
                     <div className="py-12 text-center px-6">
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: '#FEF2F2' }}>

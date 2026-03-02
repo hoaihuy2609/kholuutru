@@ -59,9 +59,11 @@ interface ExamViewProps {
     exam: Exam;
     onBack: () => void;
     onSubmit: (submission: ExamSubmission) => void;
+    isPreviewMode?: boolean;
+    onShowToast?: (message: string, type: 'success' | 'error' | 'warning') => void;
 }
 
-const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit }) => {
+const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMode, onShowToast }) => {
     const [mc, setMC] = useState<string[]>(emptyMC());
     const [tf, setTF] = useState<ExamTFAnswer[]>(emptyTF());
     const [sa, setSA] = useState<string[]>(emptySA());
@@ -142,6 +144,13 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit }) => {
 
     // ── Countdown ──
     const handleSubmitFinal = useCallback(() => {
+        if (isPreviewMode) {
+            if (onShowToast) {
+                onShowToast('Bạn đang ở chế độ xem trước (Preview Mode). Hãy đăng nhập bằng tài khoản học sinh để thao tác.', 'warning');
+            }
+            setShowConfirm(false);
+            return;
+        }
         if (submitted) return;
         setSubmitted(true);
         if (timerRef.current) clearInterval(timerRef.current);
@@ -152,7 +161,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit }) => {
             timeTaken: Math.round((Date.now() - startTime.current) / 1000),
         };
         onSubmit(submission);
-    }, [submitted, mc, tf, sa, exam.id, onSubmit]);
+    }, [submitted, mc, tf, sa, exam.id, onSubmit, isPreviewMode, onShowToast]);
 
     useEffect(() => {
         timerRef.current = setInterval(() => {
