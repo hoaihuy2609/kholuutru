@@ -648,7 +648,6 @@ function App() {
           <div className="text-center mt-6">
             <p className="text-[10px] uppercase tracking-[0.2em] font-bold" style={{ color: '#CFCFCB' }}>
               PhysiVault · Security System
-            </p>
           </div>
         </div>
       </div>
@@ -657,32 +656,6 @@ function App() {
 
   return (
     <div className="min-h-screen font-sans" style={{ background: '#F7F6F3', color: '#1A1A1A' }}>
-
-      {/* Global Preview Mode Banner */}
-      {previewMode && (
-        <div className="px-4 py-2.5 flex items-center justify-between sticky top-0 z-[100] shadow-md transition-all animate-slide-in"
-          style={{ background: '#D9730D', color: '#FFFFFF' }}>
-          <div className="flex items-center gap-2">
-            <span className="font-bold flex items-center gap-2 text-sm tracking-wide shrink-0">
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              XEM TRƯỚC
-            </span>
-            <span className="hidden sm:inline-block mx-2 opacity-50">|</span>
-            <span className="text-sm">
-              Giao diện của Học sinh <strong className="font-bold">{previewMode === GradeLevel.Grade12 ? 'Lớp 12' : previewMode === GradeLevel.Grade11 ? 'Lớp 11' : 'Lớp 10'}</strong>
-            </span>
-          </div>
-          <button
-            onClick={() => {
-              setPreviewMode(null);
-            }}
-            className="px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 hover:shadow flex items-center shrink-0"
-            style={{ background: '#FFFFFF', color: '#D9730D' }}
-          >
-            Thoát chế độ
-          </button>
-        </div>
-      )}
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
@@ -766,7 +739,20 @@ function App() {
           notificationUnreadCount={notificationUnreadCount}
           isAdmin={isAdmin}
           previewMode={previewMode}
-          onSetPreviewMode={(mode) => setPreviewMode(mode)}
+          onSetPreviewMode={(mode) => {
+            setPreviewMode(mode);
+            if (mode) {
+              setCurrentGrade(mode);
+              setShowExamList(false);
+              setShowContactBook(false);
+              setShowStudyPlanner(false);
+              setShowNotification(false);
+              setCurrentChapterId(null);
+              setCurrentLesson(null);
+            } else {
+              setCurrentGrade(null);
+            }
+          }}
           className="w-full"
         />
       </div>
@@ -834,16 +820,23 @@ function App() {
         showNotification={showNotification}
         notificationUnreadCount={notificationUnreadCount}
         isAdmin={isAdmin}
+        showStudyPlanner={showStudyPlanner}
+        showNotification={showNotification}
+        notificationUnreadCount={notificationUnreadCount}
+        isAdmin={isAdmin}
         previewMode={previewMode}
         onSetPreviewMode={(mode) => {
           setPreviewMode(mode);
           if (mode) {
-            // When switching modes, optionally unset active inner screens
+            setCurrentGrade(mode);
+            setShowExamList(false);
             setShowContactBook(false);
             setShowStudyPlanner(false);
             setShowNotification(false);
             setCurrentChapterId(null);
             setCurrentLesson(null);
+          } else {
+            setCurrentGrade(null);
           }
         }}
         className="hidden md:flex"

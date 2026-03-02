@@ -17,8 +17,12 @@ const emptySA = () => Array(6).fill('');
 export const calcScore = (submission: ExamSubmission, answers: Exam['answers']) => {
     // Phần I: trắc nghiệm
     let mcScore = 0;
+    let correctCount = 0;
     submission.mc.forEach((ans, i) => {
-        if (ans && answers.mc[i] && ans === answers.mc[i]) mcScore += 0.25;
+        if (ans && answers.mc[i] && ans === answers.mc[i]) {
+            mcScore += 0.25;
+            correctCount++;
+        }
     });
 
     // Phần II: đúng/sai
@@ -26,18 +30,24 @@ export const calcScore = (submission: ExamSubmission, answers: Exam['answers']) 
     const tfKeys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
     submission.tf.forEach((stuTF, qi) => {
         const corTF = answers.tf[qi];
-        const correctCount = tfKeys.filter(k => stuTF[k] && corTF[k] && stuTF[k] === corTF[k]).length;
-        if (correctCount === 1) tfScore += 0.1;
-        else if (correctCount === 2) tfScore += 0.25;
-        else if (correctCount === 3) tfScore += 0.5;
-        else if (correctCount === 4) tfScore += 1.0;
+        const correctItemsCount = tfKeys.filter(k => stuTF[k] && corTF[k] && stuTF[k] === corTF[k]).length;
+        if (correctItemsCount === 1) tfScore += 0.1;
+        else if (correctItemsCount === 2) tfScore += 0.25;
+        else if (correctItemsCount === 3) tfScore += 0.5;
+        else if (correctItemsCount === 4) {
+            tfScore += 1.0;
+            correctCount++;
+        }
     });
 
     // Phần III: trả lời ngắn
     let saScore = 0;
     submission.sa.forEach((ans, i) => {
         const correct = answers.sa[i];
-        if (ans && correct && normalizeSA(ans) === normalizeSA(correct)) saScore += 0.25;
+        if (ans && correct && normalizeSA(ans) === normalizeSA(correct)) {
+            saScore += 0.25;
+            correctCount++;
+        }
     });
 
     return {
@@ -45,6 +55,7 @@ export const calcScore = (submission: ExamSubmission, answers: Exam['answers']) 
         tf: Math.round(tfScore * 100) / 100,
         sa: Math.round(saScore * 100) / 100,
         total: Math.round((mcScore + tfScore + saScore) * 100) / 100,
+        correctCount: correctCount,
     };
 };
 
