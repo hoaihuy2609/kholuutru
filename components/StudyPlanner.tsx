@@ -217,17 +217,7 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
                             </div>
                         </div>
 
-                        {/* Legend */}
-                        <div className="px-3 pb-3 flex items-center gap-3 text-[10px]" style={{ color: '#AEACA8' }}>
-                            <span className="flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: ACCENT }} />
-                                Có nhiệm vụ
-                            </span>
-                            <span className="flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: '#448361' }} />
-                                Hoàn thành
-                            </span>
-                        </div>
+
                     </div>
                 </div>
 
