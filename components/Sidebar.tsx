@@ -99,7 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         )}
 
         {/* Sổ liên lạc */}
-        {!previewMode && onOpenContactBook && (
+        {onOpenContactBook && (
           <button
             onClick={() => { onOpenContactBook(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
@@ -117,7 +117,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         )}
 
         {/* Lịch trình (Study Planner) */}
-        {!previewMode && onOpenStudyPlanner && (
+        {onOpenStudyPlanner && (
           <button
             onClick={() => { onOpenStudyPlanner(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
@@ -135,7 +135,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         )}
 
         {/* Thông Báo */}
-        {!previewMode && onOpenNotification && (
+        {onOpenNotification && (
           <button
             onClick={() => { onOpenNotification(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
