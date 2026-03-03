@@ -63,29 +63,42 @@ function App() {
     return () => clearInterval(interval);
   }, [isActivated]);
 
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    return localStorage.getItem('physivault_is_admin') === 'true';
+  });
+
   // ── Tính unread notification badge ──
   React.useEffect(() => {
     if (!isActivated) return;
     const loadUnread = async () => {
       try {
-        const grade = parseInt(localStorage.getItem('physivault_grade') || '12', 10);
-        const [notifs, fetched] = await Promise.all([
-          getNotifications(grade),
-          getFetchedNotificationIds(),
-        ]);
-        const unread = notifs.filter(n => n.fetch_enabled && !fetched.has(n.id)).length;
-        setNotificationUnreadCount(unread);
+        if (isAdmin) {
+          // Admin: count unread across all 3 grades
+          const [notifs10, notifs11, notifs12, fetched] = await Promise.all([
+            getNotifications(10),
+            getNotifications(11),
+            getNotifications(12),
+            getFetchedNotificationIds(),
+          ]);
+          const allNotifs = [...notifs10, ...notifs11, ...notifs12];
+          const unread = allNotifs.filter(n => n.fetch_enabled && !fetched.has(n.id)).length;
+          setNotificationUnreadCount(unread);
+        } else {
+          const grade = parseInt(localStorage.getItem('physivault_grade') || '12', 10);
+          const [notifs, fetched] = await Promise.all([
+            getNotifications(grade),
+            getFetchedNotificationIds(),
+          ]);
+          const unread = notifs.filter(n => n.fetch_enabled && !fetched.has(n.id)).length;
+          setNotificationUnreadCount(unread);
+        }
       } catch { /* silent */ }
     };
     loadUnread();
     // Reload badge count mỗi 2 phút
     const interval = setInterval(loadUnread, 2 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [isActivated]);
-
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    return localStorage.getItem('physivault_is_admin') === 'true';
-  });
+  }, [isActivated, isAdmin]);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

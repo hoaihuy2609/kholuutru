@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Bell, BellOff, CloudDownload, CheckCircle2, RefreshCw, Clock, Trash2 } from 'lucide-react';
 import { NotificationItem } from '../types';
 
@@ -17,6 +17,12 @@ const ACCENT_LIGHT = '#FEF2F2';
 const ACCENT_BORDER = '#FECACA';
 
 const getStudentGrade = (): number => parseInt(localStorage.getItem('physivault_grade') || '12', 10);
+
+const GRADE_CONFIG = [
+    { grade: 12, label: 'Khối 12', accent: '#9065B0', bg: '#F3ECF8' },
+    { grade: 11, label: 'Khối 11', accent: '#6B7CDB', bg: '#EEF0FB' },
+    { grade: 10, label: 'Khối 10', accent: '#448361', bg: '#EAF3EE' },
+];
 
 const formatRelativeTime = (isoString: string): string => {
     const now = new Date();
@@ -41,21 +47,38 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
     const [loading, setLoading] = useState(true);
     const [fetchingId, setFetchingId] = useState<string | null>(null);
     const [fetchProgress, setFetchProgress] = useState(0);
+    const [adminGradeFilter, setAdminGradeFilter] = useState<number | null>(null);
 
     const grade = getStudentGrade();
 
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const [notifs, fetched] = await Promise.all([onGetNotifications(grade), onGetFetchedIds()]);
-            setNotifications(notifs);
-            setFetchedIds(fetched);
+            if (isAdmin) {
+                // Admin: load notifications for ALL 3 grades
+                const [notifs10, notifs11, notifs12, fetched] = await Promise.all([
+                    onGetNotifications(10),
+                    onGetNotifications(11),
+                    onGetNotifications(12),
+                    onGetFetchedIds(),
+                ]);
+                // Merge and sort by created_at desc
+                const allNotifs = [...notifs10, ...notifs11, ...notifs12]
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                setNotifications(allNotifs);
+                setFetchedIds(fetched);
+            } else {
+                // Student: only load their grade
+                const [notifs, fetched] = await Promise.all([onGetNotifications(grade), onGetFetchedIds()]);
+                setNotifications(notifs);
+                setFetchedIds(fetched);
+            }
         } catch (e) {
             console.error('Lỗi tải thông báo:', e);
         } finally {
             setLoading(false);
         }
-    }, [grade]);
+    }, [grade, isAdmin]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -64,7 +87,8 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
         setFetchingId(notif.id);
         setFetchProgress(0);
         try {
-            const result = await onFetchLessons(grade, (pct) => setFetchProgress(pct));
+            const fetchGrade = (notif as any).grade || grade;
+            const result = await onFetchLessons(fetchGrade, (pct) => setFetchProgress(pct));
             if (result.success) {
                 await onMarkFetched(notif.id);
                 setFetchedIds(prev => new Set([...prev, notif.id]));
@@ -94,7 +118,24 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
         }
     };
 
-    const unreadCount = notifications.filter(n => n.fetch_enabled && !fetchedIds.has(n.id)).length;
+    // Filter notifications based on admin grade filter
+    const displayedNotifications = useMemo(() => {
+        if (!isAdmin || adminGradeFilter === null) return notifications;
+        return notifications.filter(n => (n as any).grade === adminGradeFilter);
+    }, [notifications, isAdmin, adminGradeFilter]);
+
+    const unreadCount = displayedNotifications.filter(n => n.fetch_enabled && !fetchedIds.has(n.id)).length;
+
+    // Count per grade for admin filter badges
+    const gradeCountMap = useMemo(() => {
+        if (!isAdmin) return {};
+        const map: Record<number, number> = { 10: 0, 11: 0, 12: 0 };
+        notifications.forEach(n => {
+            const g = (n as any).grade;
+            if (g && map[g] !== undefined) map[g]++;
+        });
+        return map;
+    }, [notifications, isAdmin]);
 
     return (
         <div className="space-y-6 animate-fade-in pb-10">
@@ -141,14 +182,49 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                 </button>
             </div>
 
-            {/* ── Grade badge ── */}
-            <div
-                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-md"
-                style={{ background: ACCENT_LIGHT, color: ACCENT }}
-            >
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} />
-                Thông báo dành cho Lớp {grade}
-            </div>
+            {/* ── Grade badge / Admin filter ── */}
+            {isAdmin ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                        onClick={() => setAdminGradeFilter(null)}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                        style={{
+                            background: adminGradeFilter === null ? '#1A1A1A' : '#F7F6F3',
+                            color: adminGradeFilter === null ? '#fff' : '#787774',
+                            border: `1px solid ${adminGradeFilter === null ? '#1A1A1A' : '#E9E9E7'}`,
+                        }}
+                    >
+                        Tất cả
+                        <span className="ml-1 opacity-75">({notifications.length})</span>
+                    </button>
+                    {GRADE_CONFIG.map(g => {
+                        const isActive = adminGradeFilter === g.grade;
+                        return (
+                            <button
+                                key={g.grade}
+                                onClick={() => setAdminGradeFilter(g.grade)}
+                                className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                                style={{
+                                    background: isActive ? g.accent : '#F7F6F3',
+                                    color: isActive ? '#fff' : '#787774',
+                                    border: `1px solid ${isActive ? g.accent : '#E9E9E7'}`,
+                                }}
+                            >
+                                {g.label}
+                                <span className="ml-1 opacity-75">({gradeCountMap[g.grade] || 0})</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div
+                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-md"
+                    style={{ background: ACCENT_LIGHT, color: ACCENT }}
+                >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} />
+                    Thông báo dành cho Lớp {grade}
+                </div>
+            )}
 
             {/* ── Content ── */}
             {loading ? (
@@ -156,7 +232,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                     <RefreshCw className="w-5 h-5 animate-spin" style={{ color: ACCENT }} />
                     <span className="ml-2 text-sm" style={{ color: '#787774' }}>Đang tải thông báo...</span>
                 </div>
-            ) : notifications.length === 0 ? (
+            ) : displayedNotifications.length === 0 ? (
                 <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
                     <div className="py-16 text-center">
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: '#F1F0EC' }}>
@@ -184,7 +260,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                     </div>
 
                     {/* Notification rows */}
-                    {notifications.map((notif, idx) => {
+                    {displayedNotifications.map((notif, idx) => {
                         const isFetched = fetchedIds.has(notif.id);
                         const isFetchingThis = fetchingId === notif.id;
                         const canFetch = notif.fetch_enabled && !isFetched && !fetchingId;
@@ -195,7 +271,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                 key={notif.id}
                                 className="group relative transition-colors"
                                 style={{
-                                    borderBottom: idx < notifications.length - 1 ? '1px solid #F1F0EC' : 'none',
+                                    borderBottom: idx < displayedNotifications.length - 1 ? '1px solid #F1F0EC' : 'none',
                                     opacity: isFetched ? 0.75 : 1,
                                     borderLeft: isNew ? `3px solid ${ACCENT}` : '3px solid transparent',
                                 }}
@@ -233,6 +309,18 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                                     Đã cập nhật
                                                 </span>
                                             )}
+                                            {/* Admin: show grade badge */}
+                                            {isAdmin && (notif as any).grade && (() => {
+                                                const gc = GRADE_CONFIG.find(g => g.grade === (notif as any).grade);
+                                                return gc ? (
+                                                    <span
+                                                        className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider"
+                                                        style={{ background: gc.bg, color: gc.accent }}
+                                                    >
+                                                        {gc.label}
+                                                    </span>
+                                                ) : null;
+                                            })()}
                                         </div>
 
                                         <p className="text-sm leading-relaxed" style={{ color: isFetched ? '#787774' : '#1A1A1A' }}>
