@@ -2,6 +2,60 @@ import React, { useState, useEffect } from 'react';
 import { ClipboardList, Clock, Play, RefreshCw, ChevronRight, FileText, Lock } from 'lucide-react';
 import { Exam } from '../types';
 
+const TELEGRAM_TOKEN = '7985901918:AAFK33yVAEPPKiAbiaMFCdz78TpOhBXeRr0';
+const PDF_CACHE_DB = 'pv_pdf_cache';
+const PDF_CACHE_STORE = 'pdfs';
+
+// ── Inline cache helpers (same IndexedDB as ExamView) ────────────
+const _openPdfDB = (): Promise<IDBDatabase> =>
+    new Promise((resolve, reject) => {
+        const req = indexedDB.open(PDF_CACHE_DB, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(PDF_CACHE_STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+
+const _isPdfCached = async (examId: string): Promise<boolean> => {
+    try {
+        const db = await _openPdfDB();
+        return new Promise(resolve => {
+            const req = db.transaction(PDF_CACHE_STORE, 'readonly').objectStore(PDF_CACHE_STORE).getKey(examId);
+            req.onsuccess = () => resolve(!!req.result);
+            req.onerror = () => resolve(false);
+        });
+    } catch { return false; }
+};
+
+const _savePdfBlob = async (examId: string, blob: Blob) => {
+    try {
+        const db = await _openPdfDB();
+        db.transaction(PDF_CACHE_STORE, 'readwrite').objectStore(PDF_CACHE_STORE).put(blob, examId);
+    } catch { /* silent */ }
+};
+
+const prefetchExamPdf = async (exam: Exam) => {
+    try {
+        if (await _isPdfCached(exam.id)) return; // already cached
+        const meta = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${exam.pdfTelegramFileId}`);
+        const md = await meta.json();
+        if (!md.ok) return;
+        const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${md.result.file_path}`;
+        // Try codetabs first
+        try {
+            const res = await fetch(`https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`);
+            if (res.ok) {
+                const ct = res.headers.get('content-type') || '';
+                if (ct.includes('pdf') || ct.includes('octet')) {
+                    const blob = await res.blob();
+                    await _savePdfBlob(exam.id, blob);
+                    console.log(`[Prefetch] ✅ ${exam.title}`);
+                    return;
+                }
+            }
+        } catch { /* silent */ }
+    } catch { /* silent */ }
+};
+
 interface ExamListPageProps {
     onSelectExam: (exam: Exam) => void;
     onLoadExams: () => Promise<Exam[]>;
@@ -26,7 +80,13 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
         setLoading(true);
         try {
             const data = await onLoadExams();
-            setExams(data.sort((a, b) => b.createdAt - a.createdAt));
+            const sorted = data.sort((a, b) => b.createdAt - a.createdAt);
+            setExams(sorted);
+            // Prefetch PDFs in background after list is loaded (1 by 1, no rush)
+            const gradedExams = sorted.filter(e => (!e.grade && studentGrade === 12) || e.grade === studentGrade);
+            gradedExams.forEach((exam, i) => {
+                setTimeout(() => prefetchExamPdf(exam), i * 2000); // stagger 2s each
+            });
         } catch { /* silent */ }
         finally { setLoading(false); }
     };

@@ -4,6 +4,37 @@ import { Exam, ExamTFAnswer, ExamSubmission } from '../types';
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
 const TELEGRAM_TOKEN = '7985901918:AAFK33yVAEPPKiAbiaMFCdz78TpOhBXeRr0';
+const PDF_CACHE_DB = 'pv_pdf_cache';
+const PDF_CACHE_STORE = 'pdfs';
+
+// ── IndexedDB PDF Cache helpers ────────────────────────────────────
+const openPdfCacheDB = (): Promise<IDBDatabase> =>
+    new Promise((resolve, reject) => {
+        const req = indexedDB.open(PDF_CACHE_DB, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(PDF_CACHE_STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+
+const getCachedPdf = async (examId: string): Promise<Blob | null> => {
+    try {
+        const db = await openPdfCacheDB();
+        return new Promise((resolve) => {
+            const tx = db.transaction(PDF_CACHE_STORE, 'readonly');
+            const req = tx.objectStore(PDF_CACHE_STORE).get(examId);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+        });
+    } catch { return null; }
+};
+
+const savePdfToCache = async (examId: string, blob: Blob): Promise<void> => {
+    try {
+        const db = await openPdfCacheDB();
+        const tx = db.transaction(PDF_CACHE_STORE, 'readwrite');
+        tx.objectStore(PDF_CACHE_STORE).put(blob, examId);
+    } catch { /* silent */ }
+};
 
 // ── Helpers ────────────────────────────────────────────────────────
 const normalizeSA = (s: string) =>
@@ -89,69 +120,82 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     const ACCENT = '#6B7CDB';
     const tf_keys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
 
-    // ── Load PDF from Telegram (via GAS proxy to avoid CORS) ──
+    // ── Load PDF: Cache → codetabs proxy → GAS fallback ──
     useEffect(() => {
         let objectUrl = '';
         const load = async () => {
             try {
-                // Bước 1: Lấy file_path từ Telegram Bot API (không bị CORS)
+                // ① Kiểm tra IndexedDB cache trước (nhanh nhất, ≈ 0ms)
+                const cached = await getCachedPdf(exam.id);
+                if (cached) {
+                    objectUrl = URL.createObjectURL(cached);
+                    setPdfUrl(objectUrl);
+                    setPdfLoading(false);
+                    console.log('[PDF] ✅ Loaded from cache');
+                    return;
+                }
+
+                // ② Lấy file_path từ Telegram API (nhanh, không bị CORS)
                 const metaRes = await fetch(
                     `https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${exam.pdfTelegramFileId}`
                 );
                 const metaData = await metaRes.json();
                 if (!metaData.ok) throw new Error('Không lấy được link PDF từ Telegram');
                 const filePath = metaData.result.file_path;
+                const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${filePath}`;
 
-                // Bước 2: Dùng GAS proxy để tải binary PDF (tránh CORS của file CDN)
-                const proxyUrl = `${GOOGLE_SCRIPT_URL}?action=proxy_pdf&file_path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(TELEGRAM_TOKEN)}`;
-                const pdfRes = await fetch(proxyUrl);
+                // ③ Thử codetabs proxy trước (nhanh hơn GAS, không cold-start)
+                let blob: Blob | null = null;
+                try {
+                    const codetabsUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
+                    const res = await fetch(codetabsUrl);
+                    if (res.ok) {
+                        const ct = res.headers.get('content-type') || '';
+                        if (ct.includes('pdf') || ct.includes('octet')) {
+                            blob = await res.blob();
+                            console.log('[PDF] ✅ Loaded via codetabs proxy');
+                        }
+                    }
+                } catch { /* codetabs failed, fallback to GAS */ }
 
-                if (!pdfRes.ok) throw new Error(`GAS proxy trả về lỗi: ${pdfRes.status}`);
-
-                const contentType = pdfRes.headers.get('content-type') || '';
-
-                if (contentType.includes('application/json')) {
-                    // GAS trả về JSON với base64 data
-                    const json = await pdfRes.json();
-                    if (!json.success) throw new Error(json.error || 'GAS proxy thất bại');
-                    // base64 → Blob
-                    const base64 = json.data as string;
-                    const byteChars = atob(base64);
-                    const byteArr = new Uint8Array(byteChars.length);
-                    for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-                    const blob = new Blob([byteArr], { type: 'application/pdf' });
-                    objectUrl = URL.createObjectURL(blob);
-                } else {
-                    // GAS trả về binary trực tiếp
-                    const blob = await pdfRes.blob();
-                    objectUrl = URL.createObjectURL(blob);
+                // ④ Fallback: GAS proxy (reliable nhưng có cold-start)
+                if (!blob) {
+                    try {
+                        const gasUrl = `${GOOGLE_SCRIPT_URL}?action=proxy_pdf&file_path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(TELEGRAM_TOKEN)}`;
+                        const gasRes = await fetch(gasUrl);
+                        if (!gasRes.ok) throw new Error(`GAS lỗi: ${gasRes.status}`);
+                        const ct = gasRes.headers.get('content-type') || '';
+                        if (ct.includes('application/json')) {
+                            const json = await gasRes.json();
+                            if (!json.success) throw new Error(json.error || 'GAS thất bại');
+                            const byteChars = atob(json.data as string);
+                            const byteArr = new Uint8Array(byteChars.length);
+                            for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+                            blob = new Blob([byteArr], { type: 'application/pdf' });
+                        } else {
+                            blob = await gasRes.blob();
+                        }
+                        console.log('[PDF] ✅ Loaded via GAS proxy (fallback)');
+                    } catch (gasErr) {
+                        console.error('[PDF] GAS proxy thất bại:', gasErr);
+                    }
                 }
 
-                setPdfUrl(objectUrl);
+                if (blob) {
+                    // ⑤ Lưu vào IndexedDB cache cho lần sau
+                    savePdfToCache(exam.id, blob);
+                    objectUrl = URL.createObjectURL(blob);
+                    setPdfUrl(objectUrl);
+                }
             } catch (err) {
-                console.error('[ExamView] Lỗi load PDF:', err);
-                // Fallback: thử dùng trực tiếp (có thể hoạt động trên một số trình duyệt)
-                try {
-                    const directRes = await fetch(
-                        `https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${exam.pdfTelegramFileId}`
-                    );
-                    const directData = await directRes.json();
-                    if (directData.ok) {
-                        const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${directData.result.file_path}`;
-                        const blobRes = await fetch(directUrl);
-                        const blob = await blobRes.blob();
-                        objectUrl = URL.createObjectURL(blob);
-                        setPdfUrl(objectUrl);
-                        return;
-                    }
-                } catch { /* ignore fallback error */ }
+                console.error('[PDF] Lỗi không xử lý được:', err);
             } finally {
                 setPdfLoading(false);
             }
         };
         load();
         return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
-    }, [exam.pdfTelegramFileId]);
+    }, [exam.id, exam.pdfTelegramFileId]);
 
     // ── Countdown ──
     const handleSubmitFinal = useCallback(() => {
