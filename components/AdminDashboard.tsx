@@ -6,9 +6,10 @@ import {
     ShieldCheck, Monitor, Phone,
     TrendingUp, UserCheck, ShieldAlert, LayoutDashboard,
     UserMinus, RotateCcw, Ban, ArrowLeft, X, CloudUpload, ClipboardList,
-    Plus, Edit3, FolderOpen, ChevronRight, GraduationCap, Building2, Settings2
+    Plus, Edit3, FolderOpen, ChevronRight, GraduationCap, Building2, Settings2, BarChart2
 } from 'lucide-react';
 import ExamManager from './ExamManager';
+import StatsPanel from './StatsPanel';
 import { Exam } from '../types';
 
 interface Student {
@@ -55,7 +56,7 @@ const Loader2 = ({ className, style }: { className?: string; style?: React.CSSPr
 );
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, onOpenGitHubSync, onUploadExamPdf, onSaveExam, onDeleteExam, onLoadExams }) => {
-    const [activeTab, setActiveTab] = useState<'students' | 'exams'>('students');
+    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats'>('students');
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -347,6 +348,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                 {[
                     { key: 'students', label: 'Học Sinh', icon: <Users className="w-4 h-4" /> },
                     { key: 'exams', label: 'Đề Thi', icon: <ClipboardList className="w-4 h-4" /> },
+                    { key: 'stats', label: 'Thống Kê', icon: <BarChart2 className="w-4 h-4" /> },
                 ].map(tab => (
                     <button
                         key={tab.key}
@@ -364,6 +366,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
 
             {/* ── Main scroll area ── */}
             <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6 custom-scrollbar">
+
+                {/* ── Stats Tab ── */}
+                {activeTab === 'stats' && <StatsPanel />}
 
                 {/* ── Exam Tab ── */}
                 {activeTab === 'exams' && onUploadExamPdf && onSaveExam && onDeleteExam && onLoadExams && (
