@@ -410,10 +410,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                     {[
-                                        { label: 'Tất cả', value: null, accent: '#6B7CDB', bg: '#EEF0FB' },
-                                        { label: 'Khối 12', value: 12, accent: '#6B7CDB', bg: '#EEF0FB' },
-                                        { label: 'Khối 11', value: 11, accent: '#448361', bg: '#EAF3EE' },
-                                        { label: 'Khối 10', value: 10, accent: '#D9730D', bg: '#FFF3E8' },
+                                        { label: 'Tất cả', value: null, accent: '#9065B0', bg: '#F3ECF8' },
+                                        { label: 'Khối 12', value: 12, accent: '#9065B0', bg: '#F3ECF8' },
+                                        { label: 'Khối 11', value: 11, accent: '#6B7CDB', bg: '#EEF0FB' },
+                                        { label: 'Khối 10', value: 10, accent: '#448361', bg: '#EAF3EE' },
                                     ].map(g => {
                                         const isActive = gradeFilter === g.value;
                                         return (
@@ -605,8 +605,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                                             <span
                                                                 className="px-2 py-0.5 rounded-md text-[10px] font-bold inline-block w-fit"
                                                                 style={{
-                                                                    background: s.grade === 12 ? '#EEF0FB' : s.grade === 11 ? '#EAF3EE' : '#FFF3E8',
-                                                                    color: s.grade === 12 ? '#6B7CDB' : s.grade === 11 ? '#448361' : '#D9730D'
+                                                                    background: s.grade === 12 ? '#F3ECF8' : s.grade === 11 ? '#EEF0FB' : '#EAF3EE',
+                                                                    color: s.grade === 12 ? '#9065B0' : s.grade === 11 ? '#6B7CDB' : '#448361'
                                                                 }}
                                                             >
                                                                 Khối {s.grade || 12}
@@ -931,7 +931,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                             {[12, 11, 10].map(grade => {
                                 const gradeClasses = classes.filter(c => c.grade === grade);
                                 if (gradeClasses.length === 0) return null;
-                                const gradeColors = grade === 12 ? { accent: '#6B7CDB', bg: '#EEF0FB' } : grade === 11 ? { accent: '#448361', bg: '#EAF3EE' } : { accent: '#D9730D', bg: '#FFF3E8' };
+                                const gradeColors = grade === 12 ? { accent: '#9065B0', bg: '#F3ECF8' } : grade === 11 ? { accent: '#6B7CDB', bg: '#EEF0FB' } : { accent: '#448361', bg: '#EAF3EE' };
                                 return (
                                     <div key={grade}>
                                         <div className="flex items-center gap-2 mb-2">
