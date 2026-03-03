@@ -5,18 +5,27 @@ import {
     Users, UserPlus, Trash2, Search, RefreshCw,
     ShieldCheck, Monitor, Phone,
     TrendingUp, UserCheck, ShieldAlert, LayoutDashboard,
-    UserMinus, RotateCcw, Ban, ArrowLeft, X, CloudUpload, ClipboardList
+    UserMinus, RotateCcw, Ban, ArrowLeft, X, CloudUpload, ClipboardList,
+    Plus, Edit3, FolderOpen, ChevronRight, GraduationCap, Building2, Settings2
 } from 'lucide-react';
 import ExamManager from './ExamManager';
 import { Exam } from '../types';
 
 interface Student {
-    sdt: string;       // luôn normalize thành string sau khi fetch
+    sdt: string;
     name: string;
     machineId: string;
     key: string;
     status: string;
     grade?: number;
+    class_id?: string;
+}
+
+interface ClassInfo {
+    id: string;
+    name: string;
+    grade: number;
+    created_at?: string;
 }
 
 interface AdminDashboardProps {
@@ -51,8 +60,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [newStudent, setNewStudent] = useState({ sdt: '', name: '', grade: 12 });
+    const [newStudent, setNewStudent] = useState({ sdt: '', name: '', grade: 12, class_id: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // ── Grade & Class filter ──
+    const [gradeFilter, setGradeFilter] = useState<number | null>(null);
+    const [classFilter, setClassFilter] = useState<string | null>(null);
+    const [classes, setClasses] = useState<ClassInfo[]>([]);
+
+    // ── Class management modal ──
+    const [isClassModalOpen, setIsClassModalOpen] = useState(false);
+    const [newClassName, setNewClassName] = useState('');
+    const [newClassGrade, setNewClassGrade] = useState(12);
+    const [editingClass, setEditingClass] = useState<ClassInfo | null>(null);
+
+    const refreshClasses = async () => {
+        try {
+            const { data, error } = await supabase.from('classes').select('*').order('grade', { ascending: true }).order('name', { ascending: true });
+            if (error) throw error;
+            setClasses(data || []);
+        } catch (err) {
+            console.error('[Admin] Lỗi tải danh sách lớp:', err);
+        }
+    };
 
     const refreshStudents = async () => {
         setLoading(true);
@@ -68,6 +98,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                 key: row.activation_key || '',
                 status: row.is_active === false ? 'KICKED' : (row.machine_id ? 'ACTIVATED' : 'PENDING'),
                 grade: row.grade || 12,
+                class_id: row.class_id || '',
             }));
             setStudents(normalized);
         } catch (err) {
@@ -78,7 +109,53 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         }
     };
 
-    useEffect(() => { refreshStudents(); }, []);
+    // ── Class CRUD ──
+    const handleAddClass = async () => {
+        if (!newClassName.trim()) return;
+        try {
+            const { error } = await supabase.from('classes').insert([{ name: newClassName.trim(), grade: newClassGrade }]);
+            if (error) throw error;
+            onShowToast(`Đã tạo lớp ${newClassName.trim()}!`, 'success');
+            setNewClassName('');
+            refreshClasses();
+        } catch (e: any) { onShowToast('Lỗi: ' + e.message, 'error'); }
+    };
+
+    const handleUpdateClass = async () => {
+        if (!editingClass || !newClassName.trim()) return;
+        try {
+            const { error } = await supabase.from('classes').update({ name: newClassName.trim(), grade: newClassGrade }).eq('id', editingClass.id);
+            if (error) throw error;
+            onShowToast(`Đã cập nhật lớp!`, 'success');
+            setEditingClass(null);
+            setNewClassName('');
+            refreshClasses();
+            refreshStudents();
+        } catch (e: any) { onShowToast('Lỗi: ' + e.message, 'error'); }
+    };
+
+    const handleDeleteClass = async (cls: ClassInfo) => {
+        if (!window.confirm(`Xóa lớp "${cls.name}"? Học sinh trong lớp sẽ chuyển sang trạng thái "Chưa xếp lớp".`)) return;
+        try {
+            const { error } = await supabase.from('classes').delete().eq('id', cls.id);
+            if (error) throw error;
+            onShowToast(`Đã xóa lớp ${cls.name}!`, 'warning');
+            if (classFilter === cls.id) setClassFilter(null);
+            refreshClasses();
+            refreshStudents();
+        } catch (e: any) { onShowToast('Lỗi: ' + e.message, 'error'); }
+    };
+
+    const handleUpdateStudentClass = async (sdt: string, classId: string | null) => {
+        try {
+            const { error } = await supabase.from('students').update({ class_id: classId }).eq('phone', sdt);
+            if (error) throw error;
+            onShowToast('Đã cập nhật lớp cho học viên!', 'success');
+            refreshStudents();
+        } catch (e: any) { onShowToast('Lỗi: ' + e.message, 'error'); }
+    };
+
+    useEffect(() => { refreshStudents(); refreshClasses(); }, []);
 
     const handleAddStudent = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -94,6 +171,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                 phone: phoneStr,
                 name: newStudent.name.trim(),
                 grade: newStudent.grade,
+                class_id: newStudent.class_id || null,
                 is_active: true,
                 activation_key: '',
                 machine_id: '',
@@ -104,7 +182,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
 
             onShowToast('Đã thêm học viên lên Supabase!', 'success');
             setIsAddModalOpen(false);
-            setNewStudent({ sdt: '', name: '', grade: 12 });
+            setNewStudent({ sdt: '', name: '', grade: 12, class_id: '' });
             refreshStudents();
         } catch (err: any) {
             console.error("[Admin] Lỗi khi thêm:", err);
@@ -148,8 +226,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         if (!s) return false;
         const sdt = s.sdt || '';
         const name = s.name || '';
-        return sdt.includes(searchTerm) || name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchSearch = sdt.includes(searchTerm) || name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchGrade = gradeFilter === null || s.grade === gradeFilter;
+        const matchClass = classFilter === null || s.class_id === classFilter;
+        // Special filter: 'unassigned' = students without any class
+        const matchUnassigned = classFilter === 'unassigned' ? (!s.class_id || s.class_id === '') : true;
+        return matchSearch && matchGrade && (classFilter === 'unassigned' ? matchUnassigned : matchClass);
     });
+
+    const classesForGrade = gradeFilter ? classes.filter(c => c.grade === gradeFilter) : classes;
+    const getClassName = (classId?: string) => {
+        if (!classId) return null;
+        return classes.find(c => c.id === classId)?.name || null;
+    };
 
     const stats = {
         total: students.length,
@@ -310,6 +399,110 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                         ))}
                     </div>
 
+                    {/* ── Grade & Class Filter Bar ── */}
+                    <div className="rounded-xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
+                        <div className="p-4 flex flex-col gap-3">
+                            {/* Grade filter row */}
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                <div className="flex items-center gap-1.5">
+                                    <GraduationCap className="w-4 h-4" style={{ color: '#6B7CDB' }} />
+                                    <span className="text-xs font-semibold" style={{ color: '#787774' }}>Lọc theo khối:</span>
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    {[
+                                        { label: 'Tất cả', value: null, accent: '#6B7CDB', bg: '#EEF0FB' },
+                                        { label: 'Khối 12', value: 12, accent: '#6B7CDB', bg: '#EEF0FB' },
+                                        { label: 'Khối 11', value: 11, accent: '#448361', bg: '#EAF3EE' },
+                                        { label: 'Khối 10', value: 10, accent: '#D9730D', bg: '#FFF3E8' },
+                                    ].map(g => {
+                                        const isActive = gradeFilter === g.value;
+                                        return (
+                                            <button
+                                                key={String(g.value)}
+                                                onClick={() => { setGradeFilter(g.value); setClassFilter(null); }}
+                                                className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                                                style={{
+                                                    background: isActive ? g.accent : '#F7F6F3',
+                                                    color: isActive ? '#fff' : '#787774',
+                                                    border: `1px solid ${isActive ? g.accent : '#E9E9E7'}`,
+                                                }}
+                                            >
+                                                {g.label}
+                                                {g.value !== null && (
+                                                    <span className="ml-1 opacity-75">
+                                                        ({students.filter(s => s.grade === g.value).length})
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                    <button
+                                        onClick={() => setIsClassModalOpen(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                                        style={{ background: '#F7F6F3', color: '#787774', border: '1px solid #E9E9E7' }}
+                                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#EEF0FB'; (e.currentTarget as HTMLElement).style.color = '#6B7CDB'; }}
+                                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#F7F6F3'; (e.currentTarget as HTMLElement).style.color = '#787774'; }}
+                                    >
+                                        <Settings2 className="w-3.5 h-3.5" />
+                                        Quản lý lớp
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Class filter row (only shows when a grade is selected) */}
+                            {gradeFilter !== null && (
+                                <div className="flex items-center gap-2 flex-wrap pl-5 pt-1" style={{ borderTop: '1px solid #F1F0EC' }}>
+                                    <Building2 className="w-3.5 h-3.5" style={{ color: '#AEACA8' }} />
+                                    <button
+                                        onClick={() => setClassFilter(null)}
+                                        className="px-2.5 py-1 text-[11px] font-medium rounded-md transition-all"
+                                        style={{
+                                            background: classFilter === null ? '#6B7CDB' : '#F7F6F3',
+                                            color: classFilter === null ? '#fff' : '#787774',
+                                            border: `1px solid ${classFilter === null ? '#6B7CDB' : '#E9E9E7'}`,
+                                        }}
+                                    >
+                                        Tất cả lớp
+                                    </button>
+                                    {classesForGrade.map(cls => {
+                                        const count = students.filter(s => s.class_id === cls.id).length;
+                                        const isActive = classFilter === cls.id;
+                                        return (
+                                            <button
+                                                key={cls.id}
+                                                onClick={() => setClassFilter(cls.id)}
+                                                className="px-2.5 py-1 text-[11px] font-medium rounded-md transition-all"
+                                                style={{
+                                                    background: isActive ? '#6B7CDB' : '#F7F6F3',
+                                                    color: isActive ? '#fff' : '#787774',
+                                                    border: `1px solid ${isActive ? '#6B7CDB' : '#E9E9E7'}`,
+                                                }}
+                                            >
+                                                {cls.name} <span className="opacity-60">({count})</span>
+                                            </button>
+                                        );
+                                    })}
+                                    <button
+                                        onClick={() => setClassFilter('unassigned')}
+                                        className="px-2.5 py-1 text-[11px] font-medium rounded-md transition-all italic"
+                                        style={{
+                                            background: classFilter === 'unassigned' ? '#D9730D' : '#F7F6F3',
+                                            color: classFilter === 'unassigned' ? '#fff' : '#AEACA8',
+                                            border: `1px solid ${classFilter === 'unassigned' ? '#D9730D' : '#E9E9E7'}`,
+                                        }}
+                                    >
+                                        Chưa xếp lớp ({students.filter(s => s.grade === gradeFilter && (!s.class_id || s.class_id === '')).length})
+                                    </button>
+                                    {classesForGrade.length === 0 && (
+                                        <span className="text-[11px] italic" style={{ color: '#AEACA8' }}>
+                                            Chưa có lớp nào. Bấm "Quản lý lớp" để tạo mới.
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Table section */}
                     <div className="rounded-xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
                         {/* Table toolbar */}
@@ -406,17 +599,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    {/* Grade */}
+                                                    {/* Grade & Class */}
                                                     <td className="px-5 py-4">
-                                                        <span
-                                                            className="px-2 py-1 rounded-md text-[10px] font-bold"
-                                                            style={{
-                                                                background: s.grade === 12 ? '#EEF0FB' : s.grade === 11 ? '#EAF3EE' : '#FFF3E8',
-                                                                color: s.grade === 12 ? '#6B7CDB' : s.grade === 11 ? '#448361' : '#D9730D'
-                                                            }}
-                                                        >
-                                                            Vật Lý {s.grade || 12}
-                                                        </span>
+                                                        <div className="flex flex-col gap-1">
+                                                            <span
+                                                                className="px-2 py-0.5 rounded-md text-[10px] font-bold inline-block w-fit"
+                                                                style={{
+                                                                    background: s.grade === 12 ? '#EEF0FB' : s.grade === 11 ? '#EAF3EE' : '#FFF3E8',
+                                                                    color: s.grade === 12 ? '#6B7CDB' : s.grade === 11 ? '#448361' : '#D9730D'
+                                                                }}
+                                                            >
+                                                                Khối {s.grade || 12}
+                                                            </span>
+                                                            <select
+                                                                value={s.class_id || ''}
+                                                                onChange={e => handleUpdateStudentClass(s.sdt, e.target.value || null)}
+                                                                className="text-[11px] px-1.5 py-0.5 rounded border cursor-pointer"
+                                                                style={{ background: '#F7F6F3', border: '1px solid #E9E9E7', color: '#57564F', maxWidth: '110px' }}
+                                                            >
+                                                                <option value="">Chưa xếp lớp</option>
+                                                                {classes.filter(c => c.grade === s.grade).map(c => (
+                                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
                                                     </td>
                                                     {/* Phone */}
                                                     <td className="px-5 py-4 font-mono text-sm" style={{ color: '#1A1A1A' }}>{s.sdt}</td>
@@ -582,6 +788,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                 </div>
                             </div>
 
+                            {/* Class Selection */}
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Xếp vào lớp</label>
+                                <select
+                                    value={newStudent.class_id}
+                                    onChange={e => setNewStudent({ ...newStudent, class_id: e.target.value })}
+                                    style={{ ...inputSt, cursor: 'pointer' }}
+                                >
+                                    <option value="">— Chưa xếp lớp —</option>
+                                    {classes.filter(c => c.grade === newStudent.grade).map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             {/* Phone */}
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Số điện thoại</label>
@@ -622,6 +843,155 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Class Management Modal ── */}
+            {isClassModalOpen && (
+                <div
+                    className="fixed inset-0 z-[70] flex items-center justify-center p-4 animate-fade-in"
+                    style={{ background: 'rgba(26,26,26,0.45)' }}
+                    onClick={() => { setIsClassModalOpen(false); setEditingClass(null); setNewClassName(''); }}
+                >
+                    <div
+                        className="w-full overflow-hidden animate-scale-in"
+                        style={{ maxWidth: '480px', background: '#FFFFFF', border: '1px solid #E9E9E7', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Modal header */}
+                        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E9E9E7' }}>
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 rounded-lg" style={{ background: '#EEF0FB' }}>
+                                    <Building2 className="w-4 h-4" style={{ color: '#6B7CDB' }} />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Quản lý Lớp học</h3>
+                                    <p className="text-xs mt-0.5" style={{ color: '#787774' }}>Tạo, sửa, xóa lớp theo khối</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => { setIsClassModalOpen(false); setEditingClass(null); setNewClassName(''); }}
+                                className="p-1.5 rounded-lg transition-colors"
+                                style={{ color: '#787774' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-4" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                            {/* Add/Edit class form */}
+                            <div className="flex flex-col gap-3 p-4 rounded-lg" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
+                                <p className="text-xs font-semibold" style={{ color: '#787774' }}>
+                                    {editingClass ? `✏️ Đang sửa: ${editingClass.name}` : '➕ Thêm lớp mới'}
+                                </p>
+                                <div className="flex gap-2">
+                                    <select
+                                        value={newClassGrade}
+                                        onChange={e => setNewClassGrade(Number(e.target.value))}
+                                        className="text-xs px-2 py-2 rounded-lg border cursor-pointer"
+                                        style={{ background: '#fff', border: '1px solid #E9E9E7', color: '#57564F' }}
+                                    >
+                                        <option value={12}>Khối 12</option>
+                                        <option value={11}>Khối 11</option>
+                                        <option value={10}>Khối 10</option>
+                                    </select>
+                                    <input
+                                        type="text"
+                                        value={newClassName}
+                                        onChange={e => setNewClassName(e.target.value)}
+                                        placeholder="Tên lớp (vd: 12A1)"
+                                        className="flex-1 text-sm px-3 py-2 rounded-lg border"
+                                        style={{ background: '#fff', border: '1px solid #E9E9E7', color: '#1A1A1A', outline: 'none' }}
+                                        onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+                                        onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
+                                    />
+                                    <button
+                                        onClick={editingClass ? handleUpdateClass : handleAddClass}
+                                        className="px-4 py-2 text-xs font-semibold text-white rounded-lg transition-colors"
+                                        style={{ background: editingClass ? '#448361' : '#6B7CDB' }}
+                                    >
+                                        {editingClass ? 'Cập nhật' : 'Tạo lớp'}
+                                    </button>
+                                    {editingClass && (
+                                        <button
+                                            onClick={() => { setEditingClass(null); setNewClassName(''); }}
+                                            className="px-3 py-2 text-xs rounded-lg"
+                                            style={{ background: '#F1F0EC', color: '#787774' }}
+                                        >
+                                            Hủy
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Classes list by grade */}
+                            {[12, 11, 10].map(grade => {
+                                const gradeClasses = classes.filter(c => c.grade === grade);
+                                if (gradeClasses.length === 0) return null;
+                                const gradeColors = grade === 12 ? { accent: '#6B7CDB', bg: '#EEF0FB' } : grade === 11 ? { accent: '#448361', bg: '#EAF3EE' } : { accent: '#D9730D', bg: '#FFF3E8' };
+                                return (
+                                    <div key={grade}>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <GraduationCap className="w-3.5 h-3.5" style={{ color: gradeColors.accent }} />
+                                            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: gradeColors.accent }}>Khối {grade}</span>
+                                            <span className="text-[10px]" style={{ color: '#AEACA8' }}>({gradeClasses.length} lớp)</span>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            {gradeClasses.map(cls => {
+                                                const count = students.filter(s => s.class_id === cls.id).length;
+                                                return (
+                                                    <div
+                                                        key={cls.id}
+                                                        className="flex items-center justify-between p-3 rounded-lg transition-colors"
+                                                        style={{ background: '#fff', border: '1px solid #E9E9E7' }}
+                                                    >
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background: gradeColors.bg, color: gradeColors.accent }}>
+                                                                {cls.name.slice(-2)}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{cls.name}</p>
+                                                                <p className="text-[10px]" style={{ color: '#AEACA8' }}>{count} học viên</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                onClick={() => { setEditingClass(cls); setNewClassName(cls.name); setNewClassGrade(cls.grade); }}
+                                                                className="p-1.5 rounded-lg transition-colors"
+                                                                style={{ color: '#CFCFCB' }}
+                                                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#6B7CDB'; (e.currentTarget as HTMLElement).style.background = '#EEF0FB'; }}
+                                                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                                            >
+                                                                <Edit3 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteClass(cls)}
+                                                                className="p-1.5 rounded-lg transition-colors"
+                                                                style={{ color: '#CFCFCB' }}
+                                                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#E03E3E'; (e.currentTarget as HTMLElement).style.background = '#FEF0F0'; }}
+                                                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {classes.length === 0 && (
+                                <div className="text-center py-6">
+                                    <Building2 className="w-10 h-10 mx-auto mb-2" style={{ color: '#E9E9E7' }} />
+                                    <p className="text-sm" style={{ color: '#AEACA8' }}>Chưa có lớp nào. Hãy tạo lớp đầu tiên!</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
