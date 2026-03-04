@@ -155,11 +155,6 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
       {/* Gradient top accent bar */}
       <div className="h-[3px] w-full" style={{ background: `linear-gradient(90deg,${cfg.gradFrom},${cfg.gradTo})` }} />
 
-      {/* Watermark background icon */}
-      <div className="absolute inset-0 flex items-end justify-end pointer-events-none select-none overflow-hidden" style={{ opacity: 0.05 }}>
-        <WatermarkIcon style={{ width: 160, height: 160, color: cfg.color, marginBottom: -24, marginRight: -24 }} />
-      </div>
-
       {/* Header bar */}
       <div
         className="flex items-center justify-between px-4 py-2.5"
