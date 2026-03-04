@@ -338,9 +338,7 @@ export const useCloudStorage = () => {
                 throw lastError || new Error("Lỗi tải cấu trúc dữ liệu, quá giới hạn thử lại");
             };
 
-            const t_start = performance.now();
             const indexRaw = await fetchViaPublicProxy(indexFileId);
-            console.log(`[CloudSync] Tải index xong trong ${(performance.now() - t_start).toFixed(0)}ms`);
             const indexStr = new TextDecoder().decode(indexRaw);
             const indexData = JSON.parse(xorDeobfuscate(indexStr));
 
@@ -722,7 +720,6 @@ export const useCloudStorage = () => {
             if (!pathData.ok) return cached || [];
 
             const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${pathData.result.file_path}?t=${Date.now()}`;
-
             const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
 
             const fileRes = await fetch(proxyUrl);
