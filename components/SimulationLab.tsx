@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { ChevronRight, FlaskConical, ArrowLeft } from 'lucide-react';
+import { ChevronRight, ChevronDown, FlaskConical, ArrowLeft, Activity, Zap, Atom } from 'lucide-react';
 
 // ── Import các simulation từ Google AI Studio ──────────────────────
 import CarSimulation from './simulations/CarSimulation';
 
 // ── Danh sách thí nghiệm ──────────────────────────────────────────
-// Mỗi thí nghiệm từ Google AI Studio là một component React hoàn chỉnh
-// (đã có đầy đủ tương tác bên trong), chỉ cần nhúng vào đây
 export interface SimulationItem {
     id: string;
     title: string;
@@ -14,20 +12,33 @@ export interface SimulationItem {
     category: 'mechanics' | 'optics' | 'electromagnetism' | 'thermodynamics' | 'waves' | 'modern';
     grade: number; // 10, 11, 12
     thumbnail: string; // emoji
-    aiStudioUrl?: string; // link tới app trên AI Studio
-    component?: React.FC; // Component simulation đã có đầy đủ tương tác
+    aiStudioUrl?: string;
+    component?: React.FC;
 }
 
 const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
     mechanics: { label: 'Cơ học', color: '#6B7CDB', bg: '#EEF0FB', border: '#D4D9F5' },
-    optics: { label: 'Quang học', color: '#D9730D', bg: '#FFF7ED', border: '#FED7AA' },
-    electromagnetism: { label: 'Điện từ', color: '#E03E3E', bg: '#FEF2F2', border: '#FECACA' },
+    optics: { label: 'Quang học', color: '#D9730D', bg: '#FFF3E8', border: '#FED7AA' },
+    electromagnetism: { label: 'Điện từ', color: '#E03E3E', bg: '#FEE2E2', border: '#FECACA' },
     thermodynamics: { label: 'Nhiệt học', color: '#448361', bg: '#EAF3EE', border: '#BBD6C7' },
     waves: { label: 'Sóng', color: '#9065B0', bg: '#F3ECF8', border: '#DCC8EC' },
     modern: { label: 'Vật lý hiện đại', color: '#2878BD', bg: '#EBF5FF', border: '#B3D9F5' },
 };
 
-// ── Thí nghiệm đã có code thật từ AI Studio ──
+// ── Cấu hình khối lớp — giống Dashboard (10=green, 11=blue, 12=purple) ──
+const GRADE_CONFIG: Record<number, {
+    label: string;
+    color: string;
+    colorLight: string;
+    colorBorder: string;
+    icon: React.ElementType;
+}> = {
+    10: { label: 'Lớp 10', color: '#448361', colorLight: '#EAF3EE', colorBorder: '#B7D9C4', icon: Activity },
+    11: { label: 'Lớp 11', color: '#6B7CDB', colorLight: '#EEF0FB', colorBorder: '#B8C1EF', icon: Zap },
+    12: { label: 'Lớp 12', color: '#9065B0', colorLight: '#F3ECF8', colorBorder: '#C8A8DC', icon: Atom },
+};
+
+// ── Thí nghiệm ──
 const SIMULATIONS: SimulationItem[] = [
     {
         id: 'car-motion',
@@ -40,11 +51,9 @@ const SIMULATIONS: SimulationItem[] = [
         component: CarSimulation,
     },
     // ── Thêm thí nghiệm mới ở đây ──
-    // Chỉ cần:
-    // 1. Tải file zip từ Google AI Studio
-    // 2. Copy component vào thư mục components/simulations/
-    // 3. Import và thêm vào mảng này
 ];
+
+const GRADE_ORDER = [10, 11, 12];
 
 interface SimulationLabProps {
     onBack?: () => void;
@@ -52,121 +61,83 @@ interface SimulationLabProps {
 
 const SimulationLab: React.FC<SimulationLabProps> = ({ onBack }) => {
     const [selectedSim, setSelectedSim] = useState<SimulationItem | null>(null);
+    const [expandedGrades, setExpandedGrades] = useState<Record<number, boolean>>({ 10: true, 11: true, 12: true });
+
+    const toggleGrade = (grade: number) => {
+        setExpandedGrades(prev => ({ ...prev, [grade]: !prev[grade] }));
+    };
+
+    const simsByGrade = GRADE_ORDER.map(grade => ({
+        grade,
+        config: GRADE_CONFIG[grade],
+        sims: SIMULATIONS.filter(s => s.grade === grade),
+    }));
 
     // ── Simulation Viewer ──
-    // Khi mở thí nghiệm: chỉ hiển thị component từ AI Studio,
-    // vì bản thân component đã có đầy đủ tương tác (play, pause, reset, v.v.)
     if (selectedSim) {
         const catConfig = CATEGORY_CONFIG[selectedSim.category];
+        const gradeConfig = GRADE_CONFIG[selectedSim.grade];
 
         return (
-            <div className="animate-fade-in" style={{ maxWidth: '100%' }}>
-                {/* Header bar */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '16px',
-                    padding: '0 4px',
-                    flexWrap: 'wrap',
-                    gap: '8px',
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <button
-                            onClick={() => setSelectedSim(null)}
-                            style={{
-                                padding: '8px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                background: 'transparent',
-                                color: '#57564F',
-                                cursor: 'pointer',
-                                transition: 'background 0.2s',
-                                display: 'flex',
-                                alignItems: 'center',
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.background = '#EBEBEA')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                        >
-                            <ArrowLeft size={20} />
-                        </button>
-                        <div>
-                            <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#1A1A1A', margin: 0 }}>
-                                {selectedSim.title}
-                            </h2>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                                <span style={{
-                                    fontSize: '10px',
-                                    fontWeight: 600,
-                                    padding: '2px 8px',
-                                    borderRadius: '999px',
-                                    background: catConfig.bg,
-                                    color: catConfig.color,
-                                    border: `1px solid ${catConfig.border}`,
-                                }}>
-                                    {catConfig.label}
-                                </span>
-                                <span style={{ fontSize: '11px', color: '#AEACA8' }}>Lớp {selectedSim.grade}</span>
-                            </div>
+            <div className="space-y-4 animate-fade-in">
+                {/* Header */}
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setSelectedSim(null)}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                    </button>
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span
+                                className="inline-block text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
+                                style={{ background: gradeConfig.colorLight, color: gradeConfig.color }}
+                            >
+                                {gradeConfig.label}
+                            </span>
+                            <span
+                                className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded"
+                                style={{ background: catConfig.bg, color: catConfig.color }}
+                            >
+                                {catConfig.label}
+                            </span>
                         </div>
+                        <h2 className="text-xl font-semibold" style={{ color: '#1A1A1A' }}>
+                            {selectedSim.title}
+                        </h2>
                     </div>
                 </div>
 
-                {/* Simulation Content — component từ AI Studio tự quản lý tương tác */}
-                <div style={{
-                    borderRadius: '16px',
-                    overflow: 'hidden',
-                    background: '#FFFFFF',
-                    border: '1px solid #E9E9E7',
-                    boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-                }}>
+                {/* Simulation Content */}
+                <div
+                    className="rounded-xl overflow-hidden"
+                    style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+                >
                     {selectedSim.component ? (
                         <selectedSim.component />
                     ) : (
-                        /* Placeholder nếu chưa có component */
-                        <div style={{
-                            padding: '80px 20px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '16px',
-                        }}>
-                            <div style={{
-                                width: '80px',
-                                height: '80px',
-                                borderRadius: '20px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '36px',
-                                background: `linear-gradient(135deg, ${catConfig.bg}, ${catConfig.border})`,
-                                border: `2px solid ${catConfig.border}`,
-                            }}>
+                        <div className="flex flex-col items-center gap-4 py-20 px-5">
+                            <div
+                                className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
+                                style={{ background: catConfig.bg, border: `1px solid ${catConfig.border}` }}
+                            >
                                 {selectedSim.thumbnail}
                             </div>
-                            <div style={{ textAlign: 'center', maxWidth: '320px' }}>
-                                <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px' }}>
-                                    {selectedSim.title}
-                                </h3>
-                                <p style={{ fontSize: '14px', color: '#787774', margin: 0, lineHeight: 1.5 }}>
-                                    {selectedSim.description}
-                                </p>
+                            <div className="text-center max-w-xs">
+                                <h3 className="font-semibold mb-1" style={{ color: '#1A1A1A' }}>{selectedSim.title}</h3>
+                                <p className="text-sm leading-relaxed" style={{ color: '#787774' }}>{selectedSim.description}</p>
                             </div>
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '8px 16px',
-                                borderRadius: '999px',
-                                fontSize: '13px',
-                                fontWeight: 500,
-                                background: '#FFF7ED',
-                                color: '#D9730D',
-                                border: '1px solid #FED7AA',
-                            }}>
-                                <FlaskConical size={16} />
+                            <span
+                                className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full"
+                                style={{ background: '#FFF3E8', color: '#D9730D', border: '1px solid #FED7AA' }}
+                            >
+                                <FlaskConical className="w-3.5 h-3.5" />
                                 Đang chờ code từ Google AI Studio
-                            </div>
+                            </span>
                         </div>
                     )}
                 </div>
@@ -174,207 +145,236 @@ const SimulationLab: React.FC<SimulationLabProps> = ({ onBack }) => {
         );
     }
 
-    // ── Simulation List (Main View) ──
+    // ── Main View — Phân theo khối lớp ──
     return (
-        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className="space-y-6 animate-fade-in pb-10">
+
             {/* Breadcrumb */}
             {onBack && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#787774' }}>
+                <div className="flex items-center gap-1.5 text-sm" style={{ color: '#787774' }}>
                     <span
                         onClick={onBack}
-                        style={{ cursor: 'pointer', transition: 'color 0.2s', color: '#787774' }}
-                        onMouseEnter={e => (e.currentTarget.style.color = '#6B7CDB')}
-                        onMouseLeave={e => (e.currentTarget.style.color = '#787774')}
+                        className="cursor-pointer transition-colors"
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#6B7CDB'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#787774'}
                     >
                         Tổng quan
                     </span>
-                    <ChevronRight size={14} style={{ color: '#CFCFCB' }} />
-                    <span style={{ fontWeight: 500, color: '#1A1A1A' }}>Phòng Thí Nghiệm</span>
+                    <ChevronRight className="w-3.5 h-3.5" style={{ color: '#CFCFCB' }} />
+                    <span className="font-medium" style={{ color: '#1A1A1A' }}>Phòng Thí Nghiệm</span>
                 </div>
             )}
 
-            {/* Title */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
-                        <div style={{
-                            padding: '10px',
-                            borderRadius: '12px',
-                            background: 'linear-gradient(135deg, #EEF0FB, #F3ECF8)',
-                        }}>
-                            <FlaskConical size={24} style={{ color: '#6B7CDB' }} />
-                        </div>
-                        <div>
-                            <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1A1A1A', margin: 0 }}>
-                                Phòng Thí Nghiệm
-                            </h1>
-                            <p style={{ fontSize: '14px', color: '#787774', margin: '2px 0 0' }}>
-                                Khám phá các hiện tượng vật lý qua mô phỏng tương tác từ Google AI Studio
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Stats badge */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 12px',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    background: '#FFFFFF',
-                    border: '1px solid #E9E9E7',
-                }}>
-                    <FlaskConical size={16} style={{ color: '#6B7CDB' }} />
-                    <span style={{ color: '#57564F' }}>
-                        <strong style={{ color: '#1A1A1A' }}>{SIMULATIONS.length}</strong> thí nghiệm
+            {/* Title Section */}
+            <div>
+                <div className="flex items-center gap-2 mb-4">
+                    <span
+                        className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded"
+                        style={{ background: '#EEF0FB', color: '#6B7CDB' }}
+                    >
+                        <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: '#6B7CDB' }} />
+                        Phòng mô phỏng tương tác
                     </span>
                 </div>
-            </div>
 
+                <div className="flex items-start justify-between flex-wrap gap-3">
+                    <div>
+                        <h1 className="text-2xl font-semibold mb-1" style={{ color: '#1A1A1A' }}>
+                            Phòng Thí Nghiệm
+                        </h1>
+                        <p className="text-sm" style={{ color: '#787774' }}>
+                            Khám phá các hiện tượng vật lý qua mô phỏng tương tác
+                        </p>
+                    </div>
 
-            {/* Simulation Grid */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: '16px',
-            }}>
-                {SIMULATIONS.map((sim) => {
-                    const catConfig = CATEGORY_CONFIG[sim.category];
-                    const hasComponent = !!sim.component;
-
-                    return (
-                        <div
-                            key={sim.id}
-                            onClick={() => setSelectedSim(sim)}
-                            style={{
-                                borderRadius: '12px',
-                                overflow: 'hidden',
-                                cursor: 'pointer',
-                                background: '#FFFFFF',
-                                border: '1px solid #E9E9E7',
-                                transition: 'all 0.2s',
-                            }}
-                            onMouseEnter={e => {
-                                (e.currentTarget as HTMLElement).style.borderColor = catConfig.border;
-                                (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)';
-                                (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-                            }}
-                            onMouseLeave={e => {
-                                (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
-                                (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-                                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                            }}
-                        >
-                            {/* Thumbnail area */}
-                            <div style={{
-                                height: '140px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                position: 'relative',
-                                background: `linear-gradient(135deg, ${catConfig.bg} 0%, #FFFFFF 100%)`,
-                            }}>
-                                <span style={{
-                                    fontSize: '48px',
-                                    userSelect: 'none',
-                                    filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.1))',
-                                }}>
-                                    {sim.thumbnail}
-                                </span>
-
-                                {/* Status dot */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '12px',
-                                    right: '12px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    padding: '4px 8px',
-                                    borderRadius: '999px',
-                                    fontSize: '10px',
-                                    fontWeight: 600,
-                                    background: hasComponent ? '#EAF3EE' : '#FFF7ED',
-                                    color: hasComponent ? '#448361' : '#D9730D',
-                                    border: `1px solid ${hasComponent ? '#BBD6C7' : '#FED7AA'}`,
-                                }}>
-                                    <span style={{
-                                        width: '6px',
-                                        height: '6px',
-                                        borderRadius: '50%',
-                                        background: hasComponent ? '#448361' : '#D9730D',
-                                    }} />
-                                    {hasComponent ? 'Sẵn sàng' : 'Đang phát triển'}
-                                </div>
-
-                                {/* Grade badge */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '12px',
-                                    left: '12px',
-                                    padding: '4px 8px',
-                                    borderRadius: '999px',
-                                    fontSize: '10px',
-                                    fontWeight: 700,
-                                    background: 'rgba(255,255,255,0.9)',
-                                    color: '#57564F',
-                                    border: '1px solid #E9E9E7',
-                                    backdropFilter: 'blur(8px)',
-                                }}>
-                                    Lớp {sim.grade}
-                                </div>
-                            </div>
-
-                            {/* Info */}
-                            <div style={{ padding: '16px' }}>
-                                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#1A1A1A', margin: '0 0 8px' }}>
-                                    {sim.title}
-                                </h3>
-                                <p style={{
-                                    fontSize: '12px',
-                                    lineHeight: 1.5,
-                                    color: '#787774',
-                                    margin: '0 0 12px',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                    overflow: 'hidden',
-                                }}>
-                                    {sim.description}
-                                </p>
-
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <span style={{
-                                        fontSize: '10px',
-                                        fontWeight: 600,
-                                        padding: '2px 8px',
-                                        borderRadius: '999px',
-                                        background: catConfig.bg,
-                                        color: catConfig.color,
-                                        border: `1px solid ${catConfig.border}`,
-                                    }}>
-                                        {catConfig.label}
-                                    </span>
-                                    <ChevronRight size={16} style={{ color: '#CFCFCB' }} />
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Empty state */}
-            {SIMULATIONS.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '64px 20px' }}>
-                    <FlaskConical size={48} style={{ color: '#CFCFCB', margin: '0 auto 12px' }} />
-                    <h3 style={{ fontWeight: 600, color: '#57564F', margin: '0 0 4px' }}>Chưa có thí nghiệm nào</h3>
-                    <p style={{ fontSize: '14px', color: '#AEACA8', margin: 0 }}>
-                        Quay lại sau nhé!
-                    </p>
+                    <div
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
+                        style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
+                    >
+                        <FlaskConical className="w-4 h-4" style={{ color: '#6B7CDB' }} />
+                        <span style={{ color: '#787774' }}>
+                            <strong style={{ color: '#1A1A1A' }}>{SIMULATIONS.length}</strong> thí nghiệm
+                        </span>
+                    </div>
                 </div>
-            )}
+            </div>
+
+            {/* ── Grade Sections ── */}
+            <div>
+                <div className="flex items-center gap-2 mb-4">
+                    <h2 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Khối Lớp</h2>
+                    <div className="flex-1 h-px" style={{ background: '#E9E9E7' }} />
+                </div>
+
+                <div className="space-y-4">
+                    {simsByGrade.map(({ grade, config, sims }) => {
+                        const isExpanded = expandedGrades[grade] !== false;
+                        const GradeIcon = config.icon;
+
+                        return (
+                            <div
+                                key={grade}
+                                className="rounded-xl overflow-hidden"
+                                style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', borderTop: `3px solid ${config.color}` }}
+                            >
+                                {/* Section Header — giống ChapterView CategorySection */}
+                                <div
+                                    onClick={() => toggleGrade(grade)}
+                                    className="flex items-center justify-between p-4 cursor-pointer select-none transition-colors"
+                                    style={{ borderBottom: isExpanded ? '1px solid #E9E9E7' : 'none' }}
+                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FAFAF9'}
+                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FFFFFF'}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className="w-9 h-9 rounded-lg flex items-center justify-center"
+                                            style={{ background: `${config.color}15` }}
+                                        >
+                                            <GradeIcon className="w-5 h-5" style={{ color: config.color }} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>
+                                                Vật Lý {config.label}
+                                            </h3>
+                                            <p className="text-xs mt-0.5" style={{ color: '#787774' }}>
+                                                {sims.length > 0
+                                                    ? `${sims.length} thí nghiệm mô phỏng`
+                                                    : 'Đang chuẩn bị — sắp ra mắt!'
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        {sims.length > 0 && (
+                                            <span
+                                                className="text-xs font-medium px-2 py-0.5 rounded"
+                                                style={{ background: '#F1F0EC', color: '#787774' }}
+                                            >
+                                                {sims.length} mục
+                                            </span>
+                                        )}
+                                        <div
+                                            className="flex items-center transition-transform duration-200"
+                                            style={{
+                                                color: '#AEACA8',
+                                                transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                            }}
+                                        >
+                                            <ChevronDown className="w-4 h-4" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Content */}
+                                {isExpanded && (
+                                    <div style={{ background: '#FAFAF9' }}>
+                                        {sims.length > 0 ? (
+                                            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                {sims.map((sim) => {
+                                                    const catConfig = CATEGORY_CONFIG[sim.category];
+                                                    const hasComponent = !!sim.component;
+
+                                                    return (
+                                                        <div
+                                                            key={sim.id}
+                                                            onClick={() => setSelectedSim(sim)}
+                                                            className="rounded-xl overflow-hidden cursor-pointer transition-all group"
+                                                            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
+                                                            onMouseEnter={e => {
+                                                                (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
+                                                                (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
+                                                            }}
+                                                            onMouseLeave={e => {
+                                                                (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
+                                                                (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+                                                            }}
+                                                        >
+                                                            {/* Thumbnail */}
+                                                            <div
+                                                                className="h-28 flex items-center justify-center relative"
+                                                                style={{ background: `linear-gradient(135deg, ${catConfig.bg} 0%, #FFFFFF 100%)` }}
+                                                            >
+                                                                <span className="text-4xl select-none" style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.08))' }}>
+                                                                    {sim.thumbnail}
+                                                                </span>
+
+                                                                {/* Status badge */}
+                                                                <div
+                                                                    className="absolute top-2.5 right-2.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
+                                                                    style={{
+                                                                        background: hasComponent ? '#EAF3EE' : '#FFF3E8',
+                                                                        color: hasComponent ? '#448361' : '#D9730D',
+                                                                        border: `1px solid ${hasComponent ? '#BBD6C7' : '#FED7AA'}`,
+                                                                    }}
+                                                                >
+                                                                    <span
+                                                                        className="w-1 h-1 rounded-full inline-block"
+                                                                        style={{ background: hasComponent ? '#448361' : '#D9730D' }}
+                                                                    />
+                                                                    {hasComponent ? 'Sẵn sàng' : 'Sắp có'}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Info */}
+                                                            <div className="p-3.5">
+                                                                <h4 className="text-sm font-semibold mb-1.5" style={{ color: '#1A1A1A' }}>
+                                                                    {sim.title}
+                                                                </h4>
+                                                                <p
+                                                                    className="text-xs leading-relaxed mb-3"
+                                                                    style={{
+                                                                        color: '#787774',
+                                                                        display: '-webkit-box',
+                                                                        WebkitLineClamp: 2,
+                                                                        WebkitBoxOrient: 'vertical',
+                                                                        overflow: 'hidden',
+                                                                    }}
+                                                                >
+                                                                    {sim.description}
+                                                                </p>
+
+                                                                <div className="flex items-center justify-between">
+                                                                    <span
+                                                                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                                                                        style={{ background: catConfig.bg, color: catConfig.color, border: `1px solid ${catConfig.border}` }}
+                                                                    >
+                                                                        {catConfig.label}
+                                                                    </span>
+                                                                    <div className="flex items-center gap-1 text-sm font-medium" style={{ color: config.color }}>
+                                                                        Mở
+                                                                        <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            /* Empty state */
+                                            <div className="py-10 text-center">
+                                                <div
+                                                    className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-2"
+                                                    style={{ background: `${config.color}15` }}
+                                                >
+                                                    <FlaskConical className="w-5 h-5" style={{ color: config.color, opacity: 0.4 }} />
+                                                </div>
+                                                <p className="text-sm font-medium" style={{ color: '#AEACA8' }}>
+                                                    Đang chuẩn bị thí nghiệm cho {config.label}
+                                                </p>
+                                                <p className="text-xs mt-1" style={{ color: '#CFCFCB' }}>
+                                                    Quay lại sau nhé!
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
         </div>
     );
 };
