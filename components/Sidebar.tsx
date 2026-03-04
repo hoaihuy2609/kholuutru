@@ -1,5 +1,5 @@
 import React from 'react';
-import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell } from 'lucide-react';
+import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
@@ -15,13 +15,15 @@ interface SidebarProps {
   onOpenNotification?: () => void;
   showNotification?: boolean;
   notificationUnreadCount?: number;
+  onOpenSimLab?: () => void;
+  showSimLab?: boolean;
   className?: string;
   isAdmin?: boolean;
   previewMode?: GradeLevel | null;
   onSetPreviewMode?: (mode: GradeLevel | null) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, className, isAdmin, previewMode, onSetPreviewMode }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, className, isAdmin, previewMode, onSetPreviewMode }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -167,6 +169,24 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
                 {notificationUnreadCount} MỚI
               </span>
             )}
+          </button>
+        )}
+
+        {/* Phòng Thí Nghiệm */}
+        {onOpenSimLab && (
+          <button
+            onClick={() => { onOpenSimLab(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+            style={{
+              background: showSimLab ? '#E8F4F8' : 'transparent',
+              color: showSimLab ? '#2878BD' : '#57564F',
+              fontWeight: showSimLab ? 500 : 400,
+            }}
+            onMouseEnter={e => { if (!showSimLab) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+            onMouseLeave={e => { if (!showSimLab) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          >
+            <FlaskConical className="w-4 h-4 shrink-0" style={{ color: showSimLab ? '#2878BD' : '#AEACA8' }} />
+            <span>Phòng TN</span>
           </button>
         )}
 

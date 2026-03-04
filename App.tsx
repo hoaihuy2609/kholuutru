@@ -7,7 +7,7 @@ import ChapterView from './components/ChapterView';
 import LessonView from './components/LessonView';
 import Toast, { ToastType } from './components/Toast';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
-import { Menu, FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Plus, Ban, ShieldOff, WifiOff, MessageCircle, X, Send, Bot, User, Copy, Check, Atom, Home, Bell } from 'lucide-react';
+import { Menu, FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Plus, Ban, ShieldOff, WifiOff, MessageCircle, X, Send, Bot, User, Copy, Check, Atom, Home, Bell, FlaskConical } from 'lucide-react';
 import { getMachineId } from './src/hooks/useCloudStorage';
 
 const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
@@ -24,6 +24,7 @@ import ExamResult from './components/ExamResult';
 import ContactBook from './components/ContactBook';
 import StudyPlanner from './components/StudyPlanner';
 import NotificationPage from './components/NotificationPage';
+import SimulationLab from './components/SimulationLab';
 
 interface ToastMessage {
   id: string;
@@ -113,6 +114,7 @@ function App() {
   const [examSubmission, setExamSubmission] = useState<ExamSubmission | null>(null);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
+  const [showSimLab, setShowSimLab] = useState(false);
 
   // --- PREVENT OVERLAPPING STATES ---
   const [previewMode, setPreviewMode] = useState<GradeLevel | null>(null);
@@ -310,6 +312,15 @@ function App() {
           onShowToast={showToast}
           isAdmin={effectiveIsAdmin}
           onDeleteNotification={deleteNotification}
+        />
+      );
+    }
+
+    // 0g. Simulation Lab
+    if (showSimLab) {
+      return (
+        <SimulationLab
+          onBack={() => setShowSimLab(false)}
         />
       );
     }
@@ -692,6 +703,7 @@ function App() {
             setShowContactBook(false);
             setShowStudyPlanner(false);
             setShowNotification(false);
+            setShowSimLab(false);
             setIsMobileMenuOpen(false);
           }}
           onOpenSettings={() => {
@@ -703,6 +715,7 @@ function App() {
             setShowContactBook(false);
             setShowStudyPlanner(false);
             setShowNotification(false);
+            setShowSimLab(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
@@ -715,6 +728,7 @@ function App() {
             setShowExamList(false);
             setShowStudyPlanner(false);
             setShowNotification(false);
+            setShowSimLab(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
@@ -727,6 +741,7 @@ function App() {
             setShowContactBook(false);
             setShowExamList(false);
             setShowNotification(false);
+            setShowSimLab(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
@@ -736,6 +751,20 @@ function App() {
           } : undefined}
           onOpenNotification={(isActivated || isAdmin) ? () => {
             setShowNotification(true);
+            setShowStudyPlanner(false);
+            setShowContactBook(false);
+            setShowExamList(false);
+            setShowSimLab(false);
+            setActiveExam(null);
+            setExamSubmission(null);
+            setCurrentGrade(null);
+            setCurrentChapterId(null);
+            setCurrentLesson(null);
+            setIsMobileMenuOpen(false);
+          } : undefined}
+          onOpenSimLab={(isActivated || isAdmin) ? () => {
+            setShowSimLab(true);
+            setShowNotification(false);
             setShowStudyPlanner(false);
             setShowContactBook(false);
             setShowExamList(false);
@@ -751,6 +780,7 @@ function App() {
           showStudyPlanner={showStudyPlanner}
           showNotification={showNotification}
           notificationUnreadCount={notificationUnreadCount}
+          showSimLab={showSimLab}
           isAdmin={isAdmin}
           previewMode={previewMode}
           onSetPreviewMode={(mode) => {
@@ -782,6 +812,7 @@ function App() {
           setShowContactBook(false);
           setShowStudyPlanner(false);
           setShowNotification(false);
+          setShowSimLab(false);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenExamList={(isActivated || isAdmin) ? () => {
@@ -789,6 +820,7 @@ function App() {
           setShowContactBook(false);
           setShowStudyPlanner(false);
           setShowNotification(false);
+          setShowSimLab(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
@@ -800,6 +832,7 @@ function App() {
           setShowExamList(false);
           setShowStudyPlanner(false);
           setShowNotification(false);
+          setShowSimLab(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
@@ -811,6 +844,7 @@ function App() {
           setShowContactBook(false);
           setShowExamList(false);
           setShowNotification(false);
+          setShowSimLab(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
@@ -819,6 +853,19 @@ function App() {
         } : undefined}
         onOpenNotification={(isActivated || isAdmin) ? () => {
           setShowNotification(true);
+          setShowStudyPlanner(false);
+          setShowContactBook(false);
+          setShowExamList(false);
+          setShowSimLab(false);
+          setActiveExam(null);
+          setExamSubmission(null);
+          setCurrentGrade(null);
+          setCurrentChapterId(null);
+          setCurrentLesson(null);
+        } : undefined}
+        onOpenSimLab={(isActivated || isAdmin) ? () => {
+          setShowSimLab(true);
+          setShowNotification(false);
           setShowStudyPlanner(false);
           setShowContactBook(false);
           setShowExamList(false);
@@ -833,6 +880,7 @@ function App() {
         showStudyPlanner={showStudyPlanner}
         showNotification={showNotification}
         notificationUnreadCount={notificationUnreadCount}
+        showSimLab={showSimLab}
         isAdmin={isAdmin}
         previewMode={previewMode}
         onSetPreviewMode={(mode) => {
@@ -920,7 +968,7 @@ function App() {
 
         <main className="flex-1 p-4 md:p-8 lg:p-10 pb-24 md:pb-10 max-w-7xl mx-auto w-full">
           <div
-            key={`${showExamList}-${showContactBook}-${showStudyPlanner}-${showNotification}-${currentGrade}-${currentChapterId}-${currentLesson?.id}-${activeExam?.id}`}
+            key={`${showExamList}-${showContactBook}-${showStudyPlanner}-${showNotification}-${showSimLab}-${currentGrade}-${currentChapterId}-${currentLesson?.id}-${activeExam?.id}`}
           >
             {renderContent()}
           </div>
@@ -949,11 +997,11 @@ function App() {
           <button
             onClick={() => {
               setCurrentGrade(null); setCurrentChapterId(null); setCurrentLesson(null);
-              setShowExamList(false); setShowContactBook(false); setShowStudyPlanner(false); setShowNotification(false);
+              setShowExamList(false); setShowContactBook(false); setShowStudyPlanner(false); setShowNotification(false); setShowSimLab(false);
               setActiveExam(null); setExamSubmission(null);
             }}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
-            style={{ color: (!currentGrade && !showExamList && !showContactBook && !showStudyPlanner && !showNotification) ? '#6B7CDB' : '#AEACA8' }}
+            style={{ color: (!currentGrade && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab) ? '#6B7CDB' : '#AEACA8' }}
           >
             <Home className="w-5 h-5" />
             <span className="text-[10px] font-medium">Tổng quan</span>
@@ -972,7 +1020,7 @@ function App() {
           {/* Thi thử */}
           <button
             onClick={() => {
-              setShowExamList(true); setShowContactBook(false); setShowStudyPlanner(false); setShowNotification(false);
+              setShowExamList(true); setShowContactBook(false); setShowStudyPlanner(false); setShowNotification(false); setShowSimLab(false);
               setActiveExam(null); setExamSubmission(null); setCurrentGrade(null); setCurrentChapterId(null); setCurrentLesson(null);
             }}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
@@ -985,7 +1033,7 @@ function App() {
           {/* Thông báo */}
           <button
             onClick={() => {
-              setShowNotification(true); setShowExamList(false); setShowContactBook(false); setShowStudyPlanner(false);
+              setShowNotification(true); setShowExamList(false); setShowContactBook(false); setShowStudyPlanner(false); setShowSimLab(false);
               setActiveExam(null); setExamSubmission(null); setCurrentGrade(null); setCurrentChapterId(null); setCurrentLesson(null);
             }}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors relative"
@@ -1014,11 +1062,24 @@ function App() {
             <Settings className="w-5 h-5" />
             <span className="text-[10px] font-medium">Cài đặt</span>
           </button>
+
+          {/* Phòng TN */}
+          <button
+            onClick={() => {
+              setShowSimLab(true); setShowExamList(false); setShowContactBook(false); setShowStudyPlanner(false); setShowNotification(false);
+              setActiveExam(null); setExamSubmission(null); setCurrentGrade(null); setCurrentChapterId(null); setCurrentLesson(null);
+            }}
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
+            style={{ color: showSimLab ? '#2878BD' : '#AEACA8' }}
+          >
+            <FlaskConical className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Phòng TN</span>
+          </button>
         </nav>
       )}
 
       {/* Chatbot Component - Only show on Dashboard (Overview) */}
-      {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && !showNotification && <Chatbot />}
+      {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && !showNotification && !showSimLab && <Chatbot />}
     </div>
   );
 }
