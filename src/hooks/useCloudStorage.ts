@@ -305,7 +305,19 @@ export const useCloudStorage = () => {
             }
             if (!indexFileId) throw new Error(`Hệ thống chưa có dữ liệu cho Lớp ${grade}. Thầy vui lòng Sync trước nhé!`);
 
-            // Dùng Public CORS Proxy để fetch trực tiếp file từ Telegram
+            // --- Proxy Race có kiểm tra HTML rác ---
+            const PROXY_BUILDERS = [
+                (url: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
+                (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+            ];
+
+            // Kiểm tra xem ArrayBuffer có phải HTML rác không (Cloudflare block, error page, v.v)
+            const isHtmlGarbage = (buf: ArrayBuffer): boolean => {
+                const head = new TextDecoder().decode(buf.slice(0, 100)).trim().toLowerCase();
+                return head.startsWith('<!doctype') || head.startsWith('<html') || head.startsWith('<head');
+            };
+
             const fetchViaPublicProxy = async (fileId: string): Promise<ArrayBuffer> => {
                 const maxRetries = 3;
                 let lastError = null;
@@ -323,16 +335,25 @@ export const useCloudStorage = () => {
                             throw new Error(`Lỗi cấp phép file trên Telegram: ${pathResult.description}`);
                         }
 
-                        // 2. Tải File Natively qua CORS Proxy (do api.telegram.org/file chặn CORS)
+                        // 2. Race nhiều proxy — cái nào trả về trước VÀ hợp lệ thì dùng
                         const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${pathResult.result.file_path}`;
-                        const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
 
-                        const fileRes = await fetch(proxyUrl);
-                        if (!fileRes.ok) throw new Error("Public Proxy từ chối tải file");
-                        return await fileRes.arrayBuffer();
+                        const raceResult = await Promise.any(
+                            PROXY_BUILDERS.map(async (makeUrl, idx) => {
+                                const proxyUrl = makeUrl(directUrl);
+                                const fileRes = await fetch(proxyUrl);
+                                if (!fileRes.ok) throw new Error(`Proxy ${idx} trả về ${fileRes.status}`);
+                                const buf = await fileRes.arrayBuffer();
+                                // ⛔ Kiểm tra rác HTML — nếu proxy trả về trang lỗi thì loại ngay
+                                if (isHtmlGarbage(buf)) throw new Error(`Proxy ${idx} trả về HTML rác`);
+                                return buf;
+                            })
+                        );
+                        return raceResult;
                     } catch (e: any) {
-                        lastError = e;
-                        await new Promise(r => setTimeout(r, 2000 + (attempt * 1000)));
+                        lastError = e?.errors?.[0] || e;
+                        console.warn(`[Proxy] Attempt ${attempt + 1}/${maxRetries} thất bại:`, lastError?.message);
+                        await new Promise(r => setTimeout(r, 1500 + (attempt * 1000)));
                     }
                 }
                 throw lastError || new Error("Lỗi tải cấu trúc dữ liệu, quá giới hạn thử lại");
@@ -375,38 +396,42 @@ export const useCloudStorage = () => {
                 const zIds: string[] = indexData.zipFileIds || [indexData.zipFileId];
                 if (onProgress) onProgress(10);
 
-                // Tải file ZIP TỪNG FILE MỘT qua Public Proxy
+                // Tải song song tối đa 2 ZIP parts cùng lúc (vừa nhanh, vừa không bị rate-limit)
+                const CONCURRENCY = 2;
                 let downloadedParts = 0;
 
-                for (let i = 0; i < zIds.length; i++) {
-                    const fileId = zIds[i];
-                    try {
-                        const arrayBuf = await fetchViaPublicProxy(fileId);
-                        const zip = new JSZip();
+                const processZipPart = async (fileId: string): Promise<void> => {
+                    const arrayBuf = await fetchViaPublicProxy(fileId);
+                    const zip = new JSZip();
+                    const unzipped = await zip.loadAsync(arrayBuf);
 
-                        const unzipped = await zip.loadAsync(arrayBuf); // Nạp thẳng mảng Byte (Binary)
-
-                        const filePromises: Promise<void>[] = [];
-                        unzipped.forEach((relativePath, fileObj) => {
-                            if (!fileObj.dir) {
-                                filePromises.push(
-                                    fileObj.async("string").then(content => {
-                                        let parsedData;
-                                        try { parsedData = JSON.parse(content); }
-                                        catch { parsedData = JSON.parse(xorDeobfuscate(content)); }
-                                        mergePayload(parsedData);
-                                    })
-                                );
-                            }
-                        });
-                        await Promise.all(filePromises);
-                    } catch (err: any) {
-                        console.error('Error fetching zip chunk with proxy:', err);
-                        throw new Error(`Tải đoạn dữ liệu thất bại. Vui lòng thử tải lại.`);
-                    }
+                    const filePromises: Promise<void>[] = [];
+                    unzipped.forEach((relativePath, fileObj) => {
+                        if (!fileObj.dir) {
+                            filePromises.push(
+                                fileObj.async("string").then(content => {
+                                    let parsedData;
+                                    try { parsedData = JSON.parse(content); }
+                                    catch { parsedData = JSON.parse(xorDeobfuscate(content)); }
+                                    mergePayload(parsedData);
+                                })
+                            );
+                        }
+                    });
+                    await Promise.all(filePromises);
                     downloadedParts++;
-                    // Tiến độ tải từng file zip (10% -> 90%)
                     if (onProgress) onProgress(Math.floor(10 + (downloadedParts / zIds.length) * 80));
+                };
+
+                // Chạy song song theo batch CONCURRENCY (2 file cùng lúc)
+                try {
+                    for (let i = 0; i < zIds.length; i += CONCURRENCY) {
+                        const batch = zIds.slice(i, i + CONCURRENCY);
+                        await Promise.all(batch.map(id => processZipPart(id)));
+                    }
+                } catch (err: any) {
+                    console.error('Error fetching zip chunks:', err);
+                    throw new Error(`Tải đoạn dữ liệu thất bại. Vui lòng thử tải lại.`);
                 }
 
                 if (onProgress) onProgress(90); // Finished merging 
@@ -723,11 +748,27 @@ export const useCloudStorage = () => {
 
             const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${pathData.result.file_path}?t=${Date.now()}`;
 
-            const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
+            // Race proxy có kiểm tra HTML rác
+            const EXAM_PROXIES = [
+                (url: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
+                (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+            ];
 
-            const fileRes = await fetch(proxyUrl);
-            if (!fileRes.ok) return cached || [];
-            const arrayBuf = await fileRes.arrayBuffer();
+            const arrayBuf = await Promise.any(
+                EXAM_PROXIES.map(async (makeUrl) => {
+                    const res = await fetch(makeUrl(directUrl));
+                    if (!res.ok) throw new Error('Proxy failed');
+                    const buf = await res.arrayBuffer();
+                    const head = new TextDecoder().decode(buf.slice(0, 100)).trim().toLowerCase();
+                    if (head.startsWith('<!doctype') || head.startsWith('<html') || head.startsWith('<head')) {
+                        throw new Error('Proxy trả về HTML rác');
+                    }
+                    return buf;
+                })
+            ).catch(() => null);
+
+            if (!arrayBuf) return cached || [];
             const indexStr = new TextDecoder().decode(arrayBuf);
 
             const parsed = JSON.parse(xorDeobfuscate(indexStr));
