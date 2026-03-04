@@ -9,6 +9,7 @@ import {
     TrendingUp, TrendingDown, Users, Award, AlertTriangle,
     Search, Download, RefreshCw, BarChart2, UserX,
     ChevronRight, Minus, BookOpen, CheckCircle, ArrowLeft,
+    Sparkles, Target, Zap, Star, Brain, ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
 import { ExamResultRecord } from '../types';
 
@@ -165,6 +166,98 @@ const StatsPanel: React.FC = () => {
     const searchedStudents = searchTerm.trim().length >= 2
         ? profiles.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.phone.includes(searchTerm))
         : [];
+
+    // ── AI Insights (rule-based) ──
+    const aiInsights = useMemo(() => {
+        if (totalExams < 2 || profiles.length < 1) return null;
+
+        const insights: { icon: React.ElementType; title: string; text: string; type: 'success' | 'warning' | 'danger' | 'info' }[] = [];
+
+        // 1) Overall assessment
+        if (avgScore >= 8) {
+            insights.push({ icon: Star, title: 'Kết quả xuất sắc', text: `Điểm trung bình ${avgScore.toFixed(2)}/10 — lớp đang học rất tốt! Tỷ lệ đạt ${passRate.toFixed(0)}%.`, type: 'success' });
+        } else if (avgScore >= 6.5) {
+            insights.push({ icon: CheckCircle, title: 'Kết quả khá tốt', text: `Điểm trung bình ${avgScore.toFixed(2)}/10 — khá ổn định. Tỷ lệ đạt ${passRate.toFixed(0)}%.`, type: 'success' });
+        } else if (avgScore >= 5) {
+            insights.push({ icon: AlertTriangle, title: 'Cần cải thiện', text: `Điểm trung bình chỉ ${avgScore.toFixed(2)}/10 — nên tập trung vào nhóm học sinh có điểm dưới 5.`, type: 'warning' });
+        } else {
+            insights.push({ icon: AlertTriangle, title: 'Cảnh báo nghiêm trọng', text: `Điểm trung bình ${avgScore.toFixed(2)}/10 — đa số học sinh chưa đạt. Cần rà soát phương pháp giảng dạy.`, type: 'danger' });
+        }
+
+        // 2) Concern students count
+        if (concernStudents.length > 0) {
+            const pct = ((concernStudents.length / profiles.length) * 100).toFixed(0);
+            insights.push({
+                icon: Target,
+                title: `${concernStudents.length} học sinh cần chú ý`,
+                text: `Chiếm ${pct}% tổng số học sinh. Các em có điểm TB dưới 5 hoặc xu hướng giảm điểm liên tục.`,
+                type: concernStudents.length >= profiles.length * 0.3 ? 'danger' : 'warning',
+            });
+        } else {
+            insights.push({ icon: Award, title: 'Không có học sinh cần chú ý đặc biệt', text: 'Tất cả các em đều đạt từ 5 trở lên và không có xu hướng giảm. Rất tốt!', type: 'success' });
+        }
+
+        // 3) Trend analysis (compare first half vs second half of trendData)
+        if (trendData.length >= 3) {
+            const mid = Math.floor(trendData.length / 2);
+            const firstHalf = trendData.slice(0, mid);
+            const secondHalf = trendData.slice(mid);
+            const avgFirst = firstHalf.reduce((s, d) => s + d.avg, 0) / firstHalf.length;
+            const avgSecond = secondHalf.reduce((s, d) => s + d.avg, 0) / secondHalf.length;
+            const diff = avgSecond - avgFirst;
+
+            if (diff > 0.5) {
+                insights.push({ icon: ArrowUpRight, title: 'Xu hướng tăng điểm', text: `Điểm TB các đề gần đây tăng ${diff.toFixed(2)} so với các đề trước. Học sinh đang tiến bộ!`, type: 'success' });
+            } else if (diff < -0.5) {
+                insights.push({ icon: ArrowDownRight, title: 'Xu hướng giảm điểm', text: `Điểm TB các đề gần đây giảm ${Math.abs(diff).toFixed(2)} so với trước. Nên xem lại độ khó đề hoặc nội dung ôn tập.`, type: 'danger' });
+            } else {
+                insights.push({ icon: Minus, title: 'Điểm số ổn định', text: `Điểm TB gần như không thay đổi qua các đề (biến động ${Math.abs(diff).toFixed(2)}). Lớp duy trì phong độ tốt.`, type: 'info' });
+            }
+        }
+
+        // 4) Top performers
+        const topStudents = [...profiles].sort((a, b) => b.avg - a.avg).slice(0, 3);
+        if (topStudents.length > 0 && topStudents[0].scores.length >= 2) {
+            const topNames = topStudents.map(s => s.name).join(', ');
+            insights.push({
+                icon: Star,
+                title: 'Học sinh xuất sắc nhất',
+                text: `${topNames} — với điểm TB lần lượt: ${topStudents.map(s => s.avg.toFixed(2)).join(', ')}.`,
+                type: 'info',
+            });
+        }
+
+        // 5) Grade comparison (only if no grade filter is active)
+        if (!gradeFilter) {
+            const gradesWithData = gradeComparison.filter(g => g.count > 0);
+            if (gradesWithData.length >= 2) {
+                const best = gradesWithData.reduce((a, b) => a.avg > b.avg ? a : b);
+                const worst = gradesWithData.reduce((a, b) => a.avg < b.avg ? a : b);
+                if (best.grade !== worst.grade) {
+                    insights.push({
+                        icon: Zap,
+                        title: 'So sánh giữa các khối',
+                        text: `${best.grade} học tốt nhất (TB: ${best.avg.toFixed(2)}), ${worst.grade} cần hỗ trợ thêm (TB: ${worst.avg.toFixed(2)}).`,
+                        type: 'info',
+                    });
+                }
+            }
+        }
+
+        // 6) Score distribution warning
+        const lowScoreCount = filtered.filter(r => r.score < 4).length;
+        const lowPct = totalExams > 0 ? (lowScoreCount / totalExams) * 100 : 0;
+        if (lowPct > 20) {
+            insights.push({
+                icon: AlertTriangle,
+                title: 'Nhiều bài điểm rất thấp',
+                text: `${lowPct.toFixed(0)}% bài thi có điểm dưới 4 (${lowScoreCount}/${totalExams} bài). Nên xem lại phần kiến thức cơ bản.`,
+                type: 'danger',
+            });
+        }
+
+        return insights;
+    }, [totalExams, avgScore, passRate, profiles, concernStudents, trendData, gradeFilter, gradeComparison, filtered]);
 
     const selectedProfile = selectedPhone ? profiles.find(p => p.phone === selectedPhone) : null;
     const selectedChartData = selectedProfile
@@ -408,6 +501,61 @@ const StatsPanel: React.FC = () => {
                                     </ResponsiveContainer>
                                 </div>
                             </div>
+
+                            {/* ════════════════════════════════════════════════
+                                AI INSIGHTS PANEL (Teacher)
+                            ════════════════════════════════════════════════ */}
+                            {aiInsights && aiInsights.length > 0 && (
+                                <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+                                    <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid #E9E9E7', background: 'linear-gradient(135deg, #EEF0FB 0%, #F3ECF8 100%)', borderLeft: '3px solid #6B7CDB' }}>
+                                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6B7CDB, #9065B0)' }}>
+                                            <Brain className="w-3.5 h-3.5 text-white" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-semibold" style={{ color: '#6B7CDB' }}>Nhận xét thông minh</h3>
+                                            <p className="text-[11px]" style={{ color: '#AEACA8' }}>Phân tích tự động dựa trên dữ liệu {gradeFilter ? `Lớp ${gradeFilter}` : 'toàn trường'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-4 space-y-3">
+                                        {aiInsights.map((insight, idx) => {
+                                            const colorMap = {
+                                                success: { bg: '#EAF3EE', border: '#44836133', color: '#448361', iconBg: '#D1FAE5' },
+                                                warning: { bg: '#FFF3E8', border: '#D9730D33', color: '#D9730D', iconBg: '#FEF3C7' },
+                                                danger: { bg: '#FEF0F0', border: '#E03E3E33', color: '#E03E3E', iconBg: '#FEE2E2' },
+                                                info: { bg: '#EEF0FB', border: '#6B7CDB33', color: '#6B7CDB', iconBg: '#E0E7FF' },
+                                            };
+                                            const c = colorMap[insight.type];
+                                            const Icon = insight.icon;
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    className="flex items-start gap-3 rounded-xl p-3.5 transition-all"
+                                                    style={{ background: c.bg, border: `1px solid ${c.border}` }}
+                                                >
+                                                    <div
+                                                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                                                        style={{ background: c.iconBg }}
+                                                    >
+                                                        <Icon className="w-4 h-4" style={{ color: c.color }} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="text-sm font-semibold mb-0.5" style={{ color: c.color }}>
+                                                            {insight.title}
+                                                        </div>
+                                                        <div className="text-xs leading-relaxed" style={{ color: '#57564F' }}>
+                                                            {insight.text}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        <div className="flex items-center gap-1.5 pt-1 text-[10px]" style={{ color: '#AEACA8' }}>
+                                            <Sparkles className="w-3 h-3" />
+                                            <span>Phân tích tự động · Cập nhật realtime theo dữ liệu bài thi</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
                 </>
