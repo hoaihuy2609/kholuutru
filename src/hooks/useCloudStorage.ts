@@ -305,13 +305,19 @@ export const useCloudStorage = () => {
             }
             if (!indexFileId) throw new Error(`Hệ thống chưa có dữ liệu cho Lớp ${grade}. Thầy vui lòng Sync trước nhé!`);
 
-            // Dùng Public CORS Proxy để fetch trực tiếp file từ Telegram
+            // --- CORS Proxy Fallback Chain: Race nhiều proxy, dùng cái nhanh nhất ---
+            const PROXY_BUILDERS = [
+                (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                (url: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
+            ];
+
             const fetchViaPublicProxy = async (fileId: string): Promise<ArrayBuffer> => {
                 const maxRetries = 3;
                 let lastError = null;
                 for (let attempt = 0; attempt < maxRetries; attempt++) {
                     try {
-                        // 1. Phân giải Path của File trực tiếp từ Telegram API (API này đã mở CORS sẵn)
+                        // 1. Phân giải Path của File trực tiếp từ Telegram API (API cho phép CORS)
                         const pathRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${fileId}`);
                         const pathResult = await pathRes.json();
 
@@ -323,22 +329,33 @@ export const useCloudStorage = () => {
                             throw new Error(`Lỗi cấp phép file trên Telegram: ${pathResult.description}`);
                         }
 
-                        // 2. Tải File Natively qua CORS Proxy (do api.telegram.org/file chặn CORS)
+                        // 2. Race nhiều proxy cùng lúc — cái nào trả về trước thì dùng
                         const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${pathResult.result.file_path}`;
-                        const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
+                        const t0 = performance.now();
 
-                        const fileRes = await fetch(proxyUrl);
-                        if (!fileRes.ok) throw new Error("Public Proxy từ chối tải file");
-                        return await fileRes.arrayBuffer();
+                        const raceResult = await Promise.any(
+                            PROXY_BUILDERS.map(async (makeUrl, idx) => {
+                                const proxyUrl = makeUrl(directUrl);
+                                const fileRes = await fetch(proxyUrl);
+                                if (!fileRes.ok) throw new Error(`Proxy ${idx} trả về ${fileRes.status}`);
+                                const buf = await fileRes.arrayBuffer();
+                                console.log(`[Proxy Race] Proxy #${idx} thắng, tải ${(buf.byteLength / 1024).toFixed(0)}KB trong ${(performance.now() - t0).toFixed(0)}ms`);
+                                return buf;
+                            })
+                        );
+                        return raceResult;
                     } catch (e: any) {
-                        lastError = e;
-                        await new Promise(r => setTimeout(r, 2000 + (attempt * 1000)));
+                        lastError = e?.errors?.[0] || e; // AggregateError từ Promise.any
+                        console.warn(`[Proxy] Attempt ${attempt + 1}/${maxRetries} thất bại:`, lastError?.message);
+                        await new Promise(r => setTimeout(r, 1000 + (attempt * 1000)));
                     }
                 }
                 throw lastError || new Error("Lỗi tải cấu trúc dữ liệu, quá giới hạn thử lại");
             };
 
+            const t_start = performance.now();
             const indexRaw = await fetchViaPublicProxy(indexFileId);
+            console.log(`[CloudSync] Tải index xong trong ${(performance.now() - t_start).toFixed(0)}ms`);
             const indexStr = new TextDecoder().decode(indexRaw);
             const indexData = JSON.parse(xorDeobfuscate(indexStr));
 
@@ -373,40 +390,43 @@ export const useCloudStorage = () => {
                 const zIds: string[] = indexData.zipFileIds || [indexData.zipFileId];
                 if (onProgress) onProgress(10);
 
-                // Tải file ZIP TỪNG FILE MỘT qua Public Proxy
-                let downloadedParts = 0;
+                // ⚡ TẢI SONG SONG tất cả ZIP parts cùng lúc thay vì tuần tự
+                const t_zip = performance.now();
+                let completedParts = 0;
 
-                for (let i = 0; i < zIds.length; i++) {
-                    const fileId = zIds[i];
-                    try {
-                        const arrayBuf = await fetchViaPublicProxy(fileId);
-                        const zip = new JSZip();
+                const processZipPart = async (fileId: string, partIndex: number): Promise<void> => {
+                    const arrayBuf = await fetchViaPublicProxy(fileId);
+                    const zip = new JSZip();
+                    const unzipped = await zip.loadAsync(arrayBuf);
 
-                        const unzipped = await zip.loadAsync(arrayBuf); // Nạp thẳng mảng Byte (Binary)
+                    const filePromises: Promise<void>[] = [];
+                    unzipped.forEach((relativePath, fileObj) => {
+                        if (!fileObj.dir) {
+                            filePromises.push(
+                                fileObj.async("string").then(content => {
+                                    let parsedData;
+                                    try { parsedData = JSON.parse(content); }
+                                    catch { parsedData = JSON.parse(xorDeobfuscate(content)); }
+                                    mergePayload(parsedData);
+                                })
+                            );
+                        }
+                    });
+                    await Promise.all(filePromises);
 
-                        const filePromises: Promise<void>[] = [];
-                        unzipped.forEach((relativePath, fileObj) => {
-                            if (!fileObj.dir) {
-                                filePromises.push(
-                                    fileObj.async("string").then(content => {
-                                        let parsedData;
-                                        try { parsedData = JSON.parse(content); }
-                                        catch { parsedData = JSON.parse(xorDeobfuscate(content)); }
-                                        mergePayload(parsedData);
-                                    })
-                                );
-                            }
-                        });
-                        await Promise.all(filePromises);
-                    } catch (err: any) {
-                        console.error('Error fetching zip chunk with proxy:', err);
-                        throw new Error(`Tải đoạn dữ liệu thất bại. Vui lòng thử tải lại.`);
-                    }
-                    downloadedParts++;
-                    // Tiến độ tải từng file zip (10% -> 90%)
-                    if (onProgress) onProgress(Math.floor(10 + (downloadedParts / zIds.length) * 80));
+                    completedParts++;
+                    console.log(`[CloudSync] ZIP part ${partIndex + 1}/${zIds.length} xong trong ${(performance.now() - t_zip).toFixed(0)}ms`);
+                    if (onProgress) onProgress(Math.floor(10 + (completedParts / zIds.length) * 80));
+                };
+
+                try {
+                    await Promise.all(zIds.map((fileId, idx) => processZipPart(fileId, idx)));
+                } catch (err: any) {
+                    console.error('Error fetching zip chunks:', err);
+                    throw new Error(`Tải đoạn dữ liệu thất bại. Vui lòng thử tải lại.`);
                 }
 
+                console.log(`[CloudSync] ⚡ Tất cả ${zIds.length} ZIP parts tải xong trong ${(performance.now() - t_zip).toFixed(0)}ms`);
                 if (onProgress) onProgress(90); // Finished merging 
             } else if (indexData.lessonFileIds) {
                 // Format mới V2: flat array
@@ -720,11 +740,23 @@ export const useCloudStorage = () => {
             if (!pathData.ok) return cached || [];
 
             const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${pathData.result.file_path}?t=${Date.now()}`;
-            const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
 
-            const fileRes = await fetch(proxyUrl);
-            if (!fileRes.ok) return cached || [];
-            const arrayBuf = await fileRes.arrayBuffer();
+            // Race nhiều proxy — dùng cái nhanh nhất
+            const EXAM_PROXIES = [
+                (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                (url: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
+            ];
+
+            const arrayBuf = await Promise.any(
+                EXAM_PROXIES.map(async (makeUrl) => {
+                    const res = await fetch(makeUrl(directUrl));
+                    if (!res.ok) throw new Error('Proxy failed');
+                    return res.arrayBuffer();
+                })
+            ).catch(() => null);
+
+            if (!arrayBuf) return cached || [];
             const indexStr = new TextDecoder().decode(arrayBuf);
 
             const parsed = JSON.parse(xorDeobfuscate(indexStr));
