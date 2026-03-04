@@ -7,7 +7,7 @@ import ChapterView from './components/ChapterView';
 import LessonView from './components/LessonView';
 import Toast, { ToastType } from './components/Toast';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
-import { Menu, FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Plus, Ban, ShieldOff, WifiOff, MessageCircle, X, Send, Bot, User, Copy, Check } from 'lucide-react';
+import { Menu, FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Plus, Ban, ShieldOff, WifiOff, MessageCircle, X, Send, Bot, User, Copy, Check, Atom, Home, Bell } from 'lucide-react';
 import { getMachineId } from './src/hooks/useCloudStorage';
 
 const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
@@ -905,35 +905,20 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen transition-all duration-300">
 
-        {/* Mobile Header */}
+        {/* Mobile Header — simplified */}
         <header
-          className="p-3.5 flex items-center justify-between md:hidden sticky top-0 z-30"
+          className="p-3.5 flex items-center justify-center md:hidden sticky top-0 z-30"
           style={{ background: '#F1F0EC', borderBottom: '1px solid #E9E9E7' }}
         >
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="p-2 rounded-lg transition-colors"
-              style={{ color: '#57564F' }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <span id="tour-logo" className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>PhysiVault</span>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: '#6B7CDB' }}>
+              <Atom className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>PhysiVault</span>
           </div>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-2 rounded-lg transition-colors"
-            style={{ color: '#57564F' }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-          >
-            <Settings className="w-5 h-5" />
-          </button>
         </header>
 
-        <main className="flex-1 p-4 md:p-8 lg:p-10 max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-4 md:p-8 lg:p-10 pb-24 md:pb-10 max-w-7xl mx-auto w-full">
           <div
             key={`${showExamList}-${showContactBook}-${showStudyPlanner}-${showNotification}-${currentGrade}-${currentChapterId}-${currentLesson?.id}-${activeExam?.id}`}
           >
@@ -942,8 +927,8 @@ function App() {
         </main>
       </div>
 
-      {/* Toast Container */}
-      <div className="fixed bottom-0 right-0 p-4 space-y-2 z-50">
+      {/* Toast Container — trên mobile đẩy lên trên bottom nav */}
+      <div className="fixed bottom-20 md:bottom-0 right-0 p-4 space-y-2 z-50">
         {toasts.map(toast => (
           <Toast
             key={toast.id}
@@ -953,6 +938,85 @@ function App() {
           />
         ))}
       </div>
+
+      {/* ── Mobile Bottom Navigation Bar ── */}
+      {(isActivated || isAdmin) && (
+        <nav
+          className="fixed bottom-0 left-0 right-0 z-40 md:hidden flex items-stretch"
+          style={{ background: '#FFFFFF', borderTop: '1px solid #E9E9E7', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          {/* Home */}
+          <button
+            onClick={() => {
+              setCurrentGrade(null); setCurrentChapterId(null); setCurrentLesson(null);
+              setShowExamList(false); setShowContactBook(false); setShowStudyPlanner(false); setShowNotification(false);
+              setActiveExam(null); setExamSubmission(null);
+            }}
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
+            style={{ color: (!currentGrade && !showExamList && !showContactBook && !showStudyPlanner && !showNotification) ? '#6B7CDB' : '#AEACA8' }}
+          >
+            <Home className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Tổng quan</span>
+          </button>
+
+          {/* Khối lớp — mở menu chọn lớp */}
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
+            style={{ color: currentGrade ? '#6B7CDB' : '#AEACA8' }}
+          >
+            <FolderOpen className="w-5 h-5" />
+            <span className="text-[10px] font-medium">{currentGrade ? `Lớp ${currentGrade}` : 'Khối lớp'}</span>
+          </button>
+
+          {/* Thi thử */}
+          <button
+            onClick={() => {
+              setShowExamList(true); setShowContactBook(false); setShowStudyPlanner(false); setShowNotification(false);
+              setActiveExam(null); setExamSubmission(null); setCurrentGrade(null); setCurrentChapterId(null); setCurrentLesson(null);
+            }}
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
+            style={{ color: showExamList ? '#6B7CDB' : '#AEACA8' }}
+          >
+            <FileText className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Thi thử</span>
+          </button>
+
+          {/* Thông báo */}
+          <button
+            onClick={() => {
+              setShowNotification(true); setShowExamList(false); setShowContactBook(false); setShowStudyPlanner(false);
+              setActiveExam(null); setExamSubmission(null); setCurrentGrade(null); setCurrentChapterId(null); setCurrentLesson(null);
+            }}
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors relative"
+            style={{ color: showNotification ? '#E03E3E' : '#AEACA8' }}
+          >
+            <div className="relative">
+              <Bell className="w-5 h-5" />
+              {notificationUnreadCount > 0 && (
+                <span
+                  className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] font-black"
+                  style={{ background: '#E03E3E', color: '#fff', lineHeight: 1 }}
+                >
+                  {notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] font-medium">Thông báo</span>
+          </button>
+
+          {/* Cài đặt */}
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
+            style={{ color: '#AEACA8' }}
+          >
+            <Settings className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Cài đặt</span>
+          </button>
+        </nav>
+      )}
+
       {/* Chatbot Component - Only show on Dashboard (Overview) */}
       {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && !showNotification && <Chatbot />}
     </div>
