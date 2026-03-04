@@ -274,10 +274,12 @@ function App() {
           isAdmin={isAdmin} // true admin status needed to see all exams when not previewing
           previewMode={previewMode}
           onLoadExams={loadExams}
+          onLoadHistory={getExamHistory}
           onSelectExam={(exam) => { setActiveExam(exam); setExamSubmission(null); setShowExamList(false); }}
         />
       );
     }
+
 
     // 0d. Contact Book (Exam History)
     if (showContactBook) {

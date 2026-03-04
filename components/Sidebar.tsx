@@ -1,5 +1,5 @@
-import React from 'react';
-import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 interface SidebarProps {
@@ -23,11 +23,45 @@ interface SidebarProps {
   onSetPreviewMode?: (mode: GradeLevel | null) => void;
 }
 
+// ── Custom dropdown options ──────────────────────────────────────────
+const PREVIEW_OPTIONS = [
+  { value: 'admin', label: 'Admin (Mặc định)', color: '#1A1A1A', bg: '#F1F0EC', border: '#E9E9E7', dot: '#AEACA8', icon: Shield },
+  { value: String(GradeLevel.Grade12), label: 'Học sinh Lớp 12', color: '#9065B0', bg: '#F3ECF8', border: '#C8A8DC', dot: '#9065B0', icon: Atom },
+  { value: String(GradeLevel.Grade11), label: 'Học sinh Lớp 11', color: '#6B7CDB', bg: '#EEF0FB', border: '#B8C1EF', dot: '#6B7CDB', icon: Zap },
+  { value: String(GradeLevel.Grade10), label: 'Học sinh Lớp 10', color: '#448361', bg: '#EAF3EE', border: '#B7D9C4', dot: '#448361', icon: Activity },
+];
+
 const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, className, isAdmin, previewMode, onSetPreviewMode }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
     [GradeLevel.Grade10]: { icon: Activity, label: 'Lớp 10', dot: '#448361' },
+  };
+
+  // ── Custom dropdown state ──
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [dropdownOpen]);
+
+  const currentValue = previewMode ? String(previewMode) : 'admin';
+  const selectedOption = PREVIEW_OPTIONS.find(o => o.value === currentValue) ?? PREVIEW_OPTIONS[0];
+  const SelectedIcon = selectedOption.icon;
+
+  const handleSelect = (value: string) => {
+    if (onSetPreviewMode) {
+      onSetPreviewMode(value === 'admin' ? null : Number(value) as GradeLevel);
+    }
+    setDropdownOpen(false);
   };
 
   return (
@@ -68,16 +102,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         {/* Home */}
         <button
           onClick={() => onSelectGrade(null)}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
           style={{
-            background: currentGrade === null ? '#E3E2DE' : 'transparent',
-            color: currentGrade === null ? '#1A1A1A' : '#57564F',
-            fontWeight: currentGrade === null ? 500 : 400,
+            background: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab ? '#E3E2DE' : 'transparent',
+            color: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab ? '#1A1A1A' : '#57564F',
+            fontWeight: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab ? 500 : 400,
           }}
-          onMouseEnter={e => { if (currentGrade !== null) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
-          onMouseLeave={e => { if (currentGrade !== null) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          onMouseEnter={e => { if (!(currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab)) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+          onMouseLeave={e => { if (!(currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab)) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
-          <Home className="w-4 h-4 shrink-0" style={{ color: currentGrade === null ? '#1A1A1A' : '#AEACA8' }} />
+          <Home className="w-4 h-4 shrink-0" style={{ color: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab ? '#1A1A1A' : '#AEACA8' }} />
           Tổng quan
         </button>
 
@@ -86,7 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         {onOpenExamList && (
           <button
             onClick={() => { onOpenExamList(); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
             style={{
               background: showExamList ? '#EEF0FB' : 'transparent',
               color: showExamList ? '#6B7CDB' : '#57564F',
@@ -104,7 +138,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         {onOpenContactBook && (
           <button
             onClick={() => { onOpenContactBook(); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
             style={{
               background: showContactBook ? '#F3ECF8' : 'transparent',
               color: showContactBook ? '#9065B0' : '#57564F',
@@ -122,7 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         {onOpenStudyPlanner && (
           <button
             onClick={() => { onOpenStudyPlanner(); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
             style={{
               background: showStudyPlanner ? '#EAF3EE' : 'transparent',
               color: showStudyPlanner ? '#448361' : '#57564F',
@@ -140,7 +174,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         {onOpenNotification && (
           <button
             onClick={() => { onOpenNotification(); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
             style={{
               background: showNotification ? '#FEF2F2' : 'transparent',
               color: showNotification ? '#E03E3E' : '#57564F',
@@ -176,7 +210,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         {onOpenSimLab && (
           <button
             onClick={() => { onOpenSimLab(); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
             style={{
               background: showSimLab ? '#E8F4F8' : 'transparent',
               color: showSimLab ? '#2878BD' : '#57564F',
@@ -198,7 +232,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         </div>
 
         {/* Grade items */}
-        {/* Grade items */}
         {(previewMode ? [previewMode] : [GradeLevel.Grade12, GradeLevel.Grade11, GradeLevel.Grade10]).map((grade) => {
           const isSelected = currentGrade === grade;
           const { icon: Icon, label, dot } = gradeConfig[grade];
@@ -207,7 +240,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             <button
               key={grade}
               onClick={() => onSelectGrade(grade)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
               style={{
                 background: isSelected ? '#E3E2DE' : 'transparent',
                 color: isSelected ? '#1A1A1A' : '#57564F',
@@ -234,25 +267,79 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             Quản trị viên
           </div>
 
-          <div className="space-y-1 mb-3">
+          {/* ── Custom Dropdown ── */}
+          <div className="space-y-1 mb-3" ref={dropdownRef}>
             <label className="text-[11px] font-medium text-[#787774] px-1">Xem với tư cách:</label>
-            <select
-              className="w-full bg-[#FFFFFF] border border-[#E9E9E7] rounded-md px-2 py-1.5 text-sm text-[#1A1A1A] outline-none transition-colors focus:border-[#6B7CDB]"
-              value={previewMode || 'admin'}
-              onChange={(e) => onSetPreviewMode && onSetPreviewMode(e.target.value === 'admin' ? null : Number(e.target.value) as GradeLevel)}
-            >
-              <option value="admin">Admin (Mặc định)</option>
-              <option value={GradeLevel.Grade12}>Học sinh Lớp 12</option>
-              <option value={GradeLevel.Grade11}>Học sinh Lớp 11</option>
-              <option value={GradeLevel.Grade10}>Học sinh Lớp 10</option>
-            </select>
+            <div className="relative">
+              {/* Trigger button */}
+              <button
+                onClick={() => setDropdownOpen(prev => !prev)}
+                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-all"
+                style={{
+                  background: selectedOption.bg,
+                  border: `1px solid ${selectedOption.border}`,
+                  color: selectedOption.color,
+                }}
+              >
+                <SelectedIcon className="w-3.5 h-3.5 shrink-0" style={{ color: selectedOption.dot }} />
+                <span className="flex-1 text-left font-medium text-[13px]">{selectedOption.label}</span>
+                <ChevronDown
+                  className="w-3.5 h-3.5 shrink-0 transition-transform duration-200"
+                  style={{
+                    color: selectedOption.dot,
+                    transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  }}
+                />
+              </button>
+
+              {/* Dropdown list */}
+              {dropdownOpen && (
+                <div
+                  className="absolute bottom-full left-0 w-full mb-1 rounded-xl overflow-hidden z-50"
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E9E9E7',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+                  }}
+                >
+                  {PREVIEW_OPTIONS.map(opt => {
+                    const OptIcon = opt.icon;
+                    const isActive = opt.value === currentValue;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => handleSelect(opt.value)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors"
+                        style={{
+                          background: isActive ? opt.bg : 'transparent',
+                          color: isActive ? opt.color : '#57564F',
+                          fontWeight: isActive ? 600 : 400,
+                          borderLeft: isActive ? `3px solid ${opt.dot}` : '3px solid transparent',
+                        }}
+                        onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = '#F7F6F3'; }}
+                        onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                      >
+                        <OptIcon className="w-4 h-4 shrink-0" style={{ color: isActive ? opt.dot : '#AEACA8' }} />
+                        <span>{opt.label}</span>
+                        {isActive && (
+                          <span
+                            className="ml-auto w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ background: opt.dot }}
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {!previewMode && (
             <button
               id="tour-settings-btn"
               onClick={onOpenSettings}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
               style={{ color: '#57564F' }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
@@ -270,7 +357,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           <button
             id="tour-settings-btn"
             onClick={onOpenSettings}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
             style={{ color: '#57564F' }}
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}

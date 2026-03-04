@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ClipboardList, Clock, Play, RefreshCw, ChevronRight, FileText, Lock } from 'lucide-react';
+import { ClipboardList, Clock, Play, RefreshCw, ChevronRight, FileText, Lock, CheckCircle } from 'lucide-react';
 import { Exam } from '../types';
 
 const TELEGRAM_TOKEN = '7985901918:AAFK33yVAEPPKiAbiaMFCdz78TpOhBXeRr0';
@@ -59,15 +59,18 @@ const prefetchExamPdf = async (exam: Exam) => {
 interface ExamListPageProps {
     onSelectExam: (exam: Exam) => void;
     onLoadExams: () => Promise<Exam[]>;
+    onLoadHistory?: () => Promise<any[]>;
     isAdmin?: boolean;
     previewMode?: number | null;
 }
 
 const ACCENT = '#6B7CDB';
 
-const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, isAdmin, previewMode }) => {
+const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, onLoadHistory, isAdmin, previewMode }) => {
     const [exams, setExams] = useState<Exam[]>([]);
     const [loading, setLoading] = useState(true);
+    // Map: examId → best score
+    const [doneMap, setDoneMap] = useState<Record<string, number>>({});
     const [localStudentGrade] = useState(() => parseInt(localStorage.getItem('physivault_grade') || '12', 10));
     const studentGrade = previewMode || localStudentGrade;
     const [activeTab, setActiveTab] = useState<number>(studentGrade);
@@ -79,9 +82,22 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
     const load = async () => {
         setLoading(true);
         try {
-            const data = await onLoadExams();
+            const [data, history] = await Promise.all([
+                onLoadExams(),
+                onLoadHistory ? onLoadHistory() : Promise.resolve([]),
+            ]);
             const sorted = data.sort((a, b) => b.createdAt - a.createdAt);
             setExams(sorted);
+            // Build doneMap: examId → best score
+            const map: Record<string, number> = {};
+            (history || []).forEach((h: any) => {
+                const id = h.exam_id;
+                const score = typeof h.score === 'number' ? h.score : parseFloat(h.score);
+                if (!isNaN(score)) {
+                    if (map[id] === undefined || score > map[id]) map[id] = score;
+                }
+            });
+            setDoneMap(map);
             // Prefetch PDFs in background after list is loaded (1 by 1, no rush)
             const gradedExams = sorted.filter(e => (!e.grade && studentGrade === 12) || e.grade === studentGrade);
             gradedExams.forEach((exam, i) => {
@@ -200,59 +216,84 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
                 }
                 return (
                     <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
-                        {filteredExams.map((exam, idx) => (
-                            <div
-                                key={exam.id}
-                                className="flex items-center gap-4 px-4 py-3.5 cursor-pointer transition-colors group"
-                                style={{
-                                    borderBottom: idx < filteredExams.length - 1 ? '1px solid #F1F0EC' : 'none',
-                                    background: '#FFFFFF',
-                                }}
-                                onClick={() => onSelectExam(exam)}
-                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F7F6F3'}
-                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FFFFFF'}
-                            >
-                                {/* Index badge */}
+                        {filteredExams.map((exam, idx) => {
+                            const bestScore = doneMap[exam.id];
+                            const isDone = bestScore !== undefined;
+                            return (
                                 <div
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-bold text-sm"
-                                    style={{ background: '#EEF0FB', color: ACCENT }}
+                                    key={exam.id}
+                                    className="flex items-center gap-4 px-4 py-3.5 cursor-pointer transition-colors group"
+                                    style={{
+                                        borderBottom: idx < filteredExams.length - 1 ? '1px solid #F1F0EC' : 'none',
+                                        background: '#FFFFFF',
+                                        borderLeft: isDone ? '3px solid #448361' : '3px solid transparent',
+                                    }}
+                                    onClick={() => onSelectExam(exam)}
+                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F7F6F3'}
+                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FFFFFF'}
                                 >
-                                    {idx + 1}
-                                </div>
-
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-sm font-semibold truncate" style={{ color: '#1A1A1A' }}>
-                                        {exam.title}
-                                    </h3>
-                                    <div className="flex items-center gap-3 mt-1 flex-wrap">
-                                        <span className="flex items-center gap-1 text-xs" style={{ color: '#787774' }}>
-                                            <Clock className="w-3 h-3" style={{ color: '#D9730D' }} />
-                                            {exam.duration} phút
-                                        </span>
-                                        <span className="flex items-center gap-1 text-xs truncate max-w-[180px]" style={{ color: '#AEACA8' }}>
-                                            <FileText className="w-3 h-3" />
-                                            {exam.pdfFileName}
-                                        </span>
-                                        <span className="text-[11px] px-1.5 py-0.5 rounded" style={{ background: '#F1F0EC', color: '#AEACA8' }}>
-                                            {new Date(exam.createdAt).toLocaleDateString('vi-VN')}
-                                        </span>
+                                    {/* Index badge */}
+                                    <div
+                                        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-bold text-sm"
+                                        style={{
+                                            background: isDone ? '#EAF3EE' : '#EEF0FB',
+                                            color: isDone ? '#448361' : ACCENT,
+                                        }}
+                                    >
+                                        {isDone
+                                            ? <CheckCircle className="w-4 h-4" />
+                                            : idx + 1
+                                        }
                                     </div>
-                                </div>
 
-                                {/* CTA */}
-                                <button
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold shrink-0 transition-all active:scale-95"
-                                    style={{ background: ACCENT, color: '#fff' }}
-                                    onClick={e => { e.stopPropagation(); onSelectExam(exam); }}
-                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#5a6bc9'}
-                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ACCENT}
-                                >
-                                    <Play className="w-3.5 h-3.5" />
-                                    Làm bài
-                                </button>
-                            </div>
-                        ))}
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <h3 className="text-sm font-semibold truncate" style={{ color: '#1A1A1A' }}>
+                                                {exam.title}
+                                            </h3>
+                                            {isDone && (
+                                                <span
+                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0"
+                                                    style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #B7D9C4' }}
+                                                >
+                                                    <CheckCircle className="w-2.5 h-2.5" />
+                                                    {bestScore.toFixed(2)}đ
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                            <span className="flex items-center gap-1 text-xs" style={{ color: '#787774' }}>
+                                                <Clock className="w-3 h-3" style={{ color: '#D9730D' }} />
+                                                {exam.duration} phút
+                                            </span>
+                                            <span className="flex items-center gap-1 text-xs truncate max-w-[180px]" style={{ color: '#AEACA8' }}>
+                                                <FileText className="w-3 h-3" />
+                                                {exam.pdfFileName}
+                                            </span>
+                                            <span className="text-[11px] px-1.5 py-0.5 rounded" style={{ background: '#F1F0EC', color: '#AEACA8' }}>
+                                                {new Date(exam.createdAt).toLocaleDateString('vi-VN')}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* CTA */}
+                                    <button
+                                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold shrink-0 transition-all active:scale-95"
+                                        style={{
+                                            background: isDone ? '#F1F0EC' : ACCENT,
+                                            color: isDone ? '#57564F' : '#fff',
+                                        }}
+                                        onClick={e => { e.stopPropagation(); onSelectExam(exam); }}
+                                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDone ? '#E9E9E7' : '#5a6bc9'}
+                                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDone ? '#F1F0EC' : ACCENT}
+                                    >
+                                        <Play className="w-3.5 h-3.5" />
+                                        {isDone ? 'Làm lại' : 'Làm bài'}
+                                    </button>
+                                </div>
+                            );
+                        })}
                     </div>
                 );
             })()}
