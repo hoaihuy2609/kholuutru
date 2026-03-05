@@ -326,37 +326,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
             </div>
 
             {/* ── Tab Bar ── */}
-            <div className="flex items-center justify-between px-6 pt-2" style={{ borderBottom: '1px solid #E9E9E7', background: '#fff' }}>
-                <div className="flex shrink-0">
-                    {[
-                        { key: 'students', label: 'Học Sinh', icon: <Users className="w-4 h-4" /> },
-                        { key: 'exams', label: 'Đề Thi', icon: <ClipboardList className="w-4 h-4" /> },
-                        { key: 'stats', label: 'Thống Kê', icon: <BarChart2 className="w-4 h-4" /> },
-                    ].map(tab => (
-                        <button
-                            key={tab.key}
-                            onClick={() => setActiveTab(tab.key as any)}
-                            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-all border-b-2"
-                            style={{
-                                borderColor: activeTab === tab.key ? '#6B7CDB' : 'transparent',
-                                color: activeTab === tab.key ? '#6B7CDB' : '#787774',
-                            }}
-                        >
-                            {tab.icon}{tab.label}
-                        </button>
-                    ))}
-                </div>
+            <div className="flex shrink-0 px-6 pt-2" style={{ borderBottom: '1px solid #E9E9E7', background: '#fff' }}>
+                {[
+                    { key: 'students', label: 'Học Sinh', icon: <Users className="w-4 h-4" /> },
+                    { key: 'exams', label: 'Đề Thi', icon: <ClipboardList className="w-4 h-4" /> },
+                    { key: 'stats', label: 'Thống Kê', icon: <BarChart2 className="w-4 h-4" /> },
+                ].map(tab => (
+                    <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key as any)}
+                        className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-all border-b-2"
+                        style={{
+                            borderColor: activeTab === tab.key ? '#6B7CDB' : 'transparent',
+                            color: activeTab === tab.key ? '#6B7CDB' : '#787774',
+                        }}
+                    >
+                        {tab.icon}{tab.label}
+                    </button>
+                ))}
+
                 {/* Cloud Sync Button */}
                 <button
                     onClick={onOpenGitHubSync}
-                    className="flex items-center gap-2 px-3 py-1.5 mb-2 rounded-lg text-sm font-semibold transition-colors"
-                    style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #44836133' }}
+                    className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-all"
+                    style={{ color: '#787774' }}
                     title="Quản lý & Sync dữ liệu"
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#D5E8DD'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#EAF3EE'}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#1A1A1A'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#787774'}
                 >
                     <CloudUpload className="w-4 h-4" />
-                    <span className="hidden md:inline">Cloud Sync</span>
+                    Cloud Sync
                 </button>
             </div>
 
