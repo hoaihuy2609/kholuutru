@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle, XCircle, Minus, RotateCcw, Home, Clock, Award } from 'lucide-react';
+import { CheckCircle, XCircle, Minus, RotateCcw, Home, Clock, Award, HelpCircle, Send } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { Exam, ExamSubmission, ExamTFAnswer } from '../types';
 import { calcScore } from './ExamView';
@@ -296,43 +296,70 @@ const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBa
 
                 {/* ── Vote Section ── */}
                 <div className="rounded-2xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                    <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #F1F0EC', background: '#FDF2F8' }}>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Câu hỏi hóc búa nhất? 🤯</span>
+                    <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #F1F0EC', background: '#FAFAFA' }}>
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: '#FFF7ED' }}>
+                                <HelpCircle className="w-4 h-4" style={{ color: '#D9730D' }} />
+                            </div>
+                            <span className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Báo cáo câu hỏi khó</span>
                         </div>
                     </div>
-                    <div className="p-4 space-y-3">
-                        <p className="text-xs" style={{ color: '#787774' }}>
-                            Câu nào trong đề làm bạn "khóc thét" nhất? Hãy gửi (tối đa 3 câu/đề) để thầy ưu tiên giải chi tiết nhé!
+                    <div className="p-5 space-y-4">
+                        <p className="text-[13px] leading-relaxed" style={{ color: '#57564F' }}>
+                            Bạn có gặp khó khăn với câu hỏi nào trong đề không? Hãy gửi lại (tối đa 3 câu/đề) để thầy ưu tiên ra video giải chi tiết nhé!
                         </p>
-                        <div className="flex gap-2 items-center flex-wrap">
-                            <select
-                                className="flex-1 rounded-xl text-sm px-3 py-2 outline-none"
-                                style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}
-                                value={votePart}
-                                onChange={(e) => setVotePart(e.target.value)}
-                            >
-                                <option value="">Chọn phần thi...</option>
-                                <option value="Phần I">Phần I: Trắc nghiệm ABCD</option>
-                                <option value="Phần II">Phần II: Đúng / Sai</option>
-                                <option value="Phần III">Phần III: Trả lời ngắn</option>
-                            </select>
-                            <input
-                                type="number"
-                                placeholder="Số câu (VD: 1)"
-                                className="w-32 rounded-xl text-sm px-3 py-2 outline-none"
-                                style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}
-                                min={1}
-                                value={voteNum}
-                                onChange={(e) => setVoteNum(e.target.value)}
-                            />
+                        <div className="flex gap-3 items-center flex-wrap">
+                            <div className="flex-1 min-w-[200px] relative">
+                                <select
+                                    className="w-full rounded-xl text-sm px-4 py-2.5 outline-none transition-all duration-300 appearance-none"
+                                    style={{ background: '#F7F6F3', border: '1px solid #E9E9E7', color: '#1A1A1A', paddingRight: '2.5rem' }}
+                                    value={votePart}
+                                    onChange={(e) => setVotePart(e.target.value)}
+                                    onFocus={e => { (e.target.style.borderColor = ACCENT); (e.target.style.background = '#fff'); }}
+                                    onBlur={e => { (e.target.style.borderColor = '#E9E9E7'); (e.target.style.background = '#F7F6F3'); }}
+                                >
+                                    <option value="" disabled>Chọn phần thi...</option>
+                                    <option value="Phần I">Phần I: Trắc nghiệm ABCD</option>
+                                    <option value="Phần II">Phần II: Đúng / Sai</option>
+                                    <option value="Phần III">Phần III: Trả lời ngắn</option>
+                                </select>
+                                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#AEACA8' }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                                </div>
+                            </div>
+                            <div className="w-32 relative">
+                                <input
+                                    type="number"
+                                    placeholder="Số câu (VD: 1)"
+                                    className="w-full rounded-xl text-sm px-4 py-2.5 outline-none transition-all duration-300"
+                                    style={{ background: '#F7F6F3', border: '1px solid #E9E9E7', color: '#1A1A1A' }}
+                                    min={1}
+                                    value={voteNum}
+                                    onChange={(e) => setVoteNum(e.target.value)}
+                                    onFocus={e => { (e.target.style.borderColor = ACCENT); (e.target.style.background = '#fff'); }}
+                                    onBlur={e => { (e.target.style.borderColor = '#E9E9E7'); (e.target.style.background = '#F7F6F3'); }}
+                                />
+                            </div>
                             <button
                                 onClick={handleVote}
                                 disabled={isVoting}
-                                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 ${isVoting ? 'opacity-50' : ''}`}
-                                style={{ background: '#ED4882', color: '#fff' }}
+                                className={`px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2.5 transition-all duration-300 active:scale-95 group hover:-translate-y-[1px] ${isVoting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                style={{ background: '#1A1A1A', color: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                                onMouseEnter={e => {
+                                    if (!isVoting) {
+                                        (e.currentTarget as HTMLElement).style.background = '#333';
+                                        (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 16px rgba(0,0,0,0.12)';
+                                    }
+                                }}
+                                onMouseLeave={e => {
+                                    if (!isVoting) {
+                                        (e.currentTarget as HTMLElement).style.background = '#1A1A1A';
+                                        (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                                    }
+                                }}
                             >
-                                {isVoting ? 'Đang gửi...' : 'Vote ngay'}
+                                <Send className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                                {isVoting ? 'Đang gửi...' : 'Gửi yêu cầu'}
                             </button>
                         </div>
                     </div>
