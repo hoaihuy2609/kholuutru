@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckCircle, XCircle, Minus, RotateCcw, Home, Clock, Award } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { Exam, ExamSubmission, ExamTFAnswer } from '../types';
@@ -9,6 +9,8 @@ interface ExamResultProps {
     submission: ExamSubmission;
     onRetry: () => void;
     onBack: () => void;
+    onSubmitVote?: (part: string, qNum: number) => Promise<{ success: boolean; error?: string }>;
+    onShowToast?: (msg: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
 const tf_keys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
@@ -32,9 +34,37 @@ const ScoreBadge = ({ score, total }: { score: number; total: number }) => {
     );
 };
 
-const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBack }) => {
+const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBack, onSubmitVote, onShowToast }) => {
     const score = calcScore(submission, exam.answers);
     const tfKeys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
+    const [votePart, setVotePart] = useState('');
+    const [voteNum, setVoteNum] = useState('');
+    const [isVoting, setIsVoting] = useState(false);
+
+    const handleVote = async () => {
+        if (!votePart || !voteNum) {
+            onShowToast?.('Vui lòng chọn phần thi và nhập số câu.', 'warning');
+            return;
+        }
+
+        setIsVoting(true);
+        try {
+            if (onSubmitVote) {
+                const res = await onSubmitVote(votePart, parseInt(voteNum, 10));
+                if (res.success) {
+                    onShowToast?.(`Đã gửi vote cho câu ${voteNum} - ${votePart} thành công. Thầy sẽ ưu tiên giải câu này!`, 'success');
+                    setVoteNum('');
+                    setVotePart('');
+                } else {
+                    onShowToast?.(res.error || 'Lỗi khi gửi vote', 'error');
+                }
+            }
+        } catch (e) {
+            onShowToast?.('Lỗi hệ thống khi gửi vote', 'error');
+        } finally {
+            setIsVoting(false);
+        }
+    };
 
     const pct = score.total / 10;
     const grade = pct >= 0.9 ? { label: 'Xuất sắc', color: '#16A34A', bg: '#F0FDF4', emoji: '🥇' }
@@ -261,6 +291,50 @@ const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBa
                                 </div>
                             );
                         })}
+                    </div>
+                </div>
+
+                {/* ── Vote Section ── */}
+                <div className="rounded-2xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+                    <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #F1F0EC', background: '#FDF2F8' }}>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Câu hỏi hóc búa nhất? 🤯</span>
+                        </div>
+                    </div>
+                    <div className="p-4 space-y-3">
+                        <p className="text-xs" style={{ color: '#787774' }}>
+                            Câu nào trong đề làm bạn "khóc thét" nhất? Hãy gửi (tối đa 3 câu/đề) để thầy ưu tiên giải chi tiết nhé!
+                        </p>
+                        <div className="flex gap-2 items-center flex-wrap">
+                            <select
+                                className="flex-1 rounded-xl text-sm px-3 py-2 outline-none"
+                                style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}
+                                value={votePart}
+                                onChange={(e) => setVotePart(e.target.value)}
+                            >
+                                <option value="">Chọn phần thi...</option>
+                                <option value="Phần I">Phần I: Trắc nghiệm ABCD</option>
+                                <option value="Phần II">Phần II: Đúng / Sai</option>
+                                <option value="Phần III">Phần III: Trả lời ngắn</option>
+                            </select>
+                            <input
+                                type="number"
+                                placeholder="Số câu (VD: 1)"
+                                className="w-32 rounded-xl text-sm px-3 py-2 outline-none"
+                                style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}
+                                min={1}
+                                value={voteNum}
+                                onChange={(e) => setVoteNum(e.target.value)}
+                            />
+                            <button
+                                onClick={handleVote}
+                                disabled={isVoting}
+                                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 ${isVoting ? 'opacity-50' : ''}`}
+                                style={{ background: '#ED4882', color: '#fff' }}
+                            >
+                                {isVoting ? 'Đang gửi...' : 'Vote ngay'}
+                            </button>
+                        </div>
                     </div>
                 </div>
 

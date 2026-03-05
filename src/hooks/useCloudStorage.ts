@@ -1031,6 +1031,71 @@ export const useCloudStorage = () => {
         }
     };
 
+    // ── Voting Functions ──────────────────────────────────────
+
+    const submitQuestionVote = async (examId: string, partName: string, questionNumber: number) => {
+        const sdtStr = localStorage.getItem('pv_activated_sdt');
+        if (!sdtStr) return { success: false, error: 'Chưa kích hoạt' };
+        let normalizedPhone = sdtStr.trim();
+        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
+            normalizedPhone = '0' + normalizedPhone;
+        }
+
+        try {
+            // Kiểm tra xem user này đã vote cho đề này bao nhiêu lần rồi (limit 3 lần)
+            const { data: existingVotes, error: countError } = await supabase
+                .from('question_votes')
+                .select('id, part_name, question_number')
+                .eq('exam_id', examId)
+                .eq('student_phone', normalizedPhone);
+
+            if (countError) throw countError;
+
+            if (existingVotes && existingVotes.length >= 3) {
+                return { success: false, error: 'Bạn đã hết 3 lượt vote cho đề này.' };
+            }
+
+            // Kiểm tra trùng
+            const alreadyVoted = existingVotes?.find(v => v.part_name === partName && v.question_number === questionNumber);
+            if (alreadyVoted) {
+                return { success: false, error: 'Bạn đã vote cho câu này rồi.' };
+            }
+
+            const { error } = await supabase.from('question_votes').insert({
+                exam_id: examId,
+                student_phone: normalizedPhone,
+                part_name: partName,
+                question_number: questionNumber
+            });
+
+            if (error) {
+                if (error.code === '23505') { // unique violation
+                    return { success: false, error: 'Bạn đã vote cho câu này rồi.' };
+                }
+                throw error;
+            }
+
+            return { success: true };
+        } catch (e: any) {
+            console.error('Lỗi khi submit vote:', e);
+            return { success: false, error: e.message || 'Lỗi hệ thống' };
+        }
+    };
+
+    const getQuestionVotes = async (examId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('question_votes')
+                .select('part_name, question_number, student_phone')
+                .eq('exam_id', examId);
+            if (error) throw error;
+            return data || [];
+        } catch (e) {
+            console.error('Lỗi lấy dữ liệu vote:', e);
+            return [];
+        }
+    };
+
     return {
         lessons,
         storedFiles,
@@ -1060,6 +1125,8 @@ export const useCloudStorage = () => {
         deleteNotification,
         markNotificationFetched,
         getFetchedNotificationIds,
+        submitQuestionVote,
+        getQuestionVotes,
     };
 };
 
