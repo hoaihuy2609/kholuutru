@@ -17,6 +17,30 @@ const STORE_NAME = 'app_data';
 const TELEGRAM_TOKEN = '7985901918:AAFK33yVAEPPKiAbiaMFCdz78TpOhBXeRr0';
 const TELEGRAM_CHAT_ID = '-1003889339240';
 
+const CLOUDFLARE_PROXY_URL = 'https://physivault-proxy.hoaihuy2609.workers.dev';
+
+export const fetchViaCloudflareProxy = async (fileId: string): Promise<ArrayBuffer> => {
+    const maxRetries = 3;
+    let lastError = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            const proxyRes = await fetch(`${CLOUDFLARE_PROXY_URL}?file_id=${fileId}`);
+            if (!proxyRes.ok) {
+                let errorMsg = proxyRes.statusText;
+                try { const errData = await proxyRes.json(); if (errData.error) errorMsg = errData.error; } catch { }
+                throw new Error(`Cloudflare Proxy Error: ${proxyRes.status} - ${errorMsg}`);
+            }
+            return await proxyRes.arrayBuffer();
+        } catch (e: any) {
+            lastError = e;
+            console.warn(`[Cloudflare] Lần thử ${attempt + 1}/${maxRetries} thất bại:`, e.message);
+            await new Promise(r => setTimeout(r, 1000 * (attempt + 1))); // Tăng dần thời gian đợi
+        }
+    }
+    throw lastError || new Error("Không thể kết nối đến Cloudflare Server.");
+};
+
 // --- Security Salts ---
 const SYSTEM_SALT = "PHV_SECURITY_2026_BY_HUY";
 
@@ -305,59 +329,8 @@ export const useCloudStorage = () => {
             }
             if (!indexFileId) throw new Error(`Hệ thống chưa có dữ liệu cho Lớp ${grade}. Thầy vui lòng Sync trước nhé!`);
 
-            // --- Proxy Race có kiểm tra HTML rác ---
-            const PROXY_BUILDERS = [
-                (url: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
-                (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-                (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-            ];
-
-            // Kiểm tra xem ArrayBuffer có phải HTML rác không (Cloudflare block, error page, v.v)
-            const isHtmlGarbage = (buf: ArrayBuffer): boolean => {
-                const head = new TextDecoder().decode(buf.slice(0, 100)).trim().toLowerCase();
-                return head.startsWith('<!doctype') || head.startsWith('<html') || head.startsWith('<head');
-            };
-
-            const fetchViaPublicProxy = async (fileId: string): Promise<ArrayBuffer> => {
-                const maxRetries = 3;
-                let lastError = null;
-                for (let attempt = 0; attempt < maxRetries; attempt++) {
-                    try {
-                        // 1. Phân giải Path của File trực tiếp từ Telegram API (API này đã mở CORS sẵn)
-                        const pathRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${fileId}`);
-                        const pathResult = await pathRes.json();
-
-                        if (!pathResult.ok) {
-                            if (pathResult.error_code === 429) {
-                                await new Promise(resolve => setTimeout(resolve, (pathResult.parameters?.retry_after || 5) * 1000));
-                                continue;
-                            }
-                            throw new Error(`Lỗi cấp phép file trên Telegram: ${pathResult.description}`);
-                        }
-
-                        // 2. Race nhiều proxy — cái nào trả về trước VÀ hợp lệ thì dùng
-                        const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${pathResult.result.file_path}`;
-
-                        const raceResult = await Promise.any(
-                            PROXY_BUILDERS.map(async (makeUrl, idx) => {
-                                const proxyUrl = makeUrl(directUrl);
-                                const fileRes = await fetch(proxyUrl);
-                                if (!fileRes.ok) throw new Error(`Proxy ${idx} trả về ${fileRes.status}`);
-                                const buf = await fileRes.arrayBuffer();
-                                // ⛔ Kiểm tra rác HTML — nếu proxy trả về trang lỗi thì loại ngay
-                                if (isHtmlGarbage(buf)) throw new Error(`Proxy ${idx} trả về HTML rác`);
-                                return buf;
-                            })
-                        );
-                        return raceResult;
-                    } catch (e: any) {
-                        lastError = e?.errors?.[0] || e;
-                        console.warn(`[Proxy] Attempt ${attempt + 1}/${maxRetries} thất bại:`, lastError?.message);
-                        await new Promise(r => setTimeout(r, 1500 + (attempt * 1000)));
-                    }
-                }
-                throw lastError || new Error("Lỗi tải cấu trúc dữ liệu, quá giới hạn thử lại");
-            };
+            // Sử dụng Cloudflare Proxy dùng chung (Alias để đỡ phải sửa hàm gọi bên dưới)
+            const fetchViaPublicProxy = fetchViaCloudflareProxy;
 
             const t_start = performance.now();
             const indexRaw = await fetchViaPublicProxy(indexFileId);
@@ -741,32 +714,8 @@ export const useCloudStorage = () => {
                 return cached;
             }
 
-            // Tải file index exam từ Telegram (có file_id mới)
-            const pathRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${fileId}`);
-            const pathData = await pathRes.json();
-            if (!pathData.ok) return cached || [];
-
-            const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${pathData.result.file_path}?t=${Date.now()}`;
-
-            // Race proxy có kiểm tra HTML rác
-            const EXAM_PROXIES = [
-                (url: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`,
-                (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-                (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-            ];
-
-            const arrayBuf = await Promise.any(
-                EXAM_PROXIES.map(async (makeUrl) => {
-                    const res = await fetch(makeUrl(directUrl));
-                    if (!res.ok) throw new Error('Proxy failed');
-                    const buf = await res.arrayBuffer();
-                    const head = new TextDecoder().decode(buf.slice(0, 100)).trim().toLowerCase();
-                    if (head.startsWith('<!doctype') || head.startsWith('<html') || head.startsWith('<head')) {
-                        throw new Error('Proxy trả về HTML rác');
-                    }
-                    return buf;
-                })
-            ).catch(() => null);
+            // Tải file index exam qua Cloudflare Proxy
+            const arrayBuf = await fetchViaCloudflareProxy(fileId).catch(() => null);
 
             if (!arrayBuf) return cached || [];
             const indexStr = new TextDecoder().decode(arrayBuf);
