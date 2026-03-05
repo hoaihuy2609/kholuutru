@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Upload, FileText, Clock, ChevronLeft, ChevronRight, Save, X, Check, RefreshCw, ClipboardList } from 'lucide-react';
+import { Plus, Trash2, Upload, FileText, Clock, ChevronLeft, ChevronRight, Save, X, Check, RefreshCw, ClipboardList, Flag, User } from 'lucide-react';
 import { Exam, ExamAnswers, ExamTFAnswer } from '../types';
+import { useCloudStorage } from '../src/hooks/useCloudStorage';
 
 const Loader2 = ({ className, style }: { className?: string, style?: React.CSSProperties }) => (
     <RefreshCw className={`${className} animate-spin`} style={style} />
@@ -47,6 +48,7 @@ const ExamManager: React.FC<ExamManagerProps> = ({
     const [exams, setExams] = useState<Exam[]>([]);
     const [loadingExams, setLoadingExams] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [viewingVotes, setViewingVotes] = useState<Exam | null>(null);
 
     // Load exams on mount
     useEffect(() => {
@@ -161,6 +163,16 @@ const ExamManager: React.FC<ExamManagerProps> = ({
                                         ✓ Có đáp án
                                     </span>
                                     <button
+                                        onClick={() => setViewingVotes(exam)}
+                                        className="p-2 rounded-lg transition-colors"
+                                        style={{ color: '#D9730D', background: '#FFF7ED' }}
+                                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FFEDD5'; }}
+                                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FFF7ED'; }}
+                                        title="Xem báo cáo câu hỏi khó"
+                                    >
+                                        <Flag className="w-4 h-4" />
+                                    </button>
+                                    <button
                                         onClick={() => handleDeleteExam(exam.id, exam.title)}
                                         className="p-2 rounded-lg transition-colors"
                                         style={{ color: '#AEACA8' }}
@@ -187,6 +199,14 @@ const ExamManager: React.FC<ExamManagerProps> = ({
                     onUploadExamPdf={onUploadExamPdf}
                     onSaveExam={onSaveExam}
                     allExams={exams}
+                />
+            )}
+
+            {/* Votes Modal */}
+            {viewingVotes && (
+                <ExamVotesModal
+                    exam={viewingVotes}
+                    onClose={() => setViewingVotes(null)}
                 />
             )}
         </div>
@@ -563,6 +583,117 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                             {saving ? <Loader2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
                             {saving ? 'Đang lưu...' : 'Lưu đề thi'}
                         </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ── Exam Votes Modal ──────────────────────────────────────────────
+interface ExamVotesModalProps {
+    exam: Exam;
+    onClose: () => void;
+}
+
+const ExamVotesModal: React.FC<ExamVotesModalProps> = ({ exam, onClose }) => {
+    const { getQuestionVotes } = useCloudStorage();
+    const [votes, setVotes] = useState<{ part_name: string; question_number: number; student_phone: string }[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        getQuestionVotes(exam.id).then(data => {
+            setVotes(data);
+            setLoading(false);
+        });
+    }, [exam.id]);
+
+    // Group votes by question
+    const voteCounts: Record<string, { count: number; phones: string[]; part: string; num: number }> = {};
+    votes.forEach(v => {
+        const key = `${v.part_name}-${v.question_number}`;
+        if (!voteCounts[key]) {
+            voteCounts[key] = { count: 0, phones: [], part: v.part_name, num: v.question_number };
+        }
+        voteCounts[key].count++;
+        if (!voteCounts[key].phones.includes(v.student_phone)) {
+            voteCounts[key].phones.push(v.student_phone);
+        }
+    });
+
+    const sortedVotes = Object.values(voteCounts).sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.num - b.num;
+    });
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(26,26,26,0.5)', backdropFilter: 'blur(4px)' }}
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div
+                className="w-full max-w-lg rounded-2xl overflow-hidden flex flex-col"
+                style={{ background: '#FFFFFF', maxHeight: '80vh', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}
+            >
+                {/* Header */}
+                <div className="px-6 py-4 flex items-center justify-between shrink-0" style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAFA' }}>
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: '#FFF7ED' }}>
+                            <Flag className="w-4 h-4" style={{ color: '#D9730D' }} />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>Báo cáo câu hỏi khó</h3>
+                            <p className="text-xs" style={{ color: '#787774' }}>{exam.title}</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-1.5 rounded-lg transition-colors" style={{ color: '#AEACA8' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                    ><X className="w-4 h-4" /></button>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-12">
+                            <Loader2 className="w-8 h-8 mb-3" style={{ color: '#D9730D' } as any} />
+                            <p className="text-sm" style={{ color: '#787774' }}>Đang tải dữ liệu báo cáo...</p>
+                        </div>
+                    ) : sortedVotes.length === 0 ? (
+                        <div className="text-center py-12 rounded-xl" style={{ border: '2px dashed #E9E9E7', background: '#FAFAFA' }}>
+                            <Check className="w-10 h-10 mx-auto mb-3" style={{ color: '#16A34A' }} />
+                            <p className="text-sm font-semibold" style={{ color: '#16A34A' }}>Tuyệt vời!</p>
+                            <p className="text-xs mt-1" style={{ color: '#787774' }}>Chưa có học sinh nào báo cáo gặp khó khăn với đề này.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <p className="text-xs font-semibold mb-2" style={{ color: '#57564F' }}>TOP CÁC CÂU LÀM KHÓ HỌC SINH NHẤT</p>
+                            {sortedVotes.map((v, i) => (
+                                <div key={i} className="p-4 rounded-xl" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                                                style={{ background: i === 0 ? '#FEF2F2' : '#fff', color: i === 0 ? '#E03E3E' : '#57564F', border: i === 0 ? 'none' : '1px solid #E9E9E7' }}>
+                                                #{i + 1}
+                                            </span>
+                                            <span className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>{v.part} — Câu {v.num}</span>
+                                        </div>
+                                        <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: '#FFF7ED', color: '#D9730D' }}>
+                                            {v.count} lượt
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        {v.phones.map((phone, pi) => (
+                                            <span key={pi} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md" style={{ background: '#fff', border: '1px solid #E9E9E7', color: '#787774' }}>
+                                                <User className="w-3 h-3" />
+                                                {phone}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>
