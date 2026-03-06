@@ -45,6 +45,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                 content: blog.content, cover_image: blog.cover_image,
                 category: blog.category, tags: blog.tags || [],
                 is_published: blog.is_published,
+                grade: blog.grade ?? 0,
             });
         }
     }, [blog]);
