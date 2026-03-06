@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useState, useEffect } from 'react';
 import JSZip from 'jszip';
 import CryptoJS from 'crypto-js';
-import { Lesson, StoredFile, FileStorage, Exam, StudyPlanItem, NotificationItem } from '../../types';
+import { Lesson, StoredFile, FileStorage, Exam, StudyPlanItem, NotificationItem, BlogPost } from '../../types';
 
 // Storage Keys
 const STORAGE_FILES_KEY = 'physivault_files';
@@ -14,7 +14,6 @@ const DB_NAME = 'PhysiVaultDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'app_data';
 
-const TELEGRAM_TOKEN = '7985901918:AAFK33yVAEPPKiAbiaMFCdz78TpOhBXeRr0';
 const TELEGRAM_CHAT_ID = '-1003889339240';
 
 const CLOUDFLARE_PROXY_URL = 'https://physivault-proxy.hoaihuy2609.workers.dev';
@@ -25,7 +24,7 @@ export const fetchViaCloudflareProxy = async (fileId: string): Promise<ArrayBuff
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
-            const proxyRes = await fetch(`${CLOUDFLARE_PROXY_URL}?file_id=${fileId}`);
+            const proxyRes = await fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${fileId}`);
             if (!proxyRes.ok) {
                 let errorMsg = proxyRes.statusText;
                 try { const errData = await proxyRes.json(); if (errData.error) errorMsg = errData.error; } catch { }
@@ -440,7 +439,6 @@ export const useCloudStorage = () => {
 
     // --- Telegram Cloud Sync: Push lên Telegram (V2 — 1 file/lesson, tránh vượt 20MB) ---
     const syncToGitHub = async (grade: number, lessonsToSync: Lesson[], filesToSync: FileStorage): Promise<string> => {
-        if (!TELEGRAM_TOKEN) throw new Error('Chưa cấu hình Telegram');
         setSyncProgress(1);
 
         if (lessonsToSync.length === 0 && Object.keys(filesToSync).length === 0) {
@@ -485,7 +483,8 @@ export const useCloudStorage = () => {
                 formData.append('document', blob, fileName);
                 const result = await new Promise<{ ok: boolean; fileId?: string; retryAfter?: number; error?: string }>((resolve) => {
                     const xhr = new XMLHttpRequest();
-                    xhr.open('POST', `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`);
+                    xhr.open('POST', `https://physivault-proxy.hoaihuy2609.workers.dev/proxy/sendDocument`);
+                    xhr.setRequestHeader('Authorization', 'Bearer PV_ADMIN_SECURE_KEY_2026');
                     xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(e.loaded); };
                     xhr.onload = () => {
                         const data = JSON.parse(xhr.responseText);
@@ -570,8 +569,10 @@ export const useCloudStorage = () => {
         indexForm.append('document', indexBlob, `index_grade${grade}_v3.json`);
         indexForm.append('caption', `[INDEX-V3-ZIP] Lớp ${grade} | ${finalZipFileIds.length} phần`);
 
-        const indexRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
-            method: 'POST', body: indexForm
+        const indexRes = await fetch(`https://physivault-proxy.hoaihuy2609.workers.dev/proxy/sendDocument`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer PV_ADMIN_SECURE_KEY_2026' },
+            body: indexForm
         });
         if (!indexRes.ok) { setSyncProgress(0); throw new Error(`Lỗi upload Index: ${indexRes.statusText}`); }
 
@@ -645,7 +646,8 @@ export const useCloudStorage = () => {
 
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`);
+            xhr.open('POST', `https://physivault-proxy.hoaihuy2609.workers.dev/proxy/sendDocument`);
+            xhr.setRequestHeader('Authorization', 'Bearer PV_ADMIN_SECURE_KEY_2026');
             xhr.upload.onprogress = (e) => {
                 if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
             };
@@ -672,8 +674,10 @@ export const useCloudStorage = () => {
         formData.append('document', blob, 'exam_index.json');
         formData.append('caption', `[EXAM-INDEX] ${exams.length} đề thi`);
 
-        const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument`, {
-            method: 'POST', body: formData
+        const res = await fetch(`https://physivault-proxy.hoaihuy2609.workers.dev/proxy/sendDocument`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer PV_ADMIN_SECURE_KEY_2026' },
+            body: formData
         });
         if (!res.ok) throw new Error('Upload exam index thất bại');
         const data = await res.json();
@@ -1045,6 +1049,106 @@ export const useCloudStorage = () => {
         }
     };
 
+    // ── Blog (Góc Học Tập) Functions ─────────────────────────
+
+    const getBlogs = async (isAdmin: boolean) => {
+        try {
+            let query = supabase.from('blogs').select('*').order('created_at', { ascending: false });
+            if (!isAdmin) {
+                query = query.eq('is_published', true);
+            }
+            const { data, error } = await query;
+            if (error) {
+                if (error.code === '42P01') throw new Error('Table does not exist'); // Fallback trigger
+                throw error;
+            }
+            return data as BlogPost[];
+        } catch (e) {
+            console.warn('Fallback to IndexedDB for Blogs:', e);
+            const localBlogs = await dbGet('physivault_blogs') || [];
+            return isAdmin ? localBlogs : localBlogs.filter((b: BlogPost) => b.is_published);
+        }
+    };
+
+    const getBlogById = async (id: string, isAdmin: boolean) => {
+        try {
+            let query = supabase.from('blogs').select('*').eq('id', id);
+            if (!isAdmin) {
+                query = query.eq('is_published', true);
+            }
+            const { data, error } = await query.single();
+            if (error) throw error;
+            return data as BlogPost;
+        } catch (e) {
+            const localBlogs = await dbGet('physivault_blogs') || [];
+            return localBlogs.find((b: BlogPost) => b.id === id) || null;
+        }
+    };
+
+    const saveBlog = async (blog: Partial<BlogPost>) => {
+        try {
+            if (blog.id) {
+                const { data, error } = await supabase.from('blogs').update({
+                    ...blog,
+                    updated_at: new Date().toISOString()
+                }).eq('id', blog.id).select().single();
+                if (error) throw error;
+                return data as BlogPost;
+            } else {
+                const { data, error } = await supabase.from('blogs').insert({
+                    ...blog,
+                    tags: blog.tags || [],
+                    is_published: blog.is_published || false,
+                }).select().single();
+                if (error) throw error;
+                return data as BlogPost;
+            }
+        } catch (e) {
+            console.warn('Fallback to IndexedDB for saveBlog:', e);
+            const localBlogs: BlogPost[] = await dbGet('physivault_blogs') || [];
+            if (blog.id) {
+                const index = localBlogs.findIndex(b => b.id === blog.id);
+                if (index !== -1) {
+                    localBlogs[index] = { ...localBlogs[index], ...blog, updated_at: new Date().toISOString() };
+                    await dbSet('physivault_blogs', localBlogs);
+                    return localBlogs[index];
+                }
+            } else {
+                const newBlog: BlogPost = {
+                    id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+                    title: blog.title || '',
+                    summary: blog.summary || '',
+                    content: blog.content || '',
+                    cover_image: blog.cover_image || '',
+                    category: blog.category || '',
+                    tags: blog.tags || [],
+                    is_published: blog.is_published || false,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    ...(blog as any)
+                };
+                localBlogs.unshift(newBlog);
+                await dbSet('physivault_blogs', localBlogs);
+                return newBlog;
+            }
+            return null;
+        }
+    };
+
+    const deleteBlog = async (id: string) => {
+        try {
+            const { error } = await supabase.from('blogs').delete().eq('id', id);
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.warn('Fallback to IndexedDB for deleteBlog:', e);
+            let localBlogs: BlogPost[] = await dbGet('physivault_blogs') || [];
+            localBlogs = localBlogs.filter(b => b.id !== id);
+            await dbSet('physivault_blogs', localBlogs);
+            return true;
+        }
+    };
+
     return {
         lessons,
         storedFiles,
@@ -1076,6 +1180,10 @@ export const useCloudStorage = () => {
         getFetchedNotificationIds,
         submitQuestionVote,
         getQuestionVotes,
+        getBlogs,
+        getBlogById,
+        saveBlog,
+        deleteBlog,
     };
 };
 

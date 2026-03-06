@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { ClipboardList, Clock, Play, RefreshCw, ChevronRight, FileText, Lock, CheckCircle } from 'lucide-react';
 import { Exam } from '../types';
 
-const TELEGRAM_TOKEN = '7985901918:AAFK33yVAEPPKiAbiaMFCdz78TpOhBXeRr0';
 const PDF_CACHE_DB = 'pv_pdf_cache';
 const PDF_CACHE_STORE = 'pdfs';
 
@@ -36,23 +35,13 @@ const _savePdfBlob = async (examId: string, blob: Blob) => {
 const prefetchExamPdf = async (exam: Exam) => {
     try {
         if (await _isPdfCached(exam.id)) return; // already cached
-        const meta = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${exam.pdfTelegramFileId}`);
-        const md = await meta.json();
-        if (!md.ok) return;
-        const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${md.result.file_path}`;
-        // Try codetabs first
-        try {
-            const res = await fetch(`https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`);
-            if (res.ok) {
-                const ct = res.headers.get('content-type') || '';
-                if (ct.includes('pdf') || ct.includes('octet')) {
-                    const blob = await res.blob();
-                    await _savePdfBlob(exam.id, blob);
-                    console.log(`[Prefetch] ✅ ${exam.title}`);
-                    return;
-                }
-            }
-        } catch { /* silent */ }
+        const res = await fetch(`https://physivault-proxy.hoaihuy2609.workers.dev/getFile/${exam.pdfTelegramFileId}`);
+        if (res.ok) {
+            const buffer = await res.arrayBuffer();
+            const blob = new Blob([buffer], { type: 'application/pdf' });
+            await _savePdfBlob(exam.id, blob);
+            console.log(`[Prefetch] ✅ ${exam.title}`);
+        }
     } catch { /* silent */ }
 };
 

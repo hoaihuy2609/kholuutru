@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CheckCircle, XCircle, Minus, RotateCcw, Home, Clock, Award, HelpCircle, Send } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { CheckCircle, XCircle, Minus, RotateCcw, Home, Clock, Award, HelpCircle, Send, ChevronDown } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { Exam, ExamSubmission, ExamTFAnswer } from '../types';
 import { calcScore } from './ExamView';
@@ -40,6 +40,27 @@ const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBa
     const [votePart, setVotePart] = useState('');
     const [voteNum, setVoteNum] = useState('');
     const [isVoting, setIsVoting] = useState(false);
+
+    // Custom dropdown state
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!dropdownOpen) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [dropdownOpen]);
+
+    const VOTE_OPTIONS = [
+        { value: 'Phần I', label: 'Phần I: Trắc nghiệm ABCD' },
+        { value: 'Phần II', label: 'Phần II: Đúng / Sai' },
+        { value: 'Phần III', label: 'Phần III: Trả lời ngắn' },
+    ];
 
     const handleVote = async () => {
         if (!votePart || !voteNum) {
@@ -295,8 +316,8 @@ const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBa
                 </div>
 
                 {/* ── Vote Section ── */}
-                <div className="rounded-2xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                    <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #F1F0EC', background: '#FAFAFA' }}>
+                <div className="rounded-2xl" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+                    <div className="px-5 py-3 flex items-center justify-between rounded-t-2xl" style={{ borderBottom: '1px solid #F1F0EC', background: '#FAFAFA' }}>
                         <div className="flex items-center gap-2.5">
                             <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: '#FFF7ED' }}>
                                 <HelpCircle className="w-4 h-4" style={{ color: '#D9730D' }} />
@@ -309,23 +330,67 @@ const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBa
                             Bạn có gặp khó khăn với câu hỏi nào trong đề không? Hãy gửi lại (tối đa 3 câu/đề) để thầy ưu tiên ra video giải chi tiết nhé!
                         </p>
                         <div className="flex gap-3 items-center flex-wrap">
-                            <div className="flex-1 min-w-[200px] relative">
-                                <select
-                                    className="w-full rounded-xl text-sm px-4 py-2.5 outline-none transition-all duration-300 appearance-none"
-                                    style={{ background: '#F7F6F3', border: '1px solid #E9E9E7', color: '#1A1A1A', paddingRight: '2.5rem' }}
-                                    value={votePart}
-                                    onChange={(e) => setVotePart(e.target.value)}
-                                    onFocus={e => { (e.target.style.borderColor = ACCENT); (e.target.style.background = '#fff'); }}
-                                    onBlur={e => { (e.target.style.borderColor = '#E9E9E7'); (e.target.style.background = '#F7F6F3'); }}
+                            <div className="flex-1 min-w-[200px] relative" ref={dropdownRef}>
+                                <button
+                                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                                    className="w-full flex items-center justify-between rounded-xl text-sm px-4 py-2.5 transition-all duration-300 text-left outline-none"
+                                    style={{
+                                        background: dropdownOpen ? '#fff' : '#F7F6F3',
+                                        border: `1px solid ${dropdownOpen ? ACCENT : '#E9E9E7'}`,
+                                        color: votePart ? '#1A1A1A' : '#787774',
+                                        boxShadow: dropdownOpen ? `0 0 0 2px ${ACCENT}20` : 'none'
+                                    }}
                                 >
-                                    <option value="" disabled>Chọn phần thi...</option>
-                                    <option value="Phần I">Phần I: Trắc nghiệm ABCD</option>
-                                    <option value="Phần II">Phần II: Đúng / Sai</option>
-                                    <option value="Phần III">Phần III: Trả lời ngắn</option>
-                                </select>
-                                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#AEACA8' }}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-                                </div>
+                                    <span className="truncate block flex-1">
+                                        {votePart ? VOTE_OPTIONS.find(o => o.value === votePart)?.label : 'Chọn phần thi...'}
+                                    </span>
+                                    <ChevronDown
+                                        className="w-4 h-4 shrink-0 transition-transform duration-200 ml-2"
+                                        style={{
+                                            color: dropdownOpen ? ACCENT : '#AEACA8',
+                                            transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                        }}
+                                    />
+                                </button>
+
+                                {dropdownOpen && (
+                                    <div
+                                        className="absolute top-full left-0 w-full mt-1.5 rounded-xl overflow-hidden z-20"
+                                        style={{
+                                            background: '#FFFFFF',
+                                            border: '1px solid #E9E9E7',
+                                            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                        }}
+                                    >
+                                        <div className="p-1">
+                                            {VOTE_OPTIONS.map(opt => {
+                                                const isActive = votePart === opt.value;
+                                                return (
+                                                    <button
+                                                        key={opt.value}
+                                                        onClick={() => {
+                                                            setVotePart(opt.value);
+                                                            setDropdownOpen(false);
+                                                        }}
+                                                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-sm rounded-lg transition-colors"
+                                                        style={{
+                                                            background: isActive ? '#F3ECF8' : 'transparent',
+                                                            color: isActive ? '#9065B0' : '#57564F',
+                                                            fontWeight: isActive ? 500 : 400,
+                                                        }}
+                                                        onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = '#F7F6F3'; }}
+                                                        onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                                    >
+                                                        <span className="flex-1">{opt.label}</span>
+                                                        {isActive && (
+                                                            <CheckCircle className="w-4 h-4 shrink-0" style={{ color: '#9065B0' }} />
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="w-32 relative">
                                 <input

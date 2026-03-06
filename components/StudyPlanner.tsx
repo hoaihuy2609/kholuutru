@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Target, Plus, Trash2, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { StudyPlanItem } from '../types';
+import FocusTimer from './FocusTimer';
 
 interface StudyPlannerProps {
     onLoadPlans: () => Promise<StudyPlanItem[]>;
@@ -110,13 +111,20 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
         <div className="space-y-6 animate-fade-in pb-10">
 
             {/* ── Header ── */}
-            <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: ACCENT_LIGHT }}>
-                    <Target className="w-5 h-5" style={{ color: ACCENT }} />
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: ACCENT_LIGHT }}>
+                        <Target className="w-5 h-5" style={{ color: ACCENT }} />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-semibold" style={{ color: '#1A1A1A' }}>Mục Tiêu & Lịch Trình</h1>
+                        <p className="text-sm mt-0.5" style={{ color: '#787774' }}>Lên kế hoạch, chinh phục mục tiêu mỗi ngày.</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 className="text-2xl font-semibold" style={{ color: '#1A1A1A' }}>Mục Tiêu & Lịch Trình</h1>
-                    <p className="text-sm mt-0.5" style={{ color: '#787774' }}>Lên kế hoạch, chinh phục mục tiêu mỗi ngày.</p>
+
+                {/* Compact Timer Widget */}
+                <div className="shrink-0 flex items-center">
+                    <FocusTimer />
                 </div>
             </div>
 
@@ -216,8 +224,6 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ onLoadPlans, onSavePlan, on
                                 })}
                             </div>
                         </div>
-
-
                     </div>
                 </div>
 

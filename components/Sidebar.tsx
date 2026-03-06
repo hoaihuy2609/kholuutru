@@ -17,6 +17,8 @@ interface SidebarProps {
   notificationUnreadCount?: number;
   onOpenSimLab?: () => void;
   showSimLab?: boolean;
+  onOpenBlog?: () => void;
+  showBlog?: boolean;
   className?: string;
   isAdmin?: boolean;
   previewMode?: GradeLevel | null;
@@ -31,7 +33,7 @@ const PREVIEW_OPTIONS = [
   { value: String(GradeLevel.Grade10), label: 'Học sinh Lớp 10', color: '#448361', bg: '#EAF3EE', border: '#B7D9C4', dot: '#448361', icon: Activity },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, className, isAdmin, previewMode, onSetPreviewMode }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, onOpenBlog, showBlog, className, isAdmin, previewMode, onSetPreviewMode }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -104,14 +106,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           onClick={() => onSelectGrade(null)}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
           style={{
-            background: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab ? '#E3E2DE' : 'transparent',
-            color: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab ? '#1A1A1A' : '#57564F',
-            fontWeight: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab ? 500 : 400,
+            background: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog ? '#E3E2DE' : 'transparent',
+            color: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog ? '#1A1A1A' : '#57564F',
+            fontWeight: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog ? 500 : 400,
           }}
-          onMouseEnter={e => { if (!(currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab)) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
-          onMouseLeave={e => { if (!(currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab)) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          onMouseEnter={e => { if (!(currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog)) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+          onMouseLeave={e => { if (!(currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog)) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
-          <Home className="w-4 h-4 shrink-0" style={{ color: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab ? '#1A1A1A' : '#AEACA8' }} />
+          <Home className="w-4 h-4 shrink-0" style={{ color: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog ? '#1A1A1A' : '#AEACA8' }} />
           Tổng quan
         </button>
 
@@ -221,6 +223,24 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           >
             <FlaskConical className="w-4 h-4 shrink-0" style={{ color: showSimLab ? '#2878BD' : '#AEACA8' }} />
             <span>Phòng TN</span>
+          </button>
+        )}
+
+        {/* Góc Học Tập / Blog */}
+        {onOpenBlog && (
+          <button
+            onClick={() => { onOpenBlog(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
+            style={{
+              background: showBlog ? '#FFF7ED' : 'transparent',
+              color: showBlog ? '#D9730D' : '#57564F',
+              fontWeight: showBlog ? 500 : 400,
+            }}
+            onMouseEnter={e => { if (!showBlog) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+            onMouseLeave={e => { if (!showBlog) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          >
+            <ClipboardList className="w-4 h-4 shrink-0" style={{ color: showBlog ? '#D9730D' : '#AEACA8' }} />
+            <span>Góc Học Tập</span>
           </button>
         )}
 

@@ -3,7 +3,6 @@ import { Clock, ChevronLeft, Send, AlertTriangle, CheckCircle, RefreshCw, FileTe
 import { Exam, ExamTFAnswer, ExamSubmission } from '../types';
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
-const TELEGRAM_TOKEN = '7985901918:AAFK33yVAEPPKiAbiaMFCdz78TpOhBXeRr0';
 const PDF_CACHE_DB = 'pv_pdf_cache';
 const PDF_CACHE_STORE = 'pdfs';
 
@@ -128,57 +127,25 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                 // ① Kiểm tra IndexedDB cache trước (nhanh nhất, ≈ 0ms)
                 const cached = await getCachedPdf(exam.id);
                 if (cached) {
-                    objectUrl = URL.createObjectURL(cached);
+                    const pdfBlob = new Blob([cached], { type: 'application/pdf' });
+                    objectUrl = URL.createObjectURL(pdfBlob);
                     setPdfUrl(objectUrl);
                     setPdfLoading(false);
                     console.log('[PDF] ✅ Loaded from cache');
                     return;
                 }
 
-                // ② Lấy file_path từ Telegram API (nhanh, không bị CORS)
-                const metaRes = await fetch(
-                    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${exam.pdfTelegramFileId}`
-                );
-                const metaData = await metaRes.json();
-                if (!metaData.ok) throw new Error('Không lấy được link PDF từ Telegram');
-                const filePath = metaData.result.file_path;
-                const directUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${filePath}`;
-
-                // ③ Thử codetabs proxy trước (nhanh hơn GAS, không cold-start)
+                // ② Lấy PDF qua Cloudflare Proxy (nhanh, an toàn, đã ẩn Token)
                 let blob: Blob | null = null;
-                try {
-                    const codetabsUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(directUrl)}`;
-                    const res = await fetch(codetabsUrl);
-                    if (res.ok) {
-                        const ct = res.headers.get('content-type') || '';
-                        if (ct.includes('pdf') || ct.includes('octet')) {
-                            blob = await res.blob();
-                            console.log('[PDF] ✅ Loaded via codetabs proxy');
-                        }
-                    }
-                } catch { /* codetabs failed, fallback to GAS */ }
+                const proxyUrl = `https://physivault-proxy.hoaihuy2609.workers.dev/getFile/${exam.pdfTelegramFileId}`;
+                const res = await fetch(proxyUrl);
 
-                // ④ Fallback: GAS proxy (reliable nhưng có cold-start)
-                if (!blob) {
-                    try {
-                        const gasUrl = `${GOOGLE_SCRIPT_URL}?action=proxy_pdf&file_path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(TELEGRAM_TOKEN)}`;
-                        const gasRes = await fetch(gasUrl);
-                        if (!gasRes.ok) throw new Error(`GAS lỗi: ${gasRes.status}`);
-                        const ct = gasRes.headers.get('content-type') || '';
-                        if (ct.includes('application/json')) {
-                            const json = await gasRes.json();
-                            if (!json.success) throw new Error(json.error || 'GAS thất bại');
-                            const byteChars = atob(json.data as string);
-                            const byteArr = new Uint8Array(byteChars.length);
-                            for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-                            blob = new Blob([byteArr], { type: 'application/pdf' });
-                        } else {
-                            blob = await gasRes.blob();
-                        }
-                        console.log('[PDF] ✅ Loaded via GAS proxy (fallback)');
-                    } catch (gasErr) {
-                        console.error('[PDF] GAS proxy thất bại:', gasErr);
-                    }
+                if (res.ok) {
+                    const buffer = await res.arrayBuffer();
+                    blob = new Blob([buffer], { type: 'application/pdf' });
+                    console.log('[PDF] ✅ Loaded via Cloudflare proxy');
+                } else {
+                    throw new Error(`Cloudflare proxy lỗi: ${res.status}`);
                 }
 
                 if (blob) {

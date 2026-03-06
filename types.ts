@@ -108,3 +108,18 @@ export interface NotificationFetch {
   student_phone: string;
   fetched_at: string;
 }
+
+// ── Blog Types ──────────────────────────────────────────
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  summary: string;
+  content: string; // Markdown format
+  cover_image: string; // URL
+  category: string;
+  tags: string[];
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}

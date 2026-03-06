@@ -25,6 +25,10 @@ import ContactBook from './components/ContactBook';
 import StudyPlanner from './components/StudyPlanner';
 import NotificationPage from './components/NotificationPage';
 import SimulationLab from './components/SimulationLab';
+import BlogList from './components/BlogList';
+import BlogDetail from './components/BlogDetail';
+import AdminBlogEditor from './components/AdminBlogEditor';
+import { BlogPost } from './types';
 
 interface ToastMessage {
   id: string;
@@ -115,6 +119,10 @@ function App() {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [showSimLab, setShowSimLab] = useState(false);
+  const [showBlog, setShowBlog] = useState(false);
+  const [activeBlog, setActiveBlog] = useState<BlogPost | null>(null);
+  const [activeAdminBlog, setActiveAdminBlog] = useState<BlogPost | null>(null); // null means creating new or not editing
+  const [isCreatingBlog, setIsCreatingBlog] = useState(false);
 
   // --- PREVENT OVERLAPPING STATES ---
   const [previewMode, setPreviewMode] = useState<GradeLevel | null>(null);
@@ -325,6 +333,30 @@ function App() {
       return (
         <SimulationLab
           onBack={() => setShowSimLab(false)}
+        />
+      );
+    }
+
+    // 0h. Blog Views
+    if (showBlog) {
+      if (activeAdminBlog || isCreatingBlog) {
+        return (
+          <AdminBlogEditor
+            blog={activeAdminBlog}
+            onBack={() => { setActiveAdminBlog(null); setIsCreatingBlog(false); }}
+            onSaved={(savedBlog) => { setActiveAdminBlog(null); setIsCreatingBlog(false); }}
+          />
+        );
+      }
+      if (activeBlog) {
+        return <BlogDetail blog={activeBlog} onBack={() => setActiveBlog(null)} />;
+      }
+      return (
+        <BlogList
+          isAdmin={effectiveIsAdmin}
+          onReadBlog={setActiveBlog}
+          onEditBlog={effectiveIsAdmin ? setActiveAdminBlog : undefined}
+          onCreateBlog={effectiveIsAdmin ? () => setIsCreatingBlog(true) : undefined}
         />
       );
     }
@@ -708,6 +740,7 @@ function App() {
             setShowStudyPlanner(false);
             setShowNotification(false);
             setShowSimLab(false);
+            setShowBlog(false);
             setIsMobileMenuOpen(false);
           }}
           onOpenSettings={() => {
@@ -720,6 +753,7 @@ function App() {
             setShowStudyPlanner(false);
             setShowNotification(false);
             setShowSimLab(false);
+            setShowBlog(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
@@ -733,6 +767,7 @@ function App() {
             setShowStudyPlanner(false);
             setShowNotification(false);
             setShowSimLab(false);
+            setShowBlog(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
@@ -746,6 +781,7 @@ function App() {
             setShowExamList(false);
             setShowNotification(false);
             setShowSimLab(false);
+            setShowBlog(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
@@ -759,6 +795,7 @@ function App() {
             setShowContactBook(false);
             setShowExamList(false);
             setShowSimLab(false);
+            setShowBlog(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
@@ -772,11 +809,29 @@ function App() {
             setShowStudyPlanner(false);
             setShowContactBook(false);
             setShowExamList(false);
+            setShowBlog(false);
             setActiveExam(null);
             setExamSubmission(null);
             setCurrentGrade(null);
             setCurrentChapterId(null);
             setCurrentLesson(null);
+            setIsMobileMenuOpen(false);
+          } : undefined}
+          onOpenBlog={(isActivated || isAdmin) ? () => {
+            setShowBlog(true);
+            setShowNotification(false);
+            setShowStudyPlanner(false);
+            setShowContactBook(false);
+            setShowExamList(false);
+            setShowSimLab(false);
+            setActiveExam(null);
+            setExamSubmission(null);
+            setCurrentGrade(null);
+            setCurrentChapterId(null);
+            setCurrentLesson(null);
+            setActiveBlog(null);
+            setActiveAdminBlog(null);
+            setIsCreatingBlog(false);
             setIsMobileMenuOpen(false);
           } : undefined}
           showExamList={showExamList}
@@ -785,6 +840,7 @@ function App() {
           showNotification={showNotification}
           notificationUnreadCount={notificationUnreadCount}
           showSimLab={showSimLab}
+          showBlog={showBlog}
           isAdmin={isAdmin}
           previewMode={previewMode}
           onSetPreviewMode={(mode) => {
@@ -795,6 +851,8 @@ function App() {
               setShowContactBook(false);
               setShowStudyPlanner(false);
               setShowNotification(false);
+              setShowSimLab(false);
+              setShowBlog(false);
               setCurrentChapterId(null);
               setCurrentLesson(null);
             } else {
@@ -817,6 +875,7 @@ function App() {
           setShowStudyPlanner(false);
           setShowNotification(false);
           setShowSimLab(false);
+          setShowBlog(false);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenExamList={(isActivated || isAdmin) ? () => {
@@ -825,6 +884,7 @@ function App() {
           setShowStudyPlanner(false);
           setShowNotification(false);
           setShowSimLab(false);
+          setShowBlog(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
@@ -837,6 +897,7 @@ function App() {
           setShowStudyPlanner(false);
           setShowNotification(false);
           setShowSimLab(false);
+          setShowBlog(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
@@ -849,6 +910,7 @@ function App() {
           setShowExamList(false);
           setShowNotification(false);
           setShowSimLab(false);
+          setShowBlog(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
@@ -861,6 +923,7 @@ function App() {
           setShowContactBook(false);
           setShowExamList(false);
           setShowSimLab(false);
+          setShowBlog(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
@@ -873,11 +936,28 @@ function App() {
           setShowStudyPlanner(false);
           setShowContactBook(false);
           setShowExamList(false);
+          setShowBlog(false);
           setActiveExam(null);
           setExamSubmission(null);
           setCurrentGrade(null);
           setCurrentChapterId(null);
           setCurrentLesson(null);
+        } : undefined}
+        onOpenBlog={(isActivated || isAdmin) ? () => {
+          setShowBlog(true);
+          setShowNotification(false);
+          setShowStudyPlanner(false);
+          setShowContactBook(false);
+          setShowExamList(false);
+          setShowSimLab(false);
+          setActiveExam(null);
+          setExamSubmission(null);
+          setCurrentGrade(null);
+          setCurrentChapterId(null);
+          setCurrentLesson(null);
+          setActiveBlog(null);
+          setActiveAdminBlog(null);
+          setIsCreatingBlog(false);
         } : undefined}
         showExamList={showExamList}
         showContactBook={showContactBook}
@@ -885,6 +965,7 @@ function App() {
         showNotification={showNotification}
         notificationUnreadCount={notificationUnreadCount}
         showSimLab={showSimLab}
+        showBlog={showBlog}
         isAdmin={isAdmin}
         previewMode={previewMode}
         onSetPreviewMode={(mode) => {
@@ -895,6 +976,8 @@ function App() {
             setShowContactBook(false);
             setShowStudyPlanner(false);
             setShowNotification(false);
+            setShowSimLab(false);
+            setShowBlog(false);
             setCurrentChapterId(null);
             setCurrentLesson(null);
           } else {
