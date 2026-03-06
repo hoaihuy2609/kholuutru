@@ -1105,73 +1105,69 @@ export const useCloudStorage = () => {
         }
     };
 
-    // ── Blog (Góc Học Tập) Functions ─────────────────────────
+    // ── Blog (Góc Học Tập) — Telegram-based (không dùng Supabase DB) ────────────
 
-    const getBlogs = async (isAdmin: boolean) => {
+    const BLOG_LOCAL_KEY = 'physivault_blogs_local';
+    const BLOG_UPLOAD_AUTH = 'Bearer PV_ADMIN_SECURE_KEY_2026';
+
+    /** Lấy danh sách blog từ Telegram (học sinh fetch) hoặc IndexedDB cache */
+    const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> => {
         try {
-            let query = supabase.from('blogs').select('*').order('created_at', { ascending: false });
-            if (!isAdmin) {
-                query = query.eq('is_published', true);
+            // Bước 1: Lấy file_id từ Supabase (chỉ lưu 1 row nhỏ)
+            const { data: indexRow } = await supabase
+                .from('blog_index')
+                .select('telegram_file_id')
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (!indexRow?.telegram_file_id) {
+                // Chưa có blog nào được sync lên → fallback local
+                const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
+                return isAdmin ? local : local.filter(b => b.is_published);
             }
-            const { data, error } = await query;
-            if (error) {
-                if (error.code === '42P01') throw new Error('Table does not exist'); // Fallback trigger
-                throw error;
-            }
-            return data as BlogPost[];
+
+            // Bước 2: Tải JSON file từ Telegram qua Cloudflare
+            const t0 = performance.now();
+            const arrayBuf = await fetchViaCloudflareProxy(indexRow.telegram_file_id);
+            console.log(`[Blog] Tải file từ Telegram: ${(performance.now() - t0).toFixed(0)}ms`);
+
+            const str = new TextDecoder().decode(arrayBuf);
+            const firstChar = str.charCodeAt(0);
+            const blogs: BlogPost[] = (firstChar === 91 || firstChar === 123)
+                ? JSON.parse(str)
+                : JSON.parse(xorDeobfuscate(str));
+
+            // Cache vào IndexedDB (admin cache full, student cache published)
+            await dbSet(BLOG_LOCAL_KEY, blogs);
+
+            return isAdmin ? blogs : blogs.filter(b => b.is_published);
         } catch (e) {
-            console.warn('Fallback to IndexedDB for Blogs:', e);
-            const localBlogs = await dbGet('physivault_blogs') || [];
-            return isAdmin ? localBlogs : localBlogs.filter((b: BlogPost) => b.is_published);
+            console.warn('[Blog] Fetch thất bại, dùng cache local:', e);
+            const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
+            return isAdmin ? local : local.filter(b => b.is_published);
         }
     };
 
-    const getBlogById = async (id: string, isAdmin: boolean) => {
+    /** [ADMIN] Lưu blog vào IndexedDB local (chưa sync lên Telegram) */
+    const saveBlog = async (blog: Partial<BlogPost>): Promise<BlogPost | null> => {
         try {
-            let query = supabase.from('blogs').select('*').eq('id', id);
-            if (!isAdmin) {
-                query = query.eq('is_published', true);
-            }
-            const { data, error } = await query.single();
-            if (error) throw error;
-            return data as BlogPost;
-        } catch (e) {
-            const localBlogs = await dbGet('physivault_blogs') || [];
-            return localBlogs.find((b: BlogPost) => b.id === id) || null;
-        }
-    };
+            const localBlogs: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
+            let saved: BlogPost;
 
-    const saveBlog = async (blog: Partial<BlogPost>) => {
-        try {
             if (blog.id) {
-                const { data, error } = await supabase.from('blogs').update({
-                    ...blog,
-                    updated_at: new Date().toISOString()
-                }).eq('id', blog.id).select().single();
-                if (error) throw error;
-                return data as BlogPost;
-            } else {
-                const { data, error } = await supabase.from('blogs').insert({
-                    ...blog,
-                    tags: blog.tags || [],
-                    is_published: blog.is_published || false,
-                }).select().single();
-                if (error) throw error;
-                return data as BlogPost;
-            }
-        } catch (e) {
-            console.warn('Fallback to IndexedDB for saveBlog:', e);
-            const localBlogs: BlogPost[] = await dbGet('physivault_blogs') || [];
-            if (blog.id) {
-                const index = localBlogs.findIndex(b => b.id === blog.id);
-                if (index !== -1) {
-                    localBlogs[index] = { ...localBlogs[index], ...blog, updated_at: new Date().toISOString() };
-                    await dbSet('physivault_blogs', localBlogs);
-                    return localBlogs[index];
+                // Cập nhật bài có sẵn
+                const idx = localBlogs.findIndex(b => b.id === blog.id);
+                if (idx !== -1) {
+                    saved = { ...localBlogs[idx], ...blog, updated_at: new Date().toISOString() };
+                    localBlogs[idx] = saved;
+                } else {
+                    return null;
                 }
             } else {
-                const newBlog: BlogPost = {
-                    id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+                // Tạo bài mới
+                saved = {
+                    id: crypto.randomUUID ? crypto.randomUUID() : `blog_${Date.now()}`,
                     title: blog.title || '',
                     summary: blog.summary || '',
                     content: blog.content || '',
@@ -1181,27 +1177,120 @@ export const useCloudStorage = () => {
                     is_published: blog.is_published || false,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
-                    ...(blog as any)
+                    ...(blog as any),
                 };
-                localBlogs.unshift(newBlog);
-                await dbSet('physivault_blogs', localBlogs);
-                return newBlog;
+                localBlogs.unshift(saved);
             }
+
+            await dbSet(BLOG_LOCAL_KEY, localBlogs);
+            console.log(`[Blog] Đã lưu local: "${saved.title}" — Nhớ bấm Sync Blog để cập nhật!`);
+            return saved;
+        } catch (e) {
+            console.error('[Blog] Lỗi saveBlog:', e);
             return null;
         }
     };
 
-    const deleteBlog = async (id: string) => {
+    /** [ADMIN] Xóa blog khỏi IndexedDB local */
+    const deleteBlog = async (id: string): Promise<boolean> => {
         try {
-            const { error } = await supabase.from('blogs').delete().eq('id', id);
-            if (error) throw error;
+            let localBlogs: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
+            localBlogs = localBlogs.filter(b => b.id !== id);
+            await dbSet(BLOG_LOCAL_KEY, localBlogs);
+            console.log(`[Blog] Đã xóa local ID=${id} — Nhớ bấm Sync Blog!`);
             return true;
         } catch (e) {
-            console.warn('Fallback to IndexedDB for deleteBlog:', e);
-            let localBlogs: BlogPost[] = await dbGet('physivault_blogs') || [];
-            localBlogs = localBlogs.filter(b => b.id !== id);
-            await dbSet('physivault_blogs', localBlogs);
-            return true;
+            console.error('[Blog] Lỗi deleteBlog:', e);
+            return false;
+        }
+    };
+
+    /** [ADMIN] Sync tất cả blog local lên Telegram */
+    const syncBlogs = async (onProgress?: (pct: number) => void): Promise<{ success: boolean; fileId?: string; blogCount: number }> => {
+        try {
+            if (onProgress) onProgress(5);
+            const localBlogs: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
+            console.log(`[Blog Sync] Bắt đầu sync ${localBlogs.length} bài viết`);
+
+            // Serialize + XOR encode
+            const t1 = performance.now();
+            const jsonStr = xorObfuscate(JSON.stringify(localBlogs));
+            console.log(`[Blog Sync] XOR encode: ${(performance.now() - t1).toFixed(0)}ms | ${(jsonStr.length / 1024).toFixed(1)} KB`);
+            if (onProgress) onProgress(20);
+
+            // Upload lên Telegram qua Cloudflare
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const formData = new FormData();
+            formData.append('chat_id', TELEGRAM_CHAT_ID);
+            formData.append('document', blob, `blog_vault_v1.json`);
+            formData.append('caption', `[BLOG-V1] ${localBlogs.length} bài viết | ${new Date().toLocaleString('vi-VN')}`);
+
+            const t2 = performance.now();
+            const uploadRes = await fetch(
+                `${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`,
+                { method: 'POST', headers: { 'Authorization': BLOG_UPLOAD_AUTH }, body: formData }
+            );
+            if (!uploadRes.ok) throw new Error(`Upload thất bại: ${uploadRes.statusText}`);
+            const uploadData = await uploadRes.json();
+            const newFileId: string = uploadData.result.document.file_id;
+            console.log(`[Blog Sync] Upload xong: ${(performance.now() - t2).toFixed(0)}ms | file_id: ${newFileId}`);
+            if (onProgress) onProgress(80);
+
+            // Cập nhật file_id vào Supabase blog_index (chỉ lưu 1 row nhỏ metadata)
+            const { error: upsertErr } = await supabase
+                .from('blog_index')
+                .upsert({
+                    id: 1, // always row 1
+                    telegram_file_id: newFileId,
+                    blog_count: localBlogs.length,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'id' });
+            if (upsertErr) throw upsertErr;
+            if (onProgress) onProgress(95);
+
+            // Warm CF cache
+            try {
+                fetchViaCloudflareProxy(newFileId).catch(() => { });
+            } catch { /* ignore */ }
+
+            if (onProgress) onProgress(100);
+            console.log(`[Blog Sync] ✅ Hoàn thành! ${localBlogs.length} bài viết đã được sync.`);
+            return { success: true, fileId: newFileId, blogCount: localBlogs.length };
+        } catch (e: any) {
+            console.error('[Blog Sync] ❌ Lỗi:', e);
+            return { success: false, blogCount: 0 };
+        }
+    };
+
+    /** [ADMIN] Load blogs từ Telegram về local (trước khi chỉnh sửa) */
+    const fetchBlogsForEditing = async (): Promise<{ blogs: BlogPost[]; loaded: boolean }> => {
+        try {
+            const { data: indexRow } = await supabase
+                .from('blog_index')
+                .select('telegram_file_id, blog_count, updated_at')
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (!indexRow?.telegram_file_id) {
+                const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
+                return { blogs: local, loaded: false };
+            }
+
+            const arrayBuf = await fetchViaCloudflareProxy(indexRow.telegram_file_id);
+            const str = new TextDecoder().decode(arrayBuf);
+            const firstChar = str.charCodeAt(0);
+            const blogs: BlogPost[] = (firstChar === 91 || firstChar === 123)
+                ? JSON.parse(str)
+                : JSON.parse(xorDeobfuscate(str));
+
+            await dbSet(BLOG_LOCAL_KEY, blogs);
+            console.log(`[Blog] Đã tải ${blogs.length} bài viết từ Telegram về local.`);
+            return { blogs, loaded: true };
+        } catch (e) {
+            console.warn('[Blog] fetchBlogsForEditing thất bại, dùng local:', e);
+            const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
+            return { blogs: local, loaded: false };
         }
     };
 
@@ -1236,12 +1325,15 @@ export const useCloudStorage = () => {
         getFetchedNotificationIds,
         submitQuestionVote,
         getQuestionVotes,
+        // Blog — Telegram-based
         getBlogs,
-        getBlogById,
         saveBlog,
         deleteBlog,
+        syncBlogs,
+        fetchBlogsForEditing,
     };
 };
+
 
 // --- Export / Import Helpers ---
 

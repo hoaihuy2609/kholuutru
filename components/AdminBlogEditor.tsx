@@ -5,14 +5,13 @@ import {
     ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
     ImageIcon, Link as LinkIcon, HelpCircle, AlignLeft, AlignCenter,
     AlignRight, AlignJustify, Type, Hash, Quote, Code2, Table,
-    Upload, X, CheckCircle
+    Upload, X, CheckCircle, AlertCircle, RefreshCw
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
-import { supabase } from '../src/lib/supabase';
 
 interface AdminBlogEditorProps {
     blog: BlogPost | null;
@@ -23,7 +22,9 @@ interface AdminBlogEditorProps {
 const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
 const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved }) => {
-    const { saveBlog, deleteBlog } = useCloudStorage();
+    const { saveBlog, deleteBlog, syncBlogs } = useCloudStorage();
+    const [pendingSync, setPendingSync] = useState(false); // flag cần sync lên Telegram
+    const [isSyncingBlog, setIsSyncingBlog] = useState(false);
 
     const [formData, setFormData] = useState<Partial<BlogPost>>({
         title: '', summary: '', content: '', cover_image: '', category: '', tags: [], is_published: false,
@@ -74,10 +75,23 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         const saved = await saveBlog(formData);
         setIsSaving(false);
         if (saved) {
-            showToast('✅ Lưu bài viết thành công!');
+            showToast('✅ Đã lưu local! Bấm "Sync Blog" trong Cloud Sync để cập nhật cho học sinh.');
+            setPendingSync(true);
             onSaved(saved);
         } else {
-            showToast('❌ Lỗi khi lưu bài viết!', 'error');
+            showToast('❌ Lỗi khi lưu!', 'error');
+        }
+    };
+
+    const handleSyncNow = async () => {
+        setIsSyncingBlog(true);
+        const result = await syncBlogs();
+        setIsSyncingBlog(false);
+        if (result.success) {
+            showToast(`🚀 Sync xong! ${result.blogCount} bài viết đã lên Telegram.`);
+            setPendingSync(false);
+        } else {
+            showToast('❌ Sync thất bại! Kiểm tra kết nối.', 'error');
         }
     };
 
@@ -106,42 +120,48 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         }, 0);
     };
 
-    // Upload ảnh vào inline content qua Supabase Storage
+    // Chuyển ảnh sang Base64 và nhúng thẳng vào Markdown (không cần Supabase Storage)
     const handleInlineImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        if (file.size > 3 * 1024 * 1024) {
+            showToast('❌ Ảnh quá lớn (tối đa 3MB). Hãy dùng URL thốc nđ cho ảnh lớn.', 'error');
+            e.target.value = '';
+            return;
+        }
         setIsUploadingImage(true);
         try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `blog_image_${Date.now()}.${fileExt}`;
-            const { data, error } = await supabase.storage.from('blog-images').upload(fileName, file, { upsert: true });
-            if (error) throw error;
-            const { data: { publicUrl } } = supabase.storage.from('blog-images').getPublicUrl(fileName);
-            insertTextAtCursor(`\n![${file.name}](${publicUrl})\n`);
-            showToast('📸 Đã chèn ảnh vào bài viết!');
+            const reader = new FileReader();
+            reader.onload = () => {
+                const base64 = reader.result as string;
+                insertTextAtCursor(`\n![${file.name}](${base64})\n`);
+                showToast('ð� Đã chịn ảnh (Base64, lưu cùng bài viết)!');
+            };
+            reader.readAsDataURL(file);
         } catch (err: any) {
-            showToast(`❌ Upload thất bại: ${err.message}`, 'error');
+            showToast(`❌ Lỗi: ${err.message}`, 'error');
         }
         setIsUploadingImage(false);
         e.target.value = '';
     };
 
-    // Upload ảnh bìa qua Supabase Storage
+    // Ảnh bìa: cũng base64 hoặc URL
     const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setIsUploadingImage(true);
-        try {
-            const fileName = `blog_cover_${Date.now()}.${file.name.split('.').pop()}`;
-            const { error } = await supabase.storage.from('blog-images').upload(fileName, file, { upsert: true });
-            if (error) throw error;
-            const { data: { publicUrl } } = supabase.storage.from('blog-images').getPublicUrl(fileName);
-            handleChange('cover_image', publicUrl);
-            showToast('🖼️ Upload ảnh bìa thành công!');
-        } catch (err: any) {
-            showToast(`❌ Upload thất bại: ${err.message}`, 'error');
+        if (file.size > 3 * 1024 * 1024) {
+            showToast('❌ Ảnh quá lớn (tối đa 3MB).', 'error');
+            e.target.value = '';
+            return;
         }
-        setIsUploadingImage(false);
+        setIsUploadingImage(true);
+        const reader = new FileReader();
+        reader.onload = () => {
+            handleChange('cover_image', reader.result as string);
+            showToast('🖼️ Đã chọn ảnh bìa!');
+            setIsUploadingImage(false);
+        };
+        reader.readAsDataURL(file);
         e.target.value = '';
     };
 

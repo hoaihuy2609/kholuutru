@@ -4,7 +4,7 @@ import {
     CloudUpload, Send, CheckCircle2, RefreshCw, AlertCircle,
     FileText, Trash2, Upload,
     BookOpen, X, MessageCircle, Tag, ChevronDown, ChevronRight,
-    BarChart3, AlertTriangle
+    BarChart3, AlertTriangle, PenTool, Download
 } from 'lucide-react';
 
 const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
@@ -13,6 +13,7 @@ const Loader2 = ({ className, style }: { className?: string; style?: React.CSSPr
 
 import { CURRICULUM } from '../constants';
 import { Lesson, StoredFile, FileStorage } from '../types';
+import { useCloudStorage } from '../src/hooks/useCloudStorage';
 
 const LESSON_CATEGORIES = [
     'Trắc nghiệm Lý thuyết (ABCD)',
@@ -51,6 +52,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     onBack, onShowToast, lessons, storedFiles,
     onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
 }) => {
+    const { syncBlogs, fetchBlogsForEditing } = useCloudStorage();
     const [selectedGrade, setSelectedGrade] = useState<number>(12);
     const [syncStatus, setSyncStatus] = useState<Record<number, SyncStatus>>({ 10: 'idle', 11: 'idle', 12: 'idle' });
     const [syncMsg, setSyncMsg] = useState<Record<number, string>>({});
@@ -63,6 +65,10 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [selectedUploadCategory, setSelectedUploadCategory] = useState<string>(LESSON_CATEGORIES[0]);
     const [pendingUploadLessonId, setPendingUploadLessonId] = useState<string | null>(null);
+    // Blog sync state
+    const [blogSyncStatus, setBlogSyncStatus] = useState<'idle' | 'syncing' | 'fetching' | 'success' | 'error'>('idle');
+    const [blogSyncMsg, setBlogSyncMsg] = useState('');
+    const [blogSyncProgress, setBlogSyncProgress] = useState(0);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const uploadTargetRef = useRef<string | null>(null);
@@ -227,6 +233,90 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
 
             {/* ── Main ── */}
             <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 custom-scrollbar">
+
+                {/* ── Blog Sync Card ── */}
+                <div className="rounded-xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #C5CAFA55', borderLeft: '3px solid #6B7CDB' }}>
+                    <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-xl shrink-0" style={{ background: '#EEF0FB' }}>
+                                <PenTool className="w-5 h-5" style={{ color: '#6B7CDB' }} />
+                            </div>
+                            <div>
+                                <div className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>Sync Blog học tập</div>
+                                <div className="text-xs mt-0.5" style={{ color: '#787774' }}>
+                                    Đồng bộ tất cả bài viết (Góc Học Tập) lên Telegram
+                                    {blogSyncMsg && (
+                                        <span className="ml-2 font-medium" style={{ color: blogSyncStatus === 'success' ? '#448361' : blogSyncStatus === 'error' ? '#E03E3E' : '#6B7CDB' }}>
+                                            {blogSyncMsg}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            {/* Fetch về để chỉnh sửa */}
+                            <button
+                                onClick={async () => {
+                                    setBlogSyncStatus('fetching'); setBlogSyncMsg('');
+                                    const { blogs, loaded } = await fetchBlogsForEditing();
+                                    if (loaded) {
+                                        setBlogSyncStatus('success');
+                                        setBlogSyncMsg(`✓ Đã tải ${blogs.length} bài về local`);
+                                        onShowToast(`Đã tải ${blogs.length} bài viết về local!`, 'success');
+                                    } else {
+                                        setBlogSyncStatus('idle');
+                                        setBlogSyncMsg(`Dùng cache: ${blogs.length} bài`);
+                                    }
+                                    setTimeout(() => { setBlogSyncStatus('idle'); setBlogSyncMsg(''); }, 8000);
+                                }}
+                                disabled={blogSyncStatus === 'syncing' || blogSyncStatus === 'fetching'}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
+                                style={{ background: '#EEF0FB', color: '#6B7CDB', border: '1px solid #C5CAFA' }}
+                            >
+                                {blogSyncStatus === 'fetching' ? <Loader2 className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
+                                {blogSyncStatus === 'fetching' ? 'Đang tải...' : 'Fetch về'}
+                            </button>
+                            {/* Sync lên Telegram */}
+                            <button
+                                onClick={async () => {
+                                    setBlogSyncStatus('syncing'); setBlogSyncProgress(0); setBlogSyncMsg('');
+                                    const result = await syncBlogs((pct) => setBlogSyncProgress(pct));
+                                    if (result.success) {
+                                        setBlogSyncStatus('success');
+                                        setBlogSyncMsg(`✓ ${result.blogCount} bài · ID: ...${(result.fileId || '').slice(-6)}`);
+                                        onShowToast(`Sync Blog xong! ${result.blogCount} bài viết lên Telegram.`, 'success');
+                                    } else {
+                                        setBlogSyncStatus('error');
+                                        setBlogSyncMsg('Sync thất bại!');
+                                        onShowToast('Lỗi Sync Blog!', 'error');
+                                    }
+                                    setTimeout(() => { setBlogSyncStatus('idle'); setBlogSyncMsg(''); }, 10000);
+                                }}
+                                disabled={blogSyncStatus === 'syncing' || blogSyncStatus === 'fetching'}
+                                className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-60 active:scale-[0.98]"
+                                style={{ background: blogSyncStatus === 'success' ? '#448361' : '#6B7CDB' }}
+                            >
+                                {blogSyncStatus === 'syncing'
+                                    ? <><Loader2 className="w-4 h-4" /> Đang Sync...</>
+                                    : blogSyncStatus === 'success' ? <><CheckCircle2 className="w-4 h-4" /> Đã Sync!</>
+                                        : blogSyncStatus === 'error' ? <><AlertCircle className="w-4 h-4" /> Thử lại</>
+                                            : <><Send className="w-4 h-4" /> Sync Blog</>}
+                            </button>
+                        </div>
+                    </div>
+                    {/* Progress bar for blog sync */}
+                    {blogSyncStatus === 'syncing' && (
+                        <div className="px-4 pb-4">
+                            <div className="relative h-1.5 rounded-full overflow-hidden" style={{ background: '#F1F0EC' }}>
+                                <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-300" style={{ width: `${blogSyncProgress}%`, background: 'linear-gradient(90deg, #6B7CDB, #9065B0)' }} />
+                            </div>
+                            <div className="flex justify-between mt-1">
+                                <span className="text-[10px]" style={{ color: '#AEACA8' }}>Upload JSON blog lên Telegram...</span>
+                                <span className="text-[10px] font-semibold" style={{ color: '#6B7CDB' }}>{Math.round(blogSyncProgress)}%</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* Grade Tabs */}
                 <div className="flex items-center gap-0.5 p-1 rounded-lg" style={{ background: '#EBEBEA', width: 'fit-content' }}>
