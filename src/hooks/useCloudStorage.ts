@@ -368,8 +368,8 @@ export const useCloudStorage = () => {
                 const zIds: string[] = indexData.zipFileIds || [indexData.zipFileId];
                 if (onProgress) onProgress(10);
 
-                // Tải song song tối đa 2 ZIP parts cùng lúc (vừa nhanh, vừa không bị rate-limit)
-                const CONCURRENCY = 2;
+                // Tải song song tối đa (vừa nhanh, vừa không bị rate-limit nhờ worker cache)
+                const CONCURRENCY = 5;
                 let downloadedParts = 0;
 
                 const processZipPart = async (fileId: string): Promise<void> => {
@@ -534,10 +534,10 @@ export const useCloudStorage = () => {
         }
 
         const zipBlobs: Blob[] = [];
-        // 1. Phân bổ 0% -> 20% cho việc nén ZIP
+        // 1. Phân bổ 0% -> 20% cho việc nén ZIP (Dùng STORE để tăng tốc độ nén cho file đã mã hoá)
         for (let i = 0; i < zipChunks.length; i++) {
             const z = zipChunks[i];
-            const zipBlob = await z.generateAsync({ type: 'blob', compression: "DEFLATE", compressionOptions: { level: 6 } }, (meta) => {
+            const zipBlob = await z.generateAsync({ type: 'blob', compression: "STORE" }, (meta) => {
                 const globalPercent = Math.floor(i * (20 / zipChunks.length) + meta.percent * (0.2 / zipChunks.length));
                 setSyncProgress(globalPercent);
             });
