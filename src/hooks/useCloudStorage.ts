@@ -1113,6 +1113,19 @@ export const useCloudStorage = () => {
     /** Lấy danh sách blog từ Telegram (học sinh fetch) hoặc IndexedDB cache */
     const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> => {
         try {
+            // Admin luôn đọc từ IndexedDB local (source of truth cho việc chỉnh sửa)
+            // Học sinh mới fetch từ Telegram để lấy bản mới nhất đã sync
+            if (isAdmin) {
+                const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
+                // Nếu local có data → dùng luôn
+                if (local.length > 0) {
+                    console.log(`[Blog] Admin: đọc ${local.length} bài từ local IndexedDB`);
+                    return local;
+                }
+                // Nếu local trống → thử kéo từ Telegram về để có dữ liệu ban đầu
+                console.log('[Blog] Admin: local trống, thử kéo từ Telegram...');
+            }
+
             // Bước 1: Lấy file_id từ Supabase (chỉ lưu 1 row nhỏ)
             const { data: indexRow } = await supabase
                 .from('blog_index')
@@ -1138,7 +1151,7 @@ export const useCloudStorage = () => {
                 ? JSON.parse(str)
                 : JSON.parse(xorDeobfuscate(str));
 
-            // Cache vào IndexedDB (admin cache full, student cache published)
+            // Cache vào IndexedDB
             await dbSet(BLOG_LOCAL_KEY, blogs);
 
             return isAdmin ? blogs : blogs.filter(b => b.is_published);
