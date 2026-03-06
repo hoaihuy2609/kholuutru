@@ -482,16 +482,6 @@ export const useCloudStorage = () => {
             payloads.push({ chapterId: lesson.chapterId, lessons: [lesson], files: lessonFiles });
         }
 
-        // Chuẩn bị blobs
-        const blobs: Blob[] = [];
-        let totalUploadSize = 0;
-        for (const p of payloads) {
-            const content = xorObfuscate(JSON.stringify({ ...p, syncedAt: Date.now() }));
-            const blob = new Blob([content], { type: 'application/json' });
-            blobs.push(blob);
-            totalUploadSize += blob.size;
-        }
-
         // Helper upload 1 blob lên Telegram với retry khi 429
         const uploadBlob = async (blob: Blob, fileName: string, onProgress?: (loaded: number) => void): Promise<string> => {
             const MAX_RETRIES = 5;
@@ -527,16 +517,20 @@ export const useCloudStorage = () => {
             throw new Error('Quá 5 lần thử lại — Telegram đang bị giới hạn.');
         };
 
-        // --- V3 Zip Archive Chunking (Giới hạn tải xuống của Telegram File API là 20MB, ta chia 18MB một cục chưa nén) ---
+        // --- V3 Zip Archive Chunking ---
+        // Mỗi payload chỉ XOR encode 1 lần (trước đây encode 2 lần = lãng phí CPU)
         const MAX_CHUNK_SIZE = 18 * 1024 * 1024;
         const zipChunks: JSZip[] = [];
         let currentZip = new JSZip();
         let currentChunkSize = 0;
 
+        console.time('[Sync] Giai đoạn 1: XOR encode + pack ZIP');
         for (const p of payloads) {
+            // XOR chỉ gọi 1 lần — dùng lại cho cả chunk size check và zip.file()
             const content = xorObfuscate(JSON.stringify({ ...p, syncedAt: Date.now() }));
             const fileName = `g${grade}_${p.chapterId}_${p.lessons[0]?.id || 'ch'}.json`;
-            const contentBytes = new Blob([content]).size;
+            // Dùng content.length thay vì new Blob().size (nhanh hơn vì tránh tạo object)
+            const contentBytes = content.length;
 
             if (currentChunkSize > 0 && currentChunkSize + contentBytes > MAX_CHUNK_SIZE) {
                 zipChunks.push(currentZip);
@@ -550,17 +544,22 @@ export const useCloudStorage = () => {
         if (currentChunkSize > 0) {
             zipChunks.push(currentZip);
         }
+        console.timeEnd('[Sync] Giai đoạn 1: XOR encode + pack ZIP');
+        console.log(`[Sync] Số chunk ZIP: ${zipChunks.length}`);
 
         const zipBlobs: Blob[] = [];
-        // 1. Phân bổ 0% -> 20% cho việc nén ZIP (Dùng STORE để tăng tốc độ nén cho file đã mã hoá)
+        // 1. Phân bổ 0% -> 20% cho việc generate ZIP blob
+        console.time('[Sync] Giai đoạn 2: generateAsync ZIP');
         for (let i = 0; i < zipChunks.length; i++) {
             const z = zipChunks[i];
             const zipBlob = await z.generateAsync({ type: 'blob', compression: "STORE" }, (meta) => {
-                const globalPercent = Math.floor(i * (20 / zipChunks.length) + meta.percent * (0.2 / zipChunks.length));
+                const globalPercent = Math.floor(i * (20 / zipChunks.length) + meta.percent * (20 / zipChunks.length));
                 setSyncProgress(globalPercent);
             });
+            console.log(`[Sync] ZIP part ${i + 1}: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
             zipBlobs.push(zipBlob);
         }
+        console.timeEnd('[Sync] Giai đoạn 2: generateAsync ZIP');
 
         // 2. Phân bổ 20% -> 95%: Upload SONG SONG tất cả các phần ZIP
         const totalZipSize = zipBlobs.reduce((acc, curr) => acc + curr.size, 0);
@@ -580,6 +579,7 @@ export const useCloudStorage = () => {
         const finalZipFileIds: string[] = uploadResults;
 
         // Gửi file Index V3
+        console.time('[Sync] Giai đoạn 4: Upload index + Supabase');
         setSyncProgress(95);
         const indexPayload = { grade, zipFileIds: finalZipFileIds, totalLessons: lessonsToSync.length, updatedAt: Date.now() };
         const indexBlob = new Blob([xorObfuscate(JSON.stringify(indexPayload))], { type: 'application/json' });
@@ -597,16 +597,33 @@ export const useCloudStorage = () => {
 
         const finalFileId = (await indexRes.json()).result.document.file_id;
 
-        // Lưu vào Supabase thay vì Google Sheets
+        // Lưu vào Supabase
         const { error: sbError } = await supabase
             .from('vault_index')
             .upsert({ grade, telegram_file_id: finalFileId, updated_at: Date.now() }, { onConflict: 'grade' });
 
         if (sbError) throw new Error("Supabase từ chối lưu: " + sbError.message);
+        console.timeEnd('[Sync] Giai đoạn 4: Upload index + Supabase');
 
         localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
         setSyncProgress(100);
         setTimeout(() => setSyncProgress(0), 1000);
+
+        // Warm cache cho học sinh: tải sẵn các ZIP qua Cloudflare để cache ngay
+        // Chạy nền, không block return
+        (async () => {
+            try {
+                console.log('[Sync] 🔥 Warming Cloudflare cache cho học sinh...');
+                // Prime cache cho index + từng zip chunk song song
+                await Promise.all([
+                    fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${finalFileId}`).catch(() => null),
+                    ...finalZipFileIds.map(id =>
+                        fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${id}`).catch(() => null)
+                    )
+                ]);
+                console.log('[Sync] ✅ Cache warming xong — học sinh fetch lần đầu sẽ nhanh hơn!');
+            } catch { /* nếu fail cũng không sao */ }
+        })();
 
         // ── Auto-tạo Thông Báo sau Sync thành công ──
         try {
