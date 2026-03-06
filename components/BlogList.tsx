@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BlogPost } from '../types';
 import { useCloudStorage } from '../src/hooks/useCloudStorage';
-import { BookOpen, Calendar, ChevronRight, Edit3, Plus, Search, Clock, Tag, Filter, X } from 'lucide-react';
+import { BookOpen, Calendar, ChevronRight, Edit3, Plus, Search, Clock, Tag, Filter, X, Atom } from 'lucide-react';
 
 interface BlogListProps {
     isAdmin: boolean;
@@ -233,12 +233,15 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
                                         alt={blog.title}
                                     />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
+                                    <div className="w-full h-full flex items-center justify-center relative bg-gradient-to-br from-[#F7F6F3] to-[#EEF0FB]">
+                                        {/* Subtle background pattern */}
+                                        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#1A1A1A 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
+
                                         <div
-                                            className="w-16 h-16 rounded-3xl flex items-center justify-center"
-                                            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
+                                            className="w-16 h-16 rounded-3xl flex items-center justify-center relative z-10 transition-transform duration-500 group-hover:rotate-12"
+                                            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 4px 12px rgba(107, 124, 219, 0.1)' }}
                                         >
-                                            <BookOpen className="w-8 h-8 text-[#E9E9E7]" />
+                                            <Atom className="w-8 h-8 text-[#6B7CDB] animate-pulse" />
                                         </div>
                                     </div>
                                 )}
