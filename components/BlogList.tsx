@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BlogPost } from '../types';
 import { useCloudStorage } from '../src/hooks/useCloudStorage';
-import { BookOpen, Calendar, ChevronRight, Edit3, Plus, Search, Clock, Tag, Filter, X, Atom } from 'lucide-react';
+import { BookOpen, Calendar, ChevronRight, Edit3, Plus, Search, Clock, Tag, Filter, X, Atom, FileText } from 'lucide-react';
 
 interface BlogListProps {
     isAdmin: boolean;
@@ -72,8 +72,11 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
             <div className="flex flex-col gap-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight mb-1" style={{ color: '#1A1A1A' }}>
-                            {isAdmin ? '📝 Quản lý Blog' : '📚 Góc Học Tập'}
+                        <h1 className="text-3xl font-bold tracking-tight mb-1 flex items-center gap-3" style={{ color: '#1A1A1A' }}>
+                            {isAdmin
+                                ? <FileText className="w-7 h-7 text-indigo-500 shrink-0" strokeWidth={2} />
+                                : <BookOpen className="w-7 h-7 text-indigo-500 shrink-0" strokeWidth={2} />}
+                            {isAdmin ? 'Quản lý Blog' : 'Góc Học Tập'}
                         </h1>
                         <p className="text-sm" style={{ color: '#787774' }}>
                             {isAdmin
