@@ -20,21 +20,39 @@ const CLOUDFLARE_PROXY_URL = 'https://physivault-proxy.hoaihuy2609.workers.dev';
 
 export const fetchViaCloudflareProxy = async (fileId: string): Promise<ArrayBuffer> => {
     const maxRetries = 3;
-    let lastError = null;
+    // Timeout 60s mỗi lần thử — file ZIP lớn nhất ~18MB vẫn đủ thời gian tải
+    const FETCH_TIMEOUT_MS = 60_000;
+    let lastError: any = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
         try {
-            const proxyRes = await fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${fileId}`);
+            const proxyRes = await fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${fileId}`, {
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
             if (!proxyRes.ok) {
                 let errorMsg = proxyRes.statusText;
                 try { const errData = await proxyRes.json(); if (errData.error) errorMsg = errData.error; } catch { }
-                throw new Error(`Cloudflare Proxy Error: ${proxyRes.status} - ${errorMsg}`);
+                // 429 = Telegram rate-limit → đợi lâu hơn
+                if (proxyRes.status === 429) {
+                    await new Promise(r => setTimeout(r, 5000));
+                } else {
+                    throw new Error(`Cloudflare Proxy Error: ${proxyRes.status} - ${errorMsg}`);
+                }
+                continue;
             }
             return await proxyRes.arrayBuffer();
         } catch (e: any) {
+            clearTimeout(timeoutId);
             lastError = e;
-            console.warn(`[Cloudflare] Lần thử ${attempt + 1}/${maxRetries} thất bại:`, e.message);
-            await new Promise(r => setTimeout(r, 1000 * (attempt + 1))); // Tăng dần thời gian đợi
+            const isTimeout = e.name === 'AbortError';
+            console.warn(`[Cloudflare] Lần thử ${attempt + 1}/${maxRetries} ${isTimeout ? '(timeout)' : ''} thất bại:`, e.message);
+            if (attempt < maxRetries - 1) {
+                // Retry delay ngắn (500ms) thay vì exponential backoff chậm
+                await new Promise(r => setTimeout(r, 500));
+            }
         }
     }
     throw lastError || new Error("Không thể kết nối đến Cloudflare Server.");
@@ -544,21 +562,22 @@ export const useCloudStorage = () => {
             zipBlobs.push(zipBlob);
         }
 
-        const finalZipFileIds: string[] = [];
+        // 2. Phân bổ 20% -> 95%: Upload SONG SONG tất cả các phần ZIP
         const totalZipSize = zipBlobs.reduce((acc, curr) => acc + curr.size, 0);
-        let currentUploadedSize = 0;
+        // Track bytes đã upload của từng part riêng lẻ
+        const uploadedPerPart: number[] = new Array(zipBlobs.length).fill(0);
 
-        // 2. Phân bổ 20% -> 95% cho việc upload file
-        for (let i = 0; i < zipBlobs.length; i++) {
-            const zipBlob = zipBlobs[i];
-            const fileId = await uploadBlob(zipBlob, `vault_g${grade}_v3_part${i + 1}.zip`, (loaded) => {
-                const totalLoaded = currentUploadedSize + loaded;
-                const globalPercent = 20 + Math.floor((totalLoaded / totalZipSize) * 75);
-                setSyncProgress(Math.min(globalPercent, 95));
-            });
-            currentUploadedSize += zipBlob.size;
-            finalZipFileIds.push(fileId);
-        }
+        const uploadResults = await Promise.all(
+            zipBlobs.map((zipBlob, i) =>
+                uploadBlob(zipBlob, `vault_g${grade}_v3_part${i + 1}.zip`, (loaded) => {
+                    uploadedPerPart[i] = loaded;
+                    const totalLoaded = uploadedPerPart.reduce((a, b) => a + b, 0);
+                    const globalPercent = 20 + Math.floor((totalLoaded / totalZipSize) * 75);
+                    setSyncProgress(Math.min(globalPercent, 95));
+                })
+            )
+        );
+        const finalZipFileIds: string[] = uploadResults;
 
         // Gửi file Index V3
         setSyncProgress(95);

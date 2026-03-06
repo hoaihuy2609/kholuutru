@@ -23,9 +23,14 @@ Sau bước này, đoạn Worker bên server đã sẵn sàng hoạt động mà
 
 ---
 
-## BƯỚC 2: Mã Cloudflare Worker Cần Dùng
+## BƯỚC 2: Mã Cloudflare Worker Cần Dùng (v2 — Có Cache)
 
-*Đoạn mã này copy dán thẳng lên Cloudflare như mô tả ở Bước 1. Đừng bỏ quên.*
+> **⚡ Cập nhật v2**: Worker mới có **cache 12 tiếng** → Lần tải thứ 2 trở đi gần như **tức thì** (không cần gọi Telegram).  
+> Bảo vệ endpoint upload bằng Authorization header (tránh bị lạm dụng).
+
+**Mã mới nằm trong file `cloudflare_worker_v2.js`** — copy toàn bộ nội dung file đó rồi dán vào Cloudflare Worker editor.
+
+*Lưu ý: không dùng code cũ nữa vì code cũ không có cache → mỗi lần tải đều phải fetch từ Telegram (chậm).*
 
 ```javascript
 export default {
