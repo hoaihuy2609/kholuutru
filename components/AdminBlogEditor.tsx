@@ -27,7 +27,9 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
     const [isSyncingBlog, setIsSyncingBlog] = useState(false);
 
     const [formData, setFormData] = useState<Partial<BlogPost>>({
-        title: '', summary: '', content: '', cover_image: '', category: '', tags: [], is_published: false,
+        title: '', summary: '', content: '', cover_image: '', category: '', is_published: false,
+        grade: 0,
+        tags: []
     });
     const [isPreview, setIsPreview] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
