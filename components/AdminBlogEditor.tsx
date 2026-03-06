@@ -340,6 +340,33 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                             </label>
                         </div>
 
+                        {/* Grade Selection */}
+                        <div>
+                            <label className="block text-sm font-semibold mb-1.5 text-[#1A1A1A]">Khối lớp</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {[
+                                    { lab: 'Tất cả khối', val: 0 },
+                                    { lab: 'Lớp 12', val: 12 },
+                                    { lab: 'Lớp 11', val: 11 },
+                                    { lab: 'Lớp 10', val: 10 }
+                                ].map(g => (
+                                    <button
+                                        key={g.val}
+                                        type="button"
+                                        onClick={() => handleChange('grade', g.val)}
+                                        className="py-2 text-xs font-semibold rounded-lg border transition-all"
+                                        style={{
+                                            background: (formData.grade || 0) === g.val ? '#6B7CDB' : '#FFFFFF',
+                                            color: (formData.grade || 0) === g.val ? '#FFFFFF' : '#787774',
+                                            borderColor: (formData.grade || 0) === g.val ? '#6B7CDB' : '#E9E9E7'
+                                        }}
+                                    >
+                                        {g.lab}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* Category */}
                         <div>
                             <label className="block text-sm font-semibold mb-1.5 text-[#1A1A1A]">Chuyên mục</label>

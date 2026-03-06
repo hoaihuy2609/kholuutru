@@ -120,6 +120,7 @@ export interface BlogPost {
   category: string;
   tags: string[];
   is_published: boolean;
+  grade?: number; // 10, 11, 12 hoặc 0 (Tất cả)
   created_at: string;
   updated_at: string;
 }

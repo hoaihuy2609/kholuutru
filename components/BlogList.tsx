@@ -23,6 +23,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedTag, setSelectedTag] = useState('');
+    const [gradeFilter, setGradeFilter] = useState<number>(0);
     const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
@@ -30,13 +31,13 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
             setLoading(true);
             const data = await getBlogs(isAdmin);
             setBlogs(data);
-            if (onBlogsLoaded) onBlogsLoaded(data); // căng bản cho related posts
+            if (onBlogsLoaded) onBlogsLoaded(data);
             setLoading(false);
         };
         fetchBlogs();
     }, [isAdmin]);
 
-    // Lấy danh sách categories và tags duy nhất
+    // Categories và tags
     const categories = useMemo(() =>
         [...new Set(blogs.map(b => b.category).filter(Boolean))],
         [blogs]
@@ -51,268 +52,231 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
         const matchSearch = !q || b.title.toLowerCase().includes(q) || b.summary.toLowerCase().includes(q) || (b.tags || []).some(t => t.toLowerCase().includes(q));
         const matchCat = !selectedCategory || b.category === selectedCategory;
         const matchTag = !selectedTag || (b.tags || []).includes(selectedTag);
-        return matchSearch && matchCat && matchTag;
-    }), [blogs, searchQuery, selectedCategory, selectedTag]);
+        const matchGrade = gradeFilter === 0 || b.grade === gradeFilter || b.grade === 0;
+        return matchSearch && matchCat && matchTag && matchGrade;
+    }), [blogs, searchQuery, selectedCategory, selectedTag, gradeFilter]);
 
     const hasActiveFilters = selectedCategory || selectedTag;
 
+    const gradeTabs = [
+        { label: 'Tất cả', value: 0, color: '#6B7CDB' },
+        { label: 'Lớp 12', value: 12, color: '#9065B0' },
+        { label: 'Lớp 11', value: 11, color: '#6B7CDB' },
+        { label: 'Lớp 10', value: 10, color: '#448361' },
+    ];
+
     return (
-        <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8 animate-fade-in relative pb-20">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold mb-2 tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
-                        {isAdmin ? '📝 Quản lý Blog Kiến Thức' : '📚 Góc Học Tập'}
-                    </h1>
-                    <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-                        {isAdmin
-                            ? `${blogs.length} bài viết · ${blogs.filter(b => b.is_published).length} đã xuất bản`
-                            : 'Các bài viết chia sẻ kiến thức, kinh nghiệm và mẹo giải bài tập Vật Lý.'}
-                    </p>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                    {/* Search */}
-                    <div
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm flex-1 min-w-0"
-                        style={{ background: 'var(--color-bg-primary)', border: '1px solid var(--color-border)' }}
-                    >
-                        <Search className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
-                        <input
-                            type="text"
-                            placeholder="Tìm kiếm bài viết, thẻ..."
-                            className="bg-transparent border-none outline-none w-full placeholder:text-[#AEACA8] min-w-0"
-                            style={{ color: 'var(--color-text-primary)' }}
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
-                        {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} className="shrink-0 text-[#AEACA8] hover:text-[#57564F]">
-                                <X className="w-3.5 h-3.5" />
-                            </button>
-                        )}
+        <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20 font-sans">
+            {/* Header & Search */}
+            <div className="flex flex-col gap-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight mb-1" style={{ color: '#1A1A1A' }}>
+                            {isAdmin ? '📝 Quản lý Blog' : '📚 Góc Học Tập'}
+                        </h1>
+                        <p className="text-sm" style={{ color: '#787774' }}>
+                            {isAdmin
+                                ? `Hệ thống lưu trữ bài viết & kiến thức chuyên sâu`
+                                : 'Chia sẻ kiến thức, mẹo giải bài tập và tài liệu Vật Lý độc quyền.'}
+                        </p>
                     </div>
-
-                    {/* Filter button */}
-                    <button
-                        onClick={() => setShowFilters(!showFilters)}
-                        className="px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all shrink-0"
-                        style={{
-                            background: hasActiveFilters ? '#EEF0FB' : 'var(--color-bg-primary)',
-                            color: hasActiveFilters ? '#6B7CDB' : 'var(--color-text-secondary)',
-                            border: `1px solid ${hasActiveFilters ? '#C5CAFA' : 'var(--color-border)'}`
-                        }}
-                    >
-                        <Filter className="w-4 h-4" />
-                        Lọc {hasActiveFilters && <span className="bg-[#6B7CDB] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">!</span>}
-                    </button>
 
                     {isAdmin && onCreateBlog && (
                         <button
                             onClick={onCreateBlog}
-                            className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] shrink-0"
+                            className="px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm"
                             style={{ background: '#1A1A1A', color: '#FFFFFF' }}
                         >
                             <Plus className="w-4 h-4" />
-                            Viết bài
+                            Viết bài mới
                         </button>
                     )}
+                </div>
+
+                {/* Grade Filter Bar - New! */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    {gradeTabs.map(tab => (
+                        <button
+                            key={tab.value}
+                            onClick={() => setGradeFilter(tab.value)}
+                            className="px-5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all border shadow-sm"
+                            style={{
+                                background: gradeFilter === tab.value ? tab.color : '#FFFFFF',
+                                color: gradeFilter === tab.value ? '#FFFFFF' : '#787774',
+                                borderColor: gradeFilter === tab.value ? tab.color : '#E9E9E7'
+                            }}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+
+                    <div className="h-6 w-[1px] bg-[#E9E9E7] mx-2 shrink-0"></div>
+
+                    {/* Search Input In-line */}
+                    <div
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-white border border-[#E9E9E7] flex-1 min-w-[200px] shadow-sm"
+                    >
+                        <Search className="w-4 h-4 shrink-0 text-[#AEACA8]" />
+                        <input
+                            type="text"
+                            placeholder="Tìm kiếm..."
+                            className="bg-transparent border-none outline-none w-full placeholder:text-[#AEACA8]"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className="p-1 rounded-lg hover:bg-[#F7F6F3] text-[#AEACA8]"
+                            title="Lọc chuyên sâu"
+                        >
+                            <Filter className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Filter Panel */}
+            {/* Sub-Filters (Category/Tags) */}
             {showFilters && (categories.length > 0 || allTags.length > 0) && (
                 <div
-                    className="p-4 rounded-2xl space-y-4"
-                    style={{ background: 'var(--color-bg-primary)', border: '1px solid var(--color-border)' }}
+                    className="p-5 rounded-2xl space-y-4 animate-scale-in"
+                    style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}
                 >
                     {categories.length > 0 && (
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#AEACA8' }}>Chuyên mục</p>
-                            <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase text-[#AEACA8] mr-2">Chuyên mục:</span>
+                            {categories.map(cat => (
                                 <button
-                                    onClick={() => setSelectedCategory('')}
+                                    key={cat}
+                                    onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
                                     className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                                    style={!selectedCategory
-                                        ? { background: '#1A1A1A', color: '#FFF' }
-                                        : { background: '#F1F0EC', color: '#57564F' }}
+                                    style={selectedCategory === cat
+                                        ? { background: '#6B7CDB', color: '#FFF' }
+                                        : { background: '#F7F6F3', color: '#57564F', border: '1px solid #E9E9E7' }}
                                 >
-                                    Tất cả
+                                    {cat}
                                 </button>
-                                {categories.map(cat => (
-                                    <button
-                                        key={cat}
-                                        onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                                        style={selectedCategory === cat
-                                            ? { background: '#6B7CDB', color: '#FFF' }
-                                            : { background: '#F1F0EC', color: '#57564F' }}
-                                    >
-                                        {cat}
-                                    </button>
-                                ))}
-                            </div>
+                            ))}
                         </div>
                     )}
-
                     {allTags.length > 0 && (
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#AEACA8' }}>Thẻ</p>
-                            <div className="flex flex-wrap gap-2">
-                                {allTags.map(tag => (
-                                    <button
-                                        key={tag}
-                                        onClick={() => setSelectedTag(tag === selectedTag ? '' : tag)}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1"
-                                        style={selectedTag === tag
-                                            ? { background: '#EAF3EE', color: '#448361', border: '1px solid #B7D9C4' }
-                                            : { background: '#F1F0EC', color: '#57564F', border: '1px solid transparent' }}
-                                    >
-                                        # {tag}
-                                    </button>
-                                ))}
-                            </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase text-[#AEACA8] mr-2">Thẻ phổ biến:</span>
+                            {allTags.map(tag => (
+                                <button
+                                    key={tag}
+                                    onClick={() => setSelectedTag(tag === selectedTag ? '' : tag)}
+                                    className="px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+                                    style={selectedTag === tag
+                                        ? { background: '#EAF3EE', color: '#448361', border: '1px solid #B7D9C4' }
+                                        : { background: '#F7F6F3', color: '#AEACA8' }}
+                                >
+                                    #{tag}
+                                </button>
+                            ))}
                         </div>
-                    )}
-
-                    {hasActiveFilters && (
-                        <button
-                            onClick={() => { setSelectedCategory(''); setSelectedTag(''); }}
-                            className="text-xs text-red-500 hover:underline flex items-center gap-1"
-                        >
-                            <X className="w-3 h-3" /> Xóa bộ lọc
-                        </button>
                     )}
                 </div>
-            )}
-
-            {/* Stats summary row */}
-            {!loading && filteredBlogs.length > 0 && (
-                <p className="text-xs" style={{ color: '#AEACA8' }}>
-                    Hiển thị {filteredBlogs.length} / {blogs.length} bài viết
-                    {hasActiveFilters && ' (đang lọc)'}
-                </p>
             )}
 
             {loading ? (
-                <div className="flex justify-center items-center py-20">
-                    <div className="animate-spin w-8 h-8 rounded-full border-t-2 border-[#6B7CDB]"></div>
+                <div className="flex flex-col items-center justify-center py-32 gap-4">
+                    <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                    <p className="text-sm font-medium text-[#AEACA8]">Đang tải kho kiến thức...</p>
                 </div>
             ) : filteredBlogs.length === 0 ? (
-                <div
-                    className="text-center py-20 rounded-2xl border border-dashed"
-                    style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-primary)' }}
-                >
-                    <BookOpen className="w-12 h-12 mx-auto mb-4" style={{ color: '#CFCFCB' }} />
-                    <h3 className="text-lg font-medium mb-1" style={{ color: 'var(--color-text-primary)' }}>
-                        {searchQuery || hasActiveFilters ? 'Không tìm thấy bài viết' : 'Chưa có bài viết nào'}
-                    </h3>
-                    <p className="text-sm" style={{ color: '#787774' }}>
-                        {searchQuery || hasActiveFilters
-                            ? 'Thử thay đổi từ khóa hoặc bộ lọc nhé.'
-                            : isAdmin ? 'Bấm vào "Viết bài" để đăng chia sẻ mới nhé.' : 'Thầy Huy đang chuẩn bị các bài viết, quay lại sau nhé!'}
+                <div className="text-center py-24 rounded-3xl border-2 border-dashed border-[#E9E9E7] bg-white">
+                    <BookOpen className="w-16 h-16 mx-auto mb-4 text-[#E9E9E7]" />
+                    <h3 className="text-xl font-bold text-[#1A1A1A]">Ơ kìa, chưa có bài nào!</h3>
+                    <p className="text-sm text-[#787774] mt-2 max-w-xs mx-auto">
+                        Thầy Huy đang biên tập thêm nội dung bài viết cho phần này. Bro quay lại sau nhé!
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {filteredBlogs.map(blog => (
                         <article
                             key={blog.id}
-                            className="group cursor-pointer rounded-2xl overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
-                            style={{ background: 'var(--color-bg-primary)', border: '1px solid var(--color-border)' }}
+                            className="group relative bg-white rounded-3xl overflow-hidden border border-[#E9E9E7] hover:border-indigo-200 hover:shadow-2xl hover:shadow-indigo-100 transition-all duration-300 flex flex-col cursor-pointer"
                             onClick={() => onReadBlog(blog)}
                         >
-                            {/* Cover Image */}
-                            <div
-                                className="w-full h-48 border-b relative overflow-hidden shrink-0 flex items-center justify-center"
-                                style={{ background: '#F7F6F3', borderColor: 'var(--color-border)' }}
-                            >
+                            {/* Grade Badge - Absolute Floating */}
+                            <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+                                <span
+                                    className="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full shadow-sm text-white border border-white/20 backdrop-blur-md"
+                                    style={{ background: blog.grade === 10 ? '#448361' : blog.grade === 11 ? '#6B7CDB' : blog.grade === 12 ? '#9065B0' : '#1A1A1A' }}
+                                >
+                                    {blog.grade === 0 ? 'Chung' : `Lớp ${blog.grade}`}
+                                </span>
+                            </div>
+
+                            {/* Status logic for admin */}
+                            {isAdmin && (
+                                <div className="absolute top-4 right-4 z-10">
+                                    <span
+                                        className="px-2.5 py-1 text-[9px] font-bold rounded-lg border backdrop-blur-md"
+                                        style={blog.is_published
+                                            ? { background: 'rgba(234, 243, 238, 0.9)', color: '#448361', borderColor: '#B7D9C4' }
+                                            : { background: 'rgba(243, 236, 248, 0.9)', color: '#9065B0', borderColor: '#C8A8DC' }}
+                                    >
+                                        {blog.is_published ? 'Đã đăng' : 'Bản nháp'}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Thumbnail area */}
+                            <div className="relative h-44 overflow-hidden bg-[#F7F6F3]">
                                 {blog.cover_image ? (
                                     <img
                                         src={blog.cover_image}
+                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                         alt={blog.title}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                        loading="lazy"
                                     />
                                 ) : (
-                                    <BookOpen className="w-10 h-10" style={{ color: '#CFCFCB' }} />
-                                )}
-
-                                {/* Badges */}
-                                <div className="absolute top-3 left-3 flex gap-2">
-                                    {isAdmin && (
-                                        <span
-                                            className="px-2 py-1 text-[10px] font-bold rounded-md uppercase tracking-wide"
-                                            style={blog.is_published
-                                                ? { background: '#EAF3EE', color: '#448361', border: '1px solid #B7D9C4' }
-                                                : { background: '#F3ECF8', color: '#9065B0', border: '1px solid #C8A8DC' }}
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <div
+                                            className="w-16 h-16 rounded-3xl flex items-center justify-center"
+                                            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
                                         >
-                                            {blog.is_published ? '✓ Đã xuất bản' : '✎ Bản nháp'}
-                                        </span>
-                                    )}
-                                </div>
-
-                                {blog.category && (
-                                    <div className="absolute top-3 right-3 text-[10px] uppercase font-bold px-2.5 py-1 rounded-md bg-white/90 backdrop-blur-sm border border-[#E9E9E7] shadow-sm text-[#57564F]">
-                                        {blog.category}
+                                            <BookOpen className="w-8 h-8 text-[#E9E9E7]" />
+                                        </div>
                                     </div>
                                 )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                             </div>
 
-                            {/* Content */}
-                            <div className="p-5 flex-1 flex flex-col">
-                                {/* Meta row */}
-                                <div className="flex items-center gap-3 text-xs mb-3" style={{ color: '#AEACA8' }}>
-                                    <span className="flex items-center gap-1">
-                                        <Calendar className="w-3.5 h-3.5" />
-                                        {new Date(blog.created_at).toLocaleDateString('vi-VN')}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                        <Clock className="w-3.5 h-3.5" />
-                                        {estimateReadTime(blog.content)} phút đọc
-                                    </span>
+                            {/* Content area */}
+                            <div className="p-6 flex-1 flex flex-col">
+                                <div className="flex items-center gap-4 text-[11px] font-bold text-[#AEACA8] mb-3 uppercase tracking-wider">
+                                    <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {new Date(blog.created_at).toLocaleDateString('vi-VN')}</span>
+                                    <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {estimateReadTime(blog.content)}p</span>
                                 </div>
 
-                                <h3 className="text-lg font-bold leading-tight mb-2 group-hover:text-indigo-600 transition-colors line-clamp-2" style={{ color: 'var(--color-text-primary)' }}>
+                                <h3 className="text-xl font-bold text-[#1A1A1A] leading-tight mb-3 group-hover:text-indigo-600 transition-colors line-clamp-2">
                                     {blog.title}
                                 </h3>
 
-                                <p className="text-sm leading-relaxed line-clamp-3 mb-4 flex-1" style={{ color: '#787774' }}>
+                                <p className="text-sm text-[#787774] leading-relaxed line-clamp-3 mb-6 flex-1">
                                     {blog.summary}
                                 </p>
 
-                                {/* Tags */}
-                                {blog.tags && blog.tags.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 mb-4">
-                                        {blog.tags.slice(0, 3).map(tag => (
-                                            <span
-                                                key={tag}
-                                                className="text-[11px] px-2 py-0.5 rounded-md"
-                                                style={{ background: '#F1F0EC', color: '#787774' }}
-                                            >
-                                                #{tag}
-                                            </span>
-                                        ))}
-                                        {blog.tags.length > 3 && (
-                                            <span className="text-[11px] px-2 py-0.5 rounded-md" style={{ color: '#AEACA8' }}>
-                                                +{blog.tags.length - 3}
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
+                                <div className="pt-4 border-t border-[#F7F6F3] flex items-center justify-between">
+                                    {blog.category && (
+                                        <span className="text-[10px] font-black uppercase text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md">
+                                            {blog.category}
+                                        </span>
+                                    )}
 
-                                <div className="pt-4 border-t border-[#F1F0EC] flex items-center justify-between">
                                     {isAdmin && onEditBlog ? (
                                         <button
                                             onClick={(e) => { e.stopPropagation(); onEditBlog(blog); }}
-                                            className="text-indigo-600 text-sm font-medium flex items-center gap-1.5 hover:underline"
+                                            className="p-2 rounded-xl bg-[#F7F6F3] text-[#787774] hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                                         >
-                                            <Edit3 className="w-4 h-4" /> Chỉnh sửa
+                                            <Edit3 className="w-4 h-4" />
                                         </button>
                                     ) : (
-                                        <span className="text-sm font-medium flex items-center gap-1 transition-colors group-hover:text-indigo-600" style={{ color: 'var(--color-text-primary)' }}>
-                                            Đọc tiếp <ChevronRight className="w-4 h-4" />
-                                        </span>
+                                        <div className="flex items-center gap-1 text-sm font-bold text-[#1A1A1A] group-hover:text-indigo-600 transition-colors">
+                                            Đọc ngay <ChevronRight className="w-4 h-4" />
+                                        </div>
                                     )}
                                 </div>
                             </div>
