@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BlogPost } from '../types';
 import { useCloudStorage } from '../src/hooks/useCloudStorage';
-import { ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List, ImageIcon, Link as LinkIcon, HelpCircle, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';
+import {
+    ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
+    ImageIcon, Link as LinkIcon, HelpCircle, AlignLeft, AlignCenter,
+    AlignRight, AlignJustify, Type, Hash, Quote, Code2, Table,
+    Upload, X, CheckCircle
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
+import { supabase } from '../src/lib/supabase';
 
 interface AdminBlogEditorProps {
     blog: BlogPost | null;
@@ -14,103 +20,174 @@ interface AdminBlogEditorProps {
     onSaved: (blog: BlogPost) => void;
 }
 
+const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
+
 const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved }) => {
     const { saveBlog, deleteBlog } = useCloudStorage();
 
     const [formData, setFormData] = useState<Partial<BlogPost>>({
-        title: '',
-        summary: '',
-        content: '',
-        cover_image: '',
-        category: '',
-        tags: [],
-        is_published: false,
+        title: '', summary: '', content: '', cover_image: '', category: '', tags: [], is_published: false,
     });
     const [isPreview, setIsPreview] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [showHelper, setShowHelper] = useState(false);
+    const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+    const [wordCount, setWordCount] = useState(0);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const imageInputRef = useRef<HTMLInputElement>(null);
+    const coverImageInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (blog) {
             setFormData({
-                id: blog.id,
-                title: blog.title,
-                summary: blog.summary,
-                content: blog.content,
-                cover_image: blog.cover_image,
-                category: blog.category,
-                tags: blog.tags || [],
+                id: blog.id, title: blog.title, summary: blog.summary,
+                content: blog.content, cover_image: blog.cover_image,
+                category: blog.category, tags: blog.tags || [],
                 is_published: blog.is_published,
             });
         }
     }, [blog]);
+
+    useEffect(() => {
+        const words = (formData.content || '').trim().split(/\s+/).filter(w => w).length;
+        setWordCount(words);
+    }, [formData.content]);
+
+    const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 3000);
+    };
 
     const handleChange = (field: keyof BlogPost, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
     const handleTagsChange = (val: string) => {
-        const tags = val.split(',').map(t => t.trim()).filter(t => t);
-        handleChange('tags', tags);
+        handleChange('tags', val.split(',').map(t => t.trim()).filter(t => t));
     };
 
     const handleSave = async () => {
+        if (!formData.title?.trim()) { showToast('Vui lòng nhập tiêu đề!', 'error'); return; }
+        if (!formData.content?.trim()) { showToast('Vui lòng nhập nội dung!', 'error'); return; }
         setIsSaving(true);
         const saved = await saveBlog(formData);
         setIsSaving(false);
         if (saved) {
+            showToast('✅ Lưu bài viết thành công!');
             onSaved(saved);
         } else {
-            alert('Lỗi khi lưu bài viết!');
+            showToast('❌ Lỗi khi lưu bài viết!', 'error');
         }
     };
 
     const handleDelete = async () => {
-        if (blog && window.confirm('Bạn có chắc chắn muốn xóa bài viết này vĩnh viễn?')) {
-            setIsSaving(true);
-            const ok = await deleteBlog(blog.id);
-            setIsSaving(false);
-            if (ok) {
-                onBack();
-            } else {
-                alert('Lỗi khi xóa bài viết!');
-            }
-        }
+        if (!blog) return;
+        if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này vĩnh viễn không?')) return;
+        setIsSaving(true);
+        const ok = await deleteBlog(blog.id);
+        setIsSaving(false);
+        if (ok) { onBack(); } else { showToast('❌ Lỗi khi xóa!', 'error'); }
     };
 
     const insertTextAtCursor = (prefix: string, suffix: string = '') => {
-        const textarea = document.getElementById('blog-content-textarea') as HTMLTextAreaElement;
+        const textarea = textareaRef.current;
         if (!textarea) return;
-
-        const startPos = textarea.selectionStart;
-        const endPos = textarea.selectionEnd;
-        const currentText = formData.content || '';
-
-        let newText;
-        let newCursorPos;
-
-        if (startPos !== endPos) {
-            // Text is selected
-            const selectedText = currentText.substring(startPos, endPos);
-            newText = currentText.substring(0, startPos) + prefix + selectedText + suffix + currentText.substring(endPos);
-            newCursorPos = startPos + prefix.length + selectedText.length + suffix.length;
-        } else {
-            // No text selected
-            newText = currentText.substring(0, startPos) + prefix + suffix + currentText.substring(endPos);
-            newCursorPos = startPos + prefix.length;
-        }
-
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const current = formData.content || '';
+        const selected = current.substring(start, end);
+        const newText = current.substring(0, start) + prefix + selected + suffix + current.substring(end);
         handleChange('content', newText);
-
+        const newPos = start + prefix.length + selected.length + suffix.length;
         setTimeout(() => {
             textarea.focus();
-            textarea.setSelectionRange(newCursorPos, newCursorPos);
+            textarea.setSelectionRange(newPos, newPos);
         }, 0);
     };
+
+    // Upload ảnh vào inline content qua Supabase Storage
+    const handleInlineImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setIsUploadingImage(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `blog_image_${Date.now()}.${fileExt}`;
+            const { data, error } = await supabase.storage.from('blog-images').upload(fileName, file, { upsert: true });
+            if (error) throw error;
+            const { data: { publicUrl } } = supabase.storage.from('blog-images').getPublicUrl(fileName);
+            insertTextAtCursor(`\n![${file.name}](${publicUrl})\n`);
+            showToast('📸 Đã chèn ảnh vào bài viết!');
+        } catch (err: any) {
+            showToast(`❌ Upload thất bại: ${err.message}`, 'error');
+        }
+        setIsUploadingImage(false);
+        e.target.value = '';
+    };
+
+    // Upload ảnh bìa qua Supabase Storage
+    const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setIsUploadingImage(true);
+        try {
+            const fileName = `blog_cover_${Date.now()}.${file.name.split('.').pop()}`;
+            const { error } = await supabase.storage.from('blog-images').upload(fileName, file, { upsert: true });
+            if (error) throw error;
+            const { data: { publicUrl } } = supabase.storage.from('blog-images').getPublicUrl(fileName);
+            handleChange('cover_image', publicUrl);
+            showToast('🖼️ Upload ảnh bìa thành công!');
+        } catch (err: any) {
+            showToast(`❌ Upload thất bại: ${err.message}`, 'error');
+        }
+        setIsUploadingImage(false);
+        e.target.value = '';
+    };
+
+    const toolbarButtons = [
+        { icon: <Bold className="w-4 h-4" />, tip: 'In đậm (Ctrl+B)', action: () => insertTextAtCursor('**', '**') },
+        { icon: <Italic className="w-4 h-4" />, tip: 'In nghiêng (Ctrl+I)', action: () => insertTextAtCursor('*', '*') },
+        { divider: true },
+        { icon: <Hash className="w-4 h-4" />, tip: 'Tiêu đề H2', action: () => insertTextAtCursor('\n## ', '\n') },
+        { icon: <Type className="w-4 h-4" />, tip: 'Tiêu đề H3', action: () => insertTextAtCursor('\n### ', '\n') },
+        { divider: true },
+        { icon: <List className="w-4 h-4" />, tip: 'Danh sách bullet', action: () => insertTextAtCursor('\n- ') },
+        { icon: <span className="text-xs font-bold font-mono">1.</span>, tip: 'Danh sách số', action: () => insertTextAtCursor('\n1. ') },
+        { icon: <Quote className="w-4 h-4" />, tip: 'Trích dẫn', action: () => insertTextAtCursor('\n> ') },
+        { divider: true },
+        { icon: <LinkIcon className="w-4 h-4" />, tip: 'Chèn link', action: () => insertTextAtCursor('[Tên link](', ')') },
+        { icon: <ImageIcon className="w-4 h-4" />, tip: 'Chèn ảnh qua URL', action: () => insertTextAtCursor('![Mô tả](', ')') },
+        { divider: true },
+        { icon: <Code2 className="w-4 h-4" />, tip: 'Code block', action: () => insertTextAtCursor('\n```\n', '\n```\n') },
+        { icon: <span className="text-xs font-bold font-mono italic">fx</span>, tip: 'Công thức toán (LaTeX)', action: () => insertTextAtCursor('\n$$\n', '\n$$\n'), highlight: true },
+        { icon: <Table className="w-4 h-4" />, tip: 'Bảng Markdown', action: () => insertTextAtCursor('\n| Cột 1 | Cột 2 | Cột 3 |\n| ----- | ----- | ----- |\n| A     | B     | C     |\n') },
+        { divider: true },
+        { icon: <AlignLeft className="w-4 h-4" />, tip: 'Căn trái', action: () => insertTextAtCursor('<div align="left">\n\n', '\n\n</div>') },
+        { icon: <AlignCenter className="w-4 h-4" />, tip: 'Căn giữa', action: () => insertTextAtCursor('<div align="center">\n\n', '\n\n</div>') },
+        { icon: <AlignRight className="w-4 h-4" />, tip: 'Căn phải', action: () => insertTextAtCursor('<div align="right">\n\n', '\n\n</div>') },
+        { icon: <AlignJustify className="w-4 h-4" />, tip: 'Căn đều', action: () => insertTextAtCursor('<div align="justify">\n\n', '\n\n</div>') },
+    ];
+
     return (
-        <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20">
+        <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20">
+            {/* Toast */}
+            {toast && (
+                <div
+                    className="fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm font-medium animate-fade-in"
+                    style={{
+                        background: toast.type === 'success' ? '#EAF3EE' : '#FEE2E2',
+                        color: toast.type === 'success' ? '#448361' : '#B91C1C',
+                        border: `1px solid ${toast.type === 'success' ? '#B7D9C4' : '#FECACA'}`,
+                    }}
+                >
+                    <CheckCircle className="w-4 h-4" />
+                    {toast.msg}
+                </div>
+            )}
+
             {/* Top Bar */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
                 <button
                     onClick={onBack}
                     className="flex items-center gap-1.5 text-sm font-medium hover:text-indigo-600 transition-colors"
@@ -119,21 +196,20 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                     <ChevronLeft className="w-4 h-4" /> Quay lại
                 </button>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                     {blog && (
                         <button
                             onClick={handleDelete}
                             disabled={isSaving}
-                            className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 hover:bg-red-50 text-red-600 transition-colors"
+                            className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-red-50 text-red-600 transition-colors disabled:opacity-50"
                         >
-                            <Trash2 className="w-4 h-4" />
-                            Xóa bài
+                            <Trash2 className="w-4 h-4" /> Xóa bài
                         </button>
                     )}
 
                     <button
                         onClick={() => setIsPreview(!isPreview)}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+                        className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all"
                         style={{ background: '#F1F0EC', color: '#1A1A1A' }}
                     >
                         {isPreview ? <><PenTool className="w-4 h-4" /> Chỉnh sửa</> : <><Eye className="w-4 h-4" /> Xem trước</>}
@@ -142,10 +218,10 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                     <button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="px-6 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                        className="px-6 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60"
                     >
                         <Save className="w-4 h-4" />
-                        {isSaving ? 'Đang lưu...' : 'Lưu & Cập nhật'}
+                        {isSaving ? 'Đang lưu...' : blog ? 'Cập nhật' : 'Đăng bài'}
                     </button>
                 </div>
             </div>
@@ -154,11 +230,12 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                 {/* Editor Area */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="space-y-4 p-6 rounded-2xl bg-white border border-[#E9E9E7]">
+                        {/* Title */}
                         <div>
-                            <label className="block text-sm font-semibold mb-1 text-[#1A1A1A]">Tiêu đề bài viết</label>
+                            <label className="block text-sm font-semibold mb-1 text-[#1A1A1A]">Tiêu đề bài viết *</label>
                             <input
                                 type="text"
-                                placeholder="Nhập tiêu đề..."
+                                placeholder="Nhập tiêu đề hấp dẫn..."
                                 className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 font-semibold text-xl"
                                 value={formData.title}
                                 onChange={e => handleChange('title', e.target.value)}
@@ -166,149 +243,252 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                             />
                         </div>
 
+                        {/* Summary */}
                         <div>
-                            <label className="block text-sm font-semibold mb-1 text-[#1A1A1A]">Tóm tắt (hiển thị ở thẻ)</label>
+                            <label className="block text-sm font-semibold mb-1 text-[#1A1A1A]">Tóm tắt ngắn *</label>
                             <textarea
-                                placeholder="Một vài dòng giới thiệu ngắn gọn..."
-                                className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 min-h-[80px]"
+                                placeholder="1-3 câu giới thiệu, hiển thị ở thẻ bài viết..."
+                                className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 resize-none"
+                                rows={3}
                                 value={formData.summary}
                                 onChange={e => handleChange('summary', e.target.value)}
                                 disabled={isPreview}
                             />
                         </div>
 
+                        {/* Content */}
                         <div>
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <label className="text-sm font-semibold text-[#1A1A1A]">
-                                        Nội dung (Nên học cách dùng Markdown)
-                                    </label>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => setShowHelper(!showHelper)}
-                                            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
-                                            title="Hướng dẫn gõ Markdown"
-                                        >
-                                            <HelpCircle className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {!isPreview && (
-                                    <div className="flex flex-wrap items-center gap-1 p-2 bg-[#F7F6F3] border border-b-0 border-[#E9E9E7] rounded-t-lg">
-                                        <button onClick={() => insertTextAtCursor('**', '** ')} className="p-1.5 hover:bg-[#E9E9E7] rounded text-[#57564F] transition-colors" title="In đậm"><Bold className="w-4 h-4" /></button>
-                                        <button onClick={() => insertTextAtCursor('*', '* ')} className="p-1.5 hover:bg-[#E9E9E7] rounded text-[#57564F] transition-colors" title="In nghiêng"><Italic className="w-4 h-4" /></button>
-                                        <div className="w-px h-4 bg-[#DCDCDA] mx-1"></div>
-                                        <button onClick={() => insertTextAtCursor('\n- ')} className="p-1.5 hover:bg-[#E9E9E7] rounded text-[#57564F] transition-colors" title="Đánh Bullet"><List className="w-4 h-4" /></button>
-                                        <div className="w-px h-4 bg-[#DCDCDA] mx-1"></div>
-                                        <button onClick={() => insertTextAtCursor('![Mô tả ảnh](Link_ảnh_vào_đây)\n')} className="p-1.5 hover:bg-[#E9E9E7] rounded text-[#57564F] transition-colors" title="Chèn Ảnh (Dùng link)"><ImageIcon className="w-4 h-4" /></button>
-                                        <button onClick={() => insertTextAtCursor('[Tên đường dẫn](Link_vào_đây) ')} className="p-1.5 hover:bg-[#E9E9E7] rounded text-[#57564F] transition-colors" title="Chèn Link"><LinkIcon className="w-4 h-4" /></button>
-                                        <div className="w-px h-4 bg-[#DCDCDA] mx-1"></div>
-                                        <button onClick={() => insertTextAtCursor('\n$$\n', '\n$$\n')} className="p-1.5 hover:bg-[#E9E9E7] rounded text-indigo-600 font-bold transition-colors text-sm font-mono" title="Chèn công thức Toán/Lý">fx</button>
-                                        <div className="w-px h-4 bg-[#DCDCDA] mx-1"></div>
-                                        <button onClick={() => insertTextAtCursor('<div align="left">\n\n', '\n\n</div>')} className="p-1.5 hover:bg-[#E9E9E7] rounded text-[#57564F] transition-colors" title="Căn trái"><AlignLeft className="w-4 h-4" /></button>
-                                        <button onClick={() => insertTextAtCursor('<div align="center">\n\n', '\n\n</div>')} className="p-1.5 hover:bg-[#E9E9E7] rounded text-[#57564F] transition-colors" title="Căn giữa"><AlignCenter className="w-4 h-4" /></button>
-                                        <button onClick={() => insertTextAtCursor('<div align="right">\n\n', '\n\n</div>')} className="p-1.5 hover:bg-[#E9E9E7] rounded text-[#57564F] transition-colors" title="Căn phải"><AlignRight className="w-4 h-4" /></button>
-                                        <button onClick={() => insertTextAtCursor('<div align="justify">\n\n', '\n\n</div>')} className="p-1.5 hover:bg-[#E9E9E7] rounded text-[#57564F] transition-colors" title="Căn đều hai bên"><AlignJustify className="w-4 h-4" /></button>
-                                    </div>
-                                )}
-
-                                {showHelper && !isPreview && (
-                                    <div className="text-xs p-3 bg-indigo-50 text-indigo-800 rounded-b-lg border border-indigo-100 border-t-0 mb-2 leading-relaxed">
-                                        <strong>Mẹo Markdown nhanh:</strong><br />
-                                        - Chèn chữ: Dùng cách số 1 (chụp ảnh gõ LaTeX) copy vào giữa 2 dấu $$, ví dụ: <code className="bg-white px-1">$$ \frac{1}{2}mv^2 $$</code><br />
-                                        - In nghiêng kẹp dấu *: <code className="bg-white px-1">*in nghiêng*</code><br />
-                                        - In đậm kẹp 2 dấu sao: <code className="bg-white px-1">**in đậm**</code>
-                                    </div>
-                                )}
-
-                                {isPreview ? (
-                                    <div
-                                        className="p-6 rounded-b-lg border border-[#E9E9E7] min-h-[400px] prose prose-indigo max-w-none bg-[#F7F6F3]"
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="text-sm font-semibold text-[#1A1A1A]">Nội dung bài viết *</label>
+                                <div className="flex items-center gap-2 text-xs text-[#AEACA8]">
+                                    <span>{wordCount} từ · {Math.max(1, Math.ceil(wordCount / 200))} phút đọc</span>
+                                    <button
+                                        onClick={() => setShowHelper(!showHelper)}
+                                        className="p-1 hover:bg-gray-100 rounded text-gray-400 transition-colors"
+                                        title="Hướng dẫn Markdown"
                                     >
-                                        <ReactMarkdown
-                                            remarkPlugins={[remarkMath]}
-                                            rehypePlugins={[rehypeKatex, rehypeRaw]}
-                                        >
-                                            {formData.content || '*Chưa có nội dung*'}
-                                        </ReactMarkdown>
-                                    </div>
-                                ) : (
-                                    <textarea
-                                        id="blog-content-textarea"
-                                        placeholder="Nhập nội dung bài viết..."
-                                        className={`w-full p-4 border border-[#E9E9E7] outline-none focus:border-indigo-500 min-h-[500px] font-mono text-sm leading-relaxed ${showHelper ? 'rounded-b-lg' : 'rounded-b-lg'}`}
-                                        value={formData.content}
-                                        onChange={e => handleChange('content', e.target.value)}
-                                    />
-                                )}
+                                        <HelpCircle className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
+
+                            {/* Toolbar */}
+                            {!isPreview && (
+                                <div
+                                    className="flex flex-wrap items-center gap-0.5 p-2 border border-b-0 rounded-t-lg"
+                                    style={{ background: '#F7F6F3', borderColor: '#E9E9E7' }}
+                                >
+                                    {toolbarButtons.map((btn, i) =>
+                                        'divider' in btn ? (
+                                            <div key={i} className="w-px h-5 mx-1" style={{ background: '#DCDCDA' }} />
+                                        ) : (
+                                            <button
+                                                key={i}
+                                                onClick={btn.action}
+                                                title={btn.tip}
+                                                className="p-1.5 rounded transition-colors flex items-center justify-center min-w-[28px]"
+                                                style={{ color: btn.highlight ? '#6B7CDB' : '#57564F' }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = '#E9E9E7')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                            >
+                                                {btn.icon}
+                                            </button>
+                                        )
+                                    )}
+                                    {/* Upload ảnh trực tiếp */}
+                                    <button
+                                        onClick={() => imageInputRef.current?.click()}
+                                        title="Upload ảnh trực tiếp"
+                                        disabled={isUploadingImage}
+                                        className="p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-medium"
+                                        style={{ color: '#448361', background: isUploadingImage ? '#EAF3EE' : 'transparent' }}
+                                        onMouseEnter={e => { if (!isUploadingImage) e.currentTarget.style.background = '#EAF3EE'; }}
+                                        onMouseLeave={e => { if (!isUploadingImage) e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <Upload className="w-3.5 h-3.5" />
+                                        {isUploadingImage ? 'Đang up...' : 'Upload'}
+                                    </button>
+                                    <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleInlineImageUpload} />
+                                </div>
+                            )}
+
+                            {/* Helper panel */}
+                            {showHelper && !isPreview && (
+                                <div
+                                    className="text-xs p-3 border border-t-0 mb-0 leading-relaxed"
+                                    style={{ background: '#EEF0FB', color: '#3D3D8D', borderColor: '#C5CAFA' }}
+                                >
+                                    <strong>📖 Mẹo nhanh:</strong> <code className="bg-white/60 px-1 rounded">**đậm**</code> · <code className="bg-white/60 px-1 rounded">*nghiêng*</code> · <code className="bg-white/60 px-1 rounded">## Tiêu đề</code> · <code className="bg-white/60 px-1 rounded">$$E=mc^2$$</code> (LaTeX) · <code className="bg-white/60 px-1 rounded">&gt; trích dẫn</code> · <code className="bg-white/60 px-1 rounded">`code`</code>
+                                </div>
+                            )}
+
+                            {/* Textarea / Preview */}
+                            {isPreview ? (
+                                <div
+                                    className="p-6 rounded-b-lg border min-h-[400px] prose prose-indigo max-w-none"
+                                    style={{ background: '#F7F6F3', borderColor: '#E9E9E7' }}
+                                >
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkMath]}
+                                        rehypePlugins={[rehypeKatex, rehypeRaw]}
+                                    >
+                                        {formData.content || '*Chưa có nội dung*'}
+                                    </ReactMarkdown>
+                                </div>
+                            ) : (
+                                <textarea
+                                    ref={textareaRef}
+                                    id="blog-content-textarea"
+                                    placeholder="Nhập nội dung bài viết bằng Markdown... Bắt đầu với ## Tiêu đề"
+                                    className="w-full p-4 border border-[#E9E9E7] outline-none focus:border-indigo-500 font-mono text-sm leading-relaxed rounded-b-lg resize-none"
+                                    style={{ minHeight: '500px' }}
+                                    value={formData.content}
+                                    onChange={e => handleChange('content', e.target.value)}
+                                    onKeyDown={e => {
+                                        // Tab support
+                                        if (e.key === 'Tab') {
+                                            e.preventDefault();
+                                            insertTextAtCursor('  ');
+                                        }
+                                    }}
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* Sidebar Settings */}
-                <div className="space-y-6">
-                    <div className="p-6 rounded-2xl bg-white border border-[#E9E9E7] space-y-5">
-                        <h3 className="font-semibold text-[#1A1A1A] text-lg mb-2">Cài đặt bài viết</h3>
+                {/* Sidebar */}
+                <div className="space-y-5">
+                    {/* Publish settings */}
+                    <div className="p-5 rounded-2xl bg-white border border-[#E9E9E7] space-y-5">
+                        <h3 className="font-semibold text-[#1A1A1A]">Cài đặt xuất bản</h3>
 
-                        {/* Trạng thái xuất bản */}
-                        <div className="flex items-center justify-between p-3 rounded-xl border border-[#E9E9E7] bg-[#F7F6F3]">
+                        {/* Toggle publish */}
+                        <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
                             <div>
                                 <span className="block font-medium text-sm text-[#1A1A1A]">Trạng thái</span>
-                                <span className="text-[11px] text-[#787774]">{formData.is_published ? 'Hiển thị cho học sinh' : 'Chỉ Admin thấy'}</span>
+                                <span className="text-[11px]" style={{ color: formData.is_published ? '#448361' : '#787774' }}>
+                                    {formData.is_published ? '✓ Hiển thị cho học sinh' : '✎ Chỉ Admin thấy'}
+                                </span>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                                 <input
                                     type="checkbox"
                                     className="sr-only peer"
                                     checked={formData.is_published}
-                                    onChange={(e) => handleChange('is_published', e.target.checked)}
-                                    disabled={isPreview}
+                                    onChange={e => handleChange('is_published', e.target.checked)}
                                 />
-                                <div className={"w-9 h-5 bg-[#CFCFCB] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#AEACA8] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"}></div>
+                                <div className="w-9 h-5 bg-[#CFCFCB] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
                             </label>
                         </div>
 
+                        {/* Category */}
                         <div>
-                            <label className="block text-sm font-semibold mb-1 text-[#1A1A1A]">Chuyên mục</label>
-                            <input
-                                type="text"
-                                placeholder="VD: Lý thuyết, Tin tức, Mẹo vặt"
-                                className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm"
+                            <label className="block text-sm font-semibold mb-1.5 text-[#1A1A1A]">Chuyên mục</label>
+                            <select
+                                className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm bg-white"
                                 value={formData.category}
                                 onChange={e => handleChange('category', e.target.value)}
-                                disabled={isPreview}
+                            >
+                                <option value="">-- Chọn chuyên mục --</option>
+                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            {/* Hoặc nhập tùy chỉnh */}
+                            <input
+                                type="text"
+                                placeholder="Hoặc nhập tùy chỉnh..."
+                                className="w-full mt-2 p-2.5 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm"
+                                value={formData.category}
+                                onChange={e => handleChange('category', e.target.value)}
                             />
                         </div>
 
+                        {/* Tags */}
                         <div>
-                            <label className="block text-sm font-semibold mb-1 text-[#1A1A1A]">Thẻ (Tags)</label>
+                            <label className="block text-sm font-semibold mb-1.5 text-[#1A1A1A]">Thẻ (Tags)</label>
                             <input
                                 type="text"
-                                placeholder="Ngăn cách bằng dấu phẩy (VD: bai12, dongluc)"
+                                placeholder="VD: vatly12, dongdien, nangluong"
                                 className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm"
                                 value={(formData.tags || []).join(', ')}
                                 onChange={e => handleTagsChange(e.target.value)}
-                                disabled={isPreview}
+                            />
+                            <p className="text-[11px] mt-1" style={{ color: '#AEACA8' }}>Ngăn cách bằng dấu phẩy</p>
+                            {(formData.tags || []).length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                    {(formData.tags || []).map(tag => (
+                                        <span key={tag} className="text-xs px-2 py-0.5 rounded-md flex items-center gap-1" style={{ background: '#EEF0FB', color: '#6B7CDB' }}>
+                                            #{tag}
+                                            <button onClick={() => handleChange('tags', (formData.tags || []).filter(t => t !== tag))} className="hover:text-red-500">
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Cover Image */}
+                    <div className="p-5 rounded-2xl bg-white border border-[#E9E9E7] space-y-4">
+                        <h3 className="font-semibold text-[#1A1A1A]">Ảnh bìa</h3>
+
+                        {/* Upload ảnh bìa trực tiếp */}
+                        <button
+                            onClick={() => coverImageInputRef.current?.click()}
+                            disabled={isUploadingImage}
+                            className="w-full p-3 rounded-xl border-2 border-dashed text-sm font-medium flex items-center justify-center gap-2 transition-all hover:border-indigo-400"
+                            style={{ borderColor: '#E9E9E7', color: '#787774' }}
+                        >
+                            <Upload className="w-4 h-4" />
+                            {isUploadingImage ? 'Đang upload...' : 'Upload ảnh bìa'}
+                        </button>
+                        <input ref={coverImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverImageUpload} />
+
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[#AEACA8] text-xs">URL:</div>
+                            <input
+                                type="url"
+                                placeholder="https://..."
+                                className="w-full pl-10 pr-3 py-2.5 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm"
+                                value={formData.cover_image}
+                                onChange={e => handleChange('cover_image', e.target.value)}
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-semibold mb-1 text-[#1A1A1A]">Ảnh đại diện (URL)</label>
-                            <input
-                                type="url"
-                                placeholder="https://example.com/image.jpg"
-                                className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm"
-                                value={formData.cover_image}
-                                onChange={e => handleChange('cover_image', e.target.value)}
-                                disabled={isPreview}
-                            />
-                            {formData.cover_image && (
-                                <div className="mt-3 rounded-lg overflow-hidden border border-[#E9E9E7] bg-[#F7F6F3]">
-                                    <img src={formData.cover_image} alt="Cover Preview" className="w-full h-32 object-cover" />
-                                </div>
-                            )}
+                        {formData.cover_image ? (
+                            <div className="relative rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7' }}>
+                                <img src={formData.cover_image} alt="Cover" className="w-full h-36 object-cover" />
+                                <button
+                                    onClick={() => handleChange('cover_image', '')}
+                                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="rounded-xl overflow-hidden flex items-center justify-center h-24" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
+                                <span className="text-xs" style={{ color: '#CFCFCB' }}>Chưa có ảnh bìa</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Quick stats */}
+                    <div className="p-5 rounded-2xl bg-white border border-[#E9E9E7]">
+                        <h3 className="font-semibold text-[#1A1A1A] mb-3">Thống kê bài viết</h3>
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span style={{ color: '#787774' }}>Số từ</span>
+                                <span className="font-medium" style={{ color: '#1A1A1A' }}>{wordCount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span style={{ color: '#787774' }}>P.đọc ước tính</span>
+                                <span className="font-medium" style={{ color: '#1A1A1A' }}>{Math.max(1, Math.ceil(wordCount / 200))} phút</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span style={{ color: '#787774' }}>Số ký tự</span>
+                                <span className="font-medium" style={{ color: '#1A1A1A' }}>{(formData.content || '').length.toLocaleString()}</span>
+                            </div>
                         </div>
                     </div>
                 </div>

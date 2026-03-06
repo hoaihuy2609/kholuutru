@@ -121,8 +121,9 @@ function App() {
   const [showSimLab, setShowSimLab] = useState(false);
   const [showBlog, setShowBlog] = useState(false);
   const [activeBlog, setActiveBlog] = useState<BlogPost | null>(null);
-  const [activeAdminBlog, setActiveAdminBlog] = useState<BlogPost | null>(null); // null means creating new or not editing
+  const [activeAdminBlog, setActiveAdminBlog] = useState<BlogPost | null>(null);
   const [isCreatingBlog, setIsCreatingBlog] = useState(false);
+  const [allBlogs, setAllBlogs] = useState<BlogPost[]>([]); // cache bài viết cho related posts
 
   // --- PREVENT OVERLAPPING STATES ---
   const [previewMode, setPreviewMode] = useState<GradeLevel | null>(null);
@@ -337,7 +338,6 @@ function App() {
       );
     }
 
-    // 0h. Blog Views
     if (showBlog) {
       if (activeAdminBlog || isCreatingBlog) {
         return (
@@ -349,16 +349,23 @@ function App() {
         );
       }
       if (activeBlog) {
-        return <BlogDetail blog={activeBlog} onBack={() => setActiveBlog(null)} />;
+        // Tính related blogs: cùng category hoặc chung tags, bỏ bài hiện tại
+        const related = allBlogs
+          .filter(b => b.id !== activeBlog.id && b.is_published)
+          .filter(b => b.category === activeBlog.category || (b.tags || []).some(t => (activeBlog.tags || []).includes(t)))
+          .slice(0, 4);
+        return <BlogDetail blog={activeBlog} onBack={() => setActiveBlog(null)} relatedBlogs={related} />;
       }
       return (
         <BlogList
           isAdmin={effectiveIsAdmin}
-          onReadBlog={setActiveBlog}
+          onReadBlog={(blog) => { setActiveBlog(blog); }}
           onEditBlog={effectiveIsAdmin ? setActiveAdminBlog : undefined}
           onCreateBlog={effectiveIsAdmin ? () => setIsCreatingBlog(true) : undefined}
+          onBlogsLoaded={setAllBlogs}
         />
       );
+
     }
 
     // 1. Lesson View (Deepest level)
