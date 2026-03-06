@@ -569,7 +569,8 @@ export const useCloudStorage = () => {
         for (let i = 0; i < zipChunks.length; i++) {
             const z = zipChunks[i];
             const zipBlob = await z.generateAsync({ type: 'blob', compression: "STORE" }, (meta) => {
-                const globalPercent = Math.floor(i * (20 / zipChunks.length) + meta.percent * (20 / zipChunks.length));
+                // meta.percent từ JSZip là 0–100, chia 100 để normalize về 0–1 trước khi nhân
+                const globalPercent = Math.floor((i + meta.percent / 100) * (20 / zipChunks.length));
                 setSyncProgress(globalPercent);
             });
             console.log(`[Sync] ZIP part ${i + 1}: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
