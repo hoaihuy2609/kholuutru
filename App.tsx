@@ -1173,7 +1173,7 @@ function App() {
       )}
 
       {/* Chatbot Component - Only show on Dashboard (Overview) */}
-      {/* Vô hiệu hóa Chatbot theo yêu cầu người dùng: { !currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && !showNotification && !showSimLab && <Chatbot /> } */}
+      {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && !showNotification && !showSimLab && !showBlog && <Chatbot />}
 
     </div>
   );
