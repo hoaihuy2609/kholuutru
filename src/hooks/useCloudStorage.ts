@@ -63,15 +63,16 @@ const SYSTEM_SALT = "PHV_SECURITY_2026_BY_HUY";
 
 // --- XOR Obfuscation for content ---
 const XOR_KEY = 'PHV2026';
+// Pre-compute key bytes một lần duy nhất (tránh tạo lại mỗi lần gọi hàm)
+const XOR_KEY_BYTES = new TextEncoder().encode(XOR_KEY);
+const XOR_KEY_LEN = XOR_KEY_BYTES.length;
 
 export const xorObfuscate = (data: string): string => {
     // Encode UTF-8 string → bytes để tránh lỗi với ký tự tiếng Việt
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(data);
-    const keyBytes = encoder.encode(XOR_KEY);
+    const bytes = new TextEncoder().encode(data);
     const result = new Uint8Array(bytes.length);
     for (let i = 0; i < bytes.length; i++) {
-        result[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
+        result[i] = bytes[i] ^ XOR_KEY_BYTES[i % XOR_KEY_LEN];
     }
 
     // Tối ưu hiệu năng: Xử lý theo khối (chunking) để tránh treo trình duyệt và stack limit
@@ -87,20 +88,13 @@ export const xorObfuscate = (data: string): string => {
 
 export const xorDeobfuscate = (encoded: string): string => {
     try {
-        const encoder = new TextEncoder();
-        const keyBytes = encoder.encode(XOR_KEY);
-        // base64 → bytes
+        // Tối ưu: dùng pre-computed key bytes, chỉ 1 Uint8Array duy nhất (trước đây tạo 2)
         const binaryStr = atob(encoded);
-        const bytes = new Uint8Array(binaryStr.length);
-        for (let i = 0; i < binaryStr.length; i++) {
-            bytes[i] = binaryStr.charCodeAt(i);
+        const len = binaryStr.length;
+        const result = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            result[i] = binaryStr.charCodeAt(i) ^ XOR_KEY_BYTES[i % XOR_KEY_LEN];
         }
-        // XOR ngược lại
-        const result = new Uint8Array(bytes.length);
-        for (let i = 0; i < bytes.length; i++) {
-            result[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
-        }
-        // Decode bytes → UTF-8 string
         return new TextDecoder().decode(result);
     } catch {
         return encoded; // Nếu không phải XOR-encoded, trả về nguyên bản
@@ -327,10 +321,12 @@ export const useCloudStorage = () => {
 
     // --- Telegram Cloud Sync: Fetch bài giảng theo grade ---
     const fetchLessonsFromGitHub = async (grade: number, onProgress?: (pct: number) => void): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
-        console.log(`[CloudSync] Đang truy vấn Supabase cho Lớp ${grade}`);
+        console.log(`[Fetch] Bắt đầu fetch Lớp ${grade}`);
+        const t_fetch_total = performance.now();
 
         try {
-
+            // Giai đoạn 1: Lấy file ID từ Supabase
+            const t1 = performance.now();
             let indexFileId = localStorage.getItem(`pv_sync_file_id_${grade}`);
             try {
                 const { data, error } = await supabase
@@ -344,14 +340,15 @@ export const useCloudStorage = () => {
             } catch (e) {
                 console.error("Lỗi lấy index từ Supabase", e);
             }
+            console.log(`[Fetch] Giai đoạn 1 (Supabase): ${(performance.now() - t1).toFixed(0)}ms`);
             if (!indexFileId) throw new Error(`Hệ thống chưa có dữ liệu cho Lớp ${grade}. Thầy vui lòng Sync trước nhé!`);
 
-            // Sử dụng Cloudflare Proxy dùng chung (Alias để đỡ phải sửa hàm gọi bên dưới)
             const fetchViaPublicProxy = fetchViaCloudflareProxy;
 
-            const t_start = performance.now();
+            // Giai đoạn 2: Tải file index từ Cloudflare
+            const t2 = performance.now();
             const indexRaw = await fetchViaPublicProxy(indexFileId);
-            console.log(`[CloudSync] Tải index xong trong ${(performance.now() - t_start).toFixed(0)}ms`);
+            console.log(`[Fetch] Giai đoạn 2 (Tải index từ CF): ${(performance.now() - t2).toFixed(0)}ms`);
             const indexStr = new TextDecoder().decode(indexRaw);
             const indexData = JSON.parse(xorDeobfuscate(indexStr));
 
@@ -382,38 +379,51 @@ export const useCloudStorage = () => {
             // --- Lấy tất cả file IDs cần fetch ---
             let allIds: string[] = [];
             if (indexData.zipFileIds || indexData.zipFileId) {
-                // Format V3: Offline Archive ZIP (Có hỗ trợ chia nhỏ ZIP nếu > 20MB)
+                // Format V3: Offline Archive ZIP
                 const zIds: string[] = indexData.zipFileIds || [indexData.zipFileId];
                 if (onProgress) onProgress(10);
 
-                // Tải song song tối đa (vừa nhanh, vừa không bị rate-limit nhờ worker cache)
                 const CONCURRENCY = 5;
                 let downloadedParts = 0;
 
                 const processZipPart = async (fileId: string): Promise<void> => {
+                    const t_part = performance.now();
                     const arrayBuf = await fetchViaPublicProxy(fileId);
+                    console.log(`[Fetch]   └ Tải ZIP part (${(arrayBuf.byteLength / 1024 / 1024).toFixed(2)} MB): ${(performance.now() - t_part).toFixed(0)}ms`);
+
+                    const t_unzip = performance.now();
                     const zip = new JSZip();
                     const unzipped = await zip.loadAsync(arrayBuf);
+                    console.log(`[Fetch]   └ Giải nén ZIP: ${(performance.now() - t_unzip).toFixed(0)}ms`);
 
+                    const t_decode = performance.now();
                     const filePromises: Promise<void>[] = [];
                     unzipped.forEach((relativePath, fileObj) => {
                         if (!fileObj.dir) {
                             filePromises.push(
                                 fileObj.async("string").then(content => {
-                                    let parsedData;
-                                    try { parsedData = JSON.parse(content); }
-                                    catch { parsedData = JSON.parse(xorDeobfuscate(content)); }
+                                    // Phát hiện format: JSON bắt đầu bằng '{' hoặc '['
+                                    // XOR-encoded (base64) bắt đầu bằng ký tự khác
+                                    // Tránh try/catch tốn kém — chỉ throw exception khi cần
+                                    const firstChar = content.charCodeAt(0);
+                                    const parsedData = (firstChar === 123 || firstChar === 91) // '{' = 123, '[' = 91
+                                        ? JSON.parse(content)
+                                        : JSON.parse(xorDeobfuscate(content));
                                     mergePayload(parsedData);
                                 })
                             );
                         }
                     });
                     await Promise.all(filePromises);
+                    console.log(`[Fetch]   └ Decode + merge: ${(performance.now() - t_decode).toFixed(0)}ms`);
+
                     downloadedParts++;
                     if (onProgress) onProgress(Math.floor(10 + (downloadedParts / zIds.length) * 80));
                 };
 
-                // Chạy song song theo batch CONCURRENCY (2 file cùng lúc)
+                // Giai đoạn 3: Tải ZIP chunks
+                const t3 = performance.now();
+                console.log(`[Fetch] Giai đoạn 3: Bắt đầu tải ${zIds.length} ZIP chunk(s)`);
                 try {
                     for (let i = 0; i < zIds.length; i += CONCURRENCY) {
                         const batch = zIds.slice(i, i + CONCURRENCY);
@@ -423,8 +433,9 @@ export const useCloudStorage = () => {
                     console.error('Error fetching zip chunks:', err);
                     throw new Error(`Tải đoạn dữ liệu thất bại. Vui lòng thử tải lại.`);
                 }
+                console.log(`[Fetch] Giai đoạn 3 (Tải + giải nén ZIP): ${(performance.now() - t3).toFixed(0)}ms`);
 
-                if (onProgress) onProgress(90); // Finished merging 
+                if (onProgress) onProgress(90);
             } else if (indexData.lessonFileIds) {
                 // Format mới V2: flat array
                 allIds = indexData.lessonFileIds as string[];
@@ -443,11 +454,15 @@ export const useCloudStorage = () => {
                 }
             }
 
+            // Giai đoạn 4: Lưu vào IndexedDB
+            const t4 = performance.now();
             const uniqueLessons = Array.from(newLessonsMap.values()) as Lesson[];
             await dbSet(STORAGE_LESSONS_KEY, uniqueLessons);
             await dbSet(STORAGE_FILES_KEY, newFiles);
             setLessons(uniqueLessons);
             setStoredFiles(newFiles);
+            console.log(`[Fetch] Giai đoạn 4 (Lưu IndexedDB): ${(performance.now() - t4).toFixed(0)}ms`);
+            console.log(`[Fetch] ✅ Tổng thời gian: ${((performance.now() - t_fetch_total) / 1000).toFixed(2)}s | ${totalLessonCount} bài, ${totalFileCount} file`);
 
             return { success: true, lessonCount: totalLessonCount, fileCount: totalFileCount };
         } catch (err: any) {
@@ -455,13 +470,14 @@ export const useCloudStorage = () => {
         }
     };
 
-    // --- Telegram Cloud Sync: Push lên Telegram (V2 — 1 file/lesson, tránh vượt 20MB) ---
+    // --- Telegram Cloud Sync: Push lên Telegram (V3 — ZIP Archive) ---
     const syncToGitHub = async (grade: number, lessonsToSync: Lesson[], filesToSync: FileStorage): Promise<string> => {
         setSyncProgress(1);
 
         if (lessonsToSync.length === 0 && Object.keys(filesToSync).length === 0) {
             throw new Error('Này bro, chưa có bài giảng hay tài liệu nào để Sync đâu! Hãy thêm ít nhất 1 bài nhé.');
         }
+
 
         // Xác định file cấp chương (key không phải lessonId)
         const lessonIds = new Set(lessonsToSync.map(l => l.id));
@@ -566,6 +582,8 @@ export const useCloudStorage = () => {
         // Track bytes đã upload của từng part riêng lẻ
         const uploadedPerPart: number[] = new Array(zipBlobs.length).fill(0);
 
+        console.time('[Sync] Giai đoạn 3: Upload ZIP lên Telegram');
+        console.log(`[Sync] Tổng kích thước upload: ${(totalZipSize / 1024 / 1024).toFixed(2)} MB`);
         const uploadResults = await Promise.all(
             zipBlobs.map((zipBlob, i) =>
                 uploadBlob(zipBlob, `vault_g${grade}_v3_part${i + 1}.zip`, (loaded) => {
@@ -576,6 +594,7 @@ export const useCloudStorage = () => {
                 })
             )
         );
+        console.timeEnd('[Sync] Giai đoạn 3: Upload ZIP lên Telegram');
         const finalZipFileIds: string[] = uploadResults;
 
         // Gửi file Index V3
