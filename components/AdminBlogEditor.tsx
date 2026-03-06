@@ -5,7 +5,7 @@ import {
     ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
     ImageIcon, Link as LinkIcon, HelpCircle, AlignLeft, AlignCenter,
     AlignRight, AlignJustify, Type, Hash, Quote, Code2, Table,
-    Upload, X, CheckCircle, AlertCircle, RefreshCw
+    X, CheckCircle, AlertCircle, RefreshCw
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -31,13 +31,10 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
     });
     const [isPreview, setIsPreview] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [showHelper, setShowHelper] = useState(false);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [wordCount, setWordCount] = useState(0);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const imageInputRef = useRef<HTMLInputElement>(null);
-    const coverImageInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (blog) {
@@ -118,51 +115,6 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
             textarea.focus();
             textarea.setSelectionRange(newPos, newPos);
         }, 0);
-    };
-
-    // Chuyển ảnh sang Base64 và nhúng thẳng vào Markdown (không cần Supabase Storage)
-    const handleInlineImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (file.size > 3 * 1024 * 1024) {
-            showToast('❌ Ảnh quá lớn (tối đa 3MB). Hãy dùng URL thốc nđ cho ảnh lớn.', 'error');
-            e.target.value = '';
-            return;
-        }
-        setIsUploadingImage(true);
-        try {
-            const reader = new FileReader();
-            reader.onload = () => {
-                const base64 = reader.result as string;
-                insertTextAtCursor(`\n![${file.name}](${base64})\n`);
-                showToast('ð� Đã chịn ảnh (Base64, lưu cùng bài viết)!');
-            };
-            reader.readAsDataURL(file);
-        } catch (err: any) {
-            showToast(`❌ Lỗi: ${err.message}`, 'error');
-        }
-        setIsUploadingImage(false);
-        e.target.value = '';
-    };
-
-    // Ảnh bìa: cũng base64 hoặc URL
-    const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (file.size > 3 * 1024 * 1024) {
-            showToast('❌ Ảnh quá lớn (tối đa 3MB).', 'error');
-            e.target.value = '';
-            return;
-        }
-        setIsUploadingImage(true);
-        const reader = new FileReader();
-        reader.onload = () => {
-            handleChange('cover_image', reader.result as string);
-            showToast('🖼️ Đã chọn ảnh bìa!');
-            setIsUploadingImage(false);
-        };
-        reader.readAsDataURL(file);
-        e.target.value = '';
     };
 
     const toolbarButtons = [
@@ -315,20 +267,6 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                                             </button>
                                         )
                                     )}
-                                    {/* Upload ảnh trực tiếp */}
-                                    <button
-                                        onClick={() => imageInputRef.current?.click()}
-                                        title="Upload ảnh trực tiếp"
-                                        disabled={isUploadingImage}
-                                        className="p-1.5 rounded transition-colors flex items-center gap-1 text-xs font-medium"
-                                        style={{ color: '#448361', background: isUploadingImage ? '#EAF3EE' : 'transparent' }}
-                                        onMouseEnter={e => { if (!isUploadingImage) e.currentTarget.style.background = '#EAF3EE'; }}
-                                        onMouseLeave={e => { if (!isUploadingImage) e.currentTarget.style.background = 'transparent'; }}
-                                    >
-                                        <Upload className="w-3.5 h-3.5" />
-                                        {isUploadingImage ? 'Đang up...' : 'Upload'}
-                                    </button>
-                                    <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleInlineImageUpload} />
                                 </div>
                             )}
 
@@ -449,50 +387,6 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                         </div>
                     </div>
 
-                    {/* Cover Image */}
-                    <div className="p-5 rounded-2xl bg-white border border-[#E9E9E7] space-y-4">
-                        <h3 className="font-semibold text-[#1A1A1A]">Ảnh bìa</h3>
-
-                        {/* Upload ảnh bìa trực tiếp */}
-                        <button
-                            onClick={() => coverImageInputRef.current?.click()}
-                            disabled={isUploadingImage}
-                            className="w-full p-3 rounded-xl border-2 border-dashed text-sm font-medium flex items-center justify-center gap-2 transition-all hover:border-indigo-400"
-                            style={{ borderColor: '#E9E9E7', color: '#787774' }}
-                        >
-                            <Upload className="w-4 h-4" />
-                            {isUploadingImage ? 'Đang upload...' : 'Upload ảnh bìa'}
-                        </button>
-                        <input ref={coverImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverImageUpload} />
-
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[#AEACA8] text-xs">URL:</div>
-                            <input
-                                type="url"
-                                placeholder="https://..."
-                                className="w-full pl-10 pr-3 py-2.5 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm"
-                                value={formData.cover_image}
-                                onChange={e => handleChange('cover_image', e.target.value)}
-                            />
-                        </div>
-
-                        {formData.cover_image ? (
-                            <div className="relative rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7' }}>
-                                <img src={formData.cover_image} alt="Cover" className="w-full h-36 object-cover" />
-                                <button
-                                    onClick={() => handleChange('cover_image', '')}
-                                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
-                                >
-                                    <X className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="rounded-xl overflow-hidden flex items-center justify-center h-24" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
-                                <span className="text-xs" style={{ color: '#CFCFCB' }}>Chưa có ảnh bìa</span>
-                            </div>
-                        )}
-                    </div>
-
                     {/* Quick stats */}
                     <div className="p-5 rounded-2xl bg-white border border-[#E9E9E7]">
                         <h3 className="font-semibold text-[#1A1A1A] mb-3">Thống kê bài viết</h3>
@@ -512,6 +406,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     );
