@@ -14,13 +14,19 @@ export const useAdminAuth = (): AdminAuth => {
     const [adminEmail, setAdminEmail] = useState<string | null>(null);
     const [adminLoading, setAdminLoading] = useState(true);
 
-    // Check session on mount via GoTrue listener to prevent lock race conditions
+    // Check session on mount via GoTrue listener
     useEffect(() => {
         let isMounted = true;
+
+        // Fallback: if auth check hangs for any reason, force show login after 3s
+        const timeout = setTimeout(() => {
+            if (isMounted) setAdminLoading(false);
+        }, 3000);
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
                 if (!isMounted) return;
+                clearTimeout(timeout);
 
                 if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
                     if (session?.user) {
@@ -59,6 +65,7 @@ export const useAdminAuth = (): AdminAuth => {
 
         return () => {
             isMounted = false;
+            clearTimeout(timeout);
             subscription.unsubscribe();
         };
     }, []);
