@@ -630,6 +630,13 @@ export const useCloudStorage = () => {
             payloads.push({ chapterId: lesson.chapterId, lessons: [lesson], files: lessonFiles });
         }
 
+        // Sort payloads by stable key → cùng nội dung luôn rơi vào cùng chunk
+        payloads.sort((a, b) => {
+            const idA = a.lessons[0]?.id || `ch_${a.chapterId}`;
+            const idB = b.lessons[0]?.id || `ch_${b.chapterId}`;
+            return idA < idB ? -1 : idA > idB ? 1 : 0;
+        });
+
         // Helper upload 1 blob lên Telegram với retry khi 429
         const uploadBlob = async (blob: Blob, fileName: string, onProgress?: (loaded: number) => void): Promise<string> => {
             const MAX_RETRIES = 5;
@@ -711,12 +718,31 @@ export const useCloudStorage = () => {
         console.timeEnd('[Sync] Giai đoạn 1: XOR encode + pack ZIP');
         console.log(`[Sync] Số chunk ZIP: ${zipChunks.length} | ${Object.keys(lessonVersions).length} payloads tracked`);
 
-        // Pipeline: generate ZIP + upload song song (không chờ generate hết mới upload)
-        // DEFLATE level 1 giảm ~20-25% kích thước base64, upload/download nhanh hơn đáng kể
-        const uploadedPerPart: number[] = new Array(zipChunks.length).fill(0);
-        let estimatedTotalSize = zipChunks.length * 5 * 1024 * 1024;
+        // Incremental sync: compare chunk fingerprints → skip unchanged chunks
+        const prevChunkMap: Record<string, string> = JSON.parse(
+            localStorage.getItem(`pv_sync_chunks_${grade}`) || '{}'
+        );
 
-        // Monotonic progress: chỉ cho phép thanh tiến trình đi lên, không bao giờ tuột xuống
+        // Fingerprint mỗi chunk = hash(sorted payloadId:version pairs)
+        const chunkFingerprints: string[] = chunkPayloadIds.map(ids =>
+            fnvHash(ids.map(id => `${id}:${lessonVersions[id]}`).sort().join(','))
+        );
+
+        const finalZipFileIds: string[] = new Array(zipChunks.length);
+        const chunksToUpload: number[] = [];
+
+        for (let i = 0; i < zipChunks.length; i++) {
+            const fp = chunkFingerprints[i];
+            if (prevChunkMap[fp]) {
+                finalZipFileIds[i] = prevChunkMap[fp];
+                console.log(`[Sync] ZIP chunk ${i + 1}: unchanged → reuse`);
+            } else {
+                chunksToUpload.push(i);
+            }
+        }
+        console.log(`[Sync] Incremental: ${zipChunks.length - chunksToUpload.length}/${zipChunks.length} chunks reused, ${chunksToUpload.length} to upload`);
+
+        // Monotonic progress
         let _peakProgress = 0;
         const setMonotonicProgress = (pct: number) => {
             if (pct > _peakProgress) {
@@ -725,32 +751,45 @@ export const useCloudStorage = () => {
             }
         };
 
-        console.time('[Sync] Giai đoạn 2+3: Generate + Upload pipeline');
-        const uploadPromises: Promise<string>[] = [];
-        for (let i = 0; i < zipChunks.length; i++) {
-            const z = zipChunks[i];
-            const zipBlob = await z.generateAsync(
-                { type: 'blob', compression: "DEFLATE", compressionOptions: { level: 1 } },
-                (meta) => {
-                    const globalPercent = Math.floor((i + meta.percent / 100) * (20 / zipChunks.length));
-                    setMonotonicProgress(globalPercent);
-                }
-            );
-            console.log(`[Sync] ZIP part ${i + 1}: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
-            estimatedTotalSize = Math.max(estimatedTotalSize, zipBlob.size * zipChunks.length);
+        // Pipeline: generate + upload chỉ chunks thay đổi
+        if (chunksToUpload.length > 0) {
+            const uploadedPerPart: number[] = new Array(chunksToUpload.length).fill(0);
+            let estimatedTotalSize = chunksToUpload.length * 5 * 1024 * 1024;
 
-            const partIndex = i;
-            uploadPromises.push(
-                uploadBlob(zipBlob, `vault_g${grade}_v3_part${i + 1}.zip`, (loaded) => {
-                    uploadedPerPart[partIndex] = loaded;
-                    const totalLoaded = uploadedPerPart.reduce((a, b) => a + b, 0);
-                    const globalPercent = 20 + Math.floor((totalLoaded / estimatedTotalSize) * 75);
-                    setMonotonicProgress(Math.min(globalPercent, 95));
-                })
-            );
+            console.time('[Sync] Giai đoạn 2+3: Generate + Upload pipeline');
+            const uploadPromises: Promise<void>[] = [];
+            for (let u = 0; u < chunksToUpload.length; u++) {
+                const i = chunksToUpload[u];
+                const z = zipChunks[i];
+                const zipBlob = await z.generateAsync(
+                    { type: 'blob', compression: "DEFLATE", compressionOptions: { level: 1 } },
+                    (meta) => {
+                        const globalPercent = Math.floor((u + meta.percent / 100) * (20 / chunksToUpload.length));
+                        setMonotonicProgress(globalPercent);
+                    }
+                );
+                console.log(`[Sync] ZIP part ${i + 1}: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
+                estimatedTotalSize = Math.max(estimatedTotalSize, zipBlob.size * chunksToUpload.length);
+
+                const uploadIdx = u;
+                const chunkIdx = i;
+                uploadPromises.push(
+                    uploadBlob(zipBlob, `vault_g${grade}_v3_part${i + 1}.zip`, (loaded) => {
+                        uploadedPerPart[uploadIdx] = loaded;
+                        const totalLoaded = uploadedPerPart.reduce((a, b) => a + b, 0);
+                        const globalPercent = 20 + Math.floor((totalLoaded / estimatedTotalSize) * 75);
+                        setMonotonicProgress(Math.min(globalPercent, 95));
+                    }).then(fileId => {
+                        finalZipFileIds[chunkIdx] = fileId;
+                    })
+                );
+            }
+            await Promise.all(uploadPromises);
+            console.timeEnd('[Sync] Giai đoạn 2+3: Generate + Upload pipeline');
+        } else {
+            console.log('[Sync] Giai đoạn 2+3: Tất cả chunks unchanged → skip generate + upload');
+            setMonotonicProgress(95);
         }
-        const finalZipFileIds: string[] = await Promise.all(uploadPromises);
-        console.timeEnd('[Sync] Giai đoạn 2+3: Generate + Upload pipeline');
 
         // Gửi file Index V3
         console.time('[Sync] Giai đoạn 4: Upload index + Supabase');
@@ -787,15 +826,23 @@ export const useCloudStorage = () => {
         console.timeEnd('[Sync] Giai đoạn 4: Upload index + Supabase');
 
         localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
+
+        // Lưu chunk fingerprint map → incremental sync lần sau
+        const newChunkMap: Record<string, string> = {};
+        chunkFingerprints.forEach((fp, i) => {
+            newChunkMap[fp] = finalZipFileIds[i];
+        });
+        localStorage.setItem(`pv_sync_chunks_${grade}`, JSON.stringify(newChunkMap));
+
         setSyncProgress(100);
         setTimeout(() => setSyncProgress(0), 1000);
 
-        // Warm cache cho học sinh: tải sẵn các ZIP qua Cloudflare để cache ngay
-        // Chạy nền, không block return. Warm tuần tự từng file để tránh quá tải Worker.
+        // Warm cache: chỉ warm index + chunks MỚI upload (chunks reused đã có cache sẵn)
         (async () => {
             try {
-                console.log('[Sync] 🔥 Warming Cloudflare cache cho học sinh...');
-                const allWarmIds = [finalFileId, ...finalZipFileIds];
+                const newChunkIds = chunksToUpload.map(i => finalZipFileIds[i]);
+                console.log(`[Sync] 🔥 Warming cache: index + ${newChunkIds.length} new chunk(s) (${zipChunks.length - newChunkIds.length} already cached)`);
+                const allWarmIds = [finalFileId, ...newChunkIds];
                 let warmed = 0;
                 for (const id of allWarmIds) {
                     try {
