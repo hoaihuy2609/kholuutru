@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BlogPost } from '../types';
-import { useCloudStorage } from '../src/hooks/useCloudStorage';
 import {
     ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
     ImageIcon, Link as LinkIcon, HelpCircle, AlignLeft, AlignCenter,
@@ -17,12 +16,14 @@ interface AdminBlogEditorProps {
     blog: BlogPost | null;
     onBack: () => void;
     onSaved: (blog: BlogPost) => void;
+    saveBlog: (blog: Partial<BlogPost>) => Promise<BlogPost | null>;
+    deleteBlog: (id: string) => Promise<boolean>;
+    syncBlogs: (onProgress?: (pct: number) => void) => Promise<{ success: boolean; fileId?: string; blogCount: number }>;
 }
 
 const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
-const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved }) => {
-    const { saveBlog, deleteBlog, syncBlogs } = useCloudStorage();
+const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
     const [pendingSync, setPendingSync] = useState(false); // flag cần sync lên Telegram
     const [isSyncingBlog, setIsSyncingBlog] = useState(false);
 

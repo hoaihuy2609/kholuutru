@@ -48,7 +48,7 @@ function App() {
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
   const [autoCreateLesson, setAutoCreateLesson] = useState(false);
 
-  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory, getLeaderboard, getStudyPlans, saveStudyPlan, updateStudyPlan, deleteStudyPlan, getSchedules, saveSchedule, updateSchedule, deleteSchedule, getNotifications, deleteNotification, createCustomNotification, markNotificationFetched, getFetchedNotificationIds, submitQuestionVote, getQuestionVotes } = useCloudStorage();
+  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory, getLeaderboard, getStudyPlans, saveStudyPlan, updateStudyPlan, deleteStudyPlan, getSchedules, saveSchedule, updateSchedule, deleteSchedule, getNotifications, deleteNotification, createCustomNotification, markNotificationFetched, getFetchedNotificationIds, submitQuestionVote, getQuestionVotes, getBlogs, saveBlog, deleteBlog, syncBlogs, fetchBlogsForEditing } = useCloudStorage();
 
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     return localStorage.getItem('physivault_is_admin') === 'true';
@@ -425,6 +425,9 @@ function App() {
         return (
           <AdminBlogEditor
             blog={activeAdminBlog}
+            saveBlog={saveBlog}
+            deleteBlog={deleteBlog}
+            syncBlogs={syncBlogs}
             onBack={() => {
               setActiveAdminBlog(null);
               setIsCreatingBlog(false);
@@ -456,6 +459,7 @@ function App() {
           onEditBlog={effectiveIsAdmin ? setActiveAdminBlog : undefined}
           onCreateBlog={effectiveIsAdmin ? () => setIsCreatingBlog(true) : undefined}
           onBlogsLoaded={setAllBlogs}
+          getBlogs={getBlogs}
         />
       );
 

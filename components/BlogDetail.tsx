@@ -71,10 +71,24 @@ const CodeBlock: React.FC<{ children?: React.ReactNode; className?: string }> = 
 const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = [], onReadRelated }) => {
     const [showToc, setShowToc] = useState(false);
     const [activeHeading, setActiveHeading] = useState('');
+    const [readProgress, setReadProgress] = useState(0);
+    const [showScrollTop, setShowScrollTop] = useState(false);
     const contentRef = useRef<HTMLDivElement>(null);
 
     const headings = useMemo(() => extractHeadings(blog.content), [blog.content]);
     const readTime = useMemo(() => estimateReadTime(blog.content), [blog.content]);
+
+    // Reading progress bar + scroll-to-top
+    useEffect(() => {
+        const handleScroll = () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            setReadProgress(docHeight > 0 ? Math.min(100, (scrollTop / docHeight) * 100) : 0);
+            setShowScrollTop(scrollTop > 400);
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     // Scroll spy: highlight heading đang đọc
     useEffect(() => {
@@ -111,6 +125,18 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
 
     return (
         <div className="max-w-4xl mx-auto p-4 md:p-8 animate-fade-in relative pb-20">
+            {/* Reading Progress Bar */}
+            <div style={{
+                position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+                height: '3px', background: '#F0F0EE'
+            }}>
+                <div style={{
+                    height: '100%', width: `${readProgress}%`,
+                    background: 'linear-gradient(90deg, #6B7CDB, #9065B0)',
+                    transition: 'width 0.1s linear', borderRadius: '0 2px 2px 0'
+                }} />
+            </div>
+
             {/* Back Button */}
             <button
                 onClick={onBack}
@@ -329,6 +355,28 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
                         ))}
                     </div>
                 </div>
+            )}
+
+            {/* Scroll to Top */}
+            {showScrollTop && (
+                <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="animate-fade-in"
+                    style={{
+                        position: 'fixed', bottom: '24px', right: '24px', zIndex: 40,
+                        width: '42px', height: '42px', borderRadius: '12px',
+                        background: '#fff', border: '1px solid #E9E9E7',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', transition: 'all 0.2s',
+                        color: '#787774', fontSize: '18px'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#6B7CDB'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#6B7CDB'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#787774'; e.currentTarget.style.borderColor = '#E9E9E7'; }}
+                    title="Về đầu trang"
+                >
+                    ↑
+                </button>
             )}
         </div>
     );

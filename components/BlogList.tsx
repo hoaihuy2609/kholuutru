@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BlogPost } from '../types';
-import { useCloudStorage } from '../src/hooks/useCloudStorage';
 import { BookOpen, Calendar, ChevronRight, Edit3, Plus, Search, Clock, Tag, Filter, Atom, FileText } from 'lucide-react';
 
 interface BlogListProps {
@@ -9,6 +8,7 @@ interface BlogListProps {
     onEditBlog?: (blog: BlogPost) => void;
     onCreateBlog?: () => void;
     onBlogsLoaded?: (blogs: BlogPost[]) => void;
+    getBlogs: (isAdmin: boolean) => Promise<BlogPost[]>;
 }
 
 const estimateReadTime = (content: string): number => {
@@ -16,11 +16,11 @@ const estimateReadTime = (content: string): number => {
     return Math.max(1, Math.ceil(words / 200)); // ~200 từ/phút
 };
 
-const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, onCreateBlog, onBlogsLoaded }) => {
-    const { getBlogs } = useCloudStorage();
+const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, onCreateBlog, onBlogsLoaded, getBlogs }) => {
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedTag, setSelectedTag] = useState('');
     const [gradeFilter, setGradeFilter] = useState<number>(0);
@@ -47,15 +47,21 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
         [blogs]
     );
 
+    // Debounce search: avoid filtering on every keystroke
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchQuery), 200);
+        return () => clearTimeout(t);
+    }, [searchQuery]);
+
     const filteredBlogs = useMemo(() => blogs.filter(b => {
-        const q = searchQuery.toLowerCase();
+        const q = debouncedSearch.toLowerCase();
         const matchSearch = !q || b.title.toLowerCase().includes(q) || b.summary.toLowerCase().includes(q) || (b.tags || []).some(t => t.toLowerCase().includes(q));
         const matchCat = !selectedCategory || b.category === selectedCategory;
         const matchTag = !selectedTag || (b.tags || []).includes(selectedTag);
         const gradeVal = b.grade || 0;
         const matchGrade = gradeFilter === 0 || gradeVal === gradeFilter || gradeVal === 0;
         return matchSearch && matchCat && matchTag && matchGrade;
-    }), [blogs, searchQuery, selectedCategory, selectedTag, gradeFilter]);
+    }), [blogs, debouncedSearch, selectedCategory, selectedTag, gradeFilter]);
 
     const hasActiveFilters = selectedCategory || selectedTag;
 
