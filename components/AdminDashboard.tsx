@@ -10,8 +10,6 @@ import {
 } from 'lucide-react';
 import ExamManager from './ExamManager';
 import StatsPanel from './StatsPanel';
-import AdminBlogEditor from './AdminBlogEditor';
-import { BlogPost } from '../types';
 import { Exam } from '../types';
 
 interface Student {
@@ -58,41 +56,7 @@ const Loader2 = ({ className, style }: { className?: string; style?: React.CSSPr
 );
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, onOpenGitHubSync, onUploadExamPdf, onSaveExam, onDeleteExam, onLoadExams }) => {
-    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats' | 'blog'>('students');
-
-    // Blog state
-    const [blogs, setBlogs] = useState<BlogPost[]>([]);
-    const [blogsLoading, setBlogsLoading] = useState(false);
-    const [editingBlog, setEditingBlog] = useState<BlogPost | null | '__new__'>(() => undefined as any);
-    const [showBlogEditor, setShowBlogEditor] = useState(false);
-    const [activeBlogPost, setActiveBlogPost] = useState<BlogPost | null>(null);
-
-    const refreshBlogs = async () => {
-        setBlogsLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from('blog_posts')
-                .select('*')
-                .order('created_at', { ascending: false });
-            if (error) throw error;
-            setBlogs(data || []);
-        } catch (err: any) {
-            console.error('[Admin] Lỗi load blog:', err);
-        } finally {
-            setBlogsLoading(false);
-        }
-    };
-
-    const handleDeleteBlog = async (id: string, title: string) => {
-        if (!window.confirm(`Xóa bài viết "${title}"?`)) return;
-        try {
-            await supabase.from('blog_posts').delete().eq('id', id);
-            onShowToast('Đã xóa bài viết!', 'warning');
-            refreshBlogs();
-        } catch (err: any) {
-            onShowToast('Lỗi xóa bài: ' + err.message, 'error');
-        }
-    };
+    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats'>('students');
 
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -194,7 +158,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     };
 
     useEffect(() => { refreshStudents(); refreshClasses(); }, []);
-    useEffect(() => { if (activeTab === 'blog') refreshBlogs(); }, [activeTab]);
 
     const handleAddStudent = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -368,7 +331,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                 {[
                     { key: 'students', label: 'Học Sinh', icon: <Users className="w-4 h-4" /> },
                     { key: 'exams', label: 'Đề Thi', icon: <ClipboardList className="w-4 h-4" /> },
-                    { key: 'blog', label: 'Blog', icon: <Newspaper className="w-4 h-4" /> },
                     { key: 'stats', label: 'Thống Kê', icon: <BarChart2 className="w-4 h-4" /> },
                 ].map(tab => (
                     <button
@@ -403,109 +365,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
 
                 {/* ── Stats Tab ── */}
                 {activeTab === 'stats' && <StatsPanel />}
-
-                {/* ── Blog Tab ── */}
-                {activeTab === 'blog' && (
-                    showBlogEditor ? (
-                        <AdminBlogEditor
-                            blog={activeBlogPost}
-                            onBack={() => { setShowBlogEditor(false); setActiveBlogPost(null); refreshBlogs(); }}
-                            onSaved={() => { setShowBlogEditor(false); setActiveBlogPost(null); refreshBlogs(); onShowToast('Đã lưu bài viết!', 'success'); }}
-                        />
-                    ) : (
-                        <div className="space-y-4">
-                            {/* Header */}
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h2 className="text-lg font-semibold" style={{ color: '#1A1A1A' }}>Quản lý Blog</h2>
-                                    <p className="text-sm" style={{ color: '#787774' }}>{blogs.length} bài viết</p>
-                                </div>
-                                <button
-                                    onClick={() => { setActiveBlogPost(null); setShowBlogEditor(true); }}
-                                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg"
-                                    style={{ background: '#6B7CDB' }}
-                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#5a6bc9'}
-                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#6B7CDB'}
-                                >
-                                    <Plus className="w-4 h-4" /> Viết bài mới
-                                </button>
-                            </div>
-
-                            {/* Blog list */}
-                            {blogsLoading ? (
-                                <div className="flex justify-center py-16">
-                                    <RefreshCw className="w-8 h-8 animate-spin" style={{ color: '#6B7CDB' }} />
-                                </div>
-                            ) : blogs.length === 0 ? (
-                                <div className="rounded-xl py-16 text-center" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                    <BookOpen className="w-12 h-12 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
-                                    <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có bài viết nào</p>
-                                    <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Bấm "Viết bài mới" để bắt đầu</p>
-                                </div>
-                            ) : (
-                                <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                    {blogs.map((post, idx) => (
-                                        <div
-                                            key={post.id}
-                                            className="flex items-center justify-between px-5 py-4 transition-colors"
-                                            style={{ borderBottom: idx < blogs.length - 1 ? '1px solid #F1F0EC' : undefined }}
-                                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FAFAF9'}
-                                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                                        >
-                                            <div className="flex items-center gap-4 min-w-0">
-                                                {post.cover_image ? (
-                                                    <img src={post.cover_image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
-                                                ) : (
-                                                    <div className="w-12 h-12 rounded-lg shrink-0 flex items-center justify-center" style={{ background: '#EEF0FB' }}>
-                                                        <Newspaper className="w-5 h-5" style={{ color: '#6B7CDB' }} />
-                                                    </div>
-                                                )}
-                                                <div className="min-w-0">
-                                                    <p className="font-medium text-sm truncate" style={{ color: '#1A1A1A' }}>{post.title || 'Không có tiêu đề'}</p>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        {post.category && (
-                                                            <span className="text-[10px] px-2 py-0.5 rounded-md font-medium" style={{ background: '#EEF0FB', color: '#6B7CDB' }}>
-                                                                {post.category}
-                                                            </span>
-                                                        )}
-                                                        <span className="text-[11px]" style={{ color: '#AEACA8' }}>
-                                                            {post.created_at ? new Date(post.created_at).toLocaleDateString('vi-VN') : ''}
-                                                        </span>
-                                                        {post.is_published !== false && (
-                                                            <span className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ background: '#EAF3EE', color: '#448361' }}>Đã xuất bản</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-1 shrink-0 ml-4">
-                                                <button
-                                                    onClick={() => { setActiveBlogPost(post); setShowBlogEditor(true); }}
-                                                    className="p-2 rounded-lg transition-colors"
-                                                    style={{ color: '#AEACA8' }}
-                                                    title="Chỉnh sửa"
-                                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#6B7CDB'; (e.currentTarget as HTMLElement).style.background = '#EEF0FB'; }}
-                                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#AEACA8'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                                                >
-                                                    <Edit3 className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteBlog(post.id, post.title)}
-                                                    className="p-2 rounded-lg transition-colors"
-                                                    style={{ color: '#AEACA8' }}
-                                                    title="Xóa"
-                                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#E03E3E'; (e.currentTarget as HTMLElement).style.background = '#FEF0F0'; }}
-                                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#AEACA8'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )
-                )}
 
                 {/* ── Exam Tab ── */}
                 {activeTab === 'exams' && onUploadExamPdf && onSaveExam && onDeleteExam && onLoadExams && (
