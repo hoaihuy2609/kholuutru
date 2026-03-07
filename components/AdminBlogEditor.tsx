@@ -115,8 +115,24 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này vĩnh viễn không?')) return;
         setIsSaving(true);
         const ok = await deleteBlog(blog.id);
+        if (!ok) {
+            setIsSaving(false);
+            showToast('❌ Lỗi khi xóa!', 'error');
+            return;
+        }
+        // Sync lên Telegram NGAY để Telegram cũng phản ánh bài đã xóa
+        // Nếu không sync trước, BlogList sẽ kéo lại bài cũ từ Telegram khi re-mount
+        showToast('🗑️ Đã xóa! Đang sync lên Telegram...');
+        setIsSyncingBlog(true);
+        const result = await syncBlogs();
+        setIsSyncingBlog(false);
         setIsSaving(false);
-        if (ok) { onBack(); } else { showToast('❌ Lỗi khi xóa!', 'error'); }
+        if (result.success) {
+            showToast('✅ Đã xóa và sync xong!');
+        } else {
+            showToast('⚠️ Đã xóa local. Sync thất bại — Telegram chưa cập nhật.', 'error');
+        }
+        onBack();
     };
 
     const insertTextAtCursor = (prefix: string, suffix: string = '') => {
