@@ -4,8 +4,9 @@ import { CURRICULUM } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Toast, { ToastType } from './components/Toast';
+import FloatingMeetButton from './components/FloatingMeetButton';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
-import { FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Ban, ShieldOff, WifiOff, Atom, Home, Bell, FlaskConical } from 'lucide-react';
+import { FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Ban, ShieldOff, WifiOff, Atom, Home, Bell, FlaskConical, Video } from 'lucide-react';
 import { getMachineId } from './src/hooks/useCloudStorage';
 
 const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
@@ -924,7 +925,7 @@ function App() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen transition-all duration-300">
+      <div className="flex-1 md:ml-64 flex flex-col min-h-screen transition-all duration-300 relative">
 
         {/* Mobile Header — simplified */}
         <header
@@ -1043,6 +1044,8 @@ function App() {
       {/* Chatbot Component - Only show on Dashboard (Overview) */}
       {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && !showNotification && !showSimLab && !showBlog && <Suspense fallback={null}><Chatbot /></Suspense>}
 
+      {/* Floating Action Menu for Google Meet */}
+      {(isActivated || isAdmin) && <FloatingMeetButton />}
     </div>
   );
 }

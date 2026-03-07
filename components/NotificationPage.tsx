@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Bell, BellOff, CloudDownload, CheckCircle2, RefreshCw, Clock, Trash2, Send, MessageSquarePlus, ChevronDown, Megaphone } from 'lucide-react';
+import { Bell, BellOff, CloudDownload, CheckCircle2, RefreshCw, Clock, Trash2, Send, MessageSquarePlus, ChevronDown, Megaphone, Video } from 'lucide-react';
 import { NotificationItem } from '../types';
 
 interface NotificationPageProps {
@@ -217,18 +217,51 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                         </p>
                     </div>
                 </div>
-                <button
-                    onClick={load}
-                    disabled={loading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                    style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
-                    title="Làm mới thông báo"
-                >
-                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} style={{ color: ACCENT }} />
-                    Làm mới
-                </button>
+
+                <div className="flex items-center gap-2">
+                    {/* ── Cá nhân hóa nút Meet hiển thị đúng khối ── */}
+                    {(() => {
+                        const stdGrade = grade; // grade is already getStudentGrade() or set. For admin, it defaults to 12 or we can handle it.
+                        // Nếu là admin, ta có thể hiển thị chọn link dropdown hoặc tạm lấy mặc định khối 12 nếu thầy không chọn filter.
+                        const targetGrade = isAdmin && adminGradeFilter ? adminGradeFilter : stdGrade;
+                        const meetConfig = GRADE_CONFIG.find(g => g.grade === targetGrade) || GRADE_CONFIG[0];
+                        const url = meetConfig.grade === 10 ? 'https://meet.google.com/vch-rjum-kus'
+                            : meetConfig.grade === 11 ? 'https://meet.google.com/kup-kyii-ess'
+                                : 'https://meet.google.com/omz-jvty-osn';
+                        return (
+                            <a
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="group relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                style={{ background: meetConfig.bg, color: meetConfig.accent, border: `1px solid ${meetConfig.accent}40` }}
+                                title={`Vào phòng Meet khối ${meetConfig.grade}`}
+                            >
+                                <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity" style={{ background: meetConfig.accent }} />
+                                {/* Chấm đỏ live nhấp nháy */}
+                                <div className="relative flex h-2 w-2 mr-0.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#E03E3E' }}></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: '#E03E3E' }}></span>
+                                </div>
+                                <Video className="w-4 h-4" />
+                                <span className="hidden sm:inline">Meet {isAdmin && !adminGradeFilter ? 'Kho' : 'Khối'} {meetConfig.grade}</span>
+                            </a>
+                        );
+                    })()}
+
+                    <button
+                        onClick={load}
+                        disabled={loading}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                        style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                        title="Làm mới thông báo"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} style={{ color: ACCENT }} />
+                        Làm mới
+                    </button>
+                </div>
             </div>
 
             {/* ── Admin: Compose + Filter Bar ── */}
@@ -421,6 +454,8 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                     Thông báo dành cho Lớp {grade}
                 </div>
             )}
+
+
 
             {/* ── Content ── */}
             {loading ? (
