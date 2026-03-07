@@ -627,6 +627,15 @@ export const useCloudStorage = () => {
         const uploadedPerPart: number[] = new Array(zipChunks.length).fill(0);
         let estimatedTotalSize = zipChunks.length * 5 * 1024 * 1024;
 
+        // Monotonic progress: chỉ cho phép thanh tiến trình đi lên, không bao giờ tuột xuống
+        let _peakProgress = 0;
+        const setMonotonicProgress = (pct: number) => {
+            if (pct > _peakProgress) {
+                _peakProgress = pct;
+                setSyncProgress(pct);
+            }
+        };
+
         console.time('[Sync] Giai đoạn 2+3: Generate + Upload pipeline');
         const uploadPromises: Promise<string>[] = [];
         for (let i = 0; i < zipChunks.length; i++) {
@@ -635,7 +644,7 @@ export const useCloudStorage = () => {
                 { type: 'blob', compression: "DEFLATE", compressionOptions: { level: 1 } },
                 (meta) => {
                     const globalPercent = Math.floor((i + meta.percent / 100) * (20 / zipChunks.length));
-                    setSyncProgress(globalPercent);
+                    setMonotonicProgress(globalPercent);
                 }
             );
             console.log(`[Sync] ZIP part ${i + 1}: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
@@ -647,7 +656,7 @@ export const useCloudStorage = () => {
                     uploadedPerPart[partIndex] = loaded;
                     const totalLoaded = uploadedPerPart.reduce((a, b) => a + b, 0);
                     const globalPercent = 20 + Math.floor((totalLoaded / estimatedTotalSize) * 75);
-                    setSyncProgress(Math.min(globalPercent, 95));
+                    setMonotonicProgress(Math.min(globalPercent, 95));
                 })
             );
         }
