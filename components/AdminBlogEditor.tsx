@@ -203,22 +203,6 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                 </button>
 
                 <div className="flex items-center gap-3 flex-wrap">
-                    {/* Sync Blog — luôn hiển thị */}
-                    <button
-                        onClick={handleSyncNow}
-                        disabled={isSyncingBlog || isSaving}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all disabled:opacity-60"
-                        style={pendingSync
-                            ? { background: '#EAF3EE', color: '#448361', border: '1px solid #B7D9C4' }
-                            : { background: '#F7F6F3', color: '#787774', border: '1px solid #E9E9E7' }
-                        }
-                        title="Sync blog lên Telegram để học sinh thấy"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${isSyncingBlog ? 'animate-spin' : ''}`} />
-                        {isSyncingBlog ? 'Đang sync...' : pendingSync ? '⚡ Sync Blog' : 'Sync Blog'}
-                    </button>
-
-
                     {blog && (
                         <button
                             onClick={handleDelete}
