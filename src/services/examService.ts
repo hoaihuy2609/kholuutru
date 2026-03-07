@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { dbGet, dbSet } from '../lib/db';
-import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL } from '../lib/telegram';
+import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
 import { xorObfuscate, xorDeobfuscate } from '../lib/crypto';
 import { Exam } from '../../types';
 
@@ -13,7 +13,7 @@ export const uploadExamPdf = async (file: File, onProgress?: (pct: number) => vo
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', `${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`);
-        xhr.setRequestHeader('Authorization', 'Bearer PV_ADMIN_SECURE_KEY_2026');
+        xhr.setRequestHeader('Authorization', ADMIN_AUTH_HEADER);
         xhr.upload.onprogress = (e) => {
             if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
         };
@@ -41,7 +41,7 @@ export const saveExam = async (exams: Exam[]): Promise<void> => {
 
     const res = await fetch(`${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`, {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer PV_ADMIN_SECURE_KEY_2026' },
+        headers: { 'Authorization': ADMIN_AUTH_HEADER },
         body: formData
     });
     if (!res.ok) throw new Error('Upload exam index thất bại');

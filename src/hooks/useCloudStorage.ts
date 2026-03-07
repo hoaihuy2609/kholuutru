@@ -5,8 +5,8 @@ import { Lesson, StoredFile, FileStorage } from '../../types';
 
 // Shared utilities (extracted)
 import { dbGet, dbSet, dbSetBatch } from '../lib/db';
-import { xorObfuscate, xorDeobfuscate, fnvHash, getMachineId, generateActivationKey, checkActivationStatus } from '../lib/crypto';
-import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL } from '../lib/telegram';
+import { xorObfuscate, xorDeobfuscate, fnvHash, getMachineId, generateActivationKey, checkActivationStatus, aesEncrypt, smartDecrypt } from '../lib/crypto';
+import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
 
 // Service modules (extracted)
 import * as examService from '../services/examService';
@@ -206,7 +206,7 @@ export const useCloudStorage = () => {
                 indexRaw = await fetchViaCloudflareProxy(indexFileId);
                 console.log(`[Fetch] Giai đoạn 2 (Fresh download): ${(performance.now() - t2).toFixed(0)}ms`);
             }
-            const indexData = JSON.parse(xorDeobfuscate(new TextDecoder().decode(indexRaw)));
+            const indexData = JSON.parse(await smartDecrypt(new Uint8Array(indexRaw)));
 
             const [rawLessons, rawFiles] = await localDataPromise;
             const newLessonsMap = new Map();
@@ -264,9 +264,9 @@ export const useCloudStorage = () => {
                     const filePromises: Promise<void>[] = [];
                     unzipped.forEach((_, fileObj) => {
                         if (!fileObj.dir) {
-                            filePromises.push(fileObj.async("string").then(content => {
-                                const fc = content.charCodeAt(0);
-                                mergePayload((fc === 123 || fc === 91) ? JSON.parse(content) : JSON.parse(xorDeobfuscate(content)));
+                            filePromises.push(fileObj.async("uint8array").then(async (bytes) => {
+                                const decrypted = await smartDecrypt(bytes);
+                                mergePayload(JSON.parse(decrypted));
                             }));
                         }
                     });
@@ -299,7 +299,7 @@ export const useCloudStorage = () => {
                 for (const id of allIds) {
                     const p = (async () => {
                         const buf = await fetchViaCloudflareProxy(id);
-                        mergePayload(JSON.parse(xorDeobfuscate(new TextDecoder().decode(buf))));
+                        mergePayload(JSON.parse(await smartDecrypt(new Uint8Array(buf))));
                     })().then(() => { pool.delete(p); });
                     pool.add(p);
                     if (pool.size >= CONCURRENCY) await Promise.race(pool);
@@ -359,7 +359,7 @@ export const useCloudStorage = () => {
                 const result = await new Promise<{ ok: boolean; fileId?: string; retryAfter?: number; error?: string }>((resolve) => {
                     const xhr = new XMLHttpRequest();
                     xhr.open('POST', `${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`);
-                    xhr.setRequestHeader('Authorization', 'Bearer PV_ADMIN_SECURE_KEY_2026');
+                    xhr.setRequestHeader('Authorization', ADMIN_AUTH_HEADER);
                     xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(e.loaded); };
                     xhr.onload = () => {
                         const data = JSON.parse(xhr.responseText);
@@ -385,14 +385,19 @@ export const useCloudStorage = () => {
         let currentPayloadIds: string[] = [];
         const lessonVersions: Record<string, string> = {};
 
-        for (const p of payloads) {
+        // AES encrypt all payloads in parallel for speed
+        const payloadJsons = payloads.map(p => JSON.stringify({ ...p, syncedAt: Date.now() }));
+        const encryptedPayloads = await Promise.all(payloadJsons.map(json => aesEncrypt(json)));
+
+        for (let pi = 0; pi < payloads.length; pi++) {
+            const p = payloads[pi];
             const payloadId = p.lessons[0]?.id || `ch_${p.chapterId}`;
             const vParts = [p.chapterId, ...p.lessons.map(l => `${l.id}:${l.name}:${l.createdAt}`), ...Object.values(p.files).flat().map(f => `${f.id}:${f.size}`)];
             lessonVersions[payloadId] = fnvHash(vParts.join('|'));
 
-            const content = xorObfuscate(JSON.stringify({ ...p, syncedAt: Date.now() }));
-            const fileName = `g${grade}_${p.chapterId}_${p.lessons[0]?.id || 'ch'}.json`;
-            const contentBytes = content.length;
+            const encrypted = encryptedPayloads[pi];
+            const fileName = `g${grade}_${p.chapterId}_${p.lessons[0]?.id || 'ch'}.bin`;
+            const contentBytes = encrypted.byteLength;
 
             if (currentChunkSize > 0 && currentChunkSize + contentBytes > MAX_CHUNK_SIZE) {
                 chunkPayloadIds.push(currentPayloadIds);
@@ -402,7 +407,7 @@ export const useCloudStorage = () => {
                 currentChunkSize = 0;
             }
             currentPayloadIds.push(payloadId);
-            currentZip.file(fileName, content);
+            currentZip.file(fileName, encrypted);
             currentChunkSize += contentBytes;
         }
         if (currentChunkSize > 0) { chunkPayloadIds.push(currentPayloadIds); zipChunks.push(currentZip); }
@@ -453,14 +458,15 @@ export const useCloudStorage = () => {
             chunkContents: Object.fromEntries(finalZipFileIds.map((id, i) => [id, chunkPayloadIds[i]])),
             lessonVersions,
         };
-        const indexBlob = new Blob([xorObfuscate(JSON.stringify(indexPayload))], { type: 'application/json' });
+        const indexEncrypted = await aesEncrypt(JSON.stringify(indexPayload));
+        const indexBlob = new Blob([indexEncrypted], { type: 'application/octet-stream' });
         const indexForm = new FormData();
         indexForm.append('chat_id', TELEGRAM_CHAT_ID);
         indexForm.append('document', indexBlob, `index_grade${grade}_v3.json`);
         indexForm.append('caption', `[INDEX-V3-ZIP] Lớp ${grade} | ${finalZipFileIds.length} phần`);
 
         const indexRes = await fetch(`${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`, {
-            method: 'POST', headers: { 'Authorization': 'Bearer PV_ADMIN_SECURE_KEY_2026' }, body: indexForm
+            method: 'POST', headers: { 'Authorization': ADMIN_AUTH_HEADER }, body: indexForm
         });
         if (!indexRes.ok) { setSyncProgress(0); throw new Error(`Lỗi upload Index: ${indexRes.statusText}`); }
 

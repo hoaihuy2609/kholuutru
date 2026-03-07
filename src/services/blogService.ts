@@ -5,7 +5,7 @@ import { xorObfuscate, xorDeobfuscate } from '../lib/crypto';
 import { BlogPost } from '../../types';
 
 const BLOG_LOCAL_KEY = 'physivault_blogs_local';
-const BLOG_UPLOAD_AUTH = 'Bearer PV_ADMIN_SECURE_KEY_2026';
+import { ADMIN_AUTH_HEADER } from '../lib/telegram';
 
 export const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> => {
     try {
@@ -87,7 +87,7 @@ export const syncBlogs = async (onProgress?: (pct: number) => void): Promise<{ s
         formData.append('caption', `[BLOG-V1] ${localBlogs.length} bài viết | ${new Date().toLocaleString('vi-VN')}`);
 
         const uploadRes = await fetch(`${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`, {
-            method: 'POST', headers: { 'Authorization': BLOG_UPLOAD_AUTH }, body: formData
+            method: 'POST', headers: { 'Authorization': ADMIN_AUTH_HEADER }, body: formData
         });
         if (!uploadRes.ok) throw new Error(`Upload thất bại: ${uploadRes.statusText}`);
         const newFileId: string = (await uploadRes.json()).result.document.file_id;

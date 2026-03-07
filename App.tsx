@@ -6,7 +6,7 @@ import Dashboard from './components/Dashboard';
 import Toast, { ToastType } from './components/Toast';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
 import { FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Ban, ShieldOff, WifiOff, Atom, Home, Bell, FlaskConical, Video } from 'lucide-react';
-import { getMachineId } from './src/hooks/useCloudStorage';
+import { getMachineId, verifyAdminToken, setAdminToken, clearAdminToken } from './src/lib/crypto';
 
 const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
   <RefreshCw className={`${className} animate-spin`} style={style} />
@@ -50,14 +50,16 @@ function App() {
 
   const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory, getLeaderboard, getStudyPlans, saveStudyPlan, updateStudyPlan, deleteStudyPlan, getSchedules, saveSchedule, updateSchedule, deleteSchedule, getNotifications, deleteNotification, createCustomNotification, markNotificationFetched, getFetchedNotificationIds, submitQuestionVote, getQuestionVotes, getBlogs, saveBlog, deleteBlog, syncBlogs, fetchBlogsForEditing } = useCloudStorage();
 
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    return localStorage.getItem('physivault_is_admin') === 'true';
-  });
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => verifyAdminToken());
 
-  const toggleAdmin = (status: boolean) => {
+  const toggleAdmin = useCallback((status: boolean) => {
+    if (status) {
+      setAdminToken();
+    } else {
+      clearAdminToken();
+    }
     setIsAdmin(status);
-    localStorage.setItem('physivault_is_admin', status ? 'true' : 'false');
-  };
+  }, []);
 
   const [isKicked, setIsKicked] = useState(false);
   const [isOfflineExpired, setIsOfflineExpired] = useState(false);
