@@ -1019,6 +1019,22 @@ export const useCloudStorage = () => {
         }
     };
 
+    // Tạo thông báo tùy ý (Dành cho Admin — không liên quan sync tài liệu)
+    const createCustomNotification = async (message: string, grade: number): Promise<boolean> => {
+        try {
+            const { error } = await supabase.from('notifications').insert({
+                message,
+                grade,
+                fetch_enabled: false, // Thông báo chung, không cần nút "Lấy bài về"
+            });
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('Lỗi tạo thông báo:', e);
+            return false;
+        }
+    };
+
     // Kiểm tra học sinh này đã fetch thông báo nào rồi (trả về Set các notification_id đã fetch)
     const getFetchedNotificationIds = async (): Promise<Set<string>> => {
         const sdtStr = localStorage.getItem('pv_activated_sdt');
@@ -1334,6 +1350,7 @@ export const useCloudStorage = () => {
         deleteStudyPlan,
         getNotifications,
         deleteNotification,
+        createCustomNotification,
         markNotificationFetched,
         getFetchedNotificationIds,
         submitQuestionVote,

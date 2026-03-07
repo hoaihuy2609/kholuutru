@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Bell, BellOff, CloudDownload, CheckCircle2, RefreshCw, Clock, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Bell, BellOff, CloudDownload, CheckCircle2, RefreshCw, Clock, Trash2, Send, MessageSquarePlus, ChevronDown, Megaphone } from 'lucide-react';
 import { NotificationItem } from '../types';
 
 interface NotificationPageProps {
@@ -10,6 +10,7 @@ interface NotificationPageProps {
     onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void;
     isAdmin?: boolean;
     onDeleteNotification?: (notifId: string) => Promise<boolean>;
+    onCreateNotification?: (message: string, grade: number) => Promise<boolean>;
 }
 
 const ACCENT = '#E03E3E';
@@ -40,7 +41,7 @@ const formatRelativeTime = (isoString: string): string => {
 
 const NotificationPage: React.FC<NotificationPageProps> = ({
     onGetNotifications, onGetFetchedIds, onMarkFetched,
-    onFetchLessons, onShowToast, isAdmin, onDeleteNotification,
+    onFetchLessons, onShowToast, isAdmin, onDeleteNotification, onCreateNotification,
 }) => {
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [fetchedIds, setFetchedIds] = useState<Set<string>>(new Set());
@@ -48,6 +49,14 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
     const [fetchingId, setFetchingId] = useState<string | null>(null);
     const [fetchProgress, setFetchProgress] = useState(0);
     const [adminGradeFilter, setAdminGradeFilter] = useState<number | null>(null);
+
+    // ── Compose custom notification state ──
+    const [showCompose, setShowCompose] = useState(false);
+    const [composeMessage, setComposeMessage] = useState('');
+    const [composeGrade, setComposeGrade] = useState<number>(12);
+    const [composeSending, setComposeSending] = useState(false);
+    const [composeAllGrades, setComposeAllGrades] = useState(false);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const grade = getStudentGrade();
 
@@ -118,6 +127,43 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
         }
     };
 
+    // ── Handle compose & send custom notification ──
+    const handleSendCustomNotification = async () => {
+        if (!onCreateNotification || !composeMessage.trim()) return;
+        setComposeSending(true);
+        try {
+            if (composeAllGrades) {
+                // Gửi cho tất cả các khối
+                const results = await Promise.all([
+                    onCreateNotification(composeMessage.trim(), 10),
+                    onCreateNotification(composeMessage.trim(), 11),
+                    onCreateNotification(composeMessage.trim(), 12),
+                ]);
+                if (results.every(r => r)) {
+                    onShowToast('✅ Đã gửi thông báo cho tất cả khối!', 'success');
+                } else {
+                    onShowToast('Một số khối gửi thất bại', 'warning');
+                }
+            } else {
+                const ok = await onCreateNotification(composeMessage.trim(), composeGrade);
+                if (ok) {
+                    const label = GRADE_CONFIG.find(g => g.grade === composeGrade)?.label || `Lớp ${composeGrade}`;
+                    onShowToast(`✅ Đã gửi thông báo cho ${label}!`, 'success');
+                } else {
+                    onShowToast('Lỗi khi gửi thông báo', 'error');
+                }
+            }
+            setComposeMessage('');
+            setShowCompose(false);
+            // Reload notifications
+            load();
+        } catch (e: any) {
+            onShowToast(`Lỗi: ${e.message}`, 'error');
+        } finally {
+            setComposeSending(false);
+        }
+    };
+
     // Filter notifications based on admin grade filter
     const displayedNotifications = useMemo(() => {
         if (!isAdmin || adminGradeFilter === null) return notifications;
@@ -164,7 +210,10 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                             )}
                         </div>
                         <p className="text-sm mt-0.5" style={{ color: '#787774' }}>
-                            Thầy thông báo tài liệu mới — bấm <strong style={{ color: '#1A1A1A' }}>Lấy bài về</strong> để cập nhật.
+                            {isAdmin
+                                ? <>Quản lý thông báo — <strong style={{ color: '#1A1A1A' }}>Soạn thông báo</strong> tùy ý hoặc xóa thông báo cũ.</>
+                                : <>Thầy thông báo tài liệu mới & tin nhắn — bấm <strong style={{ color: '#1A1A1A' }}>Lấy bài về</strong> để cập nhật.</>
+                            }
                         </p>
                     </div>
                 </div>
@@ -182,39 +231,186 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                 </button>
             </div>
 
-            {/* ── Grade badge / Admin filter ── */}
+            {/* ── Admin: Compose + Filter Bar ── */}
             {isAdmin ? (
-                <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                        onClick={() => setAdminGradeFilter(null)}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
-                        style={{
-                            background: adminGradeFilter === null ? '#1A1A1A' : '#F7F6F3',
-                            color: adminGradeFilter === null ? '#fff' : '#787774',
-                            border: `1px solid ${adminGradeFilter === null ? '#1A1A1A' : '#E9E9E7'}`,
-                        }}
-                    >
-                        Tất cả
-                        <span className="ml-1 opacity-75">({notifications.length})</span>
-                    </button>
-                    {GRADE_CONFIG.map(g => {
-                        const isActive = adminGradeFilter === g.grade;
-                        return (
+                <div className="space-y-3">
+                    {/* Filter + Compose button row */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                            onClick={() => setAdminGradeFilter(null)}
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                            style={{
+                                background: adminGradeFilter === null ? '#1A1A1A' : '#F7F6F3',
+                                color: adminGradeFilter === null ? '#fff' : '#787774',
+                                border: `1px solid ${adminGradeFilter === null ? '#1A1A1A' : '#E9E9E7'}`,
+                            }}
+                        >
+                            Tất cả
+                            <span className="ml-1 opacity-75">({notifications.length})</span>
+                        </button>
+                        {GRADE_CONFIG.map(g => {
+                            const isActive = adminGradeFilter === g.grade;
+                            return (
+                                <button
+                                    key={g.grade}
+                                    onClick={() => setAdminGradeFilter(g.grade)}
+                                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                                    style={{
+                                        background: isActive ? g.accent : '#F7F6F3',
+                                        color: isActive ? '#fff' : '#787774',
+                                        border: `1px solid ${isActive ? g.accent : '#E9E9E7'}`,
+                                    }}
+                                >
+                                    {g.label}
+                                    <span className="ml-1 opacity-75">({gradeCountMap[g.grade] || 0})</span>
+                                </button>
+                            );
+                        })}
+
+                        {/* Compose button */}
+                        {onCreateNotification && (
                             <button
-                                key={g.grade}
-                                onClick={() => setAdminGradeFilter(g.grade)}
-                                className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                                onClick={() => { setShowCompose(prev => !prev); setTimeout(() => textareaRef.current?.focus(), 100); }}
+                                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
                                 style={{
-                                    background: isActive ? g.accent : '#F7F6F3',
-                                    color: isActive ? '#fff' : '#787774',
-                                    border: `1px solid ${isActive ? g.accent : '#E9E9E7'}`,
+                                    background: showCompose ? '#1A1A1A' : 'linear-gradient(135deg, #6B7CDB, #9065B0)',
+                                    color: '#fff',
+                                    boxShadow: showCompose ? 'none' : '0 2px 8px rgba(107,124,219,0.3)',
                                 }}
                             >
-                                {g.label}
-                                <span className="ml-1 opacity-75">({gradeCountMap[g.grade] || 0})</span>
+                                <MessageSquarePlus className="w-3.5 h-3.5" />
+                                {showCompose ? 'Đóng' : 'Soạn thông báo'}
                             </button>
-                        );
-                    })}
+                        )}
+                    </div>
+
+                    {/* ── Compose Form (Admin only) ── */}
+                    {showCompose && onCreateNotification && (
+                        <div
+                            className="rounded-xl overflow-hidden animate-fade-in"
+                            style={{
+                                border: '1px solid #E9E9E7',
+                                background: '#FFFFFF',
+                                boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+                            }}
+                        >
+                            {/* Header */}
+                            <div
+                                className="px-4 py-3 flex items-center gap-2"
+                                style={{ borderBottom: '1px solid #E9E9E7', background: 'linear-gradient(135deg, #F3ECF8, #EEF0FB)' }}
+                            >
+                                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+                                    <Megaphone className="w-3.5 h-3.5" style={{ color: '#6B7CDB' }} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Soạn thông báo mới</h3>
+                                    <p className="text-[11px]" style={{ color: '#787774' }}>Gửi thông báo tùy ý đến học sinh</p>
+                                </div>
+                            </div>
+
+                            <div className="p-4 space-y-3">
+                                {/* Textarea */}
+                                <div>
+                                    <textarea
+                                        ref={textareaRef}
+                                        value={composeMessage}
+                                        onChange={e => setComposeMessage(e.target.value)}
+                                        placeholder="Ví dụ: Tuần sau nghỉ học, các em nhớ ôn bài chuẩn bị kiểm tra nhé! 📚"
+                                        rows={3}
+                                        className="w-full px-3 py-2.5 rounded-lg text-sm resize-none focus:outline-none transition-all"
+                                        style={{
+                                            border: '1px solid #E9E9E7',
+                                            background: '#F7F6F3',
+                                            color: '#1A1A1A',
+                                        }}
+                                        onFocus={e => { (e.target as HTMLTextAreaElement).style.borderColor = '#6B7CDB'; (e.target as HTMLTextAreaElement).style.background = '#fff'; }}
+                                        onBlur={e => { (e.target as HTMLTextAreaElement).style.borderColor = '#E9E9E7'; (e.target as HTMLTextAreaElement).style.background = '#F7F6F3'; }}
+                                    />
+                                    <div className="flex items-center justify-between mt-1">
+                                        <span className="text-[10px]" style={{ color: '#AEACA8' }}>
+                                            {composeMessage.length}/500 ký tự
+                                        </span>
+                                        {composeMessage.length > 500 && (
+                                            <span className="text-[10px] font-medium" style={{ color: '#E03E3E' }}>Quá dài!</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Grade selector + Send all toggle */}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs font-medium" style={{ color: '#57564F' }}>Gửi cho:</span>
+
+                                    {/* All grades toggle */}
+                                    <button
+                                        onClick={() => setComposeAllGrades(prev => !prev)}
+                                        className="px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-all"
+                                        style={{
+                                            background: composeAllGrades ? '#1A1A1A' : '#F7F6F3',
+                                            color: composeAllGrades ? '#fff' : '#787774',
+                                            border: `1px solid ${composeAllGrades ? '#1A1A1A' : '#E9E9E7'}`,
+                                        }}
+                                    >
+                                        Tất cả khối
+                                    </button>
+
+                                    {/* Individual grade selector */}
+                                    {!composeAllGrades && GRADE_CONFIG.map(g => {
+                                        const isSelected = composeGrade === g.grade;
+                                        return (
+                                            <button
+                                                key={g.grade}
+                                                onClick={() => setComposeGrade(g.grade)}
+                                                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-all"
+                                                style={{
+                                                    background: isSelected ? g.accent : '#F7F6F3',
+                                                    color: isSelected ? '#fff' : '#787774',
+                                                    border: `1px solid ${isSelected ? g.accent : '#E9E9E7'}`,
+                                                }}
+                                            >
+                                                {g.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Send button */}
+                                <div className="flex items-center justify-end gap-2 pt-1">
+                                    <button
+                                        onClick={() => { setShowCompose(false); setComposeMessage(''); }}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                                        style={{ background: '#F7F6F3', color: '#787774', border: '1px solid #E9E9E7' }}
+                                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+                                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F7F6F3'}
+                                    >
+                                        Hủy
+                                    </button>
+                                    <button
+                                        onClick={handleSendCustomNotification}
+                                        disabled={!composeMessage.trim() || composeMessage.length > 500 || composeSending}
+                                        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
+                                        style={{
+                                            background: (!composeMessage.trim() || composeMessage.length > 500) ? '#E9E9E7' : 'linear-gradient(135deg, #6B7CDB, #9065B0)',
+                                            color: (!composeMessage.trim() || composeMessage.length > 500) ? '#AEACA8' : '#fff',
+                                            cursor: (!composeMessage.trim() || composeMessage.length > 500) ? 'not-allowed' : 'pointer',
+                                            boxShadow: composeMessage.trim() && composeMessage.length <= 500 ? '0 2px 8px rgba(107,124,219,0.3)' : 'none',
+                                        }}
+                                    >
+                                        {composeSending ? (
+                                            <>
+                                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                                Đang gửi...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Send className="w-3.5 h-3.5" />
+                                                Gửi thông báo
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div
@@ -326,6 +522,17 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                         <p className="text-sm leading-relaxed" style={{ color: isFetched ? '#787774' : '#1A1A1A' }}>
                                             {notif.message}
                                         </p>
+
+                                        {/* Badge for custom (non-sync) notifications */}
+                                        {!notif.fetch_enabled && (
+                                            <span
+                                                className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded mt-1"
+                                                style={{ background: '#EEF0FB', color: '#6B7CDB' }}
+                                            >
+                                                <Megaphone className="w-2.5 h-2.5" />
+                                                Thông báo chung
+                                            </span>
+                                        )}
 
                                         <div className="flex items-center gap-1 mt-1.5" style={{ color: '#AEACA8' }}>
                                             <Clock className="w-3 h-3" />
