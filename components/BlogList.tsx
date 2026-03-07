@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BlogPost } from '../types';
-import { BookOpen, Calendar, ChevronRight, Edit3, Plus, Search, Clock, Tag, Filter, Atom, FileText } from 'lucide-react';
+import { BookOpen, Calendar, ChevronRight, Edit3, Plus, Search, Clock, Filter, Atom, FileText, Tag } from 'lucide-react';
 
 interface BlogListProps {
     isAdmin: boolean;
@@ -11,9 +11,14 @@ interface BlogListProps {
     getBlogs: (isAdmin: boolean) => Promise<BlogPost[]>;
 }
 
-const estimateReadTime = (content: string): number => {
-    const words = content.trim().split(/\s+/).length;
-    return Math.max(1, Math.ceil(words / 200)); // ~200 từ/phút
+const estimateReadTime = (content: string): number =>
+    Math.max(1, Math.ceil(content.trim().split(/\s+/).length / 200));
+
+const GRADE_COLORS: Record<number, { bg: string; text: string; dot: string }> = {
+    12: { bg: '#F3ECF8', text: '#9065B0', dot: '#9065B0' },
+    11: { bg: '#EEF0FB', text: '#6B7CDB', dot: '#6B7CDB' },
+    10: { bg: '#EAF3EE', text: '#448361', dot: '#448361' },
+    0: { bg: '#F1F0EC', text: '#787774', dot: '#AEACA8' },
 };
 
 const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, onCreateBlog, onBlogsLoaded, getBlogs }) => {
@@ -37,264 +42,329 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
         fetchBlogs();
     }, [isAdmin]);
 
-    // Categories và tags
-    const categories = useMemo(() =>
-        [...new Set(blogs.map(b => b.category).filter(Boolean))],
-        [blogs]
-    );
-    const allTags = useMemo(() =>
-        [...new Set(blogs.flatMap(b => b.tags || []))],
-        [blogs]
-    );
-
-    // Debounce search: avoid filtering on every keystroke
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchQuery), 200);
         return () => clearTimeout(t);
     }, [searchQuery]);
+
+    const categories = useMemo(() => [...new Set(blogs.map(b => b.category).filter(Boolean))], [blogs]);
+    const allTags = useMemo(() => [...new Set(blogs.flatMap(b => b.tags || []))], [blogs]);
 
     const filteredBlogs = useMemo(() => blogs.filter(b => {
         const q = debouncedSearch.toLowerCase();
         const matchSearch = !q || b.title.toLowerCase().includes(q) || b.summary.toLowerCase().includes(q) || (b.tags || []).some(t => t.toLowerCase().includes(q));
         const matchCat = !selectedCategory || b.category === selectedCategory;
         const matchTag = !selectedTag || (b.tags || []).includes(selectedTag);
-        const gradeVal = b.grade || 0;
-        const matchGrade = gradeFilter === 0 || gradeVal === gradeFilter || gradeVal === 0;
+        const matchGrade = gradeFilter === 0 || (b.grade || 0) === gradeFilter || (b.grade || 0) === 0;
         return matchSearch && matchCat && matchTag && matchGrade;
     }), [blogs, debouncedSearch, selectedCategory, selectedTag, gradeFilter]);
 
-    const hasActiveFilters = selectedCategory || selectedTag;
-
     const gradeTabs = [
-        { label: 'Tất cả', value: 0, color: '#6B7CDB' },
+        { label: 'Tất cả', value: 0, color: '#787774' },
         { label: 'Lớp 12', value: 12, color: '#9065B0' },
         { label: 'Lớp 11', value: 11, color: '#6B7CDB' },
         { label: 'Lớp 10', value: 10, color: '#448361' },
     ];
 
     return (
-        <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20 font-sans">
-            {/* Header & Search */}
-            <div className="flex flex-col gap-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto p-4 md:p-8 animate-fade-in relative pb-20" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                        width: '40px', height: '40px', borderRadius: '10px',
+                        background: isAdmin ? '#EEF0FB' : '#F3ECF8',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                    }}>
+                        {isAdmin
+                            ? <FileText style={{ width: '20px', height: '20px', color: '#6B7CDB' }} />
+                            : <BookOpen style={{ width: '20px', height: '20px', color: '#9065B0' }} />}
+                    </div>
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight mb-1 flex items-center gap-3" style={{ color: '#1A1A1A' }}>
-                            {isAdmin
-                                ? <FileText className="w-7 h-7 text-indigo-500 shrink-0" strokeWidth={2} />
-                                : <BookOpen className="w-7 h-7 text-indigo-500 shrink-0" strokeWidth={2} />}
+                        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1A1A1A', lineHeight: 1.2 }}>
                             {isAdmin ? 'Quản lý Blog' : 'Góc Học Tập'}
                         </h1>
-                        <p className="text-sm" style={{ color: '#787774' }}>
-                            {isAdmin
-                                ? `Hệ thống lưu trữ bài viết & kiến thức chuyên sâu`
-                                : 'Chia sẻ kiến thức, mẹo giải bài tập và tài liệu Vật Lý độc quyền.'}
+                        <p style={{ fontSize: '13px', color: '#787774', marginTop: '2px' }}>
+                            {isAdmin ? 'Quản lý bài viết & kiến thức chuyên sâu' : 'Kiến thức, mẹo giải bài tập và tài liệu Vật Lý'}
                         </p>
                     </div>
+                </div>
 
-                    {isAdmin && onCreateBlog && (
+                {isAdmin && onCreateBlog && (
+                    <button
+                        onClick={onCreateBlog}
+                        style={{
+                            padding: '9px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
+                            background: '#1A1A1A', color: '#fff', border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)', transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.02)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+                    >
+                        <Plus style={{ width: '15px', height: '15px' }} /> Viết bài mới
+                    </button>
+                )}
+            </div>
+
+            {/* Filter Bar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                {gradeTabs.map(tab => (
+                    <button
+                        key={tab.value}
+                        onClick={() => setGradeFilter(tab.value)}
+                        style={{
+                            padding: '6px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
+                            border: `1px solid ${gradeFilter === tab.value ? tab.color : '#E9E9E7'}`,
+                            background: gradeFilter === tab.value ? tab.color : '#fff',
+                            color: gradeFilter === tab.value ? '#fff' : '#787774',
+                            cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap'
+                        }}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+
+                <div style={{ width: '1px', height: '20px', background: '#E9E9E7', margin: '0 4px', flexShrink: 0 }} />
+
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '6px 12px', borderRadius: '8px', border: '1px solid #E9E9E7',
+                    background: '#fff', flex: 1, minWidth: '180px'
+                }}>
+                    <Search style={{ width: '14px', height: '14px', color: '#AEACA8', flexShrink: 0 }} />
+                    <input
+                        type="text"
+                        placeholder="Tìm kiếm bài viết..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        style={{
+                            border: 'none', outline: 'none', background: 'transparent', width: '100%',
+                            fontSize: '13px', color: '#1A1A1A'
+                        }}
+                    />
+                    {(categories.length > 0 || allTags.length > 0) && (
                         <button
-                            onClick={onCreateBlog}
-                            className="px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm"
-                            style={{ background: '#1A1A1A', color: '#FFFFFF' }}
+                            onClick={() => setShowFilters(!showFilters)}
+                            style={{
+                                padding: '3px', borderRadius: '5px', border: 'none', background: 'transparent',
+                                color: showFilters ? '#6B7CDB' : '#AEACA8', cursor: 'pointer', display: 'flex',
+                                transition: 'all 0.15s'
+                            }}
                         >
-                            <Plus className="w-4 h-4" />
-                            Viết bài mới
+                            <Filter style={{ width: '14px', height: '14px' }} />
                         </button>
                     )}
                 </div>
-
-                {/* Grade Filter Bar - New! */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-                    {gradeTabs.map(tab => (
-                        <button
-                            key={tab.value}
-                            onClick={() => setGradeFilter(tab.value)}
-                            className="px-5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all border shadow-sm"
-                            style={{
-                                background: gradeFilter === tab.value ? tab.color : '#FFFFFF',
-                                color: gradeFilter === tab.value ? '#FFFFFF' : '#787774',
-                                borderColor: gradeFilter === tab.value ? tab.color : '#E9E9E7'
-                            }}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
-
-                    <div className="h-6 w-[1px] bg-[#E9E9E7] mx-2 shrink-0"></div>
-
-                    {/* Search Input In-line */}
-                    <div
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-white border border-[#E9E9E7] flex-1 min-w-[200px] shadow-sm"
-                    >
-                        <Search className="w-4 h-4 shrink-0 text-[#AEACA8]" />
-                        <input
-                            type="text"
-                            placeholder="Tìm kiếm..."
-                            className="bg-transparent border-none outline-none w-full placeholder:text-[#AEACA8]"
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
-                        <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className="p-1 rounded-lg hover:bg-[#F7F6F3] text-[#AEACA8]"
-                            title="Lọc chuyên sâu"
-                        >
-                            <Filter className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
             </div>
 
-            {/* Sub-Filters (Category/Tags) */}
+            {/* Sub-Filters */}
             {showFilters && (categories.length > 0 || allTags.length > 0) && (
                 <div
-                    className="p-5 rounded-2xl space-y-4 animate-scale-in"
-                    style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}
+                    className="animate-fade-in"
+                    style={{
+                        padding: '16px', borderRadius: '12px', marginBottom: '20px',
+                        background: '#fff', border: '1px solid #E9E9E7',
+                        display: 'flex', flexDirection: 'column', gap: '12px'
+                    }}
                 >
                     {categories.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[10px] font-bold uppercase text-[#AEACA8] mr-2">Chuyên mục:</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#AEACA8', marginRight: '4px', letterSpacing: '0.05em' }}>Chuyên mục:</span>
                             {categories.map(cat => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
-                                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                                    style={selectedCategory === cat
-                                        ? { background: '#6B7CDB', color: '#FFF' }
-                                        : { background: '#F7F6F3', color: '#57564F', border: '1px solid #E9E9E7' }}
-                                >
-                                    {cat}
-                                </button>
+                                <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
+                                    style={{
+                                        padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 500,
+                                        border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                                        background: selectedCategory === cat ? '#6B7CDB' : '#F7F6F3',
+                                        color: selectedCategory === cat ? '#fff' : '#57564F'
+                                    }}>{cat}</button>
                             ))}
                         </div>
                     )}
                     {allTags.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[10px] font-bold uppercase text-[#AEACA8] mr-2">Thẻ phổ biến:</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#AEACA8', marginRight: '4px', letterSpacing: '0.05em' }}>Thẻ:</span>
                             {allTags.map(tag => (
-                                <button
-                                    key={tag}
-                                    onClick={() => setSelectedTag(tag === selectedTag ? '' : tag)}
-                                    className="px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
-                                    style={selectedTag === tag
-                                        ? { background: '#EAF3EE', color: '#448361', border: '1px solid #B7D9C4' }
-                                        : { background: '#F7F6F3', color: '#AEACA8' }}
-                                >
-                                    #{tag}
-                                </button>
+                                <button key={tag} onClick={() => setSelectedTag(tag === selectedTag ? '' : tag)}
+                                    style={{
+                                        padding: '3px 8px', borderRadius: '5px', fontSize: '11px', fontWeight: 500,
+                                        border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                                        background: selectedTag === tag ? '#EAF3EE' : '#F7F6F3',
+                                        color: selectedTag === tag ? '#448361' : '#AEACA8'
+                                    }}>#{tag}</button>
                             ))}
                         </div>
                     )}
                 </div>
             )}
 
+            {/* Content */}
             {loading ? (
-                <div className="flex flex-col items-center justify-center py-32 gap-4">
-                    <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-                    <p className="text-sm font-medium text-[#AEACA8]">Đang tải kho kiến thức...</p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: '12px' }}>
+                    <div className="animate-spin" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid #EEF0FB', borderTopColor: '#6B7CDB' }} />
+                    <p style={{ fontSize: '13px', color: '#AEACA8', fontWeight: 500 }}>Đang tải bài viết...</p>
                 </div>
             ) : filteredBlogs.length === 0 ? (
-                <div className="text-center py-24 rounded-3xl border-2 border-dashed border-[#E9E9E7] bg-white">
-                    <BookOpen className="w-16 h-16 mx-auto mb-4 text-[#E9E9E7]" />
-                    <h3 className="text-xl font-bold text-[#1A1A1A]">Ơ kìa, chưa có bài nào!</h3>
-                    <p className="text-sm text-[#787774] mt-2 max-w-xs mx-auto">
-                        Thầy Huy đang biên tập thêm nội dung bài viết cho phần này. Bro quay lại sau nhé!
+                <div style={{
+                    textAlign: 'center', padding: '64px 24px', borderRadius: '12px',
+                    border: '1px solid #E9E9E7', background: '#fff'
+                }}>
+                    <div style={{
+                        width: '48px', height: '48px', borderRadius: '12px', background: '#F1F0EC',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px'
+                    }}>
+                        <BookOpen style={{ width: '22px', height: '22px', color: '#CFCFCB' }} />
+                    </div>
+                    <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#1A1A1A', marginBottom: '6px' }}>Chưa có bài viết nào</h3>
+                    <p style={{ fontSize: '13px', color: '#AEACA8', maxWidth: '280px', margin: '0 auto' }}>
+                        Thầy đang biên tập thêm nội dung. Quay lại sau nhé!
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {filteredBlogs.map(blog => (
-                        <article
-                            key={blog.id}
-                            className="group relative bg-white rounded-3xl overflow-hidden border border-[#E9E9E7] hover:border-indigo-200 hover:shadow-2xl hover:shadow-indigo-100 transition-all duration-300 flex flex-col cursor-pointer"
-                            onClick={() => onReadBlog(blog)}
-                        >
-                            {/* Grade Badge - Absolute Floating */}
-                            <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-                                <span
-                                    className="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full shadow-sm text-white border border-white/20 backdrop-blur-md"
-                                    style={{ background: blog.grade === 10 ? '#448361' : blog.grade === 11 ? '#6B7CDB' : blog.grade === 12 ? '#9065B0' : '#1A1A1A' }}
-                                >
-                                    {blog.grade === 0 ? 'Chung' : `Lớp ${blog.grade}`}
-                                </span>
-                            </div>
-
-                            {/* Status logic for admin */}
-                            {isAdmin && (
-                                <div className="absolute top-4 right-4 z-10">
-                                    <span
-                                        className="px-2.5 py-1 text-[9px] font-bold rounded-lg border backdrop-blur-md"
-                                        style={blog.is_published
-                                            ? { background: 'rgba(234, 243, 238, 0.9)', color: '#448361', borderColor: '#B7D9C4' }
-                                            : { background: 'rgba(243, 236, 248, 0.9)', color: '#9065B0', borderColor: '#C8A8DC' }}
-                                    >
-                                        {blog.is_published ? 'Đã đăng' : 'Bản nháp'}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* Thumbnail area */}
-                            <div className="relative h-44 overflow-hidden bg-[#F7F6F3]">
-                                {blog.cover_image ? (
-                                    <img
-                                        src={blog.cover_image}
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                        alt={blog.title}
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center relative bg-gradient-to-br from-[#F7F6F3] to-[#EEF0FB]">
-                                        {/* Subtle background pattern */}
-                                        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#1A1A1A 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
-
-                                        <div
-                                            className="w-16 h-16 rounded-3xl flex items-center justify-center relative z-10 transition-transform duration-500 group-hover:rotate-12"
-                                            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 4px 12px rgba(107, 124, 219, 0.1)' }}
-                                        >
-                                            <Atom className="w-8 h-8 text-[#6B7CDB] animate-pulse" />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+                    {filteredBlogs.map(blog => {
+                        const gc = GRADE_COLORS[blog.grade || 0] || GRADE_COLORS[0];
+                        return (
+                            <article
+                                key={blog.id}
+                                onClick={() => onReadBlog(blog)}
+                                style={{
+                                    borderRadius: '12px', overflow: 'hidden', cursor: 'pointer',
+                                    border: '1px solid #E9E9E7', background: '#fff',
+                                    display: 'flex', flexDirection: 'column',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.borderColor = '#CFCFCB';
+                                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.borderColor = '#E9E9E7';
+                                    e.currentTarget.style.boxShadow = 'none';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                }}
+                            >
+                                {/* Thumbnail */}
+                                <div style={{ position: 'relative', height: '160px', overflow: 'hidden', background: '#F7F6F3' }}>
+                                    {blog.cover_image ? (
+                                        <img src={blog.cover_image} alt={blog.title} loading="lazy"
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }}
+                                            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+                                        />
+                                    ) : (
+                                        <div style={{
+                                            width: '100%', height: '100%', display: 'flex',
+                                            alignItems: 'center', justifyContent: 'center',
+                                            background: 'linear-gradient(135deg, #F7F6F3, #EEF0FB)'
+                                        }}>
+                                            <div style={{
+                                                width: '48px', height: '48px', borderRadius: '14px',
+                                                background: '#fff', border: '1px solid #E9E9E7',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                boxShadow: '0 2px 8px rgba(107,124,219,0.08)'
+                                            }}>
+                                                <Atom style={{ width: '24px', height: '24px', color: '#6B7CDB' }} />
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            </div>
+                                    )}
 
-                            {/* Content area */}
-                            <div className="p-6 flex-1 flex flex-col">
-                                <div className="flex items-center gap-4 text-[11px] font-bold text-[#AEACA8] mb-3 uppercase tracking-wider">
-                                    <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {new Date(blog.created_at).toLocaleDateString('vi-VN')}</span>
-                                    <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {estimateReadTime(blog.content)}p</span>
-                                </div>
+                                    {/* Grade badge */}
+                                    <span style={{
+                                        position: 'absolute', top: '10px', left: '10px',
+                                        padding: '3px 10px', borderRadius: '6px', fontSize: '10px',
+                                        fontWeight: 700, letterSpacing: '0.03em',
+                                        background: gc.bg, color: gc.text, border: `1px solid ${gc.dot}30`
+                                    }}>
+                                        {(blog.grade || 0) === 0 ? 'Chung' : `Lớp ${blog.grade}`}
+                                    </span>
 
-                                <h3 className="text-xl font-bold text-[#1A1A1A] leading-tight mb-3 group-hover:text-indigo-600 transition-colors line-clamp-2">
-                                    {blog.title}
-                                </h3>
-
-                                <p className="text-sm text-[#787774] leading-relaxed line-clamp-3 mb-6 flex-1">
-                                    {blog.summary}
-                                </p>
-
-                                <div className="pt-4 border-t border-[#F7F6F3] flex items-center justify-between">
-                                    {blog.category && (
-                                        <span className="text-[10px] font-black uppercase text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md">
-                                            {blog.category}
+                                    {/* Admin status */}
+                                    {isAdmin && (
+                                        <span style={{
+                                            position: 'absolute', top: '10px', right: '10px',
+                                            padding: '3px 8px', borderRadius: '6px', fontSize: '9px', fontWeight: 700,
+                                            background: blog.is_published ? '#EAF3EE' : '#F3ECF8',
+                                            color: blog.is_published ? '#448361' : '#9065B0',
+                                            border: `1px solid ${blog.is_published ? '#B7D9C4' : '#C8A8DC'}`
+                                        }}>
+                                            {blog.is_published ? 'Đã đăng' : 'Nháp'}
                                         </span>
                                     )}
-
-                                    {isAdmin && onEditBlog ? (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); onEditBlog(blog); }}
-                                            className="p-2 rounded-xl bg-[#F7F6F3] text-[#787774] hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                                        >
-                                            <Edit3 className="w-4 h-4" />
-                                        </button>
-                                    ) : (
-                                        <div className="flex items-center gap-1 text-sm font-bold text-[#1A1A1A] group-hover:text-indigo-600 transition-colors">
-                                            Đọc ngay <ChevronRight className="w-4 h-4" />
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
-                        </article>
-                    ))}
+
+                                {/* Content */}
+                                <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                    {/* Meta */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', fontWeight: 600, color: '#AEACA8', marginBottom: '8px' }}>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Calendar style={{ width: '12px', height: '12px' }} />
+                                            {new Date(blog.created_at).toLocaleDateString('vi-VN')}
+                                        </span>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Clock style={{ width: '12px', height: '12px' }} />
+                                            {estimateReadTime(blog.content)} phút
+                                        </span>
+                                    </div>
+
+                                    {/* Title */}
+                                    <h3 style={{
+                                        fontSize: '15px', fontWeight: 650, color: '#1A1A1A',
+                                        lineHeight: 1.4, marginBottom: '6px',
+                                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden'
+                                    }}>
+                                        {blog.title}
+                                    </h3>
+
+                                    {/* Summary */}
+                                    <p style={{
+                                        fontSize: '13px', color: '#787774', lineHeight: 1.6, flex: 1,
+                                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden', marginBottom: '12px'
+                                    }}>
+                                        {blog.summary}
+                                    </p>
+
+                                    {/* Footer */}
+                                    <div style={{
+                                        paddingTop: '12px', borderTop: '1px solid #F0F0EE',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                    }}>
+                                        {blog.category ? (
+                                            <span style={{
+                                                fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
+                                                padding: '3px 8px', borderRadius: '5px',
+                                                background: '#EEF0FB', color: '#6B7CDB'
+                                            }}>{blog.category}</span>
+                                        ) : <span />}
+
+                                        {isAdmin && onEditBlog ? (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onEditBlog(blog); }}
+                                                style={{
+                                                    padding: '5px', borderRadius: '6px', border: 'none',
+                                                    background: '#F7F6F3', color: '#787774', cursor: 'pointer',
+                                                    display: 'flex', transition: 'all 0.15s'
+                                                }}
+                                                onMouseEnter={e => { e.currentTarget.style.background = '#EEF0FB'; e.currentTarget.style.color = '#6B7CDB'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.background = '#F7F6F3'; e.currentTarget.style.color = '#787774'; }}
+                                            >
+                                                <Edit3 style={{ width: '14px', height: '14px' }} />
+                                            </button>
+                                        ) : (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#6B7CDB' }}>
+                                                Đọc <ChevronRight style={{ width: '14px', height: '14px' }} />
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </article>
+                        );
+                    })}
                 </div>
             )}
         </div>

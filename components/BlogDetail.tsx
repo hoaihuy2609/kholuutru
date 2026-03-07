@@ -140,55 +140,72 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
             {/* Back Button */}
             <button
                 onClick={onBack}
-                className="flex items-center gap-1.5 text-sm font-medium mb-8 hover:text-indigo-600 transition-colors"
-                style={{ color: '#787774' }}
+                style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    fontSize: '13px', fontWeight: 500, color: '#787774',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    marginBottom: '28px', padding: '6px 10px 6px 4px', borderRadius: '8px',
+                    transition: 'all 0.15s'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#F1F0EC'; e.currentTarget.style.color = '#1A1A1A'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#787774'; }}
             >
-                <ChevronLeft className="w-4 h-4" /> Quay lại danh sách
+                <ChevronLeft style={{ width: '16px', height: '16px' }} /> Quay lại
             </button>
 
             {/* Header Info */}
-            <div className="space-y-4 mb-8">
-                <div className="flex flex-wrap items-center gap-2">
+            <div style={{ marginBottom: '28px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
                     {blog.category && (
-                        <span className="text-[12px] uppercase font-bold px-3 py-1 rounded-full bg-[#EEF0FB] text-[#6B7CDB]">
+                        <span style={{
+                            fontSize: '10px', textTransform: 'uppercase', fontWeight: 700,
+                            padding: '4px 10px', borderRadius: '6px',
+                            background: '#EEF0FB', color: '#6B7CDB', letterSpacing: '0.03em'
+                        }}>
                             {blog.category}
                         </span>
                     )}
-                    <span className="flex items-center gap-1.5 text-sm" style={{ color: '#AEACA8' }}>
-                        <Calendar className="w-4 h-4" />
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: '#AEACA8' }}>
+                        <Calendar style={{ width: '13px', height: '13px' }} />
                         {new Date(blog.created_at).toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' })}
                     </span>
-                    <span className="flex items-center gap-1.5 text-sm" style={{ color: '#AEACA8' }}>
-                        <Clock className="w-4 h-4" />
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: '#AEACA8' }}>
+                        <Clock style={{ width: '13px', height: '13px' }} />
                         {readTime} phút đọc
                     </span>
                     {headings.length > 2 && (
                         <button
                             onClick={() => setShowToc(!showToc)}
-                            className="flex items-center gap-1.5 text-sm px-3 py-1 rounded-full transition-all"
-                            style={{ background: showToc ? '#EEF0FB' : '#F1F0EC', color: showToc ? '#6B7CDB' : '#57564F' }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '5px',
+                                fontSize: '12px', fontWeight: 600, padding: '4px 12px', borderRadius: '6px',
+                                border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                                background: showToc ? '#EEF0FB' : '#F1F0EC',
+                                color: showToc ? '#6B7CDB' : '#57564F'
+                            }}
                         >
-                            <List className="w-3.5 h-3.5" />
+                            <List style={{ width: '13px', height: '13px' }} />
                             Mục lục
                         </button>
                     )}
                 </div>
 
-                <h1 className="text-3xl md:text-4xl font-bold leading-tight" style={{ color: 'var(--color-text-primary)' }}>
+                <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 700, lineHeight: 1.25, color: '#1A1A1A', marginBottom: '12px' }}>
                     {blog.title}
                 </h1>
 
-                <p className="text-xl font-light italic leading-relaxed" style={{ color: '#787774' }}>
+                <p style={{ fontSize: '16px', fontStyle: 'italic', lineHeight: 1.7, color: '#787774' }}>
                     "{blog.summary}"
                 </p>
 
                 {blog.tags && blog.tags.length > 0 && (
-                    <div className="flex items-center gap-2 flex-wrap pt-1">
-                        <Tag className="w-4 h-4" style={{ color: '#AEACA8' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '12px' }}>
+                        <Tag style={{ width: '13px', height: '13px', color: '#AEACA8' }} />
                         {blog.tags.map(tag => (
-                            <span key={tag} className="text-xs px-2.5 py-1 rounded-full" style={{ background: '#F1F0EC', color: '#57564F' }}>
-                                #{tag}
-                            </span>
+                            <span key={tag} style={{
+                                fontSize: '11px', padding: '3px 8px', borderRadius: '5px',
+                                background: '#F1F0EC', color: '#57564F', fontWeight: 500
+                            }}>#{tag}</span>
                         ))}
                     </div>
                 )}
