@@ -695,18 +695,22 @@ export const useCloudStorage = () => {
         setTimeout(() => setSyncProgress(0), 1000);
 
         // Warm cache cho học sinh: tải sẵn các ZIP qua Cloudflare để cache ngay
-        // Chạy nền, không block return
+        // Chạy nền, không block return. Warm tuần tự từng file để tránh quá tải Worker.
         (async () => {
             try {
                 console.log('[Sync] 🔥 Warming Cloudflare cache cho học sinh...');
-                // Prime cache cho index + từng zip chunk song song
-                await Promise.all([
-                    fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${finalFileId}`).catch(() => null),
-                    ...finalZipFileIds.map(id =>
-                        fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${id}`).catch(() => null)
-                    )
-                ]);
-                console.log('[Sync] ✅ Cache warming xong — học sinh fetch lần đầu sẽ nhanh hơn!');
+                const allWarmIds = [finalFileId, ...finalZipFileIds];
+                let warmed = 0;
+                for (const id of allWarmIds) {
+                    try {
+                        const ctrl = new AbortController();
+                        const tid = setTimeout(() => ctrl.abort(), 30_000);
+                        await fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${id}`, { signal: ctrl.signal });
+                        clearTimeout(tid);
+                        warmed++;
+                    } catch { /* bỏ qua file lỗi, tiếp tục warm file khác */ }
+                }
+                console.log(`[Sync] ✅ Cache warming xong (${warmed}/${allWarmIds.length} file) — học sinh fetch lần đầu sẽ nhanh hơn!`);
             } catch { /* nếu fail cũng không sao */ }
         })();
 
