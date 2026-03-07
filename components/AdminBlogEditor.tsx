@@ -34,7 +34,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
     const [isPreview, setIsPreview] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [showHelper, setShowHelper] = useState(false);
-    const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+    const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'warning' } | null>(null);
     const [wordCount, setWordCount] = useState(0);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -55,7 +55,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         setWordCount(words);
     }, [formData.content]);
 
-    const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    const showToast = (msg: string, type: 'success' | 'error' | 'warning' = 'success') => {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 3000);
     };
@@ -77,24 +77,24 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         if (saved) {
             // Nếu bài đã published → auto-sync luôn để học sinh thấy ngay
             if (formData.is_published) {
-                showToast('✅ Đã lưu! Đang sync lên Telegram cho học sinh...');
+                showToast('Đã lưu! Đang sync lên Telegram...', 'warning');
                 setIsSyncingBlog(true);
                 const result = await syncBlogs();
                 setIsSyncingBlog(false);
                 if (result.success) {
-                    showToast(`🚀 Sync xong! ${result.blogCount} bài viết đã lên Telegram.`);
+                    showToast(`Sync xong! ${result.blogCount} bài viết đã lên Telegram.`);
                     setPendingSync(false);
                 } else {
-                    showToast('❌ Sync thất bại! Bấm "Sync Blog" để thử lại.', 'error');
+                    showToast('Sync thất bại! Vui lòng thử lại.', 'error');
                     setPendingSync(true);
                 }
             } else {
-                showToast('✅ Đã lưu bản nháp! Bật "Hiển thị cho học sinh" rồi bấm Đăng bài để học sinh thấy.');
+                showToast('Đã lưu bản nháp. Bật “Hiển thị cho học sinh” khi sẵn sàng đăng.');
                 setPendingSync(true);
             }
             onSaved(saved);
         } else {
-            showToast('❌ Lỗi khi lưu!', 'error');
+            showToast('Lưu thất bại, vui lòng thử lại.', 'error');
         }
     };
 
@@ -180,17 +180,29 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
             {/* Toast */}
             {toast && (
                 <div
-                    className="fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm font-medium animate-fade-in"
+                    className="fixed top-5 right-5 z-50 flex items-start gap-3 px-4 py-3.5 rounded-2xl animate-fade-in"
                     style={{
-                        background: toast.type === 'success' ? '#EAF3EE' : '#FEE2E2',
-                        color: toast.type === 'success' ? '#448361' : '#B91C1C',
-                        border: `1px solid ${toast.type === 'success' ? '#B7D9C4' : '#FECACA'}`,
+                        background: '#FFFFFF',
+                        border: `1px solid ${toast.type === 'success' ? '#B7D9C4' : toast.type === 'error' ? '#FECACA' : '#E9E9E7'}`,
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+                        maxWidth: '340px',
                     }}
                 >
-                    <CheckCircle className="w-4 h-4" />
-                    {toast.msg}
+                    <div
+                        className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+                        style={{ background: toast.type === 'success' ? '#EAF3EE' : toast.type === 'error' ? '#FEE2E2' : '#EEF0FB' }}
+                    >
+                        {toast.type === 'success'
+                            ? <CheckCircle className="w-4 h-4" style={{ color: '#448361' }} />
+                            : toast.type === 'error'
+                                ? <AlertCircle className="w-4 h-4" style={{ color: '#E03E3E' }} />
+                                : <RefreshCw className="w-4 h-4 animate-spin" style={{ color: '#6B7CDB' }} />
+                        }
+                    </div>
+                    <p className="text-sm font-medium leading-snug" style={{ color: '#1A1A1A' }}>{toast.msg}</p>
                 </div>
             )}
+
 
             {/* Top Bar */}
             <div className="flex items-center justify-between flex-wrap gap-3">
