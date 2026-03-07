@@ -123,7 +123,7 @@ export const checkActivationStatus = (): boolean => {
 };
 
 // ── AES-GCM encryption (Web Crypto API — hardware-accelerated) ──
-const AES_KEY_RAW = 'PHV2026_AES256_KEY_PADDING_OK!!'; // 32 bytes for AES-256
+const AES_KEY_RAW = 'PHV2026_AES256_KEY_PADDING_OK_!!';
 const AES_MAGIC = new Uint8Array([0x50, 0x56, 0x41, 0x45]); // "PVAE" magic header
 
 let _aesKeyCache: CryptoKey | null = null;
