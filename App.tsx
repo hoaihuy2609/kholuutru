@@ -5,7 +5,6 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Toast, { ToastType } from './components/Toast';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
-import { useAdminAuth } from './src/hooks/useAdminAuth';
 import { FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Ban, ShieldOff, WifiOff, Atom, Home, Bell, FlaskConical } from 'lucide-react';
 import { getMachineId } from './src/hooks/useCloudStorage';
 
@@ -30,9 +29,6 @@ const SimulationLab = React.lazy(() => import('./components/SimulationLab'));
 const BlogList = React.lazy(() => import('./components/BlogList'));
 const BlogDetail = React.lazy(() => import('./components/BlogDetail'));
 const AdminBlogEditor = React.lazy(() => import('./components/AdminBlogEditor'));
-import AdminLoginGate from './components/AdminLoginGate';
-
-
 // Suspense fallback
 const LazyFallback = () => (
   <div className="flex items-center justify-center h-[40vh]">
@@ -54,19 +50,14 @@ function App() {
 
   const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory, getLeaderboard, getStudyPlans, saveStudyPlan, updateStudyPlan, deleteStudyPlan, getNotifications, deleteNotification, markNotificationFetched, getFetchedNotificationIds, submitQuestionVote, getQuestionVotes } = useCloudStorage();
 
-  // ── Admin Auth (Supabase) ──
-  const { isAdmin, adminEmail, adminLoading, adminLogin, adminLogout } = useAdminAuth();
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    return localStorage.getItem('physivault_is_admin') === 'true';
+  });
 
-  // ── Hash-based routing ──
-  const [hashRoute, setHashRoute] = useState(() => window.location.hash);
-  useEffect(() => {
-    const onHash = () => setHashRoute(window.location.hash);
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
-  const isAdminRoute = hashRoute === '#/admin';
-  const goToAdmin = () => { window.location.hash = '#/admin'; };
-  const exitAdmin = () => { window.location.hash = ''; };
+  const toggleAdmin = (status: boolean) => {
+    setIsAdmin(status);
+    localStorage.setItem('physivault_is_admin', status ? 'true' : 'false');
+  };
 
   const [isKicked, setIsKicked] = useState(false);
   const [isOfflineExpired, setIsOfflineExpired] = useState(false);
@@ -809,62 +800,6 @@ function App() {
     );
   }
 
-  // ── Admin Route (/#/admin) ──
-  if (isAdminRoute) {
-    // Still checking session
-    if (adminLoading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F6F3' }}>
-          <RefreshCw className="w-8 h-8 animate-spin" style={{ color: '#6B7CDB' }} />
-        </div>
-      );
-    }
-
-    // Not logged in → show inline login gate
-    if (!isAdmin) {
-      return <AdminLoginGate onLogin={adminLogin} onCancel={exitAdmin} />;
-    }
-
-    // Logged in → show full dashboard
-    return (
-      <div className="min-h-screen" style={{ background: '#F7F6F3' }}>
-        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><RefreshCw className="w-8 h-8 animate-spin" style={{ color: '#6B7CDB' }} /></div>}>
-          <AdminDashboard
-            onBack={exitAdmin}
-            onShowToast={showToast}
-            onOpenGitHubSync={() => { setShowGitHubSync(true); }}
-            onUploadExamPdf={uploadExamPdf}
-            onSaveExam={saveExam}
-            onDeleteExam={deleteExam}
-            onLoadExams={loadExams}
-          />
-        </Suspense>
-        {showGitHubSync && (
-          <Suspense fallback={null}>
-            <AdminGitHubSync
-              onBack={() => setShowGitHubSync(false)}
-              onShowToast={showToast}
-              lessons={lessons}
-              storedFiles={storedFiles}
-              onAddLesson={addLesson}
-              onDeleteLesson={deleteLesson}
-              onUploadFiles={uploadFiles}
-              onDeleteFile={deleteFile}
-              onSyncToGitHub={syncToGitHub}
-              syncProgress={syncProgress}
-            />
-          </Suspense>
-        )}
-        {/* Toast */}
-        <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2">
-          {toasts.map(t => (
-            <Toast key={t.id} message={t.message} type={t.type} onClose={() => removeToast(t.id)} />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen font-sans" style={{ background: '#F7F6F3', color: '#1A1A1A' }}>
 
@@ -941,12 +876,10 @@ function App() {
           storedFiles={storedFiles}
           onActivateSystem={activateSystem}
           onFetchLessons={fetchLessonsFromGitHub}
-          onAdminLogin={adminLogin}
-          onAdminLogout={adminLogout}
-          adminEmail={adminEmail}
+          onToggleAdmin={toggleAdmin}
           onOpenDashboard={() => {
+            setShowAdminDashboard(true);
             setIsSettingsOpen(false);
-            goToAdmin();
           }}
           onLoadExams={loadExams}
         />
