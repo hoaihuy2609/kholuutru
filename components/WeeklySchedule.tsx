@@ -186,7 +186,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#448361]"></div>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {DAYS_OF_WEEK.map((day) => {
                         const cellDate = new Date(currentWeekStart);
                         cellDate.setDate(cellDate.getDate() + day.dateOffset);
@@ -196,53 +196,91 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
                         const dayItems = schedules.filter(s => s.date === dateStr).sort((a, b) => a.start_time.localeCompare(b.start_time));
 
                         return (
-                            <div key={day.id} className={`flex flex-col rounded-lg border overflow-hidden ${isToday ? 'bg-[#F9FCFA] border-[#A7D7BC] shadow-sm' : 'bg-white border-gray-100 shadow-sm'} transition-all`}>
+                            <div
+                                key={day.id}
+                                className="flex flex-col rounded-xl overflow-hidden transition-all duration-200 h-full"
+                                style={{
+                                    background: isToday ? '#F9FCFA' : '#FFFFFF',
+                                    border: `1px solid ${isToday ? '#A7D7BC' : '#E9E9E7'}`,
+                                    boxShadow: isToday ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+                                }}
+                            >
                                 {/* Day Header */}
-                                <div className={`py-1.5 px-3 border-b flex justify-between items-center ${isToday ? 'bg-[#EAF3EE] border-[#A7D7BC]' : 'bg-gray-50/50 border-gray-100'}`}>
-                                    <div className="flex items-center gap-2">
-                                        <div className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? 'text-[#448361]' : 'text-gray-400'}`}>{day.name}</div>
-                                        <div className={`text-sm font-bold ${isToday ? 'text-[#448361]' : 'text-gray-900'}`}>{cellDate.getDate()}</div>
+                                <div
+                                    className="py-2.5 px-4 flex justify-between items-center"
+                                    style={{
+                                        background: isToday ? '#EAF3EE' : '#F7F6F3',
+                                        borderBottom: `1px solid ${isToday ? '#A7D7BC' : '#E9E9E7'}`
+                                    }}
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: isToday ? '#448361' : '#787774' }}>{day.name}</div>
                                     </div>
                                     {isAdmin && (
                                         <button
                                             onClick={() => openFormForNew(dateStr)}
-                                            className="p-1 text-gray-400 hover:text-[#448361] hover:bg-white transition-all rounded"
+                                            className="p-1 transition-all rounded-md"
+                                            style={{ color: isToday ? '#448361' : '#AEACA8' }}
+                                            onMouseEnter={e => {
+                                                (e.currentTarget as HTMLElement).style.background = isToday ? '#A7D7BC' : '#E9E9E7';
+                                                (e.currentTarget as HTMLElement).style.color = isToday ? '#20402e' : '#1A1A1A';
+                                            }}
+                                            onMouseLeave={e => {
+                                                (e.currentTarget as HTMLElement).style.background = 'transparent';
+                                                (e.currentTarget as HTMLElement).style.color = isToday ? '#448361' : '#AEACA8';
+                                            }}
                                             title="Thêm lịch"
                                         >
-                                            <Plus className="w-3.5 h-3.5" />
+                                            <Plus className="w-4 h-4" />
                                         </button>
                                     )}
                                 </div>
 
                                 {/* Items Content */}
-                                <div className="p-2 flex-grow flex flex-col gap-1.5 min-h-[80px]">
+                                <div className="p-3 flex-grow flex flex-col gap-2.5 min-h-[100px]">
                                     {dayItems.length === 0 ? (
-                                        <div className="flex-grow flex items-center justify-center text-[11px] text-gray-300 italic">Trống</div>
+                                        <div className="flex-grow flex items-center justify-center">
+                                            <span className="text-[12px] font-medium italic" style={{ color: '#CFCFCB' }}>Trống</span>
+                                        </div>
                                     ) : (
-                                        <div className="flex flex-col gap-1.5">
+                                        <div className="flex flex-col gap-2.5">
                                             {dayItems.map(item => (
-                                                <div key={item.id} className="group/item bg-[#FAFAF9] rounded border border-[#E9E9E7] p-2 hover:border-gray-200 hover:shadow-sm transition-all flex flex-col relative w-full">
-                                                    <div className="flex justify-between items-start mb-0.5">
-                                                        <div className="flex items-center gap-1 text-[9px] font-bold text-[#D9730D] bg-[#FFF3E8] px-1.5 py-[1px] rounded border border-[#F5C796]/50">
-                                                            <Clock className="w-2.5 h-2.5" />
+                                                <div
+                                                    key={item.id}
+                                                    className="group/item rounded-lg p-3 transition-all duration-200 flex flex-col relative w-full cursor-default"
+                                                    style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
+                                                    onMouseEnter={e => {
+                                                        (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
+                                                        (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+                                                        (e.currentTarget as HTMLElement).style.background = '#FAFAF9';
+                                                    }}
+                                                    onMouseLeave={e => {
+                                                        (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
+                                                        (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+                                                        (e.currentTarget as HTMLElement).style.background = '#FFFFFF';
+                                                    }}
+                                                >
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md" style={{ color: '#D9730D', background: '#FFF3E8', border: '1px solid #F5C796' }}>
+                                                            <Clock className="w-3 h-3" />
                                                             {item.start_time} - {item.end_time}
                                                         </div>
                                                         {isAdmin && (
-                                                            <div className="flex gap-0.5 opacity-100 xl:opacity-0 group-hover/item:opacity-100 transition-opacity bg-inherit pl-1 z-10 rounded">
-                                                                <button onClick={() => openFormForEdit(item)} className="p-0.5 text-gray-400 hover:text-blue-600 rounded">
-                                                                    <Edit2 className="w-3 h-3" />
+                                                            <div className="flex gap-1 opacity-100 xl:opacity-0 group-hover/item:opacity-100 transition-opacity bg-transparent pl-1 z-10 rounded">
+                                                                <button onClick={() => openFormForEdit(item)} className="p-1 rounded-md transition-colors" style={{ color: '#AEACA8' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#EEF0FB'; (e.currentTarget as HTMLElement).style.color = '#6B7CDB'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#AEACA8'; }}>
+                                                                    <Edit2 className="w-3.5 h-3.5" />
                                                                 </button>
-                                                                <button onClick={(e) => handleDelete(item.id, e)} className="p-0.5 text-gray-400 hover:text-red-600 rounded">
-                                                                    <Trash2 className="w-3 h-3" />
+                                                                <button onClick={(e) => handleDelete(item.id, e)} className="p-1 rounded-md transition-colors" style={{ color: '#AEACA8' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FEF2F2'; (e.currentTarget as HTMLElement).style.color = '#E03E3E'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#AEACA8'; }}>
+                                                                    <Trash2 className="w-3.5 h-3.5" />
                                                                 </button>
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <div className="text-[12px] font-bold text-gray-800 line-clamp-2 leading-tight pr-6">
+                                                    <div className="text-[13px] font-semibold leading-relaxed pr-6" style={{ color: '#1A1A1A' }}>
                                                         {item.title}
                                                     </div>
                                                     {item.description && (
-                                                        <div className="text-[11px] text-gray-500 font-medium whitespace-pre-wrap border-l border-gray-200 pl-2 mt-1 max-h-[60px] overflow-y-auto custom-scrollbar">
+                                                        <div className="text-[12px] font-medium whitespace-pre-wrap pl-2.5 mt-2 max-h-[60px] overflow-y-auto custom-scrollbar" style={{ borderLeft: '2px solid #E9E9E7', color: '#787774' }}>
                                                             {item.description}
                                                         </div>
                                                     )}
