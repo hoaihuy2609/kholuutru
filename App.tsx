@@ -4,7 +4,6 @@ import { CURRICULUM } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Toast, { ToastType } from './components/Toast';
-import FloatingMeetButton from './components/FloatingMeetButton';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
 import { FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Ban, ShieldOff, WifiOff, Atom, Home, Bell, FlaskConical, Video } from 'lucide-react';
 import { getMachineId } from './src/hooks/useCloudStorage';
@@ -1043,9 +1042,6 @@ function App() {
 
       {/* Chatbot Component - Only show on Dashboard (Overview) */}
       {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && !showNotification && !showSimLab && !showBlog && <Suspense fallback={null}><Chatbot /></Suspense>}
-
-      {/* Floating Action Menu for Google Meet */}
-      {(isActivated || isAdmin) && <FloatingMeetButton />}
     </div>
   );
 }
