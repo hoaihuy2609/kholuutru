@@ -75,8 +75,23 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         const saved = await saveBlog(formData);
         setIsSaving(false);
         if (saved) {
-            showToast('✅ Đã lưu local! Bấm "Sync Blog" trong Cloud Sync để cập nhật cho học sinh.');
-            setPendingSync(true);
+            // Nếu bài đã published → auto-sync luôn để học sinh thấy ngay
+            if (formData.is_published) {
+                showToast('✅ Đã lưu! Đang sync lên Telegram cho học sinh...');
+                setIsSyncingBlog(true);
+                const result = await syncBlogs();
+                setIsSyncingBlog(false);
+                if (result.success) {
+                    showToast(`🚀 Sync xong! ${result.blogCount} bài viết đã lên Telegram.`);
+                    setPendingSync(false);
+                } else {
+                    showToast('❌ Sync thất bại! Bấm "Sync Blog" để thử lại.', 'error');
+                    setPendingSync(true);
+                }
+            } else {
+                showToast('✅ Đã lưu bản nháp! Bật "Hiển thị cho học sinh" rồi bấm Đăng bài để học sinh thấy.');
+                setPendingSync(true);
+            }
             onSaved(saved);
         } else {
             showToast('❌ Lỗi khi lưu!', 'error');
@@ -172,10 +187,23 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                 </button>
 
                 <div className="flex items-center gap-3 flex-wrap">
+                    {/* Sync pending banner */}
+                    {pendingSync && (
+                        <button
+                            onClick={handleSyncNow}
+                            disabled={isSyncingBlog}
+                            className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all disabled:opacity-60 animate-pulse"
+                            style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #B7D9C4' }}
+                        >
+                            <RefreshCw className={`w-4 h-4 ${isSyncingBlog ? 'animate-spin' : ''}`} />
+                            {isSyncingBlog ? 'Đang sync...' : 'Sync Blog'}
+                        </button>
+                    )}
+
                     {blog && (
                         <button
                             onClick={handleDelete}
-                            disabled={isSaving}
+                            disabled={isSaving || isSyncingBlog}
                             className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-red-50 text-red-600 transition-colors disabled:opacity-50"
                         >
                             <Trash2 className="w-4 h-4" /> Xóa bài
@@ -192,11 +220,11 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
 
                     <button
                         onClick={handleSave}
-                        disabled={isSaving}
+                        disabled={isSaving || isSyncingBlog}
                         className="px-6 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60"
                     >
                         <Save className="w-4 h-4" />
-                        {isSaving ? 'Đang lưu...' : blog ? 'Cập nhật' : 'Đăng bài'}
+                        {isSaving ? 'Đang lưu...' : isSyncingBlog ? 'Đang sync...' : blog ? 'Cập nhật' : 'Đăng bài'}
                     </button>
                 </div>
             </div>

@@ -343,11 +343,16 @@ function App() {
         return (
           <AdminBlogEditor
             blog={activeAdminBlog}
-            onBack={() => { setActiveAdminBlog(null); setIsCreatingBlog(false); }}
+            onBack={() => {
+              setActiveAdminBlog(null);
+              setIsCreatingBlog(false);
+              // Force BlogList re-mount để phản ánh bài đã xóa/thay đổi
+              setShowBlog(false);
+              setTimeout(() => setShowBlog(true), 0);
+            }}
             onSaved={(_savedBlog) => {
               setActiveAdminBlog(null);
               setIsCreatingBlog(false);
-              // Force BlogList re-fetch bằng cách reset showBlog rồi set lại
               setShowBlog(false);
               setTimeout(() => setShowBlog(true), 0);
             }}
