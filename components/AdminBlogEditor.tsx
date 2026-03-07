@@ -55,10 +55,18 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         setWordCount(words);
     }, [formData.content]);
 
+    const toastTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
     const showToast = (msg: string, type: 'success' | 'error' | 'warning' = 'success') => {
+        // Hủy timer cũ nếu có
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
         setToast({ msg, type });
-        setTimeout(() => setToast(null), 3000);
+        // 'warning' (đang sync) không tự đóng — đợi kết quả mới đóng
+        if (type !== 'warning') {
+            toastTimerRef.current = setTimeout(() => setToast(null), 5000);
+        }
     };
+
 
     const handleChange = (field: keyof BlogPost, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
