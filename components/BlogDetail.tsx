@@ -11,6 +11,7 @@ interface BlogDetailProps {
     blog: BlogPost;
     onBack: () => void;
     relatedBlogs?: BlogPost[];
+    onReadRelated?: (blog: BlogPost) => void;
 }
 
 const estimateReadTime = (content: string): number =>
@@ -67,7 +68,7 @@ const CodeBlock: React.FC<{ children?: React.ReactNode; className?: string }> = 
     );
 };
 
-const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = [] }) => {
+const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = [], onReadRelated }) => {
     const [showToc, setShowToc] = useState(false);
     const [activeHeading, setActiveHeading] = useState('');
     const contentRef = useRef<HTMLDivElement>(null);
@@ -304,12 +305,12 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
             {/* Related Posts */}
             {relatedBlogs.length > 0 && (
                 <div className="mt-16 pt-10" style={{ borderTop: '1px solid var(--color-border)' }}>
-                    <h3 className="text-lg font-bold mb-6" style={{ color: 'var(--color-text-primary)' }}>📖 Bài viết liên quan</h3>
+                    <h3 className="text-lg font-bold mb-6" style={{ color: 'var(--color-text-primary)' }}>Bài viết liên quan</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {relatedBlogs.map(related => (
                             <button
                                 key={related.id}
-                                onClick={() => onBack()}
+                                onClick={() => onReadRelated ? onReadRelated(related) : onBack()}
                                 className="text-left p-4 rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-md"
                                 style={{ background: 'var(--color-bg-primary)', border: '1px solid var(--color-border)' }}
                             >

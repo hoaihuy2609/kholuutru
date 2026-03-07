@@ -344,7 +344,13 @@ function App() {
           <AdminBlogEditor
             blog={activeAdminBlog}
             onBack={() => { setActiveAdminBlog(null); setIsCreatingBlog(false); }}
-            onSaved={(savedBlog) => { setActiveAdminBlog(null); setIsCreatingBlog(false); }}
+            onSaved={(_savedBlog) => {
+              setActiveAdminBlog(null);
+              setIsCreatingBlog(false);
+              // Force BlogList re-fetch bằng cách reset showBlog rồi set lại
+              setShowBlog(false);
+              setTimeout(() => setShowBlog(true), 0);
+            }}
           />
         );
       }
@@ -354,7 +360,7 @@ function App() {
           .filter(b => b.id !== activeBlog.id && b.is_published)
           .filter(b => b.category === activeBlog.category || (b.tags || []).some(t => (activeBlog.tags || []).includes(t)))
           .slice(0, 4);
-        return <BlogDetail blog={activeBlog} onBack={() => setActiveBlog(null)} relatedBlogs={related} />;
+        return <BlogDetail blog={activeBlog} onBack={() => setActiveBlog(null)} relatedBlogs={related} onReadRelated={(b) => setActiveBlog(b)} />;
       }
       return (
         <BlogList

@@ -1188,9 +1188,9 @@ export const useCloudStorage = () => {
                     category: blog.category || '',
                     tags: blog.tags || [],
                     is_published: blog.is_published || false,
+                    grade: blog.grade ?? 0, // Đảm bảo grade luôn được lưu
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
-                    ...(blog as any),
                 };
                 localBlogs.unshift(saved);
             }
