@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { GradeLevel, Lesson, Exam, ExamSubmission, BlogPost } from './types';
 import { CURRICULUM } from './constants';
 import Sidebar from './components/Sidebar';
@@ -154,8 +154,8 @@ function App() {
     return g === 10 || g === 11 || g === 12 ? g : null;
   });
 
-  // ── Centralized navigation helper ──
-  const resetNavigation = () => {
+  // ── Centralized navigation helper (memoized to prevent child re-renders) ──
+  const resetNavigation = useCallback(() => {
     setShowExamList(false);
     setShowContactBook(false);
     setShowStudyPlanner(false);
@@ -170,10 +170,10 @@ function App() {
     setActiveBlog(null);
     setActiveAdminBlog(null);
     setIsCreatingBlog(false);
-  };
+  }, []);
 
   type NavTarget = 'home' | 'examList' | 'contactBook' | 'studyPlanner' | 'notification' | 'simLab' | 'blog';
-  const navigateTo = (target: NavTarget) => {
+  const navigateTo = useCallback((target: NavTarget) => {
     resetNavigation();
     switch (target) {
       case 'examList': setShowExamList(true); break;
@@ -182,18 +182,17 @@ function App() {
       case 'notification': setShowNotification(true); break;
       case 'simLab': setShowSimLab(true); break;
       case 'blog': setShowBlog(true); break;
-      // 'home' — all states already reset
     }
     setIsMobileMenuOpen(false);
-  };
+  }, [resetNavigation]);
 
-  const selectGrade = (g: GradeLevel | null) => {
+  const selectGrade = useCallback((g: GradeLevel | null) => {
     resetNavigation();
     setCurrentGrade(g);
     setIsMobileMenuOpen(false);
-  };
+  }, [resetNavigation]);
 
-  const handlePreviewMode = (mode: GradeLevel | null) => {
+  const handlePreviewMode = useCallback((mode: GradeLevel | null) => {
     setPreviewMode(mode);
     if (mode) {
       resetNavigation();
@@ -201,17 +200,16 @@ function App() {
     } else {
       setCurrentGrade(null);
     }
-  };
+  }, [resetNavigation]);
 
-  // Toast helper
-  const showToast = (message: string, type: ToastType = 'success') => {
+  const showToast = useCallback((message: string, type: ToastType = 'success') => {
     const id = Math.random().toString(36).substring(7);
     setToasts(prev => [...prev, { id, message, type }]);
-  };
+  }, []);
 
-  const removeToast = (id: string) => {
+  const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
-  };
+  }, []);
 
   // Derived state
   const activeGradeData = useMemo(() =>

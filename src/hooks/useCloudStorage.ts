@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import JSZip from 'jszip';
 import CryptoJS from 'crypto-js';
 import { Lesson, StoredFile, FileStorage, Exam, StudyPlanItem, NotificationItem, BlogPost, ScheduleItem } from '../../types';
@@ -270,13 +270,22 @@ export const useCloudStorage = () => {
         initData();
     }, []);
 
-    // Sync state to IndexedDB
+    // Sync state to IndexedDB (debounced to avoid excessive writes during rapid updates)
+    const _dbSyncTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
     useEffect(() => {
-        if (!loading) dbSet(STORAGE_LESSONS_KEY, lessons);
+        if (!loading) {
+            clearTimeout(_dbSyncTimers.current[STORAGE_LESSONS_KEY]);
+            _dbSyncTimers.current[STORAGE_LESSONS_KEY] = setTimeout(() => dbSet(STORAGE_LESSONS_KEY, lessons), 300);
+        }
+        return () => clearTimeout(_dbSyncTimers.current[STORAGE_LESSONS_KEY]);
     }, [lessons, loading]);
 
     useEffect(() => {
-        if (!loading) dbSet(STORAGE_FILES_KEY, storedFiles);
+        if (!loading) {
+            clearTimeout(_dbSyncTimers.current[STORAGE_FILES_KEY]);
+            _dbSyncTimers.current[STORAGE_FILES_KEY] = setTimeout(() => dbSet(STORAGE_FILES_KEY, storedFiles), 300);
+        }
+        return () => clearTimeout(_dbSyncTimers.current[STORAGE_FILES_KEY]);
     }, [storedFiles, loading]);
 
     const addLesson = async (name: string, chapterId: string) => {

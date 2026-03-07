@@ -435,4 +435,4 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
   );
 };
 
-export default Sidebar;
+export default React.memo(Sidebar);
