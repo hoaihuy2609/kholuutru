@@ -26,7 +26,16 @@ export default defineConfig(({ mode }) => {
       target: 'es2020',
       sourcemap: false,
       cssCodeSplit: true,
+      // esbuild is faster than rollup's default minifier and produces similar output size
+      minify: 'esbuild',
+      // Suppress false-positive chunk size warnings for intentionally large vendor bundles
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
+        // Treeshake aggressively — safe since all our deps are pure modules
+        treeshake: {
+          moduleSideEffects: false,
+          propertyReadSideEffects: false,
+        },
         output: {
           manualChunks: {
             // Core React — cached long-term, rarely changes

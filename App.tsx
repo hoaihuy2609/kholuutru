@@ -62,10 +62,10 @@ function App() {
   const [isKicked, setIsKicked] = useState(false);
   const [isOfflineExpired, setIsOfflineExpired] = useState(false);
 
-  // Check access on mount
+  // Check access on mount — pauses when tab is hidden to avoid wasted requests
   React.useEffect(() => {
     const check = async () => {
-      if (isActivated) {
+      if (isActivated && !document.hidden) {
         const status = await verifyAccess();
         if (status === 'kicked') {
           setIsKicked(true);
@@ -78,15 +78,21 @@ function App() {
       }
     };
     check();
-    // Check every 5 minutes
+    // Check every 5 minutes, but only when tab is visible
     const interval = setInterval(check, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', check);
+    };
   }, [isActivated]);
 
-  // ── Tính unread notification badge ──
+  // ── Tính unread notification badge — pauses when tab is hidden ──
   React.useEffect(() => {
     if (!isActivated) return;
     const loadUnread = async () => {
+      // Skip network call when tab is not visible
+      if (document.hidden) return;
       try {
         if (isAdmin) {
           // Admin: count unread across all 3 grades
@@ -111,9 +117,13 @@ function App() {
       } catch { /* silent */ }
     };
     loadUnread();
-    // Reload badge count mỗi 2 phút
+    // Reload badge count every 2 minutes; also refresh when user returns to tab
     const interval = setInterval(loadUnread, 2 * 60 * 1000);
-    return () => clearInterval(interval);
+    document.addEventListener('visibilitychange', loadUnread);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', loadUnread);
+    };
   }, [isActivated, isAdmin]);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -178,15 +188,8 @@ function App() {
   };
 
   const selectGrade = (g: GradeLevel | null) => {
+    resetNavigation();
     setCurrentGrade(g);
-    setCurrentChapterId(null);
-    setCurrentLesson(null);
-    setShowExamList(false);
-    setShowContactBook(false);
-    setShowStudyPlanner(false);
-    setShowNotification(false);
-    setShowSimLab(false);
-    setShowBlog(false);
     setIsMobileMenuOpen(false);
   };
 
@@ -289,7 +292,7 @@ function App() {
     }
   };
 
-  const getFileCounts = useMemo(() => {
+  const fileCounts = useMemo(() => {
     const counts = {
       [GradeLevel.Grade10]: 0,
       [GradeLevel.Grade11]: 0,
@@ -311,7 +314,6 @@ function App() {
   }, [storedFiles, lessons]);
 
   const renderContent = () => {
-    const activeGradeData = currentGrade ? CURRICULUM.find((g) => g.level === currentGrade) : null;
 
     // 0. Exam Result
     if (activeExam && examSubmission) {
@@ -588,7 +590,7 @@ function App() {
       );
     }
 
-    return <Dashboard onSelectGrade={setCurrentGrade} fileCounts={getFileCounts} isAdmin={effectiveIsAdmin} onLoadLeaderboard={getLeaderboard} previewMode={previewMode} studentGrade={studentGradeValue} />;
+    return <Dashboard onSelectGrade={setCurrentGrade} fileCounts={fileCounts} isAdmin={effectiveIsAdmin} onLoadLeaderboard={getLeaderboard} previewMode={previewMode} studentGrade={studentGradeValue} />;
   };
 
   // === KICKED SCREEN ===
