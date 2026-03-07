@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useState, useEffect } from 'react';
 import JSZip from 'jszip';
 import CryptoJS from 'crypto-js';
-import { Lesson, StoredFile, FileStorage, Exam, StudyPlanItem, NotificationItem, BlogPost } from '../../types';
+import { Lesson, StoredFile, FileStorage, Exam, StudyPlanItem, NotificationItem, BlogPost, ScheduleItem } from '../../types';
 
 // Storage Keys
 const STORAGE_FILES_KEY = 'physivault_files';
@@ -968,6 +968,69 @@ export const useCloudStorage = () => {
         }
     };
 
+    // ── Schedule Functions ──────────────────────────────────
+    const getSchedules = async (grade: number) => {
+        try {
+            const { data, error } = await supabase
+                .from('schedules')
+                .select('*')
+                .eq('grade', grade)
+                .order('date', { ascending: true })
+                .order('start_time', { ascending: true });
+            if (error) throw error;
+            return data as ScheduleItem[];
+        } catch (e) {
+            console.error('Lỗi tải thời khóa biểu từ Supabase, fall back local:', e);
+            const localSchedules = localStorage.getItem(`pv_schedules_${grade}`);
+            return localSchedules ? JSON.parse(localSchedules) : [];
+        }
+    };
+
+    const saveSchedule = async (schedule: Omit<ScheduleItem, 'id' | 'created_at'>) => {
+        try {
+            const { data, error } = await supabase.from('schedules').insert([schedule]).select().single();
+            if (error) throw error;
+            return data as ScheduleItem;
+        } catch (e) {
+            console.error('Lỗi tạo lịch học:', e);
+            // Fallback local limit
+            const newSchedule = { id: crypto.randomUUID ? crypto.randomUUID() : `sch_${Date.now()}`, ...schedule, created_at: new Date().toISOString() };
+            const local = JSON.parse(localStorage.getItem(`pv_schedules_${schedule.grade}`) || '[]');
+            localStorage.setItem(`pv_schedules_${schedule.grade}`, JSON.stringify([...local, newSchedule]));
+            return newSchedule as ScheduleItem;
+        }
+    };
+
+    const updateSchedule = async (id: string, updates: Partial<ScheduleItem>, grade: number) => {
+        try {
+            const { error } = await supabase.from('schedules').update(updates).eq('id', id);
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('Lỗi cập nhật lịch học:', e);
+            const local = JSON.parse(localStorage.getItem(`pv_schedules_${grade}`) || '[]');
+            const idx = local.findIndex((s: ScheduleItem) => s.id === id);
+            if (idx !== -1) {
+                local[idx] = { ...local[idx], ...updates };
+                localStorage.setItem(`pv_schedules_${grade}`, JSON.stringify(local));
+            }
+            return true;
+        }
+    };
+
+    const deleteSchedule = async (id: string, grade: number) => {
+        try {
+            const { error } = await supabase.from('schedules').delete().eq('id', id);
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('Lỗi xóa lịch học:', e);
+            const local = JSON.parse(localStorage.getItem(`pv_schedules_${grade}`) || '[]');
+            localStorage.setItem(`pv_schedules_${grade}`, JSON.stringify(local.filter((s: ScheduleItem) => s.id !== id)));
+            return true;
+        }
+    };
+
     // ── Notification Functions ────────────────────────────────
 
     // Lấy danh sách thông báo theo lớp của học sinh
@@ -1348,6 +1411,10 @@ export const useCloudStorage = () => {
         saveStudyPlan,
         updateStudyPlan,
         deleteStudyPlan,
+        getSchedules,
+        saveSchedule,
+        updateSchedule,
+        deleteSchedule,
         getNotifications,
         deleteNotification,
         createCustomNotification,

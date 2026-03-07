@@ -92,6 +92,17 @@ export interface StudyPlanItem {
   color: string;
 }
 
+export interface ScheduleItem {
+  id: string;
+  title: string;
+  description: string;
+  date: string; // YYYY-MM-DD
+  start_time: string; // HH:MM
+  end_time: string; // HH:MM
+  grade: number; // 10, 11, 12
+  created_at?: string;
+}
+
 // ── Notification (Thông Báo) Types ───────────────────────────────
 
 export interface NotificationItem {
