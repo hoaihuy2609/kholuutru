@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BlogPost } from '../types';
 import { useCloudStorage } from '../src/hooks/useCloudStorage';
-import { BookOpen, Calendar, ChevronRight, Edit3, Plus, Search, Clock, Tag, Filter, X, Atom, FileText } from 'lucide-react';
+import { BookOpen, Calendar, ChevronRight, Edit3, Plus, Search, Clock, Tag, Filter, Atom, FileText } from 'lucide-react';
 
 interface BlogListProps {
     isAdmin: boolean;

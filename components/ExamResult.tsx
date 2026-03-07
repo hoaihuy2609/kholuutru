@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CheckCircle, XCircle, Minus, RotateCcw, Home, Clock, Award, HelpCircle, Send, ChevronDown } from 'lucide-react';
+import { CheckCircle, XCircle, Minus, RotateCcw, Home, Clock, HelpCircle, Send, ChevronDown } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { Exam, ExamSubmission, ExamTFAnswer } from '../types';
 import { calcScore } from './ExamView';

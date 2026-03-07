@@ -72,11 +72,6 @@
     --sidebar-width: 16rem;
 }
 
-/* ==================== Tailwind Directives ==================== */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /* ==================== Base Styles ==================== */
 html {
     scroll-behavior: smooth;

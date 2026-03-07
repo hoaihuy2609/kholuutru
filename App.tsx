@@ -1,34 +1,44 @@
-import React, { useState, useMemo } from 'react';
-import { GradeLevel, Lesson, Exam, ExamSubmission } from './types';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { GradeLevel, Lesson, Exam, ExamSubmission, BlogPost } from './types';
 import { CURRICULUM } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
-import ChapterView from './components/ChapterView';
-import LessonView from './components/LessonView';
 import Toast, { ToastType } from './components/Toast';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
-import { Menu, FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Plus, Ban, ShieldOff, WifiOff, MessageCircle, X, Send, Bot, User, Copy, Check, Atom, Home, Bell, FlaskConical } from 'lucide-react';
+import { useAdminAuth } from './src/hooks/useAdminAuth';
+import { FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Ban, ShieldOff, WifiOff, Atom, Home, Bell, FlaskConical } from 'lucide-react';
 import { getMachineId } from './src/hooks/useCloudStorage';
 
 const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
   <RefreshCw className={`${className} animate-spin`} style={style} />
 );
 
-import SettingsModal from './components/SettingsModal';
-import Chatbot from './components/Chatbot';
-import AdminDashboard from './components/AdminDashboard';
-import AdminGitHubSync from './components/AdminGitHubSync';
-import ExamListPage from './components/ExamListPage';
-import ExamView, { calcScore } from './components/ExamView';
-import ExamResult from './components/ExamResult';
-import ContactBook from './components/ContactBook';
-import StudyPlanner from './components/StudyPlanner';
-import NotificationPage from './components/NotificationPage';
-import SimulationLab from './components/SimulationLab';
-import BlogList from './components/BlogList';
-import BlogDetail from './components/BlogDetail';
-import AdminBlogEditor from './components/AdminBlogEditor';
-import { BlogPost } from './types';
+// ── Lazy-loaded components (code-split) ──
+const ChapterView = React.lazy(() => import('./components/ChapterView'));
+const LessonView = React.lazy(() => import('./components/LessonView'));
+const SettingsModal = React.lazy(() => import('./components/SettingsModal'));
+const Chatbot = React.lazy(() => import('./components/Chatbot'));
+const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
+const AdminGitHubSync = React.lazy(() => import('./components/AdminGitHubSync'));
+const ExamListPage = React.lazy(() => import('./components/ExamListPage'));
+const ExamView = React.lazy(() => import('./components/ExamView'));
+const ExamResult = React.lazy(() => import('./components/ExamResult'));
+const ContactBook = React.lazy(() => import('./components/ContactBook'));
+const StudyPlanner = React.lazy(() => import('./components/StudyPlanner'));
+const NotificationPage = React.lazy(() => import('./components/NotificationPage'));
+const SimulationLab = React.lazy(() => import('./components/SimulationLab'));
+const BlogList = React.lazy(() => import('./components/BlogList'));
+const BlogDetail = React.lazy(() => import('./components/BlogDetail'));
+const AdminBlogEditor = React.lazy(() => import('./components/AdminBlogEditor'));
+import AdminLoginGate from './components/AdminLoginGate';
+
+
+// Suspense fallback
+const LazyFallback = () => (
+  <div className="flex items-center justify-center h-[40vh]">
+    <RefreshCw className="w-8 h-8 animate-spin" style={{ color: '#6B7CDB' }} />
+  </div>
+);
 
 interface ToastMessage {
   id: string;
@@ -43,6 +53,20 @@ function App() {
   const [autoCreateLesson, setAutoCreateLesson] = useState(false);
 
   const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory, getLeaderboard, getStudyPlans, saveStudyPlan, updateStudyPlan, deleteStudyPlan, getNotifications, deleteNotification, markNotificationFetched, getFetchedNotificationIds, submitQuestionVote, getQuestionVotes } = useCloudStorage();
+
+  // ── Admin Auth (Supabase) ──
+  const { isAdmin, adminEmail, adminLoading, adminLogin, adminLogout } = useAdminAuth();
+
+  // ── Hash-based routing ──
+  const [hashRoute, setHashRoute] = useState(() => window.location.hash);
+  useEffect(() => {
+    const onHash = () => setHashRoute(window.location.hash);
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  const isAdminRoute = hashRoute === '#/admin';
+  const goToAdmin = () => { window.location.hash = '#/admin'; };
+  const exitAdmin = () => { window.location.hash = ''; };
 
   const [isKicked, setIsKicked] = useState(false);
   const [isOfflineExpired, setIsOfflineExpired] = useState(false);
@@ -67,10 +91,6 @@ function App() {
     const interval = setInterval(check, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [isActivated]);
-
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    return localStorage.getItem('physivault_is_admin') === 'true';
-  });
 
   // ── Tính unread notification badge ──
   React.useEffect(() => {
@@ -129,9 +149,60 @@ function App() {
   const [previewMode, setPreviewMode] = useState<GradeLevel | null>(null);
   const effectiveIsAdmin = isAdmin && !previewMode;
 
-  const toggleAdmin = (status: boolean) => {
-    setIsAdmin(status);
-    localStorage.setItem('physivault_is_admin', status ? 'true' : 'false');
+  // ── Centralized navigation helper ──
+  const resetNavigation = () => {
+    setShowExamList(false);
+    setShowContactBook(false);
+    setShowStudyPlanner(false);
+    setShowNotification(false);
+    setShowSimLab(false);
+    setShowBlog(false);
+    setActiveExam(null);
+    setExamSubmission(null);
+    setCurrentGrade(null);
+    setCurrentChapterId(null);
+    setCurrentLesson(null);
+    setActiveBlog(null);
+    setActiveAdminBlog(null);
+    setIsCreatingBlog(false);
+  };
+
+  type NavTarget = 'home' | 'examList' | 'contactBook' | 'studyPlanner' | 'notification' | 'simLab' | 'blog';
+  const navigateTo = (target: NavTarget) => {
+    resetNavigation();
+    switch (target) {
+      case 'examList': setShowExamList(true); break;
+      case 'contactBook': setShowContactBook(true); break;
+      case 'studyPlanner': setShowStudyPlanner(true); break;
+      case 'notification': setShowNotification(true); break;
+      case 'simLab': setShowSimLab(true); break;
+      case 'blog': setShowBlog(true); break;
+      // 'home' — all states already reset
+    }
+    setIsMobileMenuOpen(false);
+  };
+
+  const selectGrade = (g: GradeLevel | null) => {
+    setCurrentGrade(g);
+    setCurrentChapterId(null);
+    setCurrentLesson(null);
+    setShowExamList(false);
+    setShowContactBook(false);
+    setShowStudyPlanner(false);
+    setShowNotification(false);
+    setShowSimLab(false);
+    setShowBlog(false);
+    setIsMobileMenuOpen(false);
+  };
+
+  const handlePreviewMode = (mode: GradeLevel | null) => {
+    setPreviewMode(mode);
+    if (mode) {
+      resetNavigation();
+      setCurrentGrade(mode);
+    } else {
+      setCurrentGrade(null);
+    }
   };
 
   // Toast helper
@@ -269,8 +340,9 @@ function App() {
           isPreviewMode={!!previewMode}
           onShowToast={showToast}
           onBack={() => { setActiveExam(null); setShowExamList(true); }}
-          onSubmit={(sub) => {
+          onSubmit={async (sub) => {
             setExamSubmission(sub);
+            const { calcScore } = await import('./components/ExamView');
             const score = calcScore(sub, activeExam.answers);
             saveExamResult(activeExam, score.total, 28, score.correctCount);
           }}
@@ -733,6 +805,62 @@ function App() {
     );
   }
 
+  // ── Admin Route (/#/admin) ──
+  if (isAdminRoute) {
+    // Still checking session
+    if (adminLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F6F3' }}>
+          <RefreshCw className="w-8 h-8 animate-spin" style={{ color: '#6B7CDB' }} />
+        </div>
+      );
+    }
+
+    // Not logged in → show inline login gate
+    if (!isAdmin) {
+      return <AdminLoginGate onLogin={adminLogin} onCancel={exitAdmin} />;
+    }
+
+    // Logged in → show full dashboard
+    return (
+      <div className="min-h-screen" style={{ background: '#F7F6F3' }}>
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><RefreshCw className="w-8 h-8 animate-spin" style={{ color: '#6B7CDB' }} /></div>}>
+          <AdminDashboard
+            onBack={exitAdmin}
+            onShowToast={showToast}
+            onOpenGitHubSync={() => { setShowGitHubSync(true); }}
+            onUploadExamPdf={uploadExamPdf}
+            onSaveExam={saveExam}
+            onDeleteExam={deleteExam}
+            onLoadExams={loadExams}
+          />
+        </Suspense>
+        {showGitHubSync && (
+          <Suspense fallback={null}>
+            <AdminGitHubSync
+              onBack={() => setShowGitHubSync(false)}
+              onShowToast={showToast}
+              lessons={lessons}
+              storedFiles={storedFiles}
+              onAddLesson={addLesson}
+              onDeleteLesson={deleteLesson}
+              onUploadFiles={uploadFiles}
+              onDeleteFile={deleteFile}
+              onSyncToGitHub={syncToGitHub}
+              syncProgress={syncProgress}
+            />
+          </Suspense>
+        )}
+        {/* Toast */}
+        <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2">
+          {toasts.map(t => (
+            <Toast key={t.id} message={t.message} type={t.type} onClose={() => removeToast(t.id)} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen font-sans" style={{ background: '#F7F6F3', color: '#1A1A1A' }}>
 
@@ -749,109 +877,14 @@ function App() {
       <div className={`fixed inset-y-0 left-0 z-50 w-64 shadow-xl transform transition-transform duration-300 ease-out md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#F1F0EC', borderRight: '1px solid #E9E9E7' }}>
         <Sidebar
           currentGrade={currentGrade}
-          onSelectGrade={(g) => {
-            setCurrentGrade(g);
-            setCurrentChapterId(null);
-            setCurrentLesson(null);
-            setShowExamList(false);
-            setShowContactBook(false);
-            setShowStudyPlanner(false);
-            setShowNotification(false);
-            setShowSimLab(false);
-            setShowBlog(false);
-            setIsMobileMenuOpen(false);
-          }}
-          onOpenSettings={() => {
-            setIsSettingsOpen(true);
-            setIsMobileMenuOpen(false);
-          }}
-          onOpenExamList={(isActivated || isAdmin) ? () => {
-            setShowExamList(true);
-            setShowContactBook(false);
-            setShowStudyPlanner(false);
-            setShowNotification(false);
-            setShowSimLab(false);
-            setShowBlog(false);
-            setActiveExam(null);
-            setExamSubmission(null);
-            setCurrentGrade(null);
-            setCurrentChapterId(null);
-            setCurrentLesson(null);
-            setIsMobileMenuOpen(false);
-          } : undefined}
-          onOpenContactBook={(isActivated || isAdmin) ? () => {
-            setShowContactBook(true);
-            setShowExamList(false);
-            setShowStudyPlanner(false);
-            setShowNotification(false);
-            setShowSimLab(false);
-            setShowBlog(false);
-            setActiveExam(null);
-            setExamSubmission(null);
-            setCurrentGrade(null);
-            setCurrentChapterId(null);
-            setCurrentLesson(null);
-            setIsMobileMenuOpen(false);
-          } : undefined}
-          onOpenStudyPlanner={(isActivated || isAdmin) ? () => {
-            setShowStudyPlanner(true);
-            setShowContactBook(false);
-            setShowExamList(false);
-            setShowNotification(false);
-            setShowSimLab(false);
-            setShowBlog(false);
-            setActiveExam(null);
-            setExamSubmission(null);
-            setCurrentGrade(null);
-            setCurrentChapterId(null);
-            setCurrentLesson(null);
-            setIsMobileMenuOpen(false);
-          } : undefined}
-          onOpenNotification={(isActivated || isAdmin) ? () => {
-            setShowNotification(true);
-            setShowStudyPlanner(false);
-            setShowContactBook(false);
-            setShowExamList(false);
-            setShowSimLab(false);
-            setShowBlog(false);
-            setActiveExam(null);
-            setExamSubmission(null);
-            setCurrentGrade(null);
-            setCurrentChapterId(null);
-            setCurrentLesson(null);
-            setIsMobileMenuOpen(false);
-          } : undefined}
-          onOpenSimLab={(isActivated || isAdmin) ? () => {
-            setShowSimLab(true);
-            setShowNotification(false);
-            setShowStudyPlanner(false);
-            setShowContactBook(false);
-            setShowExamList(false);
-            setShowBlog(false);
-            setActiveExam(null);
-            setExamSubmission(null);
-            setCurrentGrade(null);
-            setCurrentChapterId(null);
-            setCurrentLesson(null);
-            setIsMobileMenuOpen(false);
-          } : undefined}
-          onOpenBlog={(isActivated || isAdmin) ? () => {
-            setShowBlog(true);
-            setShowNotification(false);
-            setShowStudyPlanner(false);
-            setShowContactBook(false);
-            setShowExamList(false);
-            setShowSimLab(false);
-            setActiveExam(null);
-            setExamSubmission(null);
-            setCurrentGrade(null);
-            setCurrentChapterId(null);
-            setCurrentLesson(null);
-            setActiveBlog(null);
-            setActiveAdminBlog(null);
-            setIsCreatingBlog(false);
-            setIsMobileMenuOpen(false);
-          } : undefined}
+          onSelectGrade={selectGrade}
+          onOpenSettings={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }}
+          onOpenExamList={(isActivated || isAdmin) ? () => navigateTo('examList') : undefined}
+          onOpenContactBook={(isActivated || isAdmin) ? () => navigateTo('contactBook') : undefined}
+          onOpenStudyPlanner={(isActivated || isAdmin) ? () => navigateTo('studyPlanner') : undefined}
+          onOpenNotification={(isActivated || isAdmin) ? () => navigateTo('notification') : undefined}
+          onOpenSimLab={(isActivated || isAdmin) ? () => navigateTo('simLab') : undefined}
+          onOpenBlog={(isActivated || isAdmin) ? () => navigateTo('blog') : undefined}
           showExamList={showExamList}
           showContactBook={showContactBook}
           showStudyPlanner={showStudyPlanner}
@@ -861,22 +894,7 @@ function App() {
           showBlog={showBlog}
           isAdmin={isAdmin}
           previewMode={previewMode}
-          onSetPreviewMode={(mode) => {
-            setPreviewMode(mode);
-            if (mode) {
-              setCurrentGrade(mode);
-              setShowExamList(false);
-              setShowContactBook(false);
-              setShowStudyPlanner(false);
-              setShowNotification(false);
-              setShowSimLab(false);
-              setShowBlog(false);
-              setCurrentChapterId(null);
-              setCurrentLesson(null);
-            } else {
-              setCurrentGrade(null);
-            }
-          }}
+          onSetPreviewMode={handlePreviewMode}
           className="w-full"
         />
       </div>
@@ -884,99 +902,14 @@ function App() {
       {/* Desktop Sidebar */}
       <Sidebar
         currentGrade={currentGrade}
-        onSelectGrade={(g) => {
-          setCurrentGrade(g);
-          setCurrentChapterId(null);
-          setCurrentLesson(null);
-          setShowExamList(false);
-          setShowContactBook(false);
-          setShowStudyPlanner(false);
-          setShowNotification(false);
-          setShowSimLab(false);
-          setShowBlog(false);
-        }}
+        onSelectGrade={selectGrade}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenExamList={(isActivated || isAdmin) ? () => {
-          setShowExamList(true);
-          setShowContactBook(false);
-          setShowStudyPlanner(false);
-          setShowNotification(false);
-          setShowSimLab(false);
-          setShowBlog(false);
-          setActiveExam(null);
-          setExamSubmission(null);
-          setCurrentGrade(null);
-          setCurrentChapterId(null);
-          setCurrentLesson(null);
-        } : undefined}
-        onOpenContactBook={(isActivated || isAdmin) ? () => {
-          setShowContactBook(true);
-          setShowExamList(false);
-          setShowStudyPlanner(false);
-          setShowNotification(false);
-          setShowSimLab(false);
-          setShowBlog(false);
-          setActiveExam(null);
-          setExamSubmission(null);
-          setCurrentGrade(null);
-          setCurrentChapterId(null);
-          setCurrentLesson(null);
-        } : undefined}
-        onOpenStudyPlanner={(isActivated || isAdmin) ? () => {
-          setShowStudyPlanner(true);
-          setShowContactBook(false);
-          setShowExamList(false);
-          setShowNotification(false);
-          setShowSimLab(false);
-          setShowBlog(false);
-          setActiveExam(null);
-          setExamSubmission(null);
-          setCurrentGrade(null);
-          setCurrentChapterId(null);
-          setCurrentLesson(null);
-        } : undefined}
-        onOpenNotification={(isActivated || isAdmin) ? () => {
-          setShowNotification(true);
-          setShowStudyPlanner(false);
-          setShowContactBook(false);
-          setShowExamList(false);
-          setShowSimLab(false);
-          setShowBlog(false);
-          setActiveExam(null);
-          setExamSubmission(null);
-          setCurrentGrade(null);
-          setCurrentChapterId(null);
-          setCurrentLesson(null);
-        } : undefined}
-        onOpenSimLab={(isActivated || isAdmin) ? () => {
-          setShowSimLab(true);
-          setShowNotification(false);
-          setShowStudyPlanner(false);
-          setShowContactBook(false);
-          setShowExamList(false);
-          setShowBlog(false);
-          setActiveExam(null);
-          setExamSubmission(null);
-          setCurrentGrade(null);
-          setCurrentChapterId(null);
-          setCurrentLesson(null);
-        } : undefined}
-        onOpenBlog={(isActivated || isAdmin) ? () => {
-          setShowBlog(true);
-          setShowNotification(false);
-          setShowStudyPlanner(false);
-          setShowContactBook(false);
-          setShowExamList(false);
-          setShowSimLab(false);
-          setActiveExam(null);
-          setExamSubmission(null);
-          setCurrentGrade(null);
-          setCurrentChapterId(null);
-          setCurrentLesson(null);
-          setActiveBlog(null);
-          setActiveAdminBlog(null);
-          setIsCreatingBlog(false);
-        } : undefined}
+        onOpenExamList={(isActivated || isAdmin) ? () => navigateTo('examList') : undefined}
+        onOpenContactBook={(isActivated || isAdmin) ? () => navigateTo('contactBook') : undefined}
+        onOpenStudyPlanner={(isActivated || isAdmin) ? () => navigateTo('studyPlanner') : undefined}
+        onOpenNotification={(isActivated || isAdmin) ? () => navigateTo('notification') : undefined}
+        onOpenSimLab={(isActivated || isAdmin) ? () => navigateTo('simLab') : undefined}
+        onOpenBlog={(isActivated || isAdmin) ? () => navigateTo('blog') : undefined}
         showExamList={showExamList}
         showContactBook={showContactBook}
         showStudyPlanner={showStudyPlanner}
@@ -986,73 +919,66 @@ function App() {
         showBlog={showBlog}
         isAdmin={isAdmin}
         previewMode={previewMode}
-        onSetPreviewMode={(mode) => {
-          setPreviewMode(mode);
-          if (mode) {
-            setCurrentGrade(mode);
-            setShowExamList(false);
-            setShowContactBook(false);
-            setShowStudyPlanner(false);
-            setShowNotification(false);
-            setShowSimLab(false);
-            setShowBlog(false);
-            setCurrentChapterId(null);
-            setCurrentLesson(null);
-          } else {
-            setCurrentGrade(null);
-          }
-        }}
+        onSetPreviewMode={handlePreviewMode}
         className="hidden md:flex"
       />
 
       {/* Settings Modal */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onShowToast={showToast}
-        isAdmin={isAdmin}
-        isActivated={isActivated}
-        lessons={lessons}
-        storedFiles={storedFiles}
-        onActivateSystem={activateSystem}
-        onFetchLessons={fetchLessonsFromGitHub}
-        onToggleAdmin={toggleAdmin}
-        onOpenDashboard={() => {
-          setShowAdminDashboard(true);
-          setIsSettingsOpen(false);
-        }}
-        onLoadExams={loadExams}
-      />
+      <Suspense fallback={null}>
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          onShowToast={showToast}
+          isAdmin={isAdmin}
+          isActivated={isActivated}
+          lessons={lessons}
+          storedFiles={storedFiles}
+          onActivateSystem={activateSystem}
+          onFetchLessons={fetchLessonsFromGitHub}
+          onAdminLogin={adminLogin}
+          onAdminLogout={adminLogout}
+          adminEmail={adminEmail}
+          onOpenDashboard={() => {
+            setIsSettingsOpen(false);
+            goToAdmin();
+          }}
+          onLoadExams={loadExams}
+        />
+      </Suspense>
 
 
       {showAdminDashboard && (
-        <AdminDashboard
-          onBack={() => setShowAdminDashboard(false)}
-          onShowToast={showToast}
-          onOpenGitHubSync={() => {
-            setShowAdminDashboard(false);
-            setShowGitHubSync(true);
-          }}
-          onUploadExamPdf={uploadExamPdf}
-          onSaveExam={saveExam}
-          onDeleteExam={deleteExam}
-          onLoadExams={loadExams}
-        />
+        <Suspense fallback={<LazyFallback />}>
+          <AdminDashboard
+            onBack={() => setShowAdminDashboard(false)}
+            onShowToast={showToast}
+            onOpenGitHubSync={() => {
+              setShowAdminDashboard(false);
+              setShowGitHubSync(true);
+            }}
+            onUploadExamPdf={uploadExamPdf}
+            onSaveExam={saveExam}
+            onDeleteExam={deleteExam}
+            onLoadExams={loadExams}
+          />
+        </Suspense>
       )}
 
       {showGitHubSync && (
-        <AdminGitHubSync
-          onBack={() => setShowGitHubSync(false)}
-          onShowToast={showToast}
-          lessons={lessons}
-          storedFiles={storedFiles}
-          onAddLesson={addLesson}
-          onDeleteLesson={deleteLesson}
-          onUploadFiles={uploadFiles}
-          onDeleteFile={deleteFile}
-          onSyncToGitHub={syncToGitHub}
-          syncProgress={syncProgress}
-        />
+        <Suspense fallback={<LazyFallback />}>
+          <AdminGitHubSync
+            onBack={() => setShowGitHubSync(false)}
+            onShowToast={showToast}
+            lessons={lessons}
+            storedFiles={storedFiles}
+            onAddLesson={addLesson}
+            onDeleteLesson={deleteLesson}
+            onUploadFiles={uploadFiles}
+            onDeleteFile={deleteFile}
+            onSyncToGitHub={syncToGitHub}
+            syncProgress={syncProgress}
+          />
+        </Suspense>
       )}
 
       {/* Main Content */}
@@ -1072,11 +998,13 @@ function App() {
         </header>
 
         <main className="flex-1 p-4 md:p-8 lg:p-10 pb-24 md:pb-10 max-w-7xl mx-auto w-full">
-          <div
-            key={`${showExamList}-${showContactBook}-${showStudyPlanner}-${showNotification}-${showSimLab}-${currentGrade}-${currentChapterId}-${currentLesson?.id}-${activeExam?.id}`}
-          >
-            {renderContent()}
-          </div>
+          <Suspense fallback={<LazyFallback />}>
+            <div
+              key={`${showExamList}-${showContactBook}-${showStudyPlanner}-${showNotification}-${showSimLab}-${currentGrade}-${currentChapterId}-${currentLesson?.id}-${activeExam?.id}`}
+            >
+              {renderContent()}
+            </div>
+          </Suspense>
         </main>
       </div>
 
@@ -1100,11 +1028,7 @@ function App() {
         >
           {/* Home */}
           <button
-            onClick={() => {
-              setCurrentGrade(null); setCurrentChapterId(null); setCurrentLesson(null);
-              setShowExamList(false); setShowContactBook(false); setShowStudyPlanner(false); setShowNotification(false); setShowSimLab(false);
-              setActiveExam(null); setExamSubmission(null);
-            }}
+            onClick={() => navigateTo('home')}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
             style={{ color: (!currentGrade && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab) ? '#6B7CDB' : '#AEACA8' }}
           >
@@ -1124,10 +1048,7 @@ function App() {
 
           {/* Thi thử */}
           <button
-            onClick={() => {
-              setShowExamList(true); setShowContactBook(false); setShowStudyPlanner(false); setShowNotification(false); setShowSimLab(false);
-              setActiveExam(null); setExamSubmission(null); setCurrentGrade(null); setCurrentChapterId(null); setCurrentLesson(null);
-            }}
+            onClick={() => navigateTo('examList')}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
             style={{ color: showExamList ? '#6B7CDB' : '#AEACA8' }}
           >
@@ -1137,10 +1058,7 @@ function App() {
 
           {/* Thông báo */}
           <button
-            onClick={() => {
-              setShowNotification(true); setShowExamList(false); setShowContactBook(false); setShowStudyPlanner(false); setShowSimLab(false);
-              setActiveExam(null); setExamSubmission(null); setCurrentGrade(null); setCurrentChapterId(null); setCurrentLesson(null);
-            }}
+            onClick={() => navigateTo('notification')}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors relative"
             style={{ color: showNotification ? '#E03E3E' : '#AEACA8' }}
           >
@@ -1170,10 +1088,7 @@ function App() {
 
           {/* Phòng TN */}
           <button
-            onClick={() => {
-              setShowSimLab(true); setShowExamList(false); setShowContactBook(false); setShowStudyPlanner(false); setShowNotification(false);
-              setActiveExam(null); setExamSubmission(null); setCurrentGrade(null); setCurrentChapterId(null); setCurrentLesson(null);
-            }}
+            onClick={() => navigateTo('simLab')}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
             style={{ color: showSimLab ? '#2878BD' : '#AEACA8' }}
           >
@@ -1184,7 +1099,7 @@ function App() {
       )}
 
       {/* Chatbot Component - Only show on Dashboard (Overview) */}
-      {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && !showNotification && !showSimLab && !showBlog && <Chatbot />}
+      {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && !showNotification && !showSimLab && !showBlog && <Suspense fallback={null}><Chatbot /></Suspense>}
 
     </div>
   );

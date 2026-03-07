@@ -2,6 +2,21 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield } from 'lucide-react';
 import { GradeLevel } from '../types';
 
+// ── Hover Prefetch: tải ngầm chunk khi user lướt chuột qua nút ──────────
+// Mỗi route chỉ được prefetch 1 lần duy nhất, không tải lại nữa.
+const prefetched = new Set<string>();
+const prefetch = (key: string, importer: () => Promise<unknown>) => {
+  if (prefetched.has(key)) return;
+  prefetched.add(key);
+  // requestIdleCallback để không chặn main thread
+  const run = () => void importer().catch(() => prefetched.delete(key));
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(run, { timeout: 2000 });
+  } else {
+    setTimeout(run, 0);
+  }
+};
+
 interface SidebarProps {
   currentGrade: GradeLevel | null;
   onSelectGrade: (grade: GradeLevel | null) => void;
@@ -128,7 +143,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
               color: showExamList ? '#6B7CDB' : '#57564F',
               fontWeight: showExamList ? 500 : 400,
             }}
-            onMouseEnter={e => { if (!showExamList) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+            onMouseEnter={e => {
+              prefetch('ExamListPage', () => import('./ExamListPage'));
+              prefetch('ExamView', () => import('./ExamView'));
+              if (!showExamList) (e.currentTarget as HTMLElement).style.background = '#EBEBEA';
+            }}
             onMouseLeave={e => { if (!showExamList) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
             <ClipboardList className="w-4 h-4 shrink-0" style={{ color: showExamList ? '#6B7CDB' : '#AEACA8' }} />
@@ -146,7 +165,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
               color: showContactBook ? '#9065B0' : '#57564F',
               fontWeight: showContactBook ? 500 : 400,
             }}
-            onMouseEnter={e => { if (!showContactBook) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+            onMouseEnter={e => {
+              prefetch('ContactBook', () => import('./ContactBook'));
+              if (!showContactBook) (e.currentTarget as HTMLElement).style.background = '#EBEBEA';
+            }}
             onMouseLeave={e => { if (!showContactBook) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
             <BookOpenCheck className="w-4 h-4 shrink-0" style={{ color: showContactBook ? '#9065B0' : '#AEACA8' }} />
@@ -164,7 +186,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
               color: showStudyPlanner ? '#448361' : '#57564F',
               fontWeight: showStudyPlanner ? 500 : 400,
             }}
-            onMouseEnter={e => { if (!showStudyPlanner) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+            onMouseEnter={e => {
+              prefetch('StudyPlanner', () => import('./StudyPlanner'));
+              if (!showStudyPlanner) (e.currentTarget as HTMLElement).style.background = '#EBEBEA';
+            }}
             onMouseLeave={e => { if (!showStudyPlanner) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
             <ClipboardList className="w-4 h-4 shrink-0" style={{ color: showStudyPlanner ? '#448361' : '#AEACA8' }} />
@@ -182,7 +207,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
               color: showNotification ? '#E03E3E' : '#57564F',
               fontWeight: showNotification ? 500 : 400,
             }}
-            onMouseEnter={e => { if (!showNotification) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+            onMouseEnter={e => {
+              prefetch('NotificationPage', () => import('./NotificationPage'));
+              if (!showNotification) (e.currentTarget as HTMLElement).style.background = '#EBEBEA';
+            }}
             onMouseLeave={e => { if (!showNotification) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
             <div className="relative shrink-0">
@@ -218,7 +246,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
               color: showSimLab ? '#2878BD' : '#57564F',
               fontWeight: showSimLab ? 500 : 400,
             }}
-            onMouseEnter={e => { if (!showSimLab) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+            onMouseEnter={e => {
+              prefetch('SimulationLab', () => import('./SimulationLab'));
+              if (!showSimLab) (e.currentTarget as HTMLElement).style.background = '#EBEBEA';
+            }}
             onMouseLeave={e => { if (!showSimLab) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
             <FlaskConical className="w-4 h-4 shrink-0" style={{ color: showSimLab ? '#2878BD' : '#AEACA8' }} />
@@ -236,7 +267,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
               color: showBlog ? '#D9730D' : '#57564F',
               fontWeight: showBlog ? 500 : 400,
             }}
-            onMouseEnter={e => { if (!showBlog) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+            onMouseEnter={e => {
+              prefetch('BlogList', () => import('./BlogList'));
+              prefetch('BlogDetail', () => import('./BlogDetail'));
+              if (!showBlog) (e.currentTarget as HTMLElement).style.background = '#EBEBEA';
+            }}
             onMouseLeave={e => { if (!showBlog) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
             <ClipboardList className="w-4 h-4 shrink-0" style={{ color: showBlog ? '#D9730D' : '#AEACA8' }} />
@@ -266,7 +301,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
                 color: isSelected ? '#1A1A1A' : '#57564F',
                 fontWeight: isSelected ? 500 : 400,
               }}
-              onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+              onMouseEnter={e => {
+                prefetch('ChapterView', () => import('./ChapterView'));
+                if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#EBEBEA';
+              }}
               onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
               <span

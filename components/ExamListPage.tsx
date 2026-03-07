@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ClipboardList, Clock, Play, RefreshCw, ChevronRight, FileText, Lock, CheckCircle } from 'lucide-react';
+import { ClipboardList, Clock, Play, RefreshCw, FileText, Lock, CheckCircle } from 'lucide-react';
 import { Exam } from '../types';
 
 const PDF_CACHE_DB = 'pv_pdf_cache';

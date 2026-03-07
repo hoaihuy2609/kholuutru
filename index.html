@@ -37,9 +37,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet" />
+  <!-- Fonts: Only load weights actually used (400,500,600,700) -->
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -165,16 +166,6 @@
     }
   </style>
 
-  <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@^0.564.0",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
-  }
-}
-  </script>
   <link rel="stylesheet" href="/index.css">
 </head>
 
@@ -234,16 +225,10 @@
     })();
   </script>
 
-  <!-- Removed Service Worker Registration per user request to disable offline caching -->
+  <!-- Cleanup old service workers -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function (registrations) {
-        for (let registration of registrations) {
-          registration.unregister().then(function (boolean) {
-            console.log("Unregistered service worker");
-          });
-        }
-      });
+      navigator.serviceWorker.getRegistrations().then(r => r.forEach(sw => sw.unregister()));
     }
   </script>
 </body>

@@ -1,7 +1,7 @@
 import { supabase } from '../src/lib/supabase';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone, GraduationCap, CloudDownload, Loader2, RefreshCw } from 'lucide-react';
+import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone, CloudDownload, Loader2, RefreshCw } from 'lucide-react';
 import { exportData, importData, getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
 import { Lesson, FileStorage, Exam } from '../types';
 
@@ -13,9 +13,11 @@ interface SettingsModalProps {
     isActivated: boolean;
     lessons: Lesson[];
     storedFiles: FileStorage;
-    onActivateSystem: (key: string, sdt: string, grade?: number) => boolean;
+    onActivateSystem: (key: string, sdt: string, grade?: number) => Promise<boolean>;
     onFetchLessons: (grade: number, onProgress?: (pct: number) => void) => Promise<{ success: boolean; lessonCount: number; fileCount: number }>;
-    onToggleAdmin: (status: boolean) => void;
+    onAdminLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    onAdminLogout: () => Promise<void>;
+    adminEmail: string | null;
     onOpenDashboard: () => void;
     onLoadExams: () => Promise<Exam[]>;
 }
@@ -32,10 +34,12 @@ const inputStyle: React.CSSProperties = {
     width: '100%',
 };
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowToast, isAdmin, isActivated, lessons, storedFiles, onActivateSystem, onFetchLessons, onToggleAdmin, onOpenDashboard, onLoadExams }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowToast, isAdmin, isActivated, lessons, storedFiles, onActivateSystem, onFetchLessons, onAdminLogin, onAdminLogout, adminEmail, onOpenDashboard, onLoadExams }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [password, setPassword] = useState('');
-    const [showPassInput, setShowPassInput] = useState(false);
+    const [adminLoginEmail, setAdminLoginEmail] = useState('');
+    const [adminLoginPassword, setAdminLoginPassword] = useState('');
+    const [showLoginForm, setShowLoginForm] = useState(false);
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
 
     const [myMachineId, setMyMachineId] = useState('');
     const [studentKeyInput, setStudentKeyInput] = useState('');
@@ -183,16 +187,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         }
     };
 
-    const handleVerifyPassword = () => {
-        const _ref = [84, 104, 97, 121, 72, 117, 121, 50, 48, 50, 54].map(c => String.fromCharCode(c)).join('');
-        if (password === _ref) {
-            onToggleAdmin(true);
-            onShowToast('Đã kích hoạt quyền quản trị viên!', 'success');
-            setShowPassInput(false);
-            setPassword('');
-        } else {
-            onShowToast('Sai mã xác thực hệ thống!', 'error');
+    const handleAdminLogin = async () => {
+        const email = adminLoginEmail.trim();
+        const pwd = adminLoginPassword;
+        if (!email) { onShowToast('Vui lòng nhập email!', 'warning'); return; }
+        if (!pwd) { onShowToast('Vui lòng nhập mật khẩu!', 'warning'); return; }
+
+        setIsLoggingIn(true);
+        try {
+            const result = await onAdminLogin(email, pwd);
+            if (result.success) {
+                onShowToast('Đăng nhập Quản trị viên thành công!', 'success');
+                setShowLoginForm(false);
+                setAdminLoginEmail('');
+                setAdminLoginPassword('');
+            } else {
+                onShowToast(result.error || 'Sai thông tin đăng nhập!', 'error');
+            }
+        } catch {
+            onShowToast('Lỗi kết nối đến máy chủ!', 'error');
+        } finally {
+            setIsLoggingIn(false);
         }
+    };
+
+    const handleAdminLogout = async () => {
+        await onAdminLogout();
+        onShowToast('Đã đăng xuất Quản trị viên!', 'success');
     };
 
     return (
@@ -242,7 +263,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                         {/* Row */}
                         <div
                             className="flex items-center justify-between px-4 py-3"
-                            style={{ borderBottom: showPassInput || !isAdmin ? '1px solid #E9E9E7' : undefined }}
+                            style={{ borderBottom: showLoginForm || !isAdmin ? '1px solid #E9E9E7' : undefined }}
                         >
                             <div className="flex items-center gap-3">
                                 <div
@@ -266,14 +287,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                             {/* Admin controls */}
                             {!isAdmin ? (
                                 <button
-                                    onClick={() => setShowPassInput(!showPassInput)}
+                                    onClick={() => setShowLoginForm(!showLoginForm)}
                                     className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
                                     style={{ background: '#F1F0EC', color: '#57564F', border: '1px solid #E9E9E7' }}
                                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
                                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
                                 >
                                     <KeyRound className="w-3.5 h-3.5" />
-                                    Mở khóa Admin
+                                    Đăng nhập Admin
                                 </button>
                             ) : (
                                 <div className="flex gap-2">
@@ -288,50 +309,72 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                         Quản lý Học viên
                                     </button>
                                     <button
-                                        onClick={() => onToggleAdmin(false)}
+                                        onClick={handleAdminLogout}
                                         className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
                                         style={{ background: '#FEF0F0', color: '#E03E3E', border: '1px solid #FECACA' }}
                                         onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FECACA'}
                                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FEF0F0'}
                                     >
-                                        Thoát Admin
+                                        Đăng xuất
                                     </button>
                                 </div>
                             )}
                         </div>
 
-                        {/* Password input or status text */}
+                        {/* Login form or status text */}
                         <div className="px-4 py-3" style={{ background: '#FAFAF9' }}>
-                            {!isAdmin && showPassInput ? (
-                                <div className="space-y-2 animate-fade-in">
+                            {!isAdmin && showLoginForm ? (
+                                <div className="space-y-2.5 animate-fade-in">
                                     <div className="relative">
                                         <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#AEACA8' }} />
                                         <input
-                                            type="password"
-                                            value={password}
-                                            onChange={e => setPassword(e.target.value)}
-                                            placeholder="Nhập mã xác thực hệ thống..."
+                                            type="email"
+                                            value={adminLoginEmail}
+                                            onChange={e => setAdminLoginEmail(e.target.value)}
+                                            placeholder="Email quản trị viên..."
                                             style={{ ...inputStyle, padding: '8px 12px 8px 36px' }}
                                             onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
                                             onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
-                                            onKeyDown={e => e.key === 'Enter' && handleVerifyPassword()}
+                                            onKeyDown={e => e.key === 'Enter' && document.getElementById('admin-pwd-input')?.focus()}
                                             autoFocus
                                         />
                                     </div>
+                                    <div className="relative">
+                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#AEACA8' }} />
+                                        <input
+                                            id="admin-pwd-input"
+                                            type="password"
+                                            value={adminLoginPassword}
+                                            onChange={e => setAdminLoginPassword(e.target.value)}
+                                            placeholder="Mật khẩu..."
+                                            style={{ ...inputStyle, padding: '8px 12px 8px 36px' }}
+                                            onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+                                            onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
+                                            onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
+                                        />
+                                    </div>
                                     <button
-                                        onClick={handleVerifyPassword}
-                                        className="w-full py-2 text-sm font-medium text-white rounded-lg transition-colors"
+                                        onClick={handleAdminLogin}
+                                        disabled={isLoggingIn}
+                                        className="w-full py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
                                         style={{ background: '#6B7CDB' }}
-                                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#5a6bc9'}
+                                        onMouseEnter={e => !isLoggingIn && ((e.currentTarget as HTMLElement).style.background = '#5a6bc9')}
                                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#6B7CDB'}
                                     >
-                                        Xác thực quyền Admin
+                                        {isLoggingIn ? (
+                                            <><Loader2 className="w-4 h-4 animate-spin" /> Đang xác thực...</>
+                                        ) : (
+                                            'Đăng nhập Quản trị viên'
+                                        )}
                                     </button>
                                 </div>
                             ) : (
                                 <p className="text-xs leading-relaxed" style={{ color: '#787774' }}>
                                     {isAdmin ? (
-                                        'Bạn đang ở chế độ Quản trị: Có toàn quyền thêm, sửa, xóa nội dung và cấp mã kích hoạt cho học sinh.'
+                                        <span className="flex items-center gap-1.5" style={{ color: '#448361', fontWeight: 500 }}>
+                                            <ShieldCheck className="w-3.5 h-3.5" />
+                                            Đăng nhập với tư cách: <span style={{ fontWeight: 700 }}>{adminEmail}</span>
+                                        </span>
                                     ) : isActivated ? (
                                         <span className="flex items-center gap-1.5" style={{ color: '#448361', fontWeight: 500 }}>
                                             <ShieldCheck className="w-3.5 h-3.5" />

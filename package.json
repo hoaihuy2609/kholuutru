@@ -10,9 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
-    "@types/crypto-js": "^4.2.2",
     "crypto-js": "^4.2.0",
-    "firebase": "^12.9.0",
     "jszip": "^3.10.1",
     "katex": "^0.16.35",
     "lucide-react": "^0.564.0",
@@ -25,6 +23,7 @@
     "remark-math": "^6.0.0"
   },
   "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
