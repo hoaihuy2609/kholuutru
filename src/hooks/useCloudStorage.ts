@@ -1,235 +1,37 @@
 import { supabase } from '../lib/supabase';
-
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import JSZip from 'jszip';
-import CryptoJS from 'crypto-js';
-import { Lesson, StoredFile, FileStorage, Exam, StudyPlanItem, NotificationItem, BlogPost, ScheduleItem } from '../../types';
+import { Lesson, StoredFile, FileStorage } from '../../types';
+
+// Shared utilities (extracted)
+import { dbGet, dbSet, dbSetBatch } from '../lib/db';
+import { xorObfuscate, xorDeobfuscate, fnvHash, getMachineId, generateActivationKey, checkActivationStatus } from '../lib/crypto';
+import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL } from '../lib/telegram';
+
+// Service modules (extracted)
+import * as examService from '../services/examService';
+import * as plannerService from '../services/plannerService';
+import * as notificationService from '../services/notificationService';
+import * as blogService from '../services/blogService';
+
+// Re-export utilities for external consumers
+export { fetchViaCloudflareProxy } from '../lib/telegram';
+export { xorObfuscate, xorDeobfuscate, getMachineId, generateActivationKey, checkActivationStatus } from '../lib/crypto';
+export { exportData, importData } from './exportImport';
 
 // Storage Keys
 const STORAGE_FILES_KEY = 'physivault_files';
 const STORAGE_LESSONS_KEY = 'physivault_lessons';
 const STORAGE_ACTIVATION_KEY = 'physivault_activated';
 const STORAGE_GRADE_KEY = 'physivault_grade';
-const DB_NAME = 'PhysiVaultDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'app_data';
-
-const TELEGRAM_CHAT_ID = '-1003889339240';
-
-const CLOUDFLARE_PROXY_URL = 'https://physivault-proxy.hoaihuy2609.workers.dev';
-
-export const fetchViaCloudflareProxy = async (fileId: string): Promise<ArrayBuffer> => {
-    const maxRetries = 3;
-    // Timeout 60s mỗi lần thử — file ZIP lớn nhất ~18MB vẫn đủ thời gian tải
-    const FETCH_TIMEOUT_MS = 60_000;
-    let lastError: any = null;
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-        try {
-            const proxyRes = await fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${fileId}`, {
-                signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!proxyRes.ok) {
-                let errorMsg = proxyRes.statusText;
-                try { const errData = await proxyRes.json(); if (errData.error) errorMsg = errData.error; } catch { }
-                // 429 = Telegram rate-limit → đợi lâu hơn
-                if (proxyRes.status === 429) {
-                    await new Promise(r => setTimeout(r, 5000));
-                } else {
-                    throw new Error(`Cloudflare Proxy Error: ${proxyRes.status} - ${errorMsg}`);
-                }
-                continue;
-            }
-            return await proxyRes.arrayBuffer();
-        } catch (e: any) {
-            clearTimeout(timeoutId);
-            lastError = e;
-            const isTimeout = e.name === 'AbortError';
-            console.warn(`[Cloudflare] Lần thử ${attempt + 1}/${maxRetries} ${isTimeout ? '(timeout)' : ''} thất bại:`, e.message);
-            if (attempt < maxRetries - 1) {
-                // Retry delay ngắn (500ms) thay vì exponential backoff chậm
-                await new Promise(r => setTimeout(r, 500));
-            }
-        }
-    }
-    throw lastError || new Error("Không thể kết nối đến Cloudflare Server.");
-};
-
-// --- Security Salts ---
-const SYSTEM_SALT = "PHV_SECURITY_2026_BY_HUY";
-
-// --- XOR Obfuscation for content ---
-const XOR_KEY = 'PHV2026';
-// Pre-compute key bytes một lần duy nhất (tránh tạo lại mỗi lần gọi hàm)
-const XOR_KEY_BYTES = new TextEncoder().encode(XOR_KEY);
-const XOR_KEY_LEN = XOR_KEY_BYTES.length;
-
-export const xorObfuscate = (data: string): string => {
-    const bytes = new TextEncoder().encode(data);
-    const len = bytes.length;
-    const result = new Uint8Array(len);
-    const kLen = XOR_KEY_LEN;
-    const alignedLen = len - (len % kLen);
-
-    for (let i = 0; i < alignedLen; i += kLen) {
-        for (let j = 0; j < kLen; j++) {
-            result[i + j] = bytes[i + j] ^ XOR_KEY_BYTES[j];
-        }
-    }
-    for (let i = alignedLen; i < len; i++) {
-        result[i] = bytes[i] ^ XOR_KEY_BYTES[i - alignedLen];
-    }
-
-    const CHUNK_SIZE = 0x8000;
-    let binaryParts: string[] = [];
-    for (let i = 0; i < len; i += CHUNK_SIZE) {
-        const chunk = result.subarray(i, i + CHUNK_SIZE);
-        // @ts-ignore
-        binaryParts.push(String.fromCharCode.apply(null, chunk));
-    }
-    return btoa(binaryParts.join(''));
-};
-
-export const xorDeobfuscate = (encoded: string): string => {
-    try {
-        const binaryStr = atob(encoded);
-        const len = binaryStr.length;
-        const result = new Uint8Array(len);
-        const kLen = XOR_KEY_LEN;
-        const alignedLen = len - (len % kLen);
-
-        for (let i = 0; i < alignedLen; i += kLen) {
-            for (let j = 0; j < kLen; j++) {
-                result[i + j] = binaryStr.charCodeAt(i + j) ^ XOR_KEY_BYTES[j];
-            }
-        }
-        for (let i = alignedLen; i < len; i++) {
-            result[i] = binaryStr.charCodeAt(i) ^ XOR_KEY_BYTES[i - alignedLen];
-        }
-
-        return new TextDecoder().decode(result);
-    } catch {
-        return encoded;
-    }
-};
-
-// --- Fast FNV-1a hash for version fingerprinting ---
-const fnvHash = (s: string): string => {
-    let h = 0x811c9dc5;
-    for (let i = 0; i < s.length; i++) {
-        h ^= s.charCodeAt(i);
-        h = Math.imul(h, 0x01000193);
-    }
-    return (h >>> 0).toString(36);
-};
-
-// --- IndexedDB Helper (cached connection) ---
-let _dbCache: IDBDatabase | null = null;
-
-const openDB = (): Promise<IDBDatabase> => {
-    if (_dbCache) return Promise.resolve(_dbCache);
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onupgradeneeded = () => {
-            const db = request.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
-            }
-        };
-        request.onsuccess = () => {
-            _dbCache = request.result;
-            _dbCache.onclose = () => { _dbCache = null; };
-            _dbCache.onversionchange = () => { _dbCache?.close(); _dbCache = null; };
-            resolve(_dbCache);
-        };
-        request.onerror = () => reject(request.error);
-    });
-};
-
-const dbGet = async (key: string): Promise<any> => {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.get(key);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-};
-
-const dbSet = async (key: string, value: any): Promise<void> => {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.put(value, key);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-    });
-};
-
-const dbSetBatch = async (entries: [string, any][]): Promise<void> => {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-        for (const [key, value] of entries) {
-            store.put(value, key);
-        }
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-    });
-};
 
 interface ExportData {
     version: number;
     exportedAt: number;
     lessons: Lesson[];
-    files: {
-        [lessonId: string]: StoredFile[]
-    };
+    files: { [lessonId: string]: StoredFile[] };
     isEncrypted?: boolean;
 }
-
-// --- Security Helpers ---
-
-export const getMachineId = (): string => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const txt = 'PhysiVault_Fingerprint_2026';
-    if (ctx) {
-        ctx.textBaseline = "top";
-        ctx.font = "14px 'Arial'";
-        ctx.textBaseline = "alphabetic";
-        ctx.fillStyle = "#f60";
-        ctx.fillRect(125, 1, 62, 20);
-        ctx.fillStyle = "#069";
-        ctx.fillText(txt, 2, 15);
-        ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
-        ctx.fillText(txt, 4, 17);
-    }
-    const fingerprint = canvas.toDataURL();
-    const hash = CryptoJS.SHA256(fingerprint + (navigator.userAgent || '') + (screen.height * screen.width)).toString();
-    return hash.substring(0, 12).toUpperCase().replace(/(.{4})/g, '$1-').slice(0, -1);
-};
-
-export const generateActivationKey = (machineId: string, sdt: string = ""): string => {
-    // Chuẩn hóa SĐT: Loại bỏ số 0 ở đầu để khớp với logic trên Google Sheets
-    const normalizedSdt = sdt.replace(/^0+/, "");
-    const rawData = machineId + normalizedSdt + SYSTEM_SALT;
-    const hash = CryptoJS.SHA256(rawData).toString();
-
-    // Lấy 12 ký tự đầu của hash để tạo mã PV-XXXX-YYYY
-    return "PV-" + hash.substring(0, 12).toUpperCase().replace(/(.{4})/g, '$1-').slice(0, -1);
-};
-
-export const checkActivationStatus = (): boolean => {
-    const status = localStorage.getItem(STORAGE_ACTIVATION_KEY);
-    return status === 'true';
-};
 
 export const useCloudStorage = () => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -249,7 +51,6 @@ export const useCloudStorage = () => {
                 if (!savedLessons && !savedFiles) {
                     const localFiles = localStorage.getItem(STORAGE_FILES_KEY);
                     const localLessons = localStorage.getItem(STORAGE_LESSONS_KEY);
-
                     if (localFiles || localLessons) {
                         savedLessons = localLessons ? JSON.parse(localLessons) : [];
                         savedFiles = localFiles ? JSON.parse(localFiles) : {};
@@ -266,11 +67,10 @@ export const useCloudStorage = () => {
                 setLoading(false);
             }
         };
-
         initData();
     }, []);
 
-    // Sync state to IndexedDB (debounced to avoid excessive writes during rapid updates)
+    // Sync state to IndexedDB (debounced)
     const _dbSyncTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
     useEffect(() => {
         if (!loading) {
@@ -288,62 +88,38 @@ export const useCloudStorage = () => {
         return () => clearTimeout(_dbSyncTimers.current[STORAGE_FILES_KEY]);
     }, [storedFiles, loading]);
 
+    // ── Lesson CRUD ──
+
     const addLesson = async (name: string, chapterId: string) => {
-        const newLesson: Lesson = {
-            id: Date.now().toString(),
-            name,
-            chapterId,
-            createdAt: Date.now()
-        };
+        const newLesson: Lesson = { id: Date.now().toString(), name, chapterId, createdAt: Date.now() };
         setLessons(prev => [newLesson, ...prev]);
-        return Promise.resolve();
     };
 
     const deleteLesson = async (lessonId: string) => {
         setLessons(prev => prev.filter(l => l.id !== lessonId));
-        setStoredFiles(prev => {
-            const newFiles = { ...prev };
-            delete newFiles[lessonId];
-            return newFiles;
-        });
-        return Promise.resolve();
+        setStoredFiles(prev => { const newFiles = { ...prev }; delete newFiles[lessonId]; return newFiles; });
     };
 
     const uploadFiles = async (files: File[], targetId: string, category?: string) => {
-        const filePromises = files.map(file => {
-            return new Promise<StoredFile>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const result = e.target?.result as string;
-                    resolve({
-                        id: Date.now().toString() + Math.random().toString(36).substring(7),
-                        name: file.name,
-                        type: file.type,
-                        size: file.size,
-                        url: result,
-                        uploadDate: Date.now(),
-                        category: category,
-                    });
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
+        const filePromises = files.map(file => new Promise<StoredFile>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve({
+                id: Date.now().toString() + Math.random().toString(36).substring(7),
+                name: file.name, type: file.type, size: file.size,
+                url: e.target?.result as string, uploadDate: Date.now(), category,
             });
-        });
-
-        const newStoredFiles = await Promise.all(filePromises);
-        setStoredFiles(prev => ({
-            ...prev,
-            [targetId]: [...(prev[targetId] || []), ...newStoredFiles]
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
         }));
+        const newStoredFiles = await Promise.all(filePromises);
+        setStoredFiles(prev => ({ ...prev, [targetId]: [...(prev[targetId] || []), ...newStoredFiles] }));
     };
 
     const deleteFile = async (fileId: string, targetId: string) => {
-        setStoredFiles(prev => ({
-            ...prev,
-            [targetId]: prev[targetId]?.filter(f => f.id !== fileId) || []
-        }));
-        return Promise.resolve();
+        setStoredFiles(prev => ({ ...prev, [targetId]: prev[targetId]?.filter(f => f.id !== fileId) || [] }));
     };
+
+    // ── Activation & Verification ──
 
     const activateSystem = async (key: string, sdt: string = "", grade?: number): Promise<boolean> => {
         const machineId = getMachineId();
@@ -351,20 +127,14 @@ export const useCloudStorage = () => {
         if (key === expectedKey) {
             let phoneStr = String(sdt).trim();
             if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
-
             let dbGrade = grade;
-
             try {
                 const { data, error } = await supabase.from('students').select('is_active, grade').eq('phone', phoneStr).single();
-                if (error || !data || !data.is_active) {
-                    return false; // Student is kicked or doesn't exist
-                }
+                if (error || !data || !data.is_active) return false;
                 if (data.grade) dbGrade = data.grade;
             } catch (err) {
-                // If offline or network error, fallback to local activation if key is correct
                 console.warn("Supabase check failed during activation, falling back to local verification.");
             }
-
             localStorage.setItem(STORAGE_ACTIVATION_KEY, 'true');
             if (sdt) localStorage.setItem('pv_activated_sdt', sdt);
             if (dbGrade) localStorage.setItem(STORAGE_GRADE_KEY, dbGrade.toString());
@@ -374,68 +144,70 @@ export const useCloudStorage = () => {
         return false;
     };
 
-    // --- Telegram Cloud Sync: Fetch bài giảng theo grade ---
+    const verifyAccess = async (): Promise<'ok' | 'kicked' | 'offline_expired'> => {
+        const sdt = localStorage.getItem('pv_activated_sdt');
+        const isCurrentlyActivated = localStorage.getItem(STORAGE_ACTIVATION_KEY) === 'true';
+        if (!isCurrentlyActivated || !sdt) return 'ok';
+        const machineId = getMachineId();
+        try {
+            let phoneStr = String(sdt).trim();
+            if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
+            const { data, error } = await supabase.from('students').select('is_active, machine_id').eq('phone', phoneStr).single();
+            if (error || !data || !data.is_active || data.machine_id !== machineId) {
+                localStorage.removeItem(STORAGE_ACTIVATION_KEY);
+                setIsActivated(false);
+                return 'kicked';
+            }
+            localStorage.setItem('pv_last_check', Date.now().toString());
+            return 'ok';
+        } catch (e) {
+            const lastCheck = localStorage.getItem('pv_last_check');
+            if (!lastCheck) return 'offline_expired';
+            return (Date.now() - parseInt(lastCheck)) > 24 * 60 * 60 * 1000 ? 'offline_expired' : 'ok';
+        }
+    };
+
+    // ── Telegram Cloud Sync: Fetch ──
+
     const fetchLessonsFromGitHub = async (grade: number, onProgress?: (pct: number) => void): Promise<{ success: boolean; lessonCount: number; fileCount: number; skipped?: boolean }> => {
         console.log(`[Fetch] Bắt đầu fetch Lớp ${grade}`);
         const t_fetch_total = performance.now();
 
         try {
-            // Khởi động đọc local data ngay (chạy song song với Phase 1+2, không chờ network)
-            const localDataPromise = Promise.all([
-                dbGet(STORAGE_LESSONS_KEY),
-                dbGet(STORAGE_FILES_KEY)
-            ]);
+            const localDataPromise = Promise.all([dbGet(STORAGE_LESSONS_KEY), dbGet(STORAGE_FILES_KEY)]);
 
-            // Speculative download: dùng cached ID để bắt đầu tải index ngay
-            // trong khi Supabase query chạy song song. 99% cached ID = Supabase ID.
             const cachedIndexFileId = localStorage.getItem(`pv_sync_file_id_${grade}`);
             let speculativeIndexPromise: Promise<ArrayBuffer> | null = null;
-            if (cachedIndexFileId) {
-                speculativeIndexPromise = fetchViaCloudflareProxy(cachedIndexFileId);
-            }
+            if (cachedIndexFileId) speculativeIndexPromise = fetchViaCloudflareProxy(cachedIndexFileId);
 
-            // Giai đoạn 1: Lấy file ID từ Supabase (chạy song song với speculative download)
             const t1 = performance.now();
             let indexFileId = cachedIndexFileId;
             try {
-                const { data, error } = await supabase
-                    .from('vault_index')
-                    .select('telegram_file_id')
-                    .eq('grade', grade)
-                    .single();
-                if (data && data.telegram_file_id) {
-                    indexFileId = data.telegram_file_id;
-                }
-            } catch (e) {
-                console.error("Lỗi lấy index từ Supabase", e);
-            }
+                const { data } = await supabase.from('vault_index').select('telegram_file_id').eq('grade', grade).single();
+                if (data?.telegram_file_id) indexFileId = data.telegram_file_id;
+            } catch (e) { console.error("Lỗi lấy index từ Supabase", e); }
             console.log(`[Fetch] Giai đoạn 1 (Supabase): ${(performance.now() - t1).toFixed(0)}ms`);
             if (!indexFileId) throw new Error(`Hệ thống chưa có dữ liệu cho Lớp ${grade}. Thầy vui lòng Sync trước nhé!`);
 
-            // Skip fetch: nếu indexFileId chưa đổi → học sinh đã có bản mới nhất
             const lastFetchedId = localStorage.getItem(`pv_last_fetched_index_${grade}`);
             if (lastFetchedId && lastFetchedId === indexFileId) {
-                // Hủy speculative download nếu có (không cần nữa)
                 speculativeIndexPromise?.catch(() => {});
                 console.log(`[Fetch] ⚡ Skip — đã có bản mới nhất (${(performance.now() - t_fetch_total).toFixed(0)}ms)`);
                 if (onProgress) onProgress(100);
                 return { success: true, lessonCount: 0, fileCount: 0, skipped: true };
             }
 
-            // Giai đoạn 2: Lấy index data (speculative hit hoặc fresh download)
             const t2 = performance.now();
             let indexRaw: ArrayBuffer;
             if (indexFileId === cachedIndexFileId && speculativeIndexPromise) {
                 indexRaw = await speculativeIndexPromise;
-                console.log(`[Fetch] Giai đoạn 2 (Speculative HIT — song song Phase 1): ${(performance.now() - t2).toFixed(0)}ms`);
+                console.log(`[Fetch] Giai đoạn 2 (Speculative HIT): ${(performance.now() - t2).toFixed(0)}ms`);
             } else {
                 indexRaw = await fetchViaCloudflareProxy(indexFileId);
-                console.log(`[Fetch] Giai đoạn 2 (Fresh download — ID thay đổi): ${(performance.now() - t2).toFixed(0)}ms`);
+                console.log(`[Fetch] Giai đoạn 2 (Fresh download): ${(performance.now() - t2).toFixed(0)}ms`);
             }
-            const indexStr = new TextDecoder().decode(indexRaw);
-            const indexData = JSON.parse(xorDeobfuscate(indexStr));
+            const indexData = JSON.parse(xorDeobfuscate(new TextDecoder().decode(indexRaw)));
 
-            // Local data đã chạy song song từ đầu — lấy kết quả (thường đã xong)
             const [rawLessons, rawFiles] = await localDataPromise;
             const newLessonsMap = new Map();
             (rawLessons || []).forEach((l: Lesson) => newLessonsMap.set(l.id, l));
@@ -443,7 +215,6 @@ export const useCloudStorage = () => {
             let totalLessonCount = 0;
             let totalFileCount = 0;
 
-            // Helper: gộp dữ liệu từ 1 payload vào state
             const mergePayload = (data: any) => {
                 if (!data) return;
                 (data.lessons || []).forEach((l: Lesson) => newLessonsMap.set(l.id, l));
@@ -452,186 +223,120 @@ export const useCloudStorage = () => {
                 totalFileCount += Object.values((data.files || {}) as FileStorage).flat().length;
             };
 
-            // --- Lấy tất cả file IDs cần fetch ---
             let allIds: string[] = [];
             if (indexData.zipFileIds || indexData.zipFileId) {
-                // Format V3/V4: Offline Archive ZIP
                 const allZipIds: string[] = indexData.zipFileIds || [indexData.zipFileId];
                 if (onProgress) onProgress(10);
 
                 const CONCURRENCY = 8;
                 let downloadedParts = 0;
-
-                // Incremental fetch: so sánh version → chỉ tải chunk có thay đổi
                 let zIdsToDownload: string[] = allZipIds;
                 let isIncremental = false;
 
                 if (indexData.chunkContents && indexData.lessonVersions) {
-                    const localVersions: Record<string, string> = JSON.parse(
-                        localStorage.getItem(`pv_lesson_versions_${grade}`) || '{}'
-                    );
-
-                    // Tìm payload mới hoặc đã thay đổi
+                    const localVersions: Record<string, string> = JSON.parse(localStorage.getItem(`pv_lesson_versions_${grade}`) || '{}');
                     const changedIds = new Set<string>();
                     for (const [id, ver] of Object.entries(indexData.lessonVersions as Record<string, string>)) {
                         if (localVersions[id] !== ver) changedIds.add(id);
                     }
-
-                    // Tìm payload đã bị xóa (có trong local nhưng không còn trên remote)
                     const remoteIds = new Set(Object.keys(indexData.lessonVersions as Record<string, string>));
                     const deletedIds = Object.keys(localVersions).filter(id => !remoteIds.has(id));
 
                     if (changedIds.size === 0 && deletedIds.length === 0) {
                         localStorage.setItem(`pv_last_fetched_index_${grade}`, indexFileId!);
                         localStorage.setItem(`pv_lesson_versions_${grade}`, JSON.stringify(indexData.lessonVersions));
-                        console.log(`[Fetch] ⚡ Incremental skip — không có thay đổi (${(performance.now() - t_fetch_total).toFixed(0)}ms)`);
                         if (onProgress) onProgress(100);
                         return { success: true, lessonCount: 0, fileCount: 0, skipped: true };
                     }
 
-                    // Map changed IDs → chunks chứa chúng
                     const chunkContents = indexData.chunkContents as Record<string, string[]>;
-                    zIdsToDownload = allZipIds.filter(zipId => {
-                        const payloadIds = chunkContents[zipId] || [];
-                        return payloadIds.some(id => changedIds.has(id));
-                    });
-
-                    // Xử lý bài đã xóa
-                    for (const id of deletedIds) {
-                        newLessonsMap.delete(id);
-                        delete newFiles[id];
-                        if (id.startsWith('ch_')) delete newFiles[id.substring(3)];
-                    }
-
+                    zIdsToDownload = allZipIds.filter(zipId => (chunkContents[zipId] || []).some(id => changedIds.has(id)));
+                    for (const id of deletedIds) { newLessonsMap.delete(id); delete newFiles[id]; if (id.startsWith('ch_')) delete newFiles[id.substring(3)]; }
                     isIncremental = true;
                     console.log(`[Fetch] Incremental: ${changedIds.size} thay đổi, ${deletedIds.length} xóa → tải ${zIdsToDownload.length}/${allZipIds.length} chunk(s)`);
                 }
 
                 const totalChunks = zIdsToDownload.length;
-
                 const processZipPart = async (fileId: string): Promise<void> => {
-                    const t_part = performance.now();
                     const arrayBuf = await fetchViaCloudflareProxy(fileId);
-                    console.log(`[Fetch]   └ Tải ZIP part (${(arrayBuf.byteLength / 1024 / 1024).toFixed(2)} MB): ${(performance.now() - t_part).toFixed(0)}ms`);
-
-                    const t_unzip = performance.now();
                     const zip = new JSZip();
                     const unzipped = await zip.loadAsync(arrayBuf);
-                    console.log(`[Fetch]   └ Giải nén ZIP: ${(performance.now() - t_unzip).toFixed(0)}ms`);
-
-                    const t_decode = performance.now();
                     const filePromises: Promise<void>[] = [];
-                    unzipped.forEach((relativePath, fileObj) => {
+                    unzipped.forEach((_, fileObj) => {
                         if (!fileObj.dir) {
-                            filePromises.push(
-                                fileObj.async("string").then(content => {
-                                    const firstChar = content.charCodeAt(0);
-                                    const parsedData = (firstChar === 123 || firstChar === 91)
-                                        ? JSON.parse(content)
-                                        : JSON.parse(xorDeobfuscate(content));
-                                    mergePayload(parsedData);
-                                })
-                            );
+                            filePromises.push(fileObj.async("string").then(content => {
+                                const fc = content.charCodeAt(0);
+                                mergePayload((fc === 123 || fc === 91) ? JSON.parse(content) : JSON.parse(xorDeobfuscate(content)));
+                            }));
                         }
                     });
                     await Promise.all(filePromises);
-                    console.log(`[Fetch]   └ Decode + merge: ${(performance.now() - t_decode).toFixed(0)}ms`);
-
                     downloadedParts++;
                     if (onProgress) onProgress(Math.floor(10 + (downloadedParts / totalChunks) * 80));
                 };
 
-                // Giai đoạn 3: Tải ZIP chunks — semaphore pattern
                 const t3 = performance.now();
-                console.log(`[Fetch] Giai đoạn 3: Tải ${totalChunks}${isIncremental ? `/${allZipIds.length}` : ''} ZIP chunk(s), concurrency=${CONCURRENCY}`);
                 try {
                     const pool = new Set<Promise<void>>();
                     for (const id of zIdsToDownload) {
                         const p = processZipPart(id).then(() => { pool.delete(p); });
                         pool.add(p);
-                        if (pool.size >= CONCURRENCY) {
-                            await Promise.race(pool);
-                        }
+                        if (pool.size >= CONCURRENCY) await Promise.race(pool);
                     }
                     if (pool.size > 0) await Promise.all(pool);
-                } catch (err: any) {
-                    console.error('Error fetching zip chunks:', err);
-                    throw new Error(`Tải đoạn dữ liệu thất bại. Vui lòng thử tải lại.`);
-                }
-                console.log(`[Fetch] Giai đoạn 3 (Tải + giải nén ZIP): ${(performance.now() - t3).toFixed(0)}ms`);
-
+                } catch (err: any) { throw new Error(`Tải đoạn dữ liệu thất bại. Vui lòng thử tải lại.`); }
+                console.log(`[Fetch] Giai đoạn 3: ${(performance.now() - t3).toFixed(0)}ms`);
                 if (onProgress) onProgress(90);
             } else if (indexData.lessonFileIds) {
-                // Format mới V2: flat array
                 allIds = indexData.lessonFileIds as string[];
             } else if (indexData.chapterFileIds) {
-                // Format cũ V1: { chId: fileId }
                 allIds = Object.values(indexData.chapterFileIds as Record<string, string>);
             }
 
-            // V1/V2: semaphore pattern
             if (allIds.length > 0) {
                 const CONCURRENCY = 8;
                 const pool = new Set<Promise<void>>();
                 for (const id of allIds) {
                     const p = (async () => {
                         const buf = await fetchViaCloudflareProxy(id);
-                        const str = new TextDecoder().decode(buf);
-                        mergePayload(JSON.parse(xorDeobfuscate(str)));
+                        mergePayload(JSON.parse(xorDeobfuscate(new TextDecoder().decode(buf))));
                     })().then(() => { pool.delete(p); });
                     pool.add(p);
-                    if (pool.size >= CONCURRENCY) {
-                        await Promise.race(pool);
-                    }
+                    if (pool.size >= CONCURRENCY) await Promise.race(pool);
                 }
                 if (pool.size > 0) await Promise.all(pool);
             }
 
-            // Giai đoạn 4: Lưu vào IndexedDB (1 transaction duy nhất)
             const t4 = performance.now();
             const uniqueLessons = Array.from(newLessonsMap.values()) as Lesson[];
-            await dbSetBatch([
-                [STORAGE_LESSONS_KEY, uniqueLessons],
-                [STORAGE_FILES_KEY, newFiles]
-            ]);
+            await dbSetBatch([[STORAGE_LESSONS_KEY, uniqueLessons], [STORAGE_FILES_KEY, newFiles]]);
             setLessons(uniqueLessons);
             setStoredFiles(newFiles);
-            console.log(`[Fetch] Giai đoạn 4 (Lưu IndexedDB): ${(performance.now() - t4).toFixed(0)}ms`);
-            console.log(`[Fetch] ✅ Tổng thời gian: ${((performance.now() - t_fetch_total) / 1000).toFixed(2)}s | ${totalLessonCount} bài, ${totalFileCount} file`);
+            console.log(`[Fetch] Giai đoạn 4: ${(performance.now() - t4).toFixed(0)}ms`);
+            console.log(`[Fetch] ✅ Tổng: ${((performance.now() - t_fetch_total) / 1000).toFixed(2)}s | ${totalLessonCount} bài, ${totalFileCount} file`);
 
-            // Ghi nhận fetch thành công + lesson versions cho incremental lần sau
             localStorage.setItem(`pv_last_fetched_index_${grade}`, indexFileId!);
-            if (indexData.lessonVersions) {
-                localStorage.setItem(`pv_lesson_versions_${grade}`, JSON.stringify(indexData.lessonVersions));
-            }
+            if (indexData.lessonVersions) localStorage.setItem(`pv_lesson_versions_${grade}`, JSON.stringify(indexData.lessonVersions));
 
             return { success: true, lessonCount: totalLessonCount, fileCount: totalFileCount };
-        } catch (err: any) {
-            throw new Error(`Sync thất bại: ${err.message}`);
-        }
+        } catch (err: any) { throw new Error(`Sync thất bại: ${err.message}`); }
     };
 
-    // --- Telegram Cloud Sync: Push lên Telegram (V3 — ZIP Archive) ---
+    // ── Telegram Cloud Sync: Push ──
+
     const syncToGitHub = async (grade: number, lessonsToSync: Lesson[], filesToSync: FileStorage): Promise<string> => {
         setSyncProgress(1);
-
         if (lessonsToSync.length === 0 && Object.keys(filesToSync).length === 0) {
             throw new Error('Này bro, chưa có bài giảng hay tài liệu nào để Sync đâu! Hãy thêm ít nhất 1 bài nhé.');
         }
 
-
-        // Xác định file cấp chương (key không phải lessonId)
         const lessonIds = new Set(lessonsToSync.map(l => l.id));
         const fileOnlyChapterIds = Object.keys(filesToSync).filter(k => !lessonIds.has(k));
 
-        // Tạo danh sách payloads: 1 payload/lesson (+ riêng cho file cấp chương)
         type PayloadEntry = { chapterId: string; lessons: Lesson[]; files: FileStorage };
         const payloads: PayloadEntry[] = [];
-
         for (const chId of fileOnlyChapterIds) {
-            if (filesToSync[chId]?.length) {
-                payloads.push({ chapterId: chId, lessons: [], files: { [chId]: filesToSync[chId] } });
-            }
+            if (filesToSync[chId]?.length) payloads.push({ chapterId: chId, lessons: [], files: { [chId]: filesToSync[chId] } });
         }
         for (const lesson of lessonsToSync) {
             const lessonFiles: FileStorage = {};
@@ -639,14 +344,12 @@ export const useCloudStorage = () => {
             payloads.push({ chapterId: lesson.chapterId, lessons: [lesson], files: lessonFiles });
         }
 
-        // Sort payloads by stable key → cùng nội dung luôn rơi vào cùng chunk
         payloads.sort((a, b) => {
             const idA = a.lessons[0]?.id || `ch_${a.chapterId}`;
             const idB = b.lessons[0]?.id || `ch_${b.chapterId}`;
             return idA < idB ? -1 : idA > idB ? 1 : 0;
         });
 
-        // Helper upload 1 blob lên Telegram với retry khi 429
         const uploadBlob = async (blob: Blob, fileName: string, onProgress?: (loaded: number) => void): Promise<string> => {
             const MAX_RETRIES = 5;
             for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -655,53 +358,36 @@ export const useCloudStorage = () => {
                 formData.append('document', blob, fileName);
                 const result = await new Promise<{ ok: boolean; fileId?: string; retryAfter?: number; error?: string }>((resolve) => {
                     const xhr = new XMLHttpRequest();
-                    xhr.open('POST', `https://physivault-proxy.hoaihuy2609.workers.dev/proxy/sendDocument`);
+                    xhr.open('POST', `${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`);
                     xhr.setRequestHeader('Authorization', 'Bearer PV_ADMIN_SECURE_KEY_2026');
                     xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(e.loaded); };
                     xhr.onload = () => {
                         const data = JSON.parse(xhr.responseText);
-                        if (xhr.status === 200 && data.ok) {
-                            resolve({ ok: true, fileId: data.result.document.file_id });
-                        } else if (xhr.status === 429) {
-                            resolve({ ok: false, retryAfter: (data?.parameters?.retry_after || 30) as number });
-                        } else {
-                            resolve({ ok: false, error: `HTTP ${xhr.status}: ${xhr.responseText.slice(0, 150)}` });
-                        }
+                        if (xhr.status === 200 && data.ok) resolve({ ok: true, fileId: data.result.document.file_id });
+                        else if (xhr.status === 429) resolve({ ok: false, retryAfter: (data?.parameters?.retry_after || 30) as number });
+                        else resolve({ ok: false, error: `HTTP ${xhr.status}: ${xhr.responseText.slice(0, 150)}` });
                     };
                     xhr.onerror = () => resolve({ ok: false, error: 'Network Error' });
                     xhr.send(formData);
                 });
                 if (result.ok && result.fileId) return result.fileId;
-                if (result.retryAfter) {
-                    await new Promise(r => setTimeout(r, (result.retryAfter! + 1) * 1000));
-                    continue;
-                }
+                if (result.retryAfter) { await new Promise(r => setTimeout(r, (result.retryAfter! + 1) * 1000)); continue; }
                 throw new Error(result.error || 'Upload thất bại');
             }
             throw new Error('Quá 5 lần thử lại — Telegram đang bị giới hạn.');
         };
 
-        // --- V3 Zip Archive Chunking (with incremental fetch manifest) ---
         const MAX_CHUNK_SIZE = 18 * 1024 * 1024;
         const zipChunks: JSZip[] = [];
         let currentZip = new JSZip();
         let currentChunkSize = 0;
-
-        // Manifest: track payload IDs per chunk + version fingerprints
         const chunkPayloadIds: string[][] = [];
         let currentPayloadIds: string[] = [];
         const lessonVersions: Record<string, string> = {};
 
-        console.time('[Sync] Giai đoạn 1: XOR encode + pack ZIP');
         for (const p of payloads) {
             const payloadId = p.lessons[0]?.id || `ch_${p.chapterId}`;
-
-            // Version fingerprint: lesson metadata + file IDs (fast, avoids hashing MB of base64)
-            const vParts = [
-                p.chapterId,
-                ...p.lessons.map(l => `${l.id}:${l.name}:${l.createdAt}`),
-                ...Object.values(p.files).flat().map(f => `${f.id}:${f.size}`)
-            ];
+            const vParts = [p.chapterId, ...p.lessons.map(l => `${l.id}:${l.name}:${l.createdAt}`), ...Object.values(p.files).flat().map(f => `${f.id}:${f.size}`)];
             lessonVersions[payloadId] = fnvHash(vParts.join('|'));
 
             const content = xorObfuscate(JSON.stringify({ ...p, syncedAt: Date.now() }));
@@ -715,99 +401,55 @@ export const useCloudStorage = () => {
                 currentZip = new JSZip();
                 currentChunkSize = 0;
             }
-
             currentPayloadIds.push(payloadId);
             currentZip.file(fileName, content);
             currentChunkSize += contentBytes;
         }
-        if (currentChunkSize > 0) {
-            chunkPayloadIds.push(currentPayloadIds);
-            zipChunks.push(currentZip);
-        }
-        console.timeEnd('[Sync] Giai đoạn 1: XOR encode + pack ZIP');
-        console.log(`[Sync] Số chunk ZIP: ${zipChunks.length} | ${Object.keys(lessonVersions).length} payloads tracked`);
+        if (currentChunkSize > 0) { chunkPayloadIds.push(currentPayloadIds); zipChunks.push(currentZip); }
 
-        // Incremental sync: compare chunk fingerprints → skip unchanged chunks
-        const prevChunkMap: Record<string, string> = JSON.parse(
-            localStorage.getItem(`pv_sync_chunks_${grade}`) || '{}'
-        );
-
-        // Fingerprint mỗi chunk = hash(sorted payloadId:version pairs)
-        const chunkFingerprints: string[] = chunkPayloadIds.map(ids =>
-            fnvHash(ids.map(id => `${id}:${lessonVersions[id]}`).sort().join(','))
-        );
+        const prevChunkMap: Record<string, string> = JSON.parse(localStorage.getItem(`pv_sync_chunks_${grade}`) || '{}');
+        const chunkFingerprints: string[] = chunkPayloadIds.map(ids => fnvHash(ids.map(id => `${id}:${lessonVersions[id]}`).sort().join(',')));
 
         const finalZipFileIds: string[] = new Array(zipChunks.length);
         const chunksToUpload: number[] = [];
-
         for (let i = 0; i < zipChunks.length; i++) {
             const fp = chunkFingerprints[i];
-            if (prevChunkMap[fp]) {
-                finalZipFileIds[i] = prevChunkMap[fp];
-                console.log(`[Sync] ZIP chunk ${i + 1}: unchanged → reuse`);
-            } else {
-                chunksToUpload.push(i);
-            }
+            if (prevChunkMap[fp]) { finalZipFileIds[i] = prevChunkMap[fp]; } else { chunksToUpload.push(i); }
         }
-        console.log(`[Sync] Incremental: ${zipChunks.length - chunksToUpload.length}/${zipChunks.length} chunks reused, ${chunksToUpload.length} to upload`);
 
-        // Monotonic progress
         let _peakProgress = 0;
-        const setMonotonicProgress = (pct: number) => {
-            if (pct > _peakProgress) {
-                _peakProgress = pct;
-                setSyncProgress(pct);
-            }
-        };
+        const setMonotonicProgress = (pct: number) => { if (pct > _peakProgress) { _peakProgress = pct; setSyncProgress(pct); } };
 
-        // Pipeline: generate + upload chỉ chunks thay đổi
         if (chunksToUpload.length > 0) {
             const uploadedPerPart: number[] = new Array(chunksToUpload.length).fill(0);
             let estimatedTotalSize = chunksToUpload.length * 5 * 1024 * 1024;
 
-            console.time('[Sync] Giai đoạn 2+3: Generate + Upload pipeline');
             const uploadPromises: Promise<void>[] = [];
             for (let u = 0; u < chunksToUpload.length; u++) {
                 const i = chunksToUpload[u];
-                const z = zipChunks[i];
-                const zipBlob = await z.generateAsync(
+                const zipBlob = await zipChunks[i].generateAsync(
                     { type: 'blob', compression: "DEFLATE", compressionOptions: { level: 1 } },
-                    (meta) => {
-                        const globalPercent = Math.floor((u + meta.percent / 100) * (20 / chunksToUpload.length));
-                        setMonotonicProgress(globalPercent);
-                    }
+                    (meta) => { setMonotonicProgress(Math.floor((u + meta.percent / 100) * (20 / chunksToUpload.length))); }
                 );
-                console.log(`[Sync] ZIP part ${i + 1}: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
                 estimatedTotalSize = Math.max(estimatedTotalSize, zipBlob.size * chunksToUpload.length);
-
                 const uploadIdx = u;
                 const chunkIdx = i;
                 uploadPromises.push(
                     uploadBlob(zipBlob, `vault_g${grade}_v3_part${i + 1}.zip`, (loaded) => {
                         uploadedPerPart[uploadIdx] = loaded;
                         const totalLoaded = uploadedPerPart.reduce((a, b) => a + b, 0);
-                        const globalPercent = 20 + Math.floor((totalLoaded / estimatedTotalSize) * 75);
-                        setMonotonicProgress(Math.min(globalPercent, 95));
-                    }).then(fileId => {
-                        finalZipFileIds[chunkIdx] = fileId;
-                    })
+                        setMonotonicProgress(Math.min(20 + Math.floor((totalLoaded / estimatedTotalSize) * 75), 95));
+                    }).then(fileId => { finalZipFileIds[chunkIdx] = fileId; })
                 );
             }
             await Promise.all(uploadPromises);
-            console.timeEnd('[Sync] Giai đoạn 2+3: Generate + Upload pipeline');
         } else {
-            console.log('[Sync] Giai đoạn 2+3: Tất cả chunks unchanged → skip generate + upload');
             setMonotonicProgress(95);
         }
 
-        // Gửi file Index V3
-        console.time('[Sync] Giai đoạn 4: Upload index + Supabase');
         setSyncProgress(95);
         const indexPayload = {
-            grade,
-            zipFileIds: finalZipFileIds,
-            totalLessons: lessonsToSync.length,
-            updatedAt: Date.now(),
+            grade, zipFileIds: finalZipFileIds, totalLessons: lessonsToSync.length, updatedAt: Date.now(),
             chunkContents: Object.fromEntries(finalZipFileIds.map((id, i) => [id, chunkPayloadIds[i]])),
             lessonVersions,
         };
@@ -817,890 +459,83 @@ export const useCloudStorage = () => {
         indexForm.append('document', indexBlob, `index_grade${grade}_v3.json`);
         indexForm.append('caption', `[INDEX-V3-ZIP] Lớp ${grade} | ${finalZipFileIds.length} phần`);
 
-        const indexRes = await fetch(`https://physivault-proxy.hoaihuy2609.workers.dev/proxy/sendDocument`, {
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer PV_ADMIN_SECURE_KEY_2026' },
-            body: indexForm
+        const indexRes = await fetch(`${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`, {
+            method: 'POST', headers: { 'Authorization': 'Bearer PV_ADMIN_SECURE_KEY_2026' }, body: indexForm
         });
         if (!indexRes.ok) { setSyncProgress(0); throw new Error(`Lỗi upload Index: ${indexRes.statusText}`); }
 
         const finalFileId = (await indexRes.json()).result.document.file_id;
-
-        // Lưu vào Supabase
-        const { error: sbError } = await supabase
-            .from('vault_index')
-            .upsert({ grade, telegram_file_id: finalFileId, updated_at: Date.now() }, { onConflict: 'grade' });
-
+        const { error: sbError } = await supabase.from('vault_index').upsert({ grade, telegram_file_id: finalFileId, updated_at: Date.now() }, { onConflict: 'grade' });
         if (sbError) throw new Error("Supabase từ chối lưu: " + sbError.message);
-        console.timeEnd('[Sync] Giai đoạn 4: Upload index + Supabase');
 
         localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
-
-        // Lưu chunk fingerprint map → incremental sync lần sau
         const newChunkMap: Record<string, string> = {};
-        chunkFingerprints.forEach((fp, i) => {
-            newChunkMap[fp] = finalZipFileIds[i];
-        });
+        chunkFingerprints.forEach((fp, i) => { newChunkMap[fp] = finalZipFileIds[i]; });
         localStorage.setItem(`pv_sync_chunks_${grade}`, JSON.stringify(newChunkMap));
 
         setSyncProgress(100);
         setTimeout(() => setSyncProgress(0), 1000);
 
-        // Warm cache: chỉ warm index + chunks MỚI upload (chunks reused đã có cache sẵn)
+        // Cache warming (background)
         (async () => {
             try {
                 const newChunkIds = chunksToUpload.map(i => finalZipFileIds[i]);
-                console.log(`[Sync] 🔥 Warming cache: index + ${newChunkIds.length} new chunk(s) (${zipChunks.length - newChunkIds.length} already cached)`);
                 const allWarmIds = [finalFileId, ...newChunkIds];
-                let warmed = 0;
                 for (const id of allWarmIds) {
                     try {
                         const ctrl = new AbortController();
                         const tid = setTimeout(() => ctrl.abort(), 30_000);
                         await fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${id}`, { signal: ctrl.signal });
                         clearTimeout(tid);
-                        warmed++;
-                    } catch { /* bỏ qua file lỗi, tiếp tục warm file khác */ }
+                    } catch { }
                 }
-                console.log(`[Sync] ✅ Cache warming xong (${warmed}/${allWarmIds.length} file) — học sinh fetch lần đầu sẽ nhanh hơn!`);
-            } catch { /* nếu fail cũng không sao */ }
+            } catch { }
         })();
 
-        // ── Auto-tạo Thông Báo sau Sync thành công ──
+        // Auto-create notification
         try {
             const gradeLabel = grade === 12 ? 'Lớp 12' : grade === 11 ? 'Lớp 11' : 'Lớp 10';
             await supabase.from('notifications').insert({
                 message: `Thầy vừa cập nhật tài liệu mới cho ${gradeLabel}! Hãy bấm nút bên dưới để tải về ngay nhé.`,
-                grade,
-                fetch_enabled: true,
+                grade, fetch_enabled: true,
             });
-        } catch (notifErr) {
-            console.error('[Notification] Không tạo được thông báo:', notifErr);
-        }
+        } catch (notifErr) { console.error('[Notification] Không tạo được thông báo:', notifErr); }
 
         return finalFileId;
     };
-    const verifyAccess = async (): Promise<'ok' | 'kicked' | 'offline_expired'> => {
-        const sdt = localStorage.getItem('pv_activated_sdt');
-        const isCurrentlyActivated = localStorage.getItem(STORAGE_ACTIVATION_KEY) === 'true';
-
-        if (!isCurrentlyActivated || !sdt) return 'ok';
-
-        const machineId = getMachineId();
-        try {
-            let phoneStr = String(sdt).trim();
-            if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
-
-            const { data, error } = await supabase
-                .from('students')
-                .select('is_active, machine_id')
-                .eq('phone', phoneStr)
-                .single();
-
-            if (error || !data || !data.is_active || data.machine_id !== machineId) {
-                localStorage.removeItem(STORAGE_ACTIVATION_KEY);
-                setIsActivated(false);
-                return 'kicked';
-            }
-            localStorage.setItem('pv_last_check', Date.now().toString());
-            return 'ok';
-        } catch (e) {
-            const lastCheck = localStorage.getItem('pv_last_check');
-            if (!lastCheck) return 'offline_expired';
-            const elapsed = Date.now() - parseInt(lastCheck);
-            return elapsed > 24 * 60 * 60 * 1000 ? 'offline_expired' : 'ok';
-        }
-    };
-
-    // ── Exam Functions ─────────────────────────────────────────
-
-    // Upload PDF lên Telegram, trả về file_id
-    const uploadExamPdf = async (file: File, onProgress?: (pct: number) => void): Promise<{ fileId: string; fileName: string }> => {
-        const formData = new FormData();
-        formData.append('chat_id', TELEGRAM_CHAT_ID);
-        formData.append('document', file, file.name);
-        formData.append('caption', `[EXAM-PDF] ${file.name}`);
-
-        return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', `https://physivault-proxy.hoaihuy2609.workers.dev/proxy/sendDocument`);
-            xhr.setRequestHeader('Authorization', 'Bearer PV_ADMIN_SECURE_KEY_2026');
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
-            };
-            xhr.onload = () => {
-                const data = JSON.parse(xhr.responseText);
-                if (xhr.status === 200 && data.ok) {
-                    resolve({ fileId: data.result.document.file_id, fileName: file.name });
-                } else {
-                    reject(new Error(`Upload thất bại: ${xhr.responseText.slice(0, 100)}`));
-                }
-            };
-            xhr.onerror = () => reject(new Error('Lỗi mạng khi upload PDF'));
-            xhr.send(formData);
-        });
-    };
-
-    // Lưu danh sách đề thi lên Telegram + ghi file_id vào Supabase
-    const saveExam = async (exams: Exam[]): Promise<void> => {
-        const content = xorObfuscate(JSON.stringify({ exams, savedAt: Date.now() }));
-        const blob = new Blob([content], { type: 'application/json' });
-
-        const formData = new FormData();
-        formData.append('chat_id', TELEGRAM_CHAT_ID);
-        formData.append('document', blob, 'exam_index.json');
-        formData.append('caption', `[EXAM-INDEX] ${exams.length} đề thi`);
-
-        const res = await fetch(`https://physivault-proxy.hoaihuy2609.workers.dev/proxy/sendDocument`, {
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer PV_ADMIN_SECURE_KEY_2026' },
-            body: formData
-        });
-        if (!res.ok) throw new Error('Upload exam index thất bại');
-        const data = await res.json();
-        const fileId = data.result.document.file_id;
-
-        // Ghi file_id vào Supabase
-        const { error: sbError } = await supabase
-            .from('vault_index')
-            .upsert({ grade: 0, telegram_file_id: fileId, updated_at: Date.now() }, { onConflict: 'grade' });
-        if (sbError) throw new Error('Không thể ghi địa chỉ exam lên Supabase');
-
-        localStorage.setItem('pv_exam_index_file_id', fileId);
-
-        // Lưu local IndexedDB
-        await dbSet('physivault_exams', exams);
-    };
-
-    // Tải danh sách đề thi từ Telegram
-    const loadExams = async (): Promise<Exam[]> => {
-        // 1. Ưu tiên dùng cache local
-        const cached = await dbGet('physivault_exams');
-
-        // 2. Lấy file_id mới nhất từ Supabase
-        try {
-            const { data, error } = await supabase
-                .from('vault_index')
-                .select('telegram_file_id')
-                .eq('grade', 0)
-                .single();
-
-            const fileId = data?.telegram_file_id || localStorage.getItem('pv_exam_index_file_id');
-            const savedFileId = localStorage.getItem('pv_exam_index_file_id');
-
-            if (!fileId) return cached || [];
-
-            // Nếu dữ liệu local đã MỚI NHẤT -> Không cần cất công tải lại từ Proxy
-            if (fileId === savedFileId && cached && cached.length > 0) {
-                return cached;
-            }
-
-            // Tải file index exam qua Cloudflare Proxy
-            const arrayBuf = await fetchViaCloudflareProxy(fileId).catch(() => null);
-
-            if (!arrayBuf) return cached || [];
-            const indexStr = new TextDecoder().decode(arrayBuf);
-
-            const parsed = JSON.parse(xorDeobfuscate(indexStr));
-            const exams: Exam[] = parsed.exams || [];
-            await dbSet('physivault_exams', exams);
-            localStorage.setItem('pv_exam_index_file_id', fileId); // Update local track state
-            return exams;
-        } catch {
-            return cached || [];
-        }
-    };
-
-    // Xóa 1 đề thi (cập nhật lại list)
-    const deleteExam = async (examId: string, allExams: Exam[]): Promise<void> => {
-        const updated = allExams.filter(e => e.id !== examId);
-        await saveExam(updated);
-    };
-
-    // Lưu kết quả bài thi
-    const saveExamResult = async (
-        exam: Exam,
-        score: number,
-        totalQuestions: number,
-        correctAnswers: number
-    ): Promise<void> => {
-        const sdtStr = localStorage.getItem('pv_activated_sdt');
-        if (!sdtStr) return; // Không lưu nếu không có SĐT
-        let normalizedPhone = sdtStr.trim();
-        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
-            normalizedPhone = '0' + normalizedPhone;
-        }
-
-        // Lấy tên và lớp học sinh
-        let studentName = 'Học sinh';
-        let grade = exam.grade;
-        try {
-            const { data } = await supabase
-                .from('students')
-                .select('name, grade')
-                .eq('phone', normalizedPhone)
-                .single();
-            if (data?.name) studentName = data.name;
-            if (data?.grade) grade = data.grade;
-        } catch (e) {
-            console.error('Không lấy được thông tin học sinh', e);
-        }
-
-        try {
-            const { error } = await supabase.from('exam_results').insert({
-                student_phone: normalizedPhone,
-                student_name: studentName,
-                exam_id: exam.id,
-                exam_title: exam.title,
-                score,
-                total_questions: totalQuestions,
-                correct_answers: correctAnswers,
-                submitted_at: new Date().toISOString(),
-                grade: grade
-            });
-            if (error) {
-                console.error('Lỗi Insert Supabase:', error);
-            }
-        } catch (e) {
-            console.error('Lỗi khi lưu kết quả bài thi:', e);
-        }
-    };
-
-    // Lấy lịch sử làm bài (nếu phone trống -> lấy tất cả cho Admin)
-    const getExamHistory = async (phoneFilter?: string) => {
-        try {
-            let query = supabase.from('exam_results').select('*').order('submitted_at', { ascending: false });
-            if (phoneFilter) {
-                query = query.eq('student_phone', phoneFilter);
-            }
-            const { data, error } = await query;
-            if (error) throw error;
-            return data;
-        } catch (e) {
-            console.error('Lỗi khi lấy lịch sử làm bài:', e);
-            return [];
-        }
-    };
-
-    // Lấy bảng xếp hạng tổng hợp theo khối (trung bình điểm, tối thiểu MIN_EXAMS bài)
-    const getLeaderboard = async (minExams: number = 1): Promise<{ name: string; phone: string; avgScore: number; examCount: number; recentScores: number[]; bestScore: number }[][]> => {
-        try {
-            const { data, error } = await supabase
-                .from('exam_results')
-                .select('student_phone, student_name, score, grade, submitted_at')
-                .order('submitted_at', { ascending: true });
-            if (error) throw error;
-            if (!data || data.length === 0) return [[], [], []];
-
-            // Nhóm theo (grade, phone), giữ thứ tự thời gian
-            const map: Record<string, { name: string; phone: string; grade: number; scores: number[] }> = {};
-            for (const r of data) {
-                const key = `${r.grade}__${r.student_phone}`;
-                if (!map[key]) map[key] = { name: r.student_name || 'Ẩn danh', phone: r.student_phone, grade: r.grade, scores: [] };
-                map[key].scores.push(r.score);
-            }
-
-            const byGrade: Record<number, { name: string; phone: string; avgScore: number; examCount: number; recentScores: number[]; bestScore: number }[]> = { 10: [], 11: [], 12: [] };
-            for (const entry of Object.values(map)) {
-                if (entry.scores.length < minExams) continue;
-                const avg = entry.scores.reduce((a, b) => a + b, 0) / entry.scores.length;
-                const best = Math.max(...entry.scores);
-                const recent = entry.scores.slice(-6); // lấy 6 bài gần nhất cho sparkline
-                if (byGrade[entry.grade]) {
-                    byGrade[entry.grade].push({ name: entry.name, phone: entry.phone, avgScore: avg, examCount: entry.scores.length, recentScores: recent, bestScore: best });
-                }
-            }
-
-            // Sort desc và lấy top 5 mỗi khối
-            const top = (arr: typeof byGrade[10]) => arr.sort((a, b) => b.avgScore - a.avgScore).slice(0, 5);
-            return [top(byGrade[10]), top(byGrade[11]), top(byGrade[12])];
-        } catch (e) {
-            console.error('Lỗi khi lấy leaderboard:', e);
-            return [[], [], []];
-        }
-    };
-
-    // ── Study Planner Functions ──────────────────────────────────
-    const getStudyPlans = async () => {
-        const sdtStr = localStorage.getItem('pv_activated_sdt');
-        if (!sdtStr) return [];
-        let normalizedPhone = sdtStr.trim();
-        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
-            normalizedPhone = '0' + normalizedPhone;
-        }
-
-        try {
-            const { data, error } = await supabase
-                .from('study_plans')
-                .select('*')
-                .eq('student_phone', normalizedPhone)
-                .order('due_date', { ascending: true });
-            if (error) throw error;
-            return data as StudyPlanItem[];
-        } catch (e) {
-            console.error('Lỗi tải kế hoạch:', e);
-            return [];
-        }
-    };
-
-    const saveStudyPlan = async (taskName: string, dueDate: string, color: string = '#6B7CDB') => {
-        const sdtStr = localStorage.getItem('pv_activated_sdt');
-        if (!sdtStr) return null;
-        let normalizedPhone = sdtStr.trim();
-        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
-            normalizedPhone = '0' + normalizedPhone;
-        }
-
-        try {
-            const { data, error } = await supabase.from('study_plans').insert({
-                student_phone: normalizedPhone,
-                task_name: taskName,
-                due_date: dueDate,
-                color: color
-            }).select().single();
-
-            if (error) throw error;
-            return data as StudyPlanItem;
-        } catch (e) {
-            console.error('Lỗi tạo kế hoạch:', e);
-            return null;
-        }
-    };
-
-    const updateStudyPlan = async (id: string, updates: Partial<StudyPlanItem>) => {
-        try {
-            const { error } = await supabase.from('study_plans').update(updates).eq('id', id);
-            if (error) throw error;
-            return true;
-        } catch (e) {
-            console.error('Lỗi cập nhật kế hoạch:', e);
-            return false;
-        }
-    };
-
-    const deleteStudyPlan = async (id: string) => {
-        try {
-            const { error } = await supabase.from('study_plans').delete().eq('id', id);
-            if (error) throw error;
-            return true;
-        } catch (e) {
-            console.error('Lỗi xóa kế hoạch:', e);
-            return false;
-        }
-    };
-
-    // ── Schedule Functions ──────────────────────────────────
-    const getSchedules = async (grade: number) => {
-        try {
-            const { data, error } = await supabase
-                .from('schedules')
-                .select('*')
-                .eq('grade', grade)
-                .order('date', { ascending: true })
-                .order('start_time', { ascending: true });
-            if (error) throw error;
-            return data as ScheduleItem[];
-        } catch (e) {
-            console.error('Lỗi tải thời khóa biểu từ Supabase, fall back local:', e);
-            const localSchedules = localStorage.getItem(`pv_schedules_${grade}`);
-            return localSchedules ? JSON.parse(localSchedules) : [];
-        }
-    };
-
-    const saveSchedule = async (schedule: Omit<ScheduleItem, 'id' | 'created_at'>) => {
-        try {
-            const { data, error } = await supabase.from('schedules').insert([schedule]).select().single();
-            if (error) throw error;
-            return data as ScheduleItem;
-        } catch (e) {
-            console.error('Lỗi tạo lịch học:', e);
-            // Fallback local limit
-            const newSchedule = { id: crypto.randomUUID ? crypto.randomUUID() : `sch_${Date.now()}`, ...schedule, created_at: new Date().toISOString() };
-            const local = JSON.parse(localStorage.getItem(`pv_schedules_${schedule.grade}`) || '[]');
-            localStorage.setItem(`pv_schedules_${schedule.grade}`, JSON.stringify([...local, newSchedule]));
-            return newSchedule as ScheduleItem;
-        }
-    };
-
-    const updateSchedule = async (id: string, updates: Partial<ScheduleItem>, grade: number) => {
-        try {
-            const { error } = await supabase.from('schedules').update(updates).eq('id', id);
-            if (error) throw error;
-            return true;
-        } catch (e) {
-            console.error('Lỗi cập nhật lịch học:', e);
-            const local = JSON.parse(localStorage.getItem(`pv_schedules_${grade}`) || '[]');
-            const idx = local.findIndex((s: ScheduleItem) => s.id === id);
-            if (idx !== -1) {
-                local[idx] = { ...local[idx], ...updates };
-                localStorage.setItem(`pv_schedules_${grade}`, JSON.stringify(local));
-            }
-            return true;
-        }
-    };
-
-    const deleteSchedule = async (id: string, grade: number) => {
-        try {
-            const { error } = await supabase.from('schedules').delete().eq('id', id);
-            if (error) throw error;
-            return true;
-        } catch (e) {
-            console.error('Lỗi xóa lịch học:', e);
-            const local = JSON.parse(localStorage.getItem(`pv_schedules_${grade}`) || '[]');
-            localStorage.setItem(`pv_schedules_${grade}`, JSON.stringify(local.filter((s: ScheduleItem) => s.id !== id)));
-            return true;
-        }
-    };
-
-    // ── Notification Functions ────────────────────────────────
-
-    // Lấy danh sách thông báo theo lớp của học sinh
-    const getNotifications = async (grade: number): Promise<NotificationItem[]> => {
-        try {
-            const { data, error } = await supabase
-                .from('notifications')
-                .select('*')
-                .eq('grade', grade)
-                .order('created_at', { ascending: false });
-            if (error) throw error;
-            return (data || []) as NotificationItem[];
-        } catch (e) {
-            console.error('Lỗi tải thông báo:', e);
-            return [];
-        }
-    };
-
-    // Đánh dấu học sinh này đã fetch thông báo
-    const markNotificationFetched = async (notificationId: string): Promise<boolean> => {
-        const sdtStr = localStorage.getItem('pv_activated_sdt');
-        if (!sdtStr) return false;
-        let normalizedPhone = sdtStr.trim();
-        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
-            normalizedPhone = '0' + normalizedPhone;
-        }
-        try {
-            const { error } = await supabase.from('notification_fetches').insert({
-                notification_id: notificationId,
-                student_phone: normalizedPhone,
-            });
-            if (error) throw error;
-            return true;
-        } catch (e) {
-            console.error('Lỗi đánh dấu fetch:', e);
-            return false;
-        }
-    };
-
-    // Xóa thông báo (Dành cho Admin)
-    const deleteNotification = async (notificationId: string): Promise<boolean> => {
-        try {
-            const { error } = await supabase.from('notifications').delete().eq('id', notificationId);
-            if (error) throw error;
-            return true;
-        } catch (e) {
-            console.error('Lỗi xóa thông báo:', e);
-            return false;
-        }
-    };
-
-    // Tạo thông báo tùy ý (Dành cho Admin — không liên quan sync tài liệu)
-    const createCustomNotification = async (message: string, grade: number): Promise<boolean> => {
-        try {
-            const { error } = await supabase.from('notifications').insert({
-                message,
-                grade,
-                fetch_enabled: false, // Thông báo chung, không cần nút "Lấy bài về"
-            });
-            if (error) throw error;
-            return true;
-        } catch (e) {
-            console.error('Lỗi tạo thông báo:', e);
-            return false;
-        }
-    };
-
-    // Kiểm tra học sinh này đã fetch thông báo nào rồi (trả về Set các notification_id đã fetch)
-    const getFetchedNotificationIds = async (): Promise<Set<string>> => {
-        const sdtStr = localStorage.getItem('pv_activated_sdt');
-        if (!sdtStr) return new Set();
-        let normalizedPhone = sdtStr.trim();
-        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
-            normalizedPhone = '0' + normalizedPhone;
-        }
-        try {
-            const { data, error } = await supabase
-                .from('notification_fetches')
-                .select('notification_id')
-                .eq('student_phone', normalizedPhone);
-            if (error) throw error;
-            return new Set((data || []).map((r: any) => r.notification_id));
-        } catch (e) {
-            console.error('Lỗi tải danh sách đã fetch:', e);
-            return new Set();
-        }
-    };
-
-    // ── Voting Functions ──────────────────────────────────────
-
-    const submitQuestionVote = async (examId: string, partName: string, questionNumber: number) => {
-        const sdtStr = localStorage.getItem('pv_activated_sdt');
-        if (!sdtStr) return { success: false, error: 'Chưa kích hoạt' };
-        let normalizedPhone = sdtStr.trim();
-        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
-            normalizedPhone = '0' + normalizedPhone;
-        }
-
-        try {
-            // Kiểm tra xem user này đã vote cho đề này bao nhiêu lần rồi (limit 3 lần)
-            const { data: existingVotes, error: countError } = await supabase
-                .from('question_votes')
-                .select('id, part_name, question_number')
-                .eq('exam_id', examId)
-                .eq('student_phone', normalizedPhone);
-
-            if (countError) throw countError;
-
-            if (existingVotes && existingVotes.length >= 3) {
-                return { success: false, error: 'Bạn đã hết 3 lượt vote cho đề này.' };
-            }
-
-            // Kiểm tra trùng
-            const alreadyVoted = existingVotes?.find(v => v.part_name === partName && v.question_number === questionNumber);
-            if (alreadyVoted) {
-                return { success: false, error: 'Bạn đã vote cho câu này rồi.' };
-            }
-
-            const { error } = await supabase.from('question_votes').insert({
-                exam_id: examId,
-                student_phone: normalizedPhone,
-                part_name: partName,
-                question_number: questionNumber
-            });
-
-            if (error) {
-                if (error.code === '23505') { // unique violation
-                    return { success: false, error: 'Bạn đã vote cho câu này rồi.' };
-                }
-                throw error;
-            }
-
-            return { success: true };
-        } catch (e: any) {
-            console.error('Lỗi khi submit vote:', e);
-            return { success: false, error: e.message || 'Lỗi hệ thống' };
-        }
-    };
-
-    const getQuestionVotes = async (examId: string) => {
-        try {
-            const { data, error } = await supabase
-                .from('question_votes')
-                .select('part_name, question_number, student_phone')
-                .eq('exam_id', examId);
-            if (error) throw error;
-            return data || [];
-        } catch (e) {
-            console.error('Lỗi lấy dữ liệu vote:', e);
-            return [];
-        }
-    };
-
-    // ── Blog (Góc Học Tập) — Telegram-based (không dùng Supabase DB) ────────────
-
-    const BLOG_LOCAL_KEY = 'physivault_blogs_local';
-    const BLOG_UPLOAD_AUTH = 'Bearer PV_ADMIN_SECURE_KEY_2026';
-
-    /** Lấy danh sách blog từ Telegram (học sinh fetch) hoặc IndexedDB cache */
-    const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> => {
-        try {
-            // Admin luôn đọc từ IndexedDB local (source of truth cho việc chỉnh sửa)
-            // Học sinh mới fetch từ Telegram để lấy bản mới nhất đã sync
-            if (isAdmin) {
-                const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-                // Nếu local có data → dùng luôn
-                if (local.length > 0) {
-                    console.log(`[Blog] Admin: đọc ${local.length} bài từ local IndexedDB`);
-                    return local;
-                }
-                // Nếu local trống → thử kéo từ Telegram về để có dữ liệu ban đầu
-                console.log('[Blog] Admin: local trống, thử kéo từ Telegram...');
-            }
-
-            // Bước 1: Lấy file_id từ Supabase (chỉ lưu 1 row nhỏ)
-            const { data: indexRow } = await supabase
-                .from('blog_index')
-                .select('telegram_file_id')
-                .order('updated_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-            if (!indexRow?.telegram_file_id) {
-                // Chưa có blog nào được sync lên → fallback local
-                const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-                return isAdmin ? local : local.filter(b => b.is_published);
-            }
-
-            // Bước 2: Tải JSON file từ Telegram qua Cloudflare
-            const t0 = performance.now();
-            const arrayBuf = await fetchViaCloudflareProxy(indexRow.telegram_file_id);
-            console.log(`[Blog] Tải file từ Telegram: ${(performance.now() - t0).toFixed(0)}ms`);
-
-            const str = new TextDecoder().decode(arrayBuf);
-            const firstChar = str.charCodeAt(0);
-            const blogs: BlogPost[] = (firstChar === 91 || firstChar === 123)
-                ? JSON.parse(str)
-                : JSON.parse(xorDeobfuscate(str));
-
-            // Cache vào IndexedDB
-            await dbSet(BLOG_LOCAL_KEY, blogs);
-
-            return isAdmin ? blogs : blogs.filter(b => b.is_published);
-        } catch (e) {
-            console.warn('[Blog] Fetch thất bại, dùng cache local:', e);
-            const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-            return isAdmin ? local : local.filter(b => b.is_published);
-        }
-    };
-
-    /** [ADMIN] Lưu blog vào IndexedDB local (chưa sync lên Telegram) */
-    const saveBlog = async (blog: Partial<BlogPost>): Promise<BlogPost | null> => {
-        try {
-            const localBlogs: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-            let saved: BlogPost;
-
-            if (blog.id) {
-                // Cập nhật bài có sẵn
-                const idx = localBlogs.findIndex(b => b.id === blog.id);
-                if (idx !== -1) {
-                    saved = { ...localBlogs[idx], ...blog, updated_at: new Date().toISOString() };
-                    localBlogs[idx] = saved;
-                } else {
-                    return null;
-                }
-            } else {
-                // Tạo bài mới
-                saved = {
-                    id: crypto.randomUUID ? crypto.randomUUID() : `blog_${Date.now()}`,
-                    title: blog.title || '',
-                    summary: blog.summary || '',
-                    content: blog.content || '',
-                    cover_image: blog.cover_image || '',
-                    category: blog.category || '',
-                    tags: blog.tags || [],
-                    is_published: blog.is_published || false,
-                    grade: blog.grade ?? 0, // Đảm bảo grade luôn được lưu
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                };
-                localBlogs.unshift(saved);
-            }
-
-            await dbSet(BLOG_LOCAL_KEY, localBlogs);
-            console.log(`[Blog] Đã lưu local: "${saved.title}" — Nhớ bấm Sync Blog để cập nhật!`);
-            return saved;
-        } catch (e) {
-            console.error('[Blog] Lỗi saveBlog:', e);
-            return null;
-        }
-    };
-
-    /** [ADMIN] Xóa blog khỏi IndexedDB local */
-    const deleteBlog = async (id: string): Promise<boolean> => {
-        try {
-            let localBlogs: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-            localBlogs = localBlogs.filter(b => b.id !== id);
-            await dbSet(BLOG_LOCAL_KEY, localBlogs);
-            console.log(`[Blog] Đã xóa local ID=${id} — Nhớ bấm Sync Blog!`);
-            return true;
-        } catch (e) {
-            console.error('[Blog] Lỗi deleteBlog:', e);
-            return false;
-        }
-    };
-
-    /** [ADMIN] Sync tất cả blog local lên Telegram */
-    const syncBlogs = async (onProgress?: (pct: number) => void): Promise<{ success: boolean; fileId?: string; blogCount: number }> => {
-        try {
-            if (onProgress) onProgress(5);
-            const localBlogs: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-            console.log(`[Blog Sync] Bắt đầu sync ${localBlogs.length} bài viết`);
-
-            // Serialize + XOR encode
-            const t1 = performance.now();
-            const jsonStr = xorObfuscate(JSON.stringify(localBlogs));
-            console.log(`[Blog Sync] XOR encode: ${(performance.now() - t1).toFixed(0)}ms | ${(jsonStr.length / 1024).toFixed(1)} KB`);
-            if (onProgress) onProgress(20);
-
-            // Upload lên Telegram qua Cloudflare
-            const blob = new Blob([jsonStr], { type: 'application/json' });
-            const formData = new FormData();
-            formData.append('chat_id', TELEGRAM_CHAT_ID);
-            formData.append('document', blob, `blog_vault_v1.json`);
-            formData.append('caption', `[BLOG-V1] ${localBlogs.length} bài viết | ${new Date().toLocaleString('vi-VN')}`);
-
-            const t2 = performance.now();
-            const uploadRes = await fetch(
-                `${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`,
-                { method: 'POST', headers: { 'Authorization': BLOG_UPLOAD_AUTH }, body: formData }
-            );
-            if (!uploadRes.ok) throw new Error(`Upload thất bại: ${uploadRes.statusText}`);
-            const uploadData = await uploadRes.json();
-            const newFileId: string = uploadData.result.document.file_id;
-            console.log(`[Blog Sync] Upload xong: ${(performance.now() - t2).toFixed(0)}ms | file_id: ${newFileId}`);
-            if (onProgress) onProgress(80);
-
-            // Cập nhật file_id vào Supabase blog_index (chỉ lưu 1 row nhỏ metadata)
-            const { error: upsertErr } = await supabase
-                .from('blog_index')
-                .upsert({
-                    id: 1, // always row 1
-                    telegram_file_id: newFileId,
-                    blog_count: localBlogs.length,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'id' });
-            if (upsertErr) throw upsertErr;
-            if (onProgress) onProgress(95);
-
-            // Warm CF cache
-            try {
-                fetchViaCloudflareProxy(newFileId).catch(() => { });
-            } catch { /* ignore */ }
-
-            if (onProgress) onProgress(100);
-            console.log(`[Blog Sync] ✅ Hoàn thành! ${localBlogs.length} bài viết đã được sync.`);
-            return { success: true, fileId: newFileId, blogCount: localBlogs.length };
-        } catch (e: any) {
-            console.error('[Blog Sync] ❌ Lỗi:', e);
-            return { success: false, blogCount: 0 };
-        }
-    };
-
-    /** [ADMIN] Load blogs từ Telegram về local (trước khi chỉnh sửa) */
-    const fetchBlogsForEditing = async (): Promise<{ blogs: BlogPost[]; loaded: boolean }> => {
-        try {
-            const { data: indexRow } = await supabase
-                .from('blog_index')
-                .select('telegram_file_id, blog_count, updated_at')
-                .order('updated_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-            if (!indexRow?.telegram_file_id) {
-                const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-                return { blogs: local, loaded: false };
-            }
-
-            const arrayBuf = await fetchViaCloudflareProxy(indexRow.telegram_file_id);
-            const str = new TextDecoder().decode(arrayBuf);
-            const firstChar = str.charCodeAt(0);
-            const blogs: BlogPost[] = (firstChar === 91 || firstChar === 123)
-                ? JSON.parse(str)
-                : JSON.parse(xorDeobfuscate(str));
-
-            await dbSet(BLOG_LOCAL_KEY, blogs);
-            console.log(`[Blog] Đã tải ${blogs.length} bài viết từ Telegram về local.`);
-            return { blogs, loaded: true };
-        } catch (e) {
-            console.warn('[Blog] fetchBlogsForEditing thất bại, dùng local:', e);
-            const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-            return { blogs: local, loaded: false };
-        }
-    };
 
     return {
-        lessons,
-        storedFiles,
-        loading,
-        isActivated,
-        addLesson,
-        deleteLesson,
-        uploadFiles,
-        deleteFile,
-        activateSystem,
-        verifyAccess,
-        fetchLessonsFromGitHub,
-        syncToGitHub,
-        syncProgress,
-        uploadExamPdf,
-        saveExam,
-        loadExams,
-        deleteExam,
-        saveExamResult,
-        getExamHistory,
-        getLeaderboard,
-        getStudyPlans,
-        saveStudyPlan,
-        updateStudyPlan,
-        deleteStudyPlan,
-        getSchedules,
-        saveSchedule,
-        updateSchedule,
-        deleteSchedule,
-        getNotifications,
-        deleteNotification,
-        createCustomNotification,
-        markNotificationFetched,
-        getFetchedNotificationIds,
-        submitQuestionVote,
-        getQuestionVotes,
-        // Blog — Telegram-based
-        getBlogs,
-        saveBlog,
-        deleteBlog,
-        syncBlogs,
-        fetchBlogsForEditing,
+        lessons, storedFiles, loading, isActivated, syncProgress,
+        addLesson, deleteLesson, uploadFiles, deleteFile,
+        activateSystem, verifyAccess,
+        fetchLessonsFromGitHub, syncToGitHub,
+        // Re-exported from services (backward compatible API)
+        uploadExamPdf: examService.uploadExamPdf,
+        saveExam: examService.saveExam,
+        loadExams: examService.loadExams,
+        deleteExam: examService.deleteExam,
+        saveExamResult: examService.saveExamResult,
+        getExamHistory: examService.getExamHistory,
+        getLeaderboard: examService.getLeaderboard,
+        getStudyPlans: plannerService.getStudyPlans,
+        saveStudyPlan: plannerService.saveStudyPlan,
+        updateStudyPlan: plannerService.updateStudyPlan,
+        deleteStudyPlan: plannerService.deleteStudyPlan,
+        getSchedules: plannerService.getSchedules,
+        saveSchedule: plannerService.saveSchedule,
+        updateSchedule: plannerService.updateSchedule,
+        deleteSchedule: plannerService.deleteSchedule,
+        getNotifications: notificationService.getNotifications,
+        deleteNotification: notificationService.deleteNotification,
+        createCustomNotification: notificationService.createCustomNotification,
+        markNotificationFetched: notificationService.markNotificationFetched,
+        getFetchedNotificationIds: notificationService.getFetchedNotificationIds,
+        submitQuestionVote: notificationService.submitQuestionVote,
+        getQuestionVotes: notificationService.getQuestionVotes,
+        getBlogs: blogService.getBlogs,
+        saveBlog: blogService.saveBlog,
+        deleteBlog: blogService.deleteBlog,
+        syncBlogs: blogService.syncBlogs,
+        fetchBlogsForEditing: blogService.fetchBlogsForEditing,
     };
-};
-
-
-// --- Export / Import Helpers ---
-
-export const exportData = (lessons: Lesson[], files: FileStorage) => {
-    const rawData: ExportData = {
-        version: 1.1,
-        exportedAt: Date.now(),
-        lessons,
-        files
-    };
-
-    const finalContent = JSON.stringify(rawData);
-    const blob = new Blob([finalContent], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `physivault_data_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-};
-
-export const importData = async (file: File) => {
-    return new Promise<void>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                let content = e.target?.result as string;
-                let data: ExportData = JSON.parse(content);
-                if (!data.lessons || !data.files) throw new Error("INVALID_FORMAT");
-
-                const currentLessons = await dbGet(STORAGE_LESSONS_KEY) || [];
-                const currentFiles = await dbGet(STORAGE_FILES_KEY) || {};
-
-                const lessonMap = new Map();
-                currentLessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
-                data.lessons.forEach((l: Lesson) => lessonMap.set(l.id, l));
-                const uniqueLessons = Array.from(lessonMap.values());
-                const mergedFiles = { ...currentFiles, ...data.files };
-
-                await dbSet(STORAGE_LESSONS_KEY, uniqueLessons);
-                await dbSet(STORAGE_FILES_KEY, mergedFiles);
-                resolve();
-            } catch (err) {
-                reject(err);
-            }
-        };
-        reader.onerror = () => reject(new Error("READ_ERROR"));
-        reader.readAsText(file);
-    });
 };
