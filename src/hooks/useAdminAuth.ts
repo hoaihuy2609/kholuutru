@@ -14,61 +14,53 @@ export const useAdminAuth = (): AdminAuth => {
     const [adminEmail, setAdminEmail] = useState<string | null>(null);
     const [adminLoading, setAdminLoading] = useState(true);
 
-    // Check existing session on mount
+    // Check session on mount via GoTrue listener to prevent lock race conditions
     useEffect(() => {
-        const checkSession = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.user) {
-                    const { data } = await supabase
-                        .from('admins')
-                        .select('email, role')
-                        .eq('id', session.user.id)
-                        .single();
+        let isMounted = true;
 
-                    if (data) {
-                        setIsAdmin(true);
-                        setAdminEmail(session.user.email || null);
-                    }
-                }
-            } catch {
-                // Silent — user is not admin
-            } finally {
-                setAdminLoading(false);
-            }
-        };
-
-        checkSession();
-
-        // Listen for auth state changes (login/logout from other tabs etc.)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                if (event === 'SIGNED_OUT' || !session) {
-                    setIsAdmin(false);
-                    setAdminEmail(null);
-                    return;
-                }
+                if (!isMounted) return;
 
-                if (event === 'SIGNED_IN' && session?.user) {
-                    try {
-                        const { data } = await supabase
-                            .from('admins')
-                            .select('email, role')
-                            .eq('id', session.user.id)
-                            .single();
+                if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+                    if (session?.user) {
+                        try {
+                            const { data } = await supabase
+                                .from('admins')
+                                .select('email, role')
+                                .eq('id', session.user.id)
+                                .single();
 
-                        if (data) {
-                            setIsAdmin(true);
-                            setAdminEmail(session.user.email || null);
+                            if (isMounted && data) {
+                                setIsAdmin(true);
+                                setAdminEmail(session.user.email || null);
+                            }
+                        } catch {
+                            // silent
+                        } finally {
+                            if (isMounted) setAdminLoading(false);
                         }
-                    } catch {
-                        // Not an admin
+                    } else {
+                        if (isMounted) {
+                            setAdminLoading(false);
+                            setIsAdmin(false);
+                            setAdminEmail(null);
+                        }
+                    }
+                } else if (event === 'SIGNED_OUT') {
+                    if (isMounted) {
+                        setAdminLoading(false);
+                        setIsAdmin(false);
+                        setAdminEmail(null);
                     }
                 }
             }
         );
 
-        return () => subscription.unsubscribe();
+        return () => {
+            isMounted = false;
+            subscription.unsubscribe();
+        };
     }, []);
 
     const adminLogin = async (
