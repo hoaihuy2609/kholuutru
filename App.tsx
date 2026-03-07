@@ -149,10 +149,18 @@ function App() {
   // --- PREVENT OVERLAPPING STATES ---
   const [previewMode, setPreviewMode] = useState<GradeLevel | null>(null);
   const effectiveIsAdmin = isAdmin && !previewMode;
-  const [studentGradeValue] = useState(() => {
+  const [studentGradeValue, setStudentGradeValue] = useState<number | null>(() => {
     const g = parseInt(localStorage.getItem('physivault_grade') || '0', 10);
     return g === 10 || g === 11 || g === 12 ? g : null;
   });
+
+  // Re-read grade from localStorage after activation (grade is set during activateSystem)
+  useEffect(() => {
+    if (isActivated) {
+      const g = parseInt(localStorage.getItem('physivault_grade') || '0', 10);
+      setStudentGradeValue(g === 10 || g === 11 || g === 12 ? g : null);
+    }
+  }, [isActivated]);
 
   // ── Centralized navigation helper (memoized to prevent child re-renders) ──
   const resetNavigation = useCallback(() => {
