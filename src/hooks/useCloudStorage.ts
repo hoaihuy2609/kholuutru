@@ -68,19 +68,26 @@ const XOR_KEY_BYTES = new TextEncoder().encode(XOR_KEY);
 const XOR_KEY_LEN = XOR_KEY_BYTES.length;
 
 export const xorObfuscate = (data: string): string => {
-    // Encode UTF-8 string → bytes để tránh lỗi với ký tự tiếng Việt
     const bytes = new TextEncoder().encode(data);
-    const result = new Uint8Array(bytes.length);
-    for (let i = 0; i < bytes.length; i++) {
-        result[i] = bytes[i] ^ XOR_KEY_BYTES[i % XOR_KEY_LEN];
+    const len = bytes.length;
+    const result = new Uint8Array(len);
+    const kLen = XOR_KEY_LEN;
+    const alignedLen = len - (len % kLen);
+
+    for (let i = 0; i < alignedLen; i += kLen) {
+        for (let j = 0; j < kLen; j++) {
+            result[i + j] = bytes[i + j] ^ XOR_KEY_BYTES[j];
+        }
+    }
+    for (let i = alignedLen; i < len; i++) {
+        result[i] = bytes[i] ^ XOR_KEY_BYTES[i - alignedLen];
     }
 
-    // Tối ưu hiệu năng: Xử lý theo khối (chunking) để tránh treo trình duyệt và stack limit
-    const CHUNK_SIZE = 0x8000; // 32KB mỗi khối
+    const CHUNK_SIZE = 0x8000;
     let binaryParts: string[] = [];
-    for (let i = 0; i < result.length; i += CHUNK_SIZE) {
+    for (let i = 0; i < len; i += CHUNK_SIZE) {
         const chunk = result.subarray(i, i + CHUNK_SIZE);
-        // @ts-ignore - Dùng apply để chuyển chunk sang argument list một cách an toàn
+        // @ts-ignore
         binaryParts.push(String.fromCharCode.apply(null, chunk));
     }
     return btoa(binaryParts.join(''));
@@ -360,9 +367,17 @@ export const useCloudStorage = () => {
                 dbGet(STORAGE_FILES_KEY)
             ]);
 
-            // Giai đoạn 1: Lấy file ID từ Supabase
+            // Speculative download: dùng cached ID để bắt đầu tải index ngay
+            // trong khi Supabase query chạy song song. 99% cached ID = Supabase ID.
+            const cachedIndexFileId = localStorage.getItem(`pv_sync_file_id_${grade}`);
+            let speculativeIndexPromise: Promise<ArrayBuffer> | null = null;
+            if (cachedIndexFileId) {
+                speculativeIndexPromise = fetchViaCloudflareProxy(cachedIndexFileId);
+            }
+
+            // Giai đoạn 1: Lấy file ID từ Supabase (chạy song song với speculative download)
             const t1 = performance.now();
-            let indexFileId = localStorage.getItem(`pv_sync_file_id_${grade}`);
+            let indexFileId = cachedIndexFileId;
             try {
                 const { data, error } = await supabase
                     .from('vault_index')
@@ -378,10 +393,16 @@ export const useCloudStorage = () => {
             console.log(`[Fetch] Giai đoạn 1 (Supabase): ${(performance.now() - t1).toFixed(0)}ms`);
             if (!indexFileId) throw new Error(`Hệ thống chưa có dữ liệu cho Lớp ${grade}. Thầy vui lòng Sync trước nhé!`);
 
-            // Giai đoạn 2: Tải file index từ Cloudflare
+            // Giai đoạn 2: Lấy index data (speculative hit hoặc fresh download)
             const t2 = performance.now();
-            const indexRaw = await fetchViaCloudflareProxy(indexFileId);
-            console.log(`[Fetch] Giai đoạn 2 (Tải index từ CF): ${(performance.now() - t2).toFixed(0)}ms`);
+            let indexRaw: ArrayBuffer;
+            if (indexFileId === cachedIndexFileId && speculativeIndexPromise) {
+                indexRaw = await speculativeIndexPromise;
+                console.log(`[Fetch] Giai đoạn 2 (Speculative HIT — song song Phase 1): ${(performance.now() - t2).toFixed(0)}ms`);
+            } else {
+                indexRaw = await fetchViaCloudflareProxy(indexFileId);
+                console.log(`[Fetch] Giai đoạn 2 (Fresh download — ID thay đổi): ${(performance.now() - t2).toFixed(0)}ms`);
+            }
             const indexStr = new TextDecoder().decode(indexRaw);
             const indexData = JSON.parse(xorDeobfuscate(indexStr));
 
@@ -601,40 +622,37 @@ export const useCloudStorage = () => {
         console.timeEnd('[Sync] Giai đoạn 1: XOR encode + pack ZIP');
         console.log(`[Sync] Số chunk ZIP: ${zipChunks.length}`);
 
-        const zipBlobs: Blob[] = [];
-        // 1. Phân bổ 0% -> 20% cho việc generate ZIP blob
-        console.time('[Sync] Giai đoạn 2: generateAsync ZIP');
+        // Pipeline: generate ZIP + upload song song (không chờ generate hết mới upload)
+        // DEFLATE level 1 giảm ~20-25% kích thước base64, upload/download nhanh hơn đáng kể
+        const uploadedPerPart: number[] = new Array(zipChunks.length).fill(0);
+        let estimatedTotalSize = zipChunks.length * 5 * 1024 * 1024;
+
+        console.time('[Sync] Giai đoạn 2+3: Generate + Upload pipeline');
+        const uploadPromises: Promise<string>[] = [];
         for (let i = 0; i < zipChunks.length; i++) {
             const z = zipChunks[i];
-            const zipBlob = await z.generateAsync({ type: 'blob', compression: "STORE" }, (meta) => {
-                // meta.percent từ JSZip là 0–100, chia 100 để normalize về 0–1 trước khi nhân
-                const globalPercent = Math.floor((i + meta.percent / 100) * (20 / zipChunks.length));
-                setSyncProgress(globalPercent);
-            });
+            const zipBlob = await z.generateAsync(
+                { type: 'blob', compression: "DEFLATE", compressionOptions: { level: 1 } },
+                (meta) => {
+                    const globalPercent = Math.floor((i + meta.percent / 100) * (20 / zipChunks.length));
+                    setSyncProgress(globalPercent);
+                }
+            );
             console.log(`[Sync] ZIP part ${i + 1}: ${(zipBlob.size / 1024 / 1024).toFixed(2)} MB`);
-            zipBlobs.push(zipBlob);
-        }
-        console.timeEnd('[Sync] Giai đoạn 2: generateAsync ZIP');
+            estimatedTotalSize = Math.max(estimatedTotalSize, zipBlob.size * zipChunks.length);
 
-        // 2. Phân bổ 20% -> 95%: Upload SONG SONG tất cả các phần ZIP
-        const totalZipSize = zipBlobs.reduce((acc, curr) => acc + curr.size, 0);
-        // Track bytes đã upload của từng part riêng lẻ
-        const uploadedPerPart: number[] = new Array(zipBlobs.length).fill(0);
-
-        console.time('[Sync] Giai đoạn 3: Upload ZIP lên Telegram');
-        console.log(`[Sync] Tổng kích thước upload: ${(totalZipSize / 1024 / 1024).toFixed(2)} MB`);
-        const uploadResults = await Promise.all(
-            zipBlobs.map((zipBlob, i) =>
+            const partIndex = i;
+            uploadPromises.push(
                 uploadBlob(zipBlob, `vault_g${grade}_v3_part${i + 1}.zip`, (loaded) => {
-                    uploadedPerPart[i] = loaded;
+                    uploadedPerPart[partIndex] = loaded;
                     const totalLoaded = uploadedPerPart.reduce((a, b) => a + b, 0);
-                    const globalPercent = 20 + Math.floor((totalLoaded / totalZipSize) * 75);
+                    const globalPercent = 20 + Math.floor((totalLoaded / estimatedTotalSize) * 75);
                     setSyncProgress(Math.min(globalPercent, 95));
                 })
-            )
-        );
-        console.timeEnd('[Sync] Giai đoạn 3: Upload ZIP lên Telegram');
-        const finalZipFileIds: string[] = uploadResults;
+            );
+        }
+        const finalZipFileIds: string[] = await Promise.all(uploadPromises);
+        console.timeEnd('[Sync] Giai đoạn 2+3: Generate + Upload pipeline');
 
         // Gửi file Index V3
         console.time('[Sync] Giai đoạn 4: Upload index + Supabase');
