@@ -148,6 +148,10 @@ function App() {
   // --- PREVENT OVERLAPPING STATES ---
   const [previewMode, setPreviewMode] = useState<GradeLevel | null>(null);
   const effectiveIsAdmin = isAdmin && !previewMode;
+  const [studentGradeValue] = useState(() => {
+    const g = parseInt(localStorage.getItem('physivault_grade') || '0', 10);
+    return g === 10 || g === 11 || g === 12 ? g : null;
+  });
 
   // ── Centralized navigation helper ──
   const resetNavigation = () => {
@@ -593,7 +597,7 @@ function App() {
       );
     }
 
-    return <Dashboard onSelectGrade={setCurrentGrade} fileCounts={getFileCounts} isAdmin={effectiveIsAdmin} onLoadLeaderboard={getLeaderboard} previewMode={previewMode} />;
+    return <Dashboard onSelectGrade={setCurrentGrade} fileCounts={getFileCounts} isAdmin={effectiveIsAdmin} onLoadLeaderboard={getLeaderboard} previewMode={previewMode} studentGrade={studentGradeValue} />;
   };
 
   // === KICKED SCREEN ===
@@ -895,6 +899,7 @@ function App() {
           isAdmin={isAdmin}
           previewMode={previewMode}
           onSetPreviewMode={handlePreviewMode}
+          studentGrade={studentGradeValue}
           className="w-full"
         />
       </div>
@@ -920,6 +925,7 @@ function App() {
         isAdmin={isAdmin}
         previewMode={previewMode}
         onSetPreviewMode={handlePreviewMode}
+        studentGrade={studentGradeValue}
         className="hidden md:flex"
       />
 

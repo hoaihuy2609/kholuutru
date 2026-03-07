@@ -19,6 +19,7 @@ interface DashboardProps {
   isAdmin: boolean;
   onLoadLeaderboard: () => Promise<LeaderEntry[][]>;
   previewMode?: GradeLevel | null;
+  studentGrade?: number | null;
 }
 
 const EinsteinQuotes = [
@@ -338,7 +339,7 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────
 
-const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard, previewMode }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard, previewMode, studentGrade }) => {
   const [quote, setQuote] = useState('');
 
   useEffect(() => {
@@ -450,8 +451,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
           <div className="flex-1 h-px" style={{ background: '#E9E9E7' }} />
         </div>
 
-        <div className={`grid grid-cols-1 ${previewMode ? 'sm:grid-cols-1 max-w-sm' : 'sm:grid-cols-3'} gap-3 md:gap-4`}>
-          {(previewMode ? CURRICULUM.filter(g => g.level === previewMode) : CURRICULUM).map((grade) => {
+        <div className={`grid grid-cols-1 ${(previewMode || (!isAdmin && studentGrade)) ? 'sm:grid-cols-1 max-w-sm' : 'sm:grid-cols-3'} gap-3 md:gap-4`}>
+          {(previewMode
+            ? CURRICULUM.filter(g => g.level === previewMode)
+            : !isAdmin && studentGrade
+              ? CURRICULUM.filter(g => g.level === studentGrade)
+              : CURRICULUM
+          ).map((grade) => {
             const config = gradeConfig[grade.level] ?? { icon: FileText, dot: '#AEACA8', label: grade.title };
             const { icon: Icon, dot } = config;
             return (

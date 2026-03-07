@@ -38,6 +38,7 @@ interface SidebarProps {
   isAdmin?: boolean;
   previewMode?: GradeLevel | null;
   onSetPreviewMode?: (mode: GradeLevel | null) => void;
+  studentGrade?: number | null;
 }
 
 // ── Custom dropdown options ──────────────────────────────────────────
@@ -48,7 +49,7 @@ const PREVIEW_OPTIONS = [
   { value: String(GradeLevel.Grade10), label: 'Học sinh Lớp 10', color: '#448361', bg: '#EAF3EE', border: '#B7D9C4', dot: '#448361', icon: Activity },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, onOpenBlog, showBlog, className, isAdmin, previewMode, onSetPreviewMode }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, onOpenBlog, showBlog, className, isAdmin, previewMode, onSetPreviewMode, studentGrade }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -287,7 +288,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
         </div>
 
         {/* Grade items */}
-        {(previewMode ? [previewMode] : [GradeLevel.Grade12, GradeLevel.Grade11, GradeLevel.Grade10]).map((grade) => {
+        {(previewMode
+          ? [previewMode]
+          : !isAdmin && studentGrade
+            ? [studentGrade as GradeLevel]
+            : [GradeLevel.Grade12, GradeLevel.Grade11, GradeLevel.Grade10]
+        ).map((grade) => {
           const isSelected = currentGrade === grade;
           const { icon: Icon, label, dot } = gradeConfig[grade];
 
