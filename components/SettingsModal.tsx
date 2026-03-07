@@ -192,7 +192,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     };
 
     const handleVerifyPassword = () => {
-        const _ref = [84, 104, 97, 121, 72, 117, 121, 50, 48, 50, 54].map(c => String.fromCharCode(c)).join('');
+        const _ref = import.meta.env.VITE_ADMIN_KEY || [84, 104, 97, 121, 72, 117, 121, 50, 48, 50, 54].map(c => String.fromCharCode(c)).join('');
         if (password === _ref) {
             onToggleAdmin(true);
             onShowToast('Đã kích hoạt quyền quản trị viên!', 'success');
