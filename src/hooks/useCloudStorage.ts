@@ -88,21 +88,32 @@ export const xorObfuscate = (data: string): string => {
 
 export const xorDeobfuscate = (encoded: string): string => {
     try {
-        // Tối ưu: dùng pre-computed key bytes, chỉ 1 Uint8Array duy nhất (trước đây tạo 2)
         const binaryStr = atob(encoded);
         const len = binaryStr.length;
         const result = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-            result[i] = binaryStr.charCodeAt(i) ^ XOR_KEY_BYTES[i % XOR_KEY_LEN];
+        const kLen = XOR_KEY_LEN;
+        const alignedLen = len - (len % kLen);
+
+        for (let i = 0; i < alignedLen; i += kLen) {
+            for (let j = 0; j < kLen; j++) {
+                result[i + j] = binaryStr.charCodeAt(i + j) ^ XOR_KEY_BYTES[j];
+            }
         }
+        for (let i = alignedLen; i < len; i++) {
+            result[i] = binaryStr.charCodeAt(i) ^ XOR_KEY_BYTES[i - alignedLen];
+        }
+
         return new TextDecoder().decode(result);
     } catch {
-        return encoded; // Nếu không phải XOR-encoded, trả về nguyên bản
+        return encoded;
     }
 };
 
-// --- IndexedDB Helper ---
+// --- IndexedDB Helper (cached connection) ---
+let _dbCache: IDBDatabase | null = null;
+
 const openDB = (): Promise<IDBDatabase> => {
+    if (_dbCache) return Promise.resolve(_dbCache);
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
         request.onupgradeneeded = () => {
@@ -111,7 +122,12 @@ const openDB = (): Promise<IDBDatabase> => {
                 db.createObjectStore(STORE_NAME);
             }
         };
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => {
+            _dbCache = request.result;
+            _dbCache.onclose = () => { _dbCache = null; };
+            _dbCache.onversionchange = () => { _dbCache?.close(); _dbCache = null; };
+            resolve(_dbCache);
+        };
         request.onerror = () => reject(request.error);
     });
 };
@@ -135,6 +151,19 @@ const dbSet = async (key: string, value: any): Promise<void> => {
         const request = store.put(value, key);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
+    });
+};
+
+const dbSetBatch = async (entries: [string, any][]): Promise<void> => {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        for (const [key, value] of entries) {
+            store.put(value, key);
+        }
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
     });
 };
 
@@ -325,6 +354,12 @@ export const useCloudStorage = () => {
         const t_fetch_total = performance.now();
 
         try {
+            // Khởi động đọc local data ngay (chạy song song với Phase 1+2, không chờ network)
+            const localDataPromise = Promise.all([
+                dbGet(STORAGE_LESSONS_KEY),
+                dbGet(STORAGE_FILES_KEY)
+            ]);
+
             // Giai đoạn 1: Lấy file ID từ Supabase
             const t1 = performance.now();
             let indexFileId = localStorage.getItem(`pv_sync_file_id_${grade}`);
@@ -343,29 +378,20 @@ export const useCloudStorage = () => {
             console.log(`[Fetch] Giai đoạn 1 (Supabase): ${(performance.now() - t1).toFixed(0)}ms`);
             if (!indexFileId) throw new Error(`Hệ thống chưa có dữ liệu cho Lớp ${grade}. Thầy vui lòng Sync trước nhé!`);
 
-            const fetchViaPublicProxy = fetchViaCloudflareProxy;
-
             // Giai đoạn 2: Tải file index từ Cloudflare
             const t2 = performance.now();
-            const indexRaw = await fetchViaPublicProxy(indexFileId);
+            const indexRaw = await fetchViaCloudflareProxy(indexFileId);
             console.log(`[Fetch] Giai đoạn 2 (Tải index từ CF): ${(performance.now() - t2).toFixed(0)}ms`);
             const indexStr = new TextDecoder().decode(indexRaw);
             const indexData = JSON.parse(xorDeobfuscate(indexStr));
 
-            const currentLessons = await dbGet(STORAGE_LESSONS_KEY) || [];
-            const currentFiles = await dbGet(STORAGE_FILES_KEY) || {};
+            // Local data đã chạy song song từ đầu — lấy kết quả (thường đã xong)
+            const [rawLessons, rawFiles] = await localDataPromise;
             const newLessonsMap = new Map();
-            currentLessons.forEach((l: Lesson) => newLessonsMap.set(l.id, l));
-            const newFiles = { ...currentFiles };
+            (rawLessons || []).forEach((l: Lesson) => newLessonsMap.set(l.id, l));
+            const newFiles = { ...(rawFiles || {}) };
             let totalLessonCount = 0;
             let totalFileCount = 0;
-
-            // Helper: fetch 1 file JSON đơn lẻ từ Telegram qua Proxy
-            const fetchOneFile = async (fileId: string) => {
-                const buf = await fetchViaPublicProxy(fileId);
-                const str = new TextDecoder().decode(buf);
-                return JSON.parse(xorDeobfuscate(str));
-            };
 
             // Helper: gộp dữ liệu từ 1 payload vào state
             const mergePayload = (data: any) => {
@@ -383,12 +409,12 @@ export const useCloudStorage = () => {
                 const zIds: string[] = indexData.zipFileIds || [indexData.zipFileId];
                 if (onProgress) onProgress(10);
 
-                const CONCURRENCY = 5;
+                const CONCURRENCY = 8;
                 let downloadedParts = 0;
 
                 const processZipPart = async (fileId: string): Promise<void> => {
                     const t_part = performance.now();
-                    const arrayBuf = await fetchViaPublicProxy(fileId);
+                    const arrayBuf = await fetchViaCloudflareProxy(fileId);
                     console.log(`[Fetch]   └ Tải ZIP part (${(arrayBuf.byteLength / 1024 / 1024).toFixed(2)} MB): ${(performance.now() - t_part).toFixed(0)}ms`);
 
                     const t_unzip = performance.now();
@@ -402,11 +428,8 @@ export const useCloudStorage = () => {
                         if (!fileObj.dir) {
                             filePromises.push(
                                 fileObj.async("string").then(content => {
-                                    // Phát hiện format: JSON bắt đầu bằng '{' hoặc '['
-                                    // XOR-encoded (base64) bắt đầu bằng ký tự khác
-                                    // Tránh try/catch tốn kém — chỉ throw exception khi cần
                                     const firstChar = content.charCodeAt(0);
-                                    const parsedData = (firstChar === 123 || firstChar === 91) // '{' = 123, '[' = 91
+                                    const parsedData = (firstChar === 123 || firstChar === 91)
                                         ? JSON.parse(content)
                                         : JSON.parse(xorDeobfuscate(content));
                                     mergePayload(parsedData);
@@ -421,14 +444,19 @@ export const useCloudStorage = () => {
                     if (onProgress) onProgress(Math.floor(10 + (downloadedParts / zIds.length) * 80));
                 };
 
-                // Giai đoạn 3: Tải ZIP chunks
+                // Giai đoạn 3: Tải ZIP chunks — semaphore pattern (luôn giữ N slot đầy)
                 const t3 = performance.now();
-                console.log(`[Fetch] Giai đoạn 3: Bắt đầu tải ${zIds.length} ZIP chunk(s)`);
+                console.log(`[Fetch] Giai đoạn 3: Bắt đầu tải ${zIds.length} ZIP chunk(s), concurrency=${CONCURRENCY}`);
                 try {
-                    for (let i = 0; i < zIds.length; i += CONCURRENCY) {
-                        const batch = zIds.slice(i, i + CONCURRENCY);
-                        await Promise.all(batch.map(id => processZipPart(id)));
+                    const pool = new Set<Promise<void>>();
+                    for (const id of zIds) {
+                        const p = processZipPart(id).then(() => { pool.delete(p); });
+                        pool.add(p);
+                        if (pool.size >= CONCURRENCY) {
+                            await Promise.race(pool);
+                        }
                     }
+                    if (pool.size > 0) await Promise.all(pool);
                 } catch (err: any) {
                     console.error('Error fetching zip chunks:', err);
                     throw new Error(`Tải đoạn dữ liệu thất bại. Vui lòng thử tải lại.`);
@@ -444,21 +472,31 @@ export const useCloudStorage = () => {
                 allIds = Object.values(indexData.chapterFileIds as Record<string, string>);
             }
 
-            // Fetch song song theo batch 8 để tránh rate-limit (chỉ cho cấu trúc V1, V2 cũ)
+            // V1/V2: semaphore pattern thay vì batch-wait
             if (allIds.length > 0) {
-                const BATCH = 8;
-                for (let i = 0; i < allIds.length; i += BATCH) {
-                    const chunk = allIds.slice(i, i + BATCH);
-                    const results = await Promise.all(chunk.map(fetchOneFile));
-                    results.forEach(mergePayload);
+                const CONCURRENCY = 8;
+                const pool = new Set<Promise<void>>();
+                for (const id of allIds) {
+                    const p = (async () => {
+                        const buf = await fetchViaCloudflareProxy(id);
+                        const str = new TextDecoder().decode(buf);
+                        mergePayload(JSON.parse(xorDeobfuscate(str)));
+                    })().then(() => { pool.delete(p); });
+                    pool.add(p);
+                    if (pool.size >= CONCURRENCY) {
+                        await Promise.race(pool);
+                    }
                 }
+                if (pool.size > 0) await Promise.all(pool);
             }
 
-            // Giai đoạn 4: Lưu vào IndexedDB
+            // Giai đoạn 4: Lưu vào IndexedDB (1 transaction duy nhất)
             const t4 = performance.now();
             const uniqueLessons = Array.from(newLessonsMap.values()) as Lesson[];
-            await dbSet(STORAGE_LESSONS_KEY, uniqueLessons);
-            await dbSet(STORAGE_FILES_KEY, newFiles);
+            await dbSetBatch([
+                [STORAGE_LESSONS_KEY, uniqueLessons],
+                [STORAGE_FILES_KEY, newFiles]
+            ]);
             setLessons(uniqueLessons);
             setStoredFiles(newFiles);
             console.log(`[Fetch] Giai đoạn 4 (Lưu IndexedDB): ${(performance.now() - t4).toFixed(0)}ms`);
