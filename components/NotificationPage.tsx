@@ -101,7 +101,11 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
             if (result.success) {
                 await onMarkFetched(notif.id);
                 setFetchedIds(prev => new Set([...prev, notif.id]));
-                onShowToast(`✅ Đã tải về ${result.fileCount} tài liệu mới!`, 'success');
+                if ((result as any).skipped) {
+                    onShowToast('✅ Bạn đã có bản mới nhất! Không cần tải lại.', 'success');
+                } else {
+                    onShowToast(`✅ Đã tải về ${result.fileCount} tài liệu mới!`, 'success');
+                }
             }
         } catch (err: any) {
             onShowToast(`Lỗi gọi bài: ${err.message}`, 'error');

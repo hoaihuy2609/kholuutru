@@ -117,7 +117,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                 const result = await onFetchLessons(fetchedGrade, setFetchProgress);
                 setFetchResult(result);
                 const exams = await onLoadExams();
-                onShowToast(`✓ Đã nhận ${result.lessonCount} bài giảng và ${exams.length} đề thi từ hệ thống!`, 'success');
+                if ((result as any).skipped) {
+                    onShowToast('✓ Bạn đã có bản mới nhất! Không cần tải lại.', 'success');
+                } else {
+                    onShowToast(`✓ Đã nhận ${result.lessonCount} bài giảng và ${exams.length} đề thi từ hệ thống!`, 'success');
+                }
             } catch (err: any) {
                 onShowToast(`Lưu ý: ${err.message}`, 'warning');
             } finally {
@@ -137,7 +141,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
             const result = await onFetchLessons(grade, setFetchProgress);
             setFetchResult(result);
             const exams = await onLoadExams();
-            onShowToast(`✓ Đã tải kho bài giảng kho và ${exams.length} đề thi mới nhất!`, 'success');
+            if ((result as any).skipped) {
+                onShowToast('✓ Bạn đã có bản mới nhất! Không cần tải lại.', 'success');
+            } else {
+                onShowToast(`✓ Đã tải kho bài giảng và ${exams.length} đề thi mới nhất!`, 'success');
+            }
         } catch (err: any) {
             onShowToast(`Lỗi tải bài giảng: ${err.message}`, 'error');
         } finally {

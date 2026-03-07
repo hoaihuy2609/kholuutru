@@ -356,7 +356,7 @@ export const useCloudStorage = () => {
     };
 
     // --- Telegram Cloud Sync: Fetch bài giảng theo grade ---
-    const fetchLessonsFromGitHub = async (grade: number, onProgress?: (pct: number) => void): Promise<{ success: boolean; lessonCount: number; fileCount: number }> => {
+    const fetchLessonsFromGitHub = async (grade: number, onProgress?: (pct: number) => void): Promise<{ success: boolean; lessonCount: number; fileCount: number; skipped?: boolean }> => {
         console.log(`[Fetch] Bắt đầu fetch Lớp ${grade}`);
         const t_fetch_total = performance.now();
 
@@ -392,6 +392,16 @@ export const useCloudStorage = () => {
             }
             console.log(`[Fetch] Giai đoạn 1 (Supabase): ${(performance.now() - t1).toFixed(0)}ms`);
             if (!indexFileId) throw new Error(`Hệ thống chưa có dữ liệu cho Lớp ${grade}. Thầy vui lòng Sync trước nhé!`);
+
+            // Skip fetch: nếu indexFileId chưa đổi → học sinh đã có bản mới nhất
+            const lastFetchedId = localStorage.getItem(`pv_last_fetched_index_${grade}`);
+            if (lastFetchedId && lastFetchedId === indexFileId) {
+                // Hủy speculative download nếu có (không cần nữa)
+                speculativeIndexPromise?.catch(() => {});
+                console.log(`[Fetch] ⚡ Skip — đã có bản mới nhất (${(performance.now() - t_fetch_total).toFixed(0)}ms)`);
+                if (onProgress) onProgress(100);
+                return { success: true, lessonCount: 0, fileCount: 0, skipped: true };
+            }
 
             // Giai đoạn 2: Lấy index data (speculative hit hoặc fresh download)
             const t2 = performance.now();
@@ -522,6 +532,9 @@ export const useCloudStorage = () => {
             setStoredFiles(newFiles);
             console.log(`[Fetch] Giai đoạn 4 (Lưu IndexedDB): ${(performance.now() - t4).toFixed(0)}ms`);
             console.log(`[Fetch] ✅ Tổng thời gian: ${((performance.now() - t_fetch_total) / 1000).toFixed(2)}s | ${totalLessonCount} bài, ${totalFileCount} file`);
+
+            // Ghi nhận indexFileId đã fetch thành công → lần sau skip nếu chưa có bài mới
+            localStorage.setItem(`pv_last_fetched_index_${grade}`, indexFileId!);
 
             return { success: true, lessonCount: totalLessonCount, fileCount: totalFileCount };
         } catch (err: any) {
