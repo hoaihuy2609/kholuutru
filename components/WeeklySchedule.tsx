@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScheduleItem } from '../types';
-import { Calendar, Clock, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, BookOpen, AlertCircle, Save, X } from 'lucide-react';
+import { Calendar, Clock, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
 
 interface WeeklyScheduleProps {
     isAdmin: boolean;
@@ -12,12 +12,12 @@ interface WeeklyScheduleProps {
 }
 
 const DAYS_OF_WEEK = [
-    { id: 1, name: 'Thứ 2', dateOffset: 0 },
-    { id: 2, name: 'Thứ 3', dateOffset: 1 },
-    { id: 3, name: 'Thứ 4', dateOffset: 2 },
-    { id: 4, name: 'Thứ 5', dateOffset: 3 },
-    { id: 5, name: 'Thứ 6', dateOffset: 4 },
-    { id: 6, name: 'Thứ 7', dateOffset: 5 },
+    { id: 1, name: 'Thứ 2', short: 'T2', dateOffset: 0 },
+    { id: 2, name: 'Thứ 3', short: 'T3', dateOffset: 1 },
+    { id: 3, name: 'Thứ 4', short: 'T4', dateOffset: 2 },
+    { id: 4, name: 'Thứ 5', short: 'T5', dateOffset: 3 },
+    { id: 5, name: 'Thứ 6', short: 'T6', dateOffset: 4 },
+    { id: 6, name: 'Thứ 7', short: 'T7', dateOffset: 5 },
 ];
 
 const GRADES = [10, 11, 12];
@@ -35,6 +35,15 @@ const formatISODate = (d: Date) => {
     return (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 10);
 };
 
+const ACCENT_COLORS = [
+    { bg: '#EEF0FB', border: '#6B7CDB', text: '#4B5CC4' },
+    { bg: '#F3ECF8', border: '#9065B0', text: '#7B4FA0' },
+    { bg: '#EAF3EE', border: '#448361', text: '#2E6B47' },
+    { bg: '#FFF3E8', border: '#D9730D', text: '#B85C00' },
+    { bg: '#FEF2F2', border: '#E03E3E', text: '#C52828' },
+    { bg: '#E8F4FD', border: '#2B88D8', text: '#1A6DB8' },
+];
+
 export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
     isAdmin,
     studentGrade,
@@ -47,19 +56,14 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
     const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getMonDay(new Date()));
     const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
     const [loading, setLoading] = useState(true);
-
     const [editingItem, setEditingItem] = useState<Partial<ScheduleItem> | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
 
     useEffect(() => {
-        if (!isAdmin && studentGrade) {
-            setSelectedGrade(studentGrade);
-        }
+        if (!isAdmin && studentGrade) setSelectedGrade(studentGrade);
     }, [isAdmin, studentGrade]);
 
-    useEffect(() => {
-        fetchSchedules();
-    }, [selectedGrade]);
+    useEffect(() => { fetchSchedules(); }, [selectedGrade]);
 
     const fetchSchedules = async () => {
         setLoading(true);
@@ -80,9 +84,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
         setCurrentWeekStart(prev);
     };
 
-    const handleJumpToCurrentWeek = () => {
-        setCurrentWeekStart(getMonDay(new Date()));
-    };
+    const handleJumpToCurrentWeek = () => setCurrentWeekStart(getMonDay(new Date()));
 
     const handleSaveSchedule = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -90,7 +92,6 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
             alert("Vui lòng nhập đầy đủ thông tin!");
             return;
         }
-
         const payload: Omit<ScheduleItem, 'id' | 'created_at'> = {
             title: editingItem.title,
             description: editingItem.description || '',
@@ -99,17 +100,12 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
             end_time: editingItem.end_time,
             grade: selectedGrade
         };
-
         if (editingItem.id) {
             const success = await onUpdateSchedule(editingItem.id, payload, selectedGrade);
-            if (success) {
-                setSchedules(prev => prev.map(s => s.id === editingItem.id ? { ...s, ...payload } : s));
-            }
+            if (success) setSchedules(prev => prev.map(s => s.id === editingItem.id ? { ...s, ...payload } : s));
         } else {
             const newSchedule = await onSaveSchedule(payload);
-            if (newSchedule) {
-                setSchedules(prev => [...prev, newSchedule]);
-            }
+            if (newSchedule) setSchedules(prev => [...prev, newSchedule]);
         }
         setIsFormOpen(false);
         setEditingItem(null);
@@ -124,14 +120,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
     };
 
     const openFormForNew = (dateStr: string) => {
-        setEditingItem({
-            date: dateStr,
-            start_time: "19:00",
-            end_time: "20:30",
-            grade: selectedGrade,
-            title: "",
-            description: ""
-        });
+        setEditingItem({ date: dateStr, start_time: "19:00", end_time: "20:30", grade: selectedGrade, title: "", description: "" });
         setIsFormOpen(true);
     };
 
@@ -141,152 +130,316 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
     };
 
     const currentWeekEnd = new Date(currentWeekStart);
-    currentWeekEnd.setDate(currentWeekEnd.getDate() + 6);
+    currentWeekEnd.setDate(currentWeekEnd.getDate() + 5);
 
-    const formatHeaderDate = (d: Date) => d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric' });
+    const fmtDate = (d: Date) => d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    const fmtMonth = (d: Date) => d.toLocaleDateString('vi-VN', { month: 'long' });
+
+    const todayStr = formatISODate(new Date());
 
     return (
-        <div className="animate-fade-in flex flex-col gap-6 w-full">
-            {isAdmin && (
-                <div className="flex gap-2 bg-white p-1 rounded-lg w-max border border-gray-200 shadow-sm">
-                    {GRADES.map(grade => (
-                        <button
-                            key={grade}
-                            onClick={() => setSelectedGrade(grade)}
-                            className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${selectedGrade === grade ? 'bg-[#448361] text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
-                        >
-                            Khối {grade}
-                        </button>
-                    ))}
-                </div>
-            )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
 
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-[#448361]" />
-                        Tuần từ {formatHeaderDate(currentWeekStart)} đến {formatHeaderDate(currentWeekEnd)}
-                    </h2>
-                    <div className="flex gap-1 items-center bg-gray-50 p-1 rounded-md border border-gray-200">
-                        <button onClick={handlePrevWeek} className="p-1 rounded text-gray-600 hover:bg-gray-200 transition">
-                            <ChevronLeft className="w-4 h-4" />
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                            width: '36px', height: '36px', borderRadius: '10px',
+                            background: 'linear-gradient(135deg, #448361, #5BA37A)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 2px 8px rgba(68,131,97,0.25)'
+                        }}>
+                            <Calendar style={{ width: '18px', height: '18px', color: '#fff' }} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '18px', fontWeight: 700, color: '#1A1A1A', lineHeight: 1.2 }}>
+                                Lịch tuần
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#787774', fontWeight: 500 }}>
+                                {fmtDate(currentWeekStart)} — {fmtDate(currentWeekEnd)} · {fmtMonth(currentWeekStart)}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '2px',
+                        background: '#F7F6F3', padding: '3px', borderRadius: '10px',
+                        border: '1px solid #E9E9E7'
+                    }}>
+                        <button onClick={handlePrevWeek} style={{
+                            padding: '6px', borderRadius: '7px', border: 'none', background: 'transparent',
+                            color: '#787774', cursor: 'pointer', display: 'flex', transition: 'all 0.15s'
+                        }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#E9E9E7'; e.currentTarget.style.color = '#1A1A1A'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#787774'; }}
+                        >
+                            <ChevronLeft style={{ width: '16px', height: '16px' }} />
                         </button>
-                        <button onClick={handleJumpToCurrentWeek} className="px-2 py-1 text-xs font-semibold text-[#448361] hover:bg-[#EAF3EE] rounded transition">
-                            Hiện tại
+                        <button onClick={handleJumpToCurrentWeek} style={{
+                            padding: '4px 12px', borderRadius: '7px', border: 'none',
+                            background: 'transparent', color: '#448361', cursor: 'pointer',
+                            fontSize: '12px', fontWeight: 700, transition: 'all 0.15s'
+                        }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#EAF3EE'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            Hôm nay
                         </button>
-                        <button onClick={handleNextWeek} className="p-1 rounded text-gray-600 hover:bg-gray-200 transition">
-                            <ChevronRight className="w-4 h-4" />
+                        <button onClick={handleNextWeek} style={{
+                            padding: '6px', borderRadius: '7px', border: 'none', background: 'transparent',
+                            color: '#787774', cursor: 'pointer', display: 'flex', transition: 'all 0.15s'
+                        }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#E9E9E7'; e.currentTarget.style.color = '#1A1A1A'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#787774'; }}
+                        >
+                            <ChevronRight style={{ width: '16px', height: '16px' }} />
                         </button>
                     </div>
                 </div>
+
+                {isAdmin && (
+                    <div style={{
+                        display: 'flex', gap: '3px', background: '#F7F6F3', padding: '3px',
+                        borderRadius: '10px', border: '1px solid #E9E9E7'
+                    }}>
+                        {GRADES.map(grade => (
+                            <button
+                                key={grade}
+                                onClick={() => setSelectedGrade(grade)}
+                                style={{
+                                    padding: '5px 14px', borderRadius: '7px', border: 'none',
+                                    fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    background: selectedGrade === grade ? '#448361' : 'transparent',
+                                    color: selectedGrade === grade ? '#fff' : '#787774',
+                                    boxShadow: selectedGrade === grade ? '0 2px 6px rgba(68,131,97,0.3)' : 'none'
+                                }}
+                            >
+                                Lớp {grade}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
+            {/* Schedule Grid */}
             {loading ? (
-                <div className="flex justify-center p-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#448361]"></div>
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+                    <div className="animate-spin" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid #EAF3EE', borderTopColor: '#448361' }} />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {DAYS_OF_WEEK.map((day) => {
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: '12px'
+                }}>
+                    {DAYS_OF_WEEK.map((day, dayIndex) => {
                         const cellDate = new Date(currentWeekStart);
                         cellDate.setDate(cellDate.getDate() + day.dateOffset);
                         const dateStr = formatISODate(cellDate);
-                        const isToday = dateStr === formatISODate(new Date());
-
+                        const isToday = dateStr === todayStr;
+                        const isPast = dateStr < todayStr;
                         const dayItems = schedules.filter(s => s.date === dateStr).sort((a, b) => a.start_time.localeCompare(b.start_time));
+                        const dateNum = cellDate.getDate();
 
                         return (
                             <div
                                 key={day.id}
-                                className="flex flex-col rounded-xl overflow-hidden transition-all duration-200 h-full"
                                 style={{
-                                    background: isToday ? '#F9FCFA' : '#FFFFFF',
-                                    border: `1px solid ${isToday ? '#A7D7BC' : '#E9E9E7'}`,
-                                    boxShadow: isToday ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+                                    borderRadius: '14px',
+                                    overflow: 'hidden',
+                                    border: isToday ? '1.5px solid #448361' : '1px solid #E9E9E7',
+                                    background: '#fff',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    transition: 'all 0.2s ease',
+                                    opacity: isPast ? 0.6 : 1,
+                                    boxShadow: isToday ? '0 4px 16px rgba(68,131,97,0.12)' : '0 1px 3px rgba(0,0,0,0.04)',
+                                    position: 'relative',
+                                }}
+                                onMouseEnter={e => {
+                                    if (!isToday) {
+                                        e.currentTarget.style.borderColor = '#CFCFCB';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)';
+                                    }
+                                    e.currentTarget.style.opacity = '1';
+                                }}
+                                onMouseLeave={e => {
+                                    if (!isToday) {
+                                        e.currentTarget.style.borderColor = '#E9E9E7';
+                                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
+                                    }
+                                    e.currentTarget.style.opacity = isPast ? '0.6' : '1';
                                 }}
                             >
                                 {/* Day Header */}
-                                <div
-                                    className="py-2.5 px-4 flex justify-between items-center"
-                                    style={{
-                                        background: isToday ? '#EAF3EE' : '#F7F6F3',
-                                        borderBottom: `1px solid ${isToday ? '#A7D7BC' : '#E9E9E7'}`
-                                    }}
-                                >
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: isToday ? '#448361' : '#787774' }}>{day.name}</div>
+                                <div style={{
+                                    padding: '10px 14px',
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    background: isToday ? 'linear-gradient(135deg, #EAF3EE, #F0F7F3)' : '#FAFAF9',
+                                    borderBottom: `1px solid ${isToday ? '#C5E4D1' : '#F0F0EE'}`,
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{
+                                            width: '32px', height: '32px', borderRadius: '9px',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '14px', fontWeight: 800,
+                                            background: isToday ? '#448361' : '#F0F0EE',
+                                            color: isToday ? '#fff' : '#787774',
+                                            boxShadow: isToday ? '0 2px 6px rgba(68,131,97,0.3)' : 'none',
+                                            transition: 'all 0.2s',
+                                        }}>
+                                            {dateNum}
+                                        </div>
+                                        <div>
+                                            <div style={{
+                                                fontSize: '13px', fontWeight: 700,
+                                                color: isToday ? '#2E6B47' : '#1A1A1A',
+                                                lineHeight: 1
+                                            }}>
+                                                {day.name}
+                                            </div>
+                                            {isToday && (
+                                                <div style={{
+                                                    fontSize: '10px', fontWeight: 700, color: '#448361',
+                                                    letterSpacing: '0.05em', marginTop: '2px'
+                                                }}>
+                                                    HÔM NAY
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     {isAdmin && (
                                         <button
                                             onClick={() => openFormForNew(dateStr)}
-                                            className="p-1 transition-all rounded-md"
-                                            style={{ color: isToday ? '#448361' : '#AEACA8' }}
+                                            style={{
+                                                width: '28px', height: '28px', borderRadius: '8px', border: 'none',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                background: isToday ? '#C5E4D1' : '#F0F0EE',
+                                                color: isToday ? '#2E6B47' : '#AEACA8',
+                                                cursor: 'pointer', transition: 'all 0.15s'
+                                            }}
                                             onMouseEnter={e => {
-                                                (e.currentTarget as HTMLElement).style.background = isToday ? '#A7D7BC' : '#E9E9E7';
-                                                (e.currentTarget as HTMLElement).style.color = isToday ? '#20402e' : '#1A1A1A';
+                                                e.currentTarget.style.background = isToday ? '#448361' : '#E9E9E7';
+                                                e.currentTarget.style.color = isToday ? '#fff' : '#1A1A1A';
+                                                e.currentTarget.style.transform = 'scale(1.05)';
                                             }}
                                             onMouseLeave={e => {
-                                                (e.currentTarget as HTMLElement).style.background = 'transparent';
-                                                (e.currentTarget as HTMLElement).style.color = isToday ? '#448361' : '#AEACA8';
+                                                e.currentTarget.style.background = isToday ? '#C5E4D1' : '#F0F0EE';
+                                                e.currentTarget.style.color = isToday ? '#2E6B47' : '#AEACA8';
+                                                e.currentTarget.style.transform = 'scale(1)';
                                             }}
                                             title="Thêm lịch"
                                         >
-                                            <Plus className="w-4 h-4" />
+                                            <Plus style={{ width: '15px', height: '15px' }} />
                                         </button>
                                     )}
                                 </div>
 
-                                {/* Items Content */}
-                                <div className="p-3 flex-grow flex flex-col gap-2.5 min-h-[100px]">
+                                {/* Items */}
+                                <div style={{
+                                    padding: '10px 12px',
+                                    flexGrow: 1, display: 'flex', flexDirection: 'column',
+                                    gap: '8px', minHeight: '90px'
+                                }}>
                                     {dayItems.length === 0 ? (
-                                        <div className="flex-grow flex items-center justify-center">
-                                            <span className="text-[12px] font-medium italic" style={{ color: '#CFCFCB' }}>Trống</span>
+                                        <div style={{
+                                            flexGrow: 1, display: 'flex', flexDirection: 'column',
+                                            alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                            padding: '12px 0'
+                                        }}>
+                                            <div style={{
+                                                width: '32px', height: '32px', borderRadius: '50%',
+                                                background: '#F7F6F3', display: 'flex',
+                                                alignItems: 'center', justifyContent: 'center'
+                                            }}>
+                                                <Calendar style={{ width: '14px', height: '14px', color: '#CFCFCB' }} />
+                                            </div>
+                                            <span style={{ fontSize: '11px', color: '#CFCFCB', fontWeight: 500 }}>
+                                                Chưa có lịch
+                                            </span>
                                         </div>
                                     ) : (
-                                        <div className="flex flex-col gap-2.5">
-                                            {dayItems.map(item => (
+                                        dayItems.map((item, itemIdx) => {
+                                            const accent = ACCENT_COLORS[itemIdx % ACCENT_COLORS.length];
+                                            return (
                                                 <div
                                                     key={item.id}
-                                                    className="group/item rounded-lg p-3 transition-all duration-200 flex flex-col relative w-full cursor-default"
-                                                    style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
+                                                    className="group/item"
+                                                    style={{
+                                                        borderRadius: '10px', padding: '10px 12px',
+                                                        background: accent.bg,
+                                                        borderLeft: `3px solid ${accent.border}`,
+                                                        transition: 'all 0.15s',
+                                                        cursor: 'default', position: 'relative'
+                                                    }}
                                                     onMouseEnter={e => {
-                                                        (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
-                                                        (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-                                                        (e.currentTarget as HTMLElement).style.background = '#FAFAF9';
+                                                        e.currentTarget.style.boxShadow = `0 2px 8px ${accent.border}20`;
+                                                        e.currentTarget.style.transform = 'translateX(2px)';
                                                     }}
                                                     onMouseLeave={e => {
-                                                        (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
-                                                        (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-                                                        (e.currentTarget as HTMLElement).style.background = '#FFFFFF';
+                                                        e.currentTarget.style.boxShadow = 'none';
+                                                        e.currentTarget.style.transform = 'translateX(0)';
                                                     }}
                                                 >
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md" style={{ color: '#D9730D', background: '#FFF3E8', border: '1px solid #F5C796' }}>
-                                                            <Clock className="w-3 h-3" />
-                                                            {item.start_time} - {item.end_time}
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                        <div style={{
+                                                            display: 'flex', alignItems: 'center', gap: '5px',
+                                                            fontSize: '10px', fontWeight: 700, color: accent.text,
+                                                            letterSpacing: '0.02em'
+                                                        }}>
+                                                            <Clock style={{ width: '11px', height: '11px' }} />
+                                                            {item.start_time} – {item.end_time}
                                                         </div>
                                                         {isAdmin && (
-                                                            <div className="flex gap-1 opacity-100 xl:opacity-0 group-hover/item:opacity-100 transition-opacity bg-transparent pl-1 z-10 rounded">
-                                                                <button onClick={() => openFormForEdit(item)} className="p-1 rounded-md transition-colors" style={{ color: '#AEACA8' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#EEF0FB'; (e.currentTarget as HTMLElement).style.color = '#6B7CDB'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#AEACA8'; }}>
-                                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                            <div className="sched-actions" style={{
+                                                                display: 'flex', gap: '2px',
+                                                                opacity: 0, transition: 'opacity 0.15s'
+                                                            }}>
+                                                                <button onClick={() => openFormForEdit(item)} style={{
+                                                                    padding: '3px', borderRadius: '5px', border: 'none',
+                                                                    background: 'transparent', color: '#AEACA8', cursor: 'pointer',
+                                                                    display: 'flex', transition: 'all 0.15s'
+                                                                }}
+                                                                    onMouseEnter={e => { e.currentTarget.style.background = '#EEF0FB'; e.currentTarget.style.color = '#6B7CDB'; }}
+                                                                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#AEACA8'; }}
+                                                                >
+                                                                    <Edit2 style={{ width: '12px', height: '12px' }} />
                                                                 </button>
-                                                                <button onClick={(e) => handleDelete(item.id, e)} className="p-1 rounded-md transition-colors" style={{ color: '#AEACA8' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FEF2F2'; (e.currentTarget as HTMLElement).style.color = '#E03E3E'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#AEACA8'; }}>
-                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                <button onClick={(e) => handleDelete(item.id, e)} style={{
+                                                                    padding: '3px', borderRadius: '5px', border: 'none',
+                                                                    background: 'transparent', color: '#AEACA8', cursor: 'pointer',
+                                                                    display: 'flex', transition: 'all 0.15s'
+                                                                }}
+                                                                    onMouseEnter={e => { e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.color = '#E03E3E'; }}
+                                                                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#AEACA8'; }}
+                                                                >
+                                                                    <Trash2 style={{ width: '12px', height: '12px' }} />
                                                                 </button>
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <div className="text-[13px] font-semibold leading-relaxed pr-6" style={{ color: '#1A1A1A' }}>
+                                                    <div style={{
+                                                        fontSize: '13px', fontWeight: 650, color: '#1A1A1A',
+                                                        marginTop: '5px', lineHeight: 1.35
+                                                    }}>
                                                         {item.title}
                                                     </div>
                                                     {item.description && (
-                                                        <div className="text-[12px] font-medium whitespace-pre-wrap pl-2.5 mt-2 max-h-[60px] overflow-y-auto custom-scrollbar" style={{ borderLeft: '2px solid #E9E9E7', color: '#787774' }}>
+                                                        <div className="custom-scrollbar" style={{
+                                                            fontSize: '11px', color: '#787774', fontWeight: 500,
+                                                            marginTop: '6px', paddingTop: '6px',
+                                                            borderTop: `1px dashed ${accent.border}40`,
+                                                            lineHeight: 1.5, maxHeight: '48px',
+                                                            overflow: 'hidden', whiteSpace: 'pre-wrap'
+                                                        }}>
                                                             {item.description}
                                                         </div>
                                                     )}
                                                 </div>
-                                            ))}
-                                        </div>
+                                            );
+                                        })
                                     )}
                                 </div>
                             </div>
@@ -295,67 +448,154 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
                 </div>
             )}
 
+            {/* Modal Form */}
             {isFormOpen && isAdmin && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 animate-fade-in" style={{ border: '1px solid #E9E9E7' }}>
-                        <div className="flex justify-between items-center mb-5">
-                            <h3 className="text-lg font-bold text-gray-900">
-                                {editingItem?.id ? 'Sửa chi tiết lịch trình' : 'Thêm mới lịch trình'}
-                            </h3>
-                            <button onClick={() => setIsFormOpen(false)} className="text-gray-400 hover:text-gray-900 bg-gray-100 p-1.5 rounded-lg">
-                                <X className="w-5 h-5" />
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(4px)', zIndex: 50,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '16px'
+                }}>
+                    <div className="animate-fade-in" style={{
+                        background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '420px',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.15)', border: '1px solid #E9E9E7',
+                        overflow: 'hidden'
+                    }}>
+                        <div style={{
+                            padding: '18px 20px',
+                            background: 'linear-gradient(135deg, #EAF3EE, #F0F7F3)',
+                            borderBottom: '1px solid #E9E9E7',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{
+                                    width: '32px', height: '32px', borderRadius: '9px',
+                                    background: '#448361', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                    <Calendar style={{ width: '16px', height: '16px', color: '#fff' }} />
+                                </div>
+                                <span style={{ fontSize: '16px', fontWeight: 700, color: '#1A1A1A' }}>
+                                    {editingItem?.id ? 'Chỉnh sửa lịch' : 'Thêm lịch mới'}
+                                </span>
+                            </div>
+                            <button onClick={() => setIsFormOpen(false)} style={{
+                                width: '30px', height: '30px', borderRadius: '8px', border: 'none',
+                                background: '#E9E9E7', color: '#787774', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                transition: 'all 0.15s'
+                            }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#CFCFCB'; e.currentTarget.style.color = '#1A1A1A'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#E9E9E7'; e.currentTarget.style.color = '#787774'; }}
+                            >
+                                <X style={{ width: '16px', height: '16px' }} />
                             </button>
                         </div>
-                        <form onSubmit={handleSaveSchedule} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Tiêu đề (Lý 12 - Con Lắc Đơn...)</label>
-                                <input
-                                    type="text"
-                                    value={editingItem?.title || ''}
-                                    onChange={(e) => setEditingItem(p => ({ ...p, title: e.target.value }))}
-                                    className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:border-[#448361] focus:ring-2 focus:ring-[#A7D7BC] outline-none transition-all"
-                                    placeholder="Nội dung bài học..."
-                                    required
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
+                        <form onSubmit={handleSaveSchedule} style={{ padding: '20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Bắt đầu</label>
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#787774', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        Tiêu đề
+                                    </label>
                                     <input
-                                        type="time"
-                                        value={editingItem?.start_time || ''}
-                                        onChange={(e) => setEditingItem(p => ({ ...p, start_time: e.target.value }))}
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:border-[#448361] outline-none"
+                                        type="text"
+                                        value={editingItem?.title || ''}
+                                        onChange={(e) => setEditingItem(p => ({ ...p, title: e.target.value }))}
+                                        style={{
+                                            width: '100%', border: '1px solid #E9E9E7', borderRadius: '10px',
+                                            padding: '10px 14px', fontSize: '14px', outline: 'none',
+                                            transition: 'all 0.15s', boxSizing: 'border-box'
+                                        }}
+                                        onFocus={e => { e.target.style.borderColor = '#448361'; e.target.style.boxShadow = '0 0 0 3px rgba(68,131,97,0.12)'; }}
+                                        onBlur={e => { e.target.style.borderColor = '#E9E9E7'; e.target.style.boxShadow = 'none'; }}
+                                        placeholder="VD: Lý 12 — Dao Động Điều Hòa"
                                         required
                                     />
                                 </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#787774', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            Bắt đầu
+                                        </label>
+                                        <input
+                                            type="time"
+                                            value={editingItem?.start_time || ''}
+                                            onChange={(e) => setEditingItem(p => ({ ...p, start_time: e.target.value }))}
+                                            style={{
+                                                width: '100%', border: '1px solid #E9E9E7', borderRadius: '10px',
+                                                padding: '10px 14px', fontSize: '14px', outline: 'none',
+                                                transition: 'all 0.15s', boxSizing: 'border-box'
+                                            }}
+                                            onFocus={e => { e.target.style.borderColor = '#448361'; e.target.style.boxShadow = '0 0 0 3px rgba(68,131,97,0.12)'; }}
+                                            onBlur={e => { e.target.style.borderColor = '#E9E9E7'; e.target.style.boxShadow = 'none'; }}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#787774', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            Kết thúc
+                                        </label>
+                                        <input
+                                            type="time"
+                                            value={editingItem?.end_time || ''}
+                                            onChange={(e) => setEditingItem(p => ({ ...p, end_time: e.target.value }))}
+                                            style={{
+                                                width: '100%', border: '1px solid #E9E9E7', borderRadius: '10px',
+                                                padding: '10px 14px', fontSize: '14px', outline: 'none',
+                                                transition: 'all 0.15s', boxSizing: 'border-box'
+                                            }}
+                                            onFocus={e => { e.target.style.borderColor = '#448361'; e.target.style.boxShadow = '0 0 0 3px rgba(68,131,97,0.12)'; }}
+                                            onBlur={e => { e.target.style.borderColor = '#E9E9E7'; e.target.style.boxShadow = 'none'; }}
+                                            required
+                                        />
+                                    </div>
+                                </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Kết thúc</label>
-                                    <input
-                                        type="time"
-                                        value={editingItem?.end_time || ''}
-                                        onChange={(e) => setEditingItem(p => ({ ...p, end_time: e.target.value }))}
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:border-[#448361] outline-none"
-                                        required
+                                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 700, color: '#787774', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        <span>Ghi chú</span>
+                                        <span style={{ fontSize: '10px', color: '#6B7CDB', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>Link Meet, nội dung...</span>
+                                    </label>
+                                    <textarea
+                                        rows={3}
+                                        value={editingItem?.description || ''}
+                                        onChange={(e) => setEditingItem(p => ({ ...p, description: e.target.value }))}
+                                        className="custom-scrollbar"
+                                        style={{
+                                            width: '100%', border: '1px solid #E9E9E7', borderRadius: '10px',
+                                            padding: '10px 14px', fontSize: '13px', outline: 'none',
+                                            transition: 'all 0.15s', resize: 'none', boxSizing: 'border-box',
+                                            lineHeight: 1.6
+                                        }}
+                                        onFocus={e => { e.target.style.borderColor = '#448361'; e.target.style.boxShadow = '0 0 0 3px rgba(68,131,97,0.12)'; }}
+                                        onBlur={e => { e.target.style.borderColor = '#E9E9E7'; e.target.style.boxShadow = 'none'; }}
+                                        placeholder="Dán link meet, ghi chú dặn dò..."
                                     />
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider flex items-center justify-between">
-                                    <span>Ghi chú chi tiết / Nội dung</span>
-                                    <span className="text-[10px] text-blue-500 font-medium">Bao gồm Link Meet, HD học</span>
-                                </label>
-                                <textarea
-                                    rows={4}
-                                    value={editingItem?.description || ''}
-                                    onChange={(e) => setEditingItem(p => ({ ...p, description: e.target.value }))}
-                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#448361] focus:ring-2 focus:ring-[#A7D7BC] outline-none transition-all resize-none font-medium custom-scrollbar"
-                                    placeholder="Dán link meet vào đây, hoặc ghi chú nội dung dặn dò học sinh trước buổi."
-                                />
-                            </div>
-                            <div className="pt-2 text-right">
-                                <button type="submit" className="bg-[#448361] text-white font-bold py-2.5 px-6 rounded-xl hover:bg-[#32694a] transition-colors focus:ring-4 focus:ring-[#A7D7BC]">
-                                    {editingItem?.id ? 'Lưu thay đổi' : 'Tạo lịch mới'}
+                            <div style={{ marginTop: '18px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                <button type="button" onClick={() => setIsFormOpen(false)} style={{
+                                    padding: '9px 18px', borderRadius: '10px', border: '1px solid #E9E9E7',
+                                    background: '#fff', color: '#787774', fontSize: '13px', fontWeight: 600,
+                                    cursor: 'pointer', transition: 'all 0.15s'
+                                }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = '#F7F6F3'; e.currentTarget.style.borderColor = '#CFCFCB'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#E9E9E7'; }}
+                                >
+                                    Hủy
+                                </button>
+                                <button type="submit" style={{
+                                    padding: '9px 22px', borderRadius: '10px', border: 'none',
+                                    background: 'linear-gradient(135deg, #448361, #5BA37A)',
+                                    color: '#fff', fontSize: '13px', fontWeight: 700,
+                                    cursor: 'pointer', transition: 'all 0.15s',
+                                    boxShadow: '0 2px 8px rgba(68,131,97,0.3)',
+                                    display: 'flex', alignItems: 'center', gap: '6px'
+                                }}
+                                    onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 14px rgba(68,131,97,0.4)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(68,131,97,0.3)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                >
+                                    <Save style={{ width: '14px', height: '14px' }} />
+                                    {editingItem?.id ? 'Lưu thay đổi' : 'Tạo lịch'}
                                 </button>
                             </div>
                         </form>
@@ -364,19 +604,11 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
             )}
 
             <style>{`
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 4px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: #E9E9E7;
-                    border-radius: 4px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: #CFCFCB;
-                }
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #E9E9E7; border-radius: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #CFCFCB; }
+                .group\\/item:hover .sched-actions { opacity: 1 !important; }
             `}</style>
         </div>
     );
