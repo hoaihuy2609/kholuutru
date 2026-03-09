@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye, BookOpen, Zap, CheckCircle2, Circle, X, RotateCcw, ClipboardList, Download } from 'lucide-react';
 import SearchBar from './SearchBar';
 import { Chapter, Lesson, StoredFile } from '../types';
@@ -138,6 +138,19 @@ const ProgressBar: React.FC<{ total: number; done: number; inProgress: number }>
   );
 };
 
+// ── Pure sort helper (outside component – no closure deps) ──────
+function sortFiles(files: StoredFile[], option: 'newest' | 'oldest' | 'az' | 'za') {
+  return [...files].sort((a, b) => {
+    switch (option) {
+      case 'newest': return b.uploadDate - a.uploadDate;
+      case 'oldest': return a.uploadDate - b.uploadDate;
+      case 'az': return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      case 'za': return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
+      default: return 0;
+    }
+  });
+}
+
 // ── Main Component ───────────────────────────────────────────
 interface ChapterViewProps {
   chapter: Chapter;
@@ -153,7 +166,7 @@ interface ChapterViewProps {
   onDeleteChapterFile: (fileId: string) => void;
 }
 
-const ChapterView: React.FC<ChapterViewProps> = ({
+const ChapterView: React.FC<ChapterViewProps> = React.memo(({
   chapter,
   lessons,
   chapterFiles,
@@ -260,22 +273,20 @@ const ChapterView: React.FC<ChapterViewProps> = ({
   }, []);
 
   // ── Util ─────────────────────────────────────
-  const sortFiles = (files: StoredFile[], option: 'newest' | 'oldest' | 'az' | 'za') =>
-    [...files].sort((a, b) => {
-      switch (option) {
-        case 'newest': return b.uploadDate - a.uploadDate;
-        case 'oldest': return a.uploadDate - b.uploadDate;
-        case 'az': return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-        case 'za': return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
-        default: return 0;
-      }
-    });
+  const theoryFiles = useMemo(
+    () => sortFiles(chapterFiles.filter(f => f.category === 'Lý thuyết trọng tâm (Chương)'), 'az'),
+    [chapterFiles]
+  );
+  const trueFalseFiles = useMemo(
+    () => sortFiles(chapterFiles.filter(f => f.category === 'Trắc nghiệm Đúng/Sai (Chương)'), trueFalseSort),
+    [chapterFiles, trueFalseSort]
+  );
+  const advancedFiles = useMemo(
+    () => sortFiles(chapterFiles.filter(f => f.category === 'Bài tập Tính toán Nâng cao'), advancedSort),
+    [chapterFiles, advancedSort]
+  );
 
-  const theoryFiles = sortFiles(chapterFiles.filter(f => f.category === 'Lý thuyết trọng tâm (Chương)'), 'az');
-  const trueFalseFiles = sortFiles(chapterFiles.filter(f => f.category === 'Trắc nghiệm Đúng/Sai (Chương)'), trueFalseSort);
-  const advancedFiles = sortFiles(chapterFiles.filter(f => f.category === 'Bài tập Tính toán Nâng cao'), advancedSort);
-
-  const filteredLessons = lessons
+  const filteredLessons = useMemo(() => lessons
     .filter(l => (l.name || '').toLowerCase().normalize('NFC').includes(searchTerm.toLowerCase().trim().normalize('NFC')))
     .sort((a, b) => {
       switch (sortOption) {
@@ -285,33 +296,33 @@ const ChapterView: React.FC<ChapterViewProps> = ({
         case 'za': return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
         default: return 0;
       }
-    });
+    }), [lessons, searchTerm, sortOption]);
 
   // Progress summary
-  const doneCount = lessons.filter(l => getLP(l.id).status === 'done').length;
+  const doneCount = useMemo(() => lessons.filter(l => getLP(l.id).status === 'done').length, [lessons, getLP]);
   const inProgressCount = 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (newLessonName.trim()) {
       onCreateLesson(newLessonName.trim());
       setNewLessonName('');
       setIsCreating(false);
     }
-  };
+  }, [newLessonName, onCreateLesson]);
 
-  const triggerUpload = (category: string) => {
+  const triggerUpload = useCallback((category: string) => {
     setUploadCategory(category);
     fileInputRef.current?.click();
-  };
+  }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0 && uploadCategory) {
       onUploadChapterFile(Array.from(e.target.files), uploadCategory);
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
     setUploadCategory('');
-  };
+  }, [uploadCategory, onUploadChapterFile]);
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -908,6 +919,6 @@ const ChapterView: React.FC<ChapterViewProps> = ({
       )}
     </>
   );
-};
+});
 
 export default ChapterView;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { GradeLevel } from '../types';
 import { CURRICULUM } from '../constants';
 import { FileText, Folder, Quote, Atom, Zap, Activity, Trophy, ChevronLeft, ChevronRight, Star } from 'lucide-react';
@@ -170,7 +170,7 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
 
         {/* Slide controls */}
         <div className="flex items-center gap-1.5">
-          <button onClick={prev} className="w-5 h-5 rounded flex items-center justify-center transition-colors"
+          <button onClick={prev} aria-label="Xem slide trước đó" className="w-5 h-5 rounded flex items-center justify-center transition-colors"
             style={{ color: cfg.color, background: `${cfg.color}18` }}
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `${cfg.color}30`}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = `${cfg.color}18`}>
@@ -181,7 +181,7 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
               className="rounded-full transition-all duration-300"
               style={{ width: i === slide ? '18px' : '5px', height: '5px', background: i === slide ? cfg.color : cfg.colorBorder }} />
           ))}
-          <button onClick={next} className="w-5 h-5 rounded flex items-center justify-center transition-colors"
+          <button onClick={next} aria-label="Xem slide tiếp theo" className="w-5 h-5 rounded flex items-center justify-center transition-colors"
             style={{ color: cfg.color, background: `${cfg.color}18` }}
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `${cfg.color}30`}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = `${cfg.color}18`}>
@@ -339,14 +339,14 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────
 
-const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard, previewMode, studentGrade }) => {
+const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard, previewMode, studentGrade }) => {
   const [quote, setQuote] = useState('');
 
   useEffect(() => {
     setQuote(EinsteinQuotes[Math.floor(Math.random() * EinsteinQuotes.length)]);
   }, []);
 
-  const totalFiles = Object.values(fileCounts).reduce((a: number, b: number) => a + b, 0);
+  const totalFiles = useMemo(() => Object.values(fileCounts).reduce((a: number, b: number) => a + b, 0), [fileCounts]);
   const totalChapters = CURRICULUM.reduce((acc, g) => acc + g.chapters.length, 0);
 
   return (
@@ -502,6 +502,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
       </div>
     </div>
   );
-};
+});
 
 export default Dashboard;

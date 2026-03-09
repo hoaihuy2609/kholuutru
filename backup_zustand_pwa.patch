@@ -1,0 +1,409 @@
+From 6332969a375ef10321126ec2e609496a6f84508f Mon Sep 17 00:00:00 2001
+From: hoaihuy2609 <hoaihuy2609@gmail.com>
+Date: Mon, 9 Mar 2026 14:00:00 +0700
+Subject: [PATCH] chore: optimize Zustand re-renders and add PWA
+ manifest/accessibility
+
+---
+ App.tsx                       | 87 +++++++++++++++++++++++++++++------
+ components/ChapterView.tsx    | 63 ++++++++++++++-----------
+ components/Dashboard.tsx      | 12 ++---
+ components/WeeklySchedule.tsx |  4 +-
+ index.html                    |  4 ++
+ public/manifest.json          | 23 +++++++++
+ 6 files changed, 146 insertions(+), 47 deletions(-)
+ create mode 100644 public/manifest.json
+
+diff --git a/App.tsx b/App.tsx
+index 87740ce..31d59b2 100644
+--- a/App.tsx
++++ b/App.tsx
+@@ -13,6 +13,7 @@ import OfflineExpiredScreen from './components/auth/OfflineExpiredScreen';
+ import { useUIStore } from './src/stores/useUIStore';
+ import { useDataStore } from './src/stores/useDataStore';
+ import { useExamStore, useBlogStore } from './src/stores/useContentStore';
++import { useShallow } from 'zustand/react/shallow';
+ 
+ const ChapterView = React.lazy(() => import('./components/ChapterView'));
+ const LessonView = React.lazy(() => import('./components/LessonView'));
+@@ -42,8 +43,15 @@ const LazyFallback = () => (
+ // ──────────────────────────────────────────────────────────────────
+ function AppDataSync() {
+   const cloud = useCloudStorage();
+-  const { setLessons, setStoredFiles, setLoading, setIsActivated, setStudentGradeValue } = useDataStore();
+-  const { isAdmin, setKicked, setOfflineExpired, setNotificationUnreadCount } = useUIStore();
++  const setLessons = useDataStore(state => state.setLessons);
++  const setStoredFiles = useDataStore(state => state.setStoredFiles);
++  const setLoading = useDataStore(state => state.setLoading);
++  const setIsActivated = useDataStore(state => state.setIsActivated);
++  const setStudentGradeValue = useDataStore(state => state.setStudentGradeValue);
++  const isAdmin = useUIStore(state => state.isAdmin);
++  const setKicked = useUIStore(state => state.setKicked);
++  const setOfflineExpired = useUIStore(state => state.setOfflineExpired);
++  const setNotificationUnreadCount = useUIStore(state => state.setNotificationUnreadCount);
+   const { getFetchedNotificationIds, getNotifications, verifyAccess } = cloud;
+ 
+   useEffect(() => { setLessons(cloud.lessons); }, [cloud.lessons]);
+@@ -102,7 +110,8 @@ function AppDataSync() {
+ function GradeOverviewPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+   const { level } = useParams<{ level: string }>();
+   const navigate = useNavigate();
+-  const { lessons, storedFiles } = useDataStore();
++  const lessons = useDataStore(state => state.lessons);
++  const storedFiles = useDataStore(state => state.storedFiles);
+   const grade = Number(level) as GradeLevel;
+   const gradeData = useMemo(() => CURRICULUM.find(g => g.level === grade), [grade]);
+   if (!gradeData) return <Navigate to="/" replace />;
+@@ -144,8 +153,11 @@ function GradeOverviewPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage
+ function ChapterPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+   const { level, chapterId } = useParams<{ level: string; chapterId: string }>();
+   const navigate = useNavigate();
+-  const { lessons, storedFiles } = useDataStore();
+-  const { isAdmin, previewMode, showToast } = useUIStore();
++  const lessons = useDataStore(state => state.lessons);
++  const storedFiles = useDataStore(state => state.storedFiles);
++  const isAdmin = useUIStore(state => state.isAdmin);
++  const previewMode = useUIStore(state => state.previewMode);
++  const showToast = useUIStore(state => state.showToast);
+   const effectiveIsAdmin = isAdmin && !previewMode;
+   const grade = Number(level) as GradeLevel;
+   const gradeData = useMemo(() => CURRICULUM.find(g => g.level === grade), [grade]);
+@@ -167,8 +179,11 @@ function ChapterPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+ function LessonPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+   const { level, chapterId, lessonId } = useParams<{ level: string; chapterId: string; lessonId: string }>();
+   const navigate = useNavigate();
+-  const { lessons, storedFiles } = useDataStore();
+-  const { isAdmin, previewMode, showToast } = useUIStore();
++  const lessons = useDataStore(state => state.lessons);
++  const storedFiles = useDataStore(state => state.storedFiles);
++  const isAdmin = useUIStore(state => state.isAdmin);
++  const previewMode = useUIStore(state => state.previewMode);
++  const showToast = useUIStore(state => state.showToast);
+   const effectiveIsAdmin = isAdmin && !previewMode;
+   const lesson = lessons.find(l => l.id === lessonId);
+   const lessonFiles = storedFiles[lessonId!] || [];
+@@ -184,8 +199,15 @@ function LessonPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+ 
+ function ExamRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+   const navigate = useNavigate();
+-  const { isAdmin, previewMode } = useUIStore();
+-  const { activeExam, examSubmission, setActiveExam, setExamSubmission, clearExam } = useExamStore();
++  const isAdmin = useUIStore(state => state.isAdmin);
++  const previewMode = useUIStore(state => state.previewMode);
++  const { activeExam, examSubmission, setActiveExam, setExamSubmission, clearExam } = useExamStore(useShallow(state => ({
++    activeExam: state.activeExam,
++    examSubmission: state.examSubmission,
++    setActiveExam: state.setActiveExam,
++    setExamSubmission: state.setExamSubmission,
++    clearExam: state.clearExam,
++  })));
+   if (activeExam && examSubmission) {
+     return (
+       <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+@@ -209,9 +231,19 @@ function ExamRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+ 
+ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+   const navigate = useNavigate();
+-  const { isAdmin, previewMode } = useUIStore();
++  const isAdmin = useUIStore(state => state.isAdmin);
++  const previewMode = useUIStore(state => state.previewMode);
+   const effectiveIsAdmin = isAdmin && !previewMode;
+-  const { activeBlog, activeAdminBlog, isCreatingBlog, allBlogs, setActiveBlog, setActiveAdminBlog, setIsCreatingBlog, setAllBlogs } = useBlogStore();
++  const { activeBlog, activeAdminBlog, isCreatingBlog, allBlogs, setActiveBlog, setActiveAdminBlog, setIsCreatingBlog, setAllBlogs } = useBlogStore(useShallow(state => ({
++    activeBlog: state.activeBlog,
++    activeAdminBlog: state.activeAdminBlog,
++    isCreatingBlog: state.isCreatingBlog,
++    allBlogs: state.allBlogs,
++    setActiveBlog: state.setActiveBlog,
++    setActiveAdminBlog: state.setActiveAdminBlog,
++    setIsCreatingBlog: state.setIsCreatingBlog,
++    setAllBlogs: state.setAllBlogs,
++  })));
+   if ((activeAdminBlog || isCreatingBlog) && effectiveIsAdmin) {
+     const back = () => { setActiveAdminBlog(null); setIsCreatingBlog(false); navigate('/blog', { replace: true }); };
+     return (
+@@ -241,8 +273,37 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+   const navigate = useNavigate();
+   const path = window.location.pathname;
+-  const { isSettingsOpen, setSettingsOpen, isMobileMenuOpen, setMobileMenuOpen, showAdminDashboard, setShowAdminDashboard, showGitHubSync, setShowGitHubSync, toasts, removeToast, isAdmin, previewMode, setPreviewMode, isKicked, isOfflineExpired, notificationUnreadCount, toggleAdmin } = useUIStore();
+-  const { lessons, storedFiles, loading, isActivated, studentGradeValue } = useDataStore();
++  const {
++    isSettingsOpen, setSettingsOpen, isMobileMenuOpen, setMobileMenuOpen,
++    showAdminDashboard, setShowAdminDashboard, showGitHubSync, setShowGitHubSync,
++    toasts, removeToast, isAdmin, previewMode, setPreviewMode,
++    isKicked, isOfflineExpired, notificationUnreadCount, toggleAdmin,
++  } = useUIStore(useShallow(state => ({
++    isSettingsOpen: state.isSettingsOpen,
++    setSettingsOpen: state.setSettingsOpen,
++    isMobileMenuOpen: state.isMobileMenuOpen,
++    setMobileMenuOpen: state.setMobileMenuOpen,
++    showAdminDashboard: state.showAdminDashboard,
++    setShowAdminDashboard: state.setShowAdminDashboard,
++    showGitHubSync: state.showGitHubSync,
++    setShowGitHubSync: state.setShowGitHubSync,
++    toasts: state.toasts,
++    removeToast: state.removeToast,
++    isAdmin: state.isAdmin,
++    previewMode: state.previewMode,
++    setPreviewMode: state.setPreviewMode,
++    isKicked: state.isKicked,
++    isOfflineExpired: state.isOfflineExpired,
++    notificationUnreadCount: state.notificationUnreadCount,
++    toggleAdmin: state.toggleAdmin,
++  })));
++  const { lessons, storedFiles, loading, isActivated, studentGradeValue } = useDataStore(useShallow(state => ({
++    lessons: state.lessons,
++    storedFiles: state.storedFiles,
++    loading: state.loading,
++    isActivated: state.isActivated,
++    studentGradeValue: state.studentGradeValue,
++  })));
+   const effectiveIsAdmin = isAdmin && !previewMode;
+ 
+   const fileCounts = useMemo(() => {
+diff --git a/components/ChapterView.tsx b/components/ChapterView.tsx
+index 8a4f034..721e371 100644
+--- a/components/ChapterView.tsx
++++ b/components/ChapterView.tsx
+@@ -1,4 +1,4 @@
+-import React, { useState, useRef, useEffect, useCallback } from 'react';
++import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+ import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye, BookOpen, Zap, CheckCircle2, Circle, X, RotateCcw, ClipboardList, Download } from 'lucide-react';
+ import SearchBar from './SearchBar';
+ import { Chapter, Lesson, StoredFile } from '../types';
+@@ -138,6 +138,19 @@ const ProgressBar: React.FC<{ total: number; done: number; inProgress: number }>
+   );
+ };
+ 
++// ── Pure sort helper (outside component – no closure deps) ──────
++function sortFiles(files: StoredFile[], option: 'newest' | 'oldest' | 'az' | 'za') {
++  return [...files].sort((a, b) => {
++    switch (option) {
++      case 'newest': return b.uploadDate - a.uploadDate;
++      case 'oldest': return a.uploadDate - b.uploadDate;
++      case 'az': return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
++      case 'za': return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
++      default: return 0;
++    }
++  });
++}
++
+ // ── Main Component ───────────────────────────────────────────
+ interface ChapterViewProps {
+   chapter: Chapter;
+@@ -153,7 +166,7 @@ interface ChapterViewProps {
+   onDeleteChapterFile: (fileId: string) => void;
+ }
+ 
+-const ChapterView: React.FC<ChapterViewProps> = ({
++const ChapterView: React.FC<ChapterViewProps> = React.memo(({
+   chapter,
+   lessons,
+   chapterFiles,
+@@ -260,22 +273,20 @@ const ChapterView: React.FC<ChapterViewProps> = ({
+   }, []);
+ 
+   // ── Util ─────────────────────────────────────
+-  const sortFiles = (files: StoredFile[], option: 'newest' | 'oldest' | 'az' | 'za') =>
+-    [...files].sort((a, b) => {
+-      switch (option) {
+-        case 'newest': return b.uploadDate - a.uploadDate;
+-        case 'oldest': return a.uploadDate - b.uploadDate;
+-        case 'az': return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+-        case 'za': return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
+-        default: return 0;
+-      }
+-    });
+-
+-  const theoryFiles = sortFiles(chapterFiles.filter(f => f.category === 'Lý thuyết trọng tâm (Chương)'), 'az');
+-  const trueFalseFiles = sortFiles(chapterFiles.filter(f => f.category === 'Trắc nghiệm Đúng/Sai (Chương)'), trueFalseSort);
+-  const advancedFiles = sortFiles(chapterFiles.filter(f => f.category === 'Bài tập Tính toán Nâng cao'), advancedSort);
++  const theoryFiles = useMemo(
++    () => sortFiles(chapterFiles.filter(f => f.category === 'Lý thuyết trọng tâm (Chương)'), 'az'),
++    [chapterFiles]
++  );
++  const trueFalseFiles = useMemo(
++    () => sortFiles(chapterFiles.filter(f => f.category === 'Trắc nghiệm Đúng/Sai (Chương)'), trueFalseSort),
++    [chapterFiles, trueFalseSort]
++  );
++  const advancedFiles = useMemo(
++    () => sortFiles(chapterFiles.filter(f => f.category === 'Bài tập Tính toán Nâng cao'), advancedSort),
++    [chapterFiles, advancedSort]
++  );
+ 
+-  const filteredLessons = lessons
++  const filteredLessons = useMemo(() => lessons
+     .filter(l => (l.name || '').toLowerCase().normalize('NFC').includes(searchTerm.toLowerCase().trim().normalize('NFC')))
+     .sort((a, b) => {
+       switch (sortOption) {
+@@ -285,33 +296,33 @@ const ChapterView: React.FC<ChapterViewProps> = ({
+         case 'za': return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
+         default: return 0;
+       }
+-    });
++    }), [lessons, searchTerm, sortOption]);
+ 
+   // Progress summary
+-  const doneCount = lessons.filter(l => getLP(l.id).status === 'done').length;
++  const doneCount = useMemo(() => lessons.filter(l => getLP(l.id).status === 'done').length, [lessons, getLP]);
+   const inProgressCount = 0;
+ 
+-  const handleSubmit = (e: React.FormEvent) => {
++  const handleSubmit = useCallback((e: React.FormEvent) => {
+     e.preventDefault();
+     if (newLessonName.trim()) {
+       onCreateLesson(newLessonName.trim());
+       setNewLessonName('');
+       setIsCreating(false);
+     }
+-  };
++  }, [newLessonName, onCreateLesson]);
+ 
+-  const triggerUpload = (category: string) => {
++  const triggerUpload = useCallback((category: string) => {
+     setUploadCategory(category);
+     fileInputRef.current?.click();
+-  };
++  }, []);
+ 
+-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
++  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+     if (e.target.files && e.target.files.length > 0 && uploadCategory) {
+       onUploadChapterFile(Array.from(e.target.files), uploadCategory);
+     }
+     if (fileInputRef.current) fileInputRef.current.value = '';
+     setUploadCategory('');
+-  };
++  }, [uploadCategory, onUploadChapterFile]);
+ 
+   const formatSize = (bytes: number) => {
+     if (bytes === 0) return '0 B';
+@@ -908,6 +919,6 @@ const ChapterView: React.FC<ChapterViewProps> = ({
+       )}
+     </>
+   );
+-};
++});
+ 
+ export default ChapterView;
+diff --git a/components/Dashboard.tsx b/components/Dashboard.tsx
+index 25c10e4..75e7cdf 100644
+--- a/components/Dashboard.tsx
++++ b/components/Dashboard.tsx
+@@ -1,4 +1,4 @@
+-import React, { useState, useEffect, useRef, useCallback } from 'react';
++import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+ import { GradeLevel } from '../types';
+ import { CURRICULUM } from '../constants';
+ import { FileText, Folder, Quote, Atom, Zap, Activity, Trophy, ChevronLeft, ChevronRight, Star } from 'lucide-react';
+@@ -170,7 +170,7 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
+ 
+         {/* Slide controls */}
+         <div className="flex items-center gap-1.5">
+-          <button onClick={prev} className="w-5 h-5 rounded flex items-center justify-center transition-colors"
++          <button onClick={prev} aria-label="Xem slide trước đó" className="w-5 h-5 rounded flex items-center justify-center transition-colors"
+             style={{ color: cfg.color, background: `${cfg.color}18` }}
+             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `${cfg.color}30`}
+             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = `${cfg.color}18`}>
+@@ -181,7 +181,7 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
+               className="rounded-full transition-all duration-300"
+               style={{ width: i === slide ? '18px' : '5px', height: '5px', background: i === slide ? cfg.color : cfg.colorBorder }} />
+           ))}
+-          <button onClick={next} className="w-5 h-5 rounded flex items-center justify-center transition-colors"
++          <button onClick={next} aria-label="Xem slide tiếp theo" className="w-5 h-5 rounded flex items-center justify-center transition-colors"
+             style={{ color: cfg.color, background: `${cfg.color}18` }}
+             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `${cfg.color}30`}
+             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = `${cfg.color}18`}>
+@@ -339,14 +339,14 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
+ 
+ // ─── Dashboard ──────────────────────────────────────────────────────────────
+ 
+-const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard, previewMode, studentGrade }) => {
++const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard, previewMode, studentGrade }) => {
+   const [quote, setQuote] = useState('');
+ 
+   useEffect(() => {
+     setQuote(EinsteinQuotes[Math.floor(Math.random() * EinsteinQuotes.length)]);
+   }, []);
+ 
+-  const totalFiles = Object.values(fileCounts).reduce((a: number, b: number) => a + b, 0);
++  const totalFiles = useMemo(() => Object.values(fileCounts).reduce((a: number, b: number) => a + b, 0), [fileCounts]);
+   const totalChapters = CURRICULUM.reduce((acc, g) => acc + g.chapters.length, 0);
+ 
+   return (
+@@ -502,6 +502,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectGrade, fileCounts, isAdmi
+       </div>
+     </div>
+   );
+-};
++});
+ 
+ export default Dashboard;
+\ No newline at end of file
+diff --git a/components/WeeklySchedule.tsx b/components/WeeklySchedule.tsx
+index 3fc318b..672524a 100644
+--- a/components/WeeklySchedule.tsx
++++ b/components/WeeklySchedule.tsx
+@@ -44,7 +44,7 @@ const ACCENT_COLORS = [
+     { bg: '#E8F4FD', border: '#2B88D8', text: '#1A6DB8' },
+ ];
+ 
+-export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
++export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
+     isAdmin,
+     studentGrade,
+     onLoadSchedules,
+@@ -612,4 +612,4 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
+             `}</style>
+         </div>
+     );
+-};
++});
+diff --git a/index.html b/index.html
+index fb7e34f..b6dd8ec 100644
+--- a/index.html
++++ b/index.html
+@@ -155,6 +155,10 @@
+   </style>
+ 
+   <link rel="stylesheet" href="/index.css">
++
++  <!-- PWA -->
++  <link rel="manifest" href="/manifest.json" />
++  <link rel="apple-touch-icon" href="/icon-192.svg" />
+ </head>
+ 
+ <body>
+diff --git a/public/manifest.json b/public/manifest.json
+new file mode 100644
+index 0000000..521ccc4
+--- /dev/null
++++ b/public/manifest.json
+@@ -0,0 +1,23 @@
++{
++  "name": "PhysiVault - Kho Lưu Trữ Vật Lý",
++  "short_name": "PhysiVault",
++  "description": "Quản lý và lưu trữ tài liệu Vật Lý một cách dễ dàng, hiệu quả.",
++  "start_url": "/",
++  "display": "standalone",
++  "background_color": "#F7F6F3",
++  "theme_color": "#F7F6F3",
++  "icons": [
++    {
++      "src": "/icon-192.svg",
++      "sizes": "192x192",
++      "type": "image/svg+xml",
++      "purpose": "any maskable"
++    },
++    {
++      "src": "/icon-512.svg",
++      "sizes": "512x512",
++      "type": "image/svg+xml",
++      "purpose": "any maskable"
++    }
++  ]
++}
+-- 
+2.52.0.windows.1
+

@@ -44,7 +44,7 @@ const ACCENT_COLORS = [
     { bg: '#E8F4FD', border: '#2B88D8', text: '#1A6DB8' },
 ];
 
-export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
+export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
     isAdmin,
     studentGrade,
     onLoadSchedules,
@@ -612,4 +612,4 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({
             `}</style>
         </div>
     );
-};
+});

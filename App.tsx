@@ -13,6 +13,7 @@ import OfflineExpiredScreen from './components/auth/OfflineExpiredScreen';
 import { useUIStore } from './src/stores/useUIStore';
 import { useDataStore } from './src/stores/useDataStore';
 import { useExamStore, useBlogStore } from './src/stores/useContentStore';
+import { useShallow } from 'zustand/react/shallow';
 
 const ChapterView = React.lazy(() => import('./components/ChapterView'));
 const LessonView = React.lazy(() => import('./components/LessonView'));
@@ -40,10 +41,16 @@ const LazyFallback = () => (
 // ──────────────────────────────────────────────────────────────────
 // AppDataSync: bridges useCloudStorage data → Zustand stores
 // ──────────────────────────────────────────────────────────────────
-function AppDataSync() {
-  const cloud = useCloudStorage();
-  const { setLessons, setStoredFiles, setLoading, setIsActivated, setStudentGradeValue } = useDataStore();
-  const { isAdmin, setKicked, setOfflineExpired, setNotificationUnreadCount } = useUIStore();
+function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+  const setLessons = useDataStore(state => state.setLessons);
+  const setStoredFiles = useDataStore(state => state.setStoredFiles);
+  const setLoading = useDataStore(state => state.setLoading);
+  const setIsActivated = useDataStore(state => state.setIsActivated);
+  const setStudentGradeValue = useDataStore(state => state.setStudentGradeValue);
+  const isAdmin = useUIStore(state => state.isAdmin);
+  const setKicked = useUIStore(state => state.setKicked);
+  const setOfflineExpired = useUIStore(state => state.setOfflineExpired);
+  const setNotificationUnreadCount = useUIStore(state => state.setNotificationUnreadCount);
   const { getFetchedNotificationIds, getNotifications, verifyAccess } = cloud;
 
   useEffect(() => { setLessons(cloud.lessons); }, [cloud.lessons]);
@@ -102,7 +109,8 @@ function AppDataSync() {
 function GradeOverviewPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const { level } = useParams<{ level: string }>();
   const navigate = useNavigate();
-  const { lessons, storedFiles } = useDataStore();
+  const lessons = useDataStore(state => state.lessons);
+  const storedFiles = useDataStore(state => state.storedFiles);
   const grade = Number(level) as GradeLevel;
   const gradeData = useMemo(() => CURRICULUM.find(g => g.level === grade), [grade]);
   if (!gradeData) return <Navigate to="/" replace />;
@@ -144,8 +152,11 @@ function GradeOverviewPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage
 function ChapterPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const { level, chapterId } = useParams<{ level: string; chapterId: string }>();
   const navigate = useNavigate();
-  const { lessons, storedFiles } = useDataStore();
-  const { isAdmin, previewMode, showToast } = useUIStore();
+  const lessons = useDataStore(state => state.lessons);
+  const storedFiles = useDataStore(state => state.storedFiles);
+  const isAdmin = useUIStore(state => state.isAdmin);
+  const previewMode = useUIStore(state => state.previewMode);
+  const showToast = useUIStore(state => state.showToast);
   const effectiveIsAdmin = isAdmin && !previewMode;
   const grade = Number(level) as GradeLevel;
   const gradeData = useMemo(() => CURRICULUM.find(g => g.level === grade), [grade]);
@@ -167,8 +178,11 @@ function ChapterPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 function LessonPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const { level, chapterId, lessonId } = useParams<{ level: string; chapterId: string; lessonId: string }>();
   const navigate = useNavigate();
-  const { lessons, storedFiles } = useDataStore();
-  const { isAdmin, previewMode, showToast } = useUIStore();
+  const lessons = useDataStore(state => state.lessons);
+  const storedFiles = useDataStore(state => state.storedFiles);
+  const isAdmin = useUIStore(state => state.isAdmin);
+  const previewMode = useUIStore(state => state.previewMode);
+  const showToast = useUIStore(state => state.showToast);
   const effectiveIsAdmin = isAdmin && !previewMode;
   const lesson = lessons.find(l => l.id === lessonId);
   const lessonFiles = storedFiles[lessonId!] || [];
@@ -184,8 +198,15 @@ function LessonPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 
 function ExamRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const navigate = useNavigate();
-  const { isAdmin, previewMode } = useUIStore();
-  const { activeExam, examSubmission, setActiveExam, setExamSubmission, clearExam } = useExamStore();
+  const isAdmin = useUIStore(state => state.isAdmin);
+  const previewMode = useUIStore(state => state.previewMode);
+  const { activeExam, examSubmission, setActiveExam, setExamSubmission, clearExam } = useExamStore(useShallow(state => ({
+    activeExam: state.activeExam,
+    examSubmission: state.examSubmission,
+    setActiveExam: state.setActiveExam,
+    setExamSubmission: state.setExamSubmission,
+    clearExam: state.clearExam,
+  })));
   if (activeExam && examSubmission) {
     return (
       <ErrorBoundary><Suspense fallback={<LazyFallback />}>
@@ -209,9 +230,19 @@ function ExamRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 
 function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const navigate = useNavigate();
-  const { isAdmin, previewMode } = useUIStore();
+  const isAdmin = useUIStore(state => state.isAdmin);
+  const previewMode = useUIStore(state => state.previewMode);
   const effectiveIsAdmin = isAdmin && !previewMode;
-  const { activeBlog, activeAdminBlog, isCreatingBlog, allBlogs, setActiveBlog, setActiveAdminBlog, setIsCreatingBlog, setAllBlogs } = useBlogStore();
+  const { activeBlog, activeAdminBlog, isCreatingBlog, allBlogs, setActiveBlog, setActiveAdminBlog, setIsCreatingBlog, setAllBlogs } = useBlogStore(useShallow(state => ({
+    activeBlog: state.activeBlog,
+    activeAdminBlog: state.activeAdminBlog,
+    isCreatingBlog: state.isCreatingBlog,
+    allBlogs: state.allBlogs,
+    setActiveBlog: state.setActiveBlog,
+    setActiveAdminBlog: state.setActiveAdminBlog,
+    setIsCreatingBlog: state.setIsCreatingBlog,
+    setAllBlogs: state.setAllBlogs,
+  })));
   if ((activeAdminBlog || isCreatingBlog) && effectiveIsAdmin) {
     const back = () => { setActiveAdminBlog(null); setIsCreatingBlog(false); navigate('/blog', { replace: true }); };
     return (
@@ -241,8 +272,37 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const navigate = useNavigate();
   const path = window.location.pathname;
-  const { isSettingsOpen, setSettingsOpen, isMobileMenuOpen, setMobileMenuOpen, showAdminDashboard, setShowAdminDashboard, showGitHubSync, setShowGitHubSync, toasts, removeToast, isAdmin, previewMode, setPreviewMode, isKicked, isOfflineExpired, notificationUnreadCount, toggleAdmin } = useUIStore();
-  const { lessons, storedFiles, loading, isActivated, studentGradeValue } = useDataStore();
+  const {
+    isSettingsOpen, setSettingsOpen, isMobileMenuOpen, setMobileMenuOpen,
+    showAdminDashboard, setShowAdminDashboard, showGitHubSync, setShowGitHubSync,
+    toasts, removeToast, isAdmin, previewMode, setPreviewMode,
+    isKicked, isOfflineExpired, notificationUnreadCount, toggleAdmin,
+  } = useUIStore(useShallow(state => ({
+    isSettingsOpen: state.isSettingsOpen,
+    setSettingsOpen: state.setSettingsOpen,
+    isMobileMenuOpen: state.isMobileMenuOpen,
+    setMobileMenuOpen: state.setMobileMenuOpen,
+    showAdminDashboard: state.showAdminDashboard,
+    setShowAdminDashboard: state.setShowAdminDashboard,
+    showGitHubSync: state.showGitHubSync,
+    setShowGitHubSync: state.setShowGitHubSync,
+    toasts: state.toasts,
+    removeToast: state.removeToast,
+    isAdmin: state.isAdmin,
+    previewMode: state.previewMode,
+    setPreviewMode: state.setPreviewMode,
+    isKicked: state.isKicked,
+    isOfflineExpired: state.isOfflineExpired,
+    notificationUnreadCount: state.notificationUnreadCount,
+    toggleAdmin: state.toggleAdmin,
+  })));
+  const { lessons, storedFiles, loading, isActivated, studentGradeValue } = useDataStore(useShallow(state => ({
+    lessons: state.lessons,
+    storedFiles: state.storedFiles,
+    loading: state.loading,
+    isActivated: state.isActivated,
+    studentGradeValue: state.studentGradeValue,
+  })));
   const effectiveIsAdmin = isAdmin && !previewMode;
 
   const fileCounts = useMemo(() => {
@@ -409,7 +469,7 @@ function App() {
   const cloud = useCloudStorage();
   return (
     <>
-      <AppDataSync />
+      <AppDataSync cloud={cloud} />
       <AppShell cloud={cloud} />
     </>
   );
