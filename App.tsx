@@ -5,7 +5,9 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Toast, { ToastType } from './components/Toast';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
-import { FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Ban, ShieldOff, WifiOff, Atom, Home, Bell, FlaskConical, Video } from 'lucide-react';
+import { FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Atom, Home, Bell, FlaskConical, Video } from 'lucide-react';
+import KickedScreen from './components/auth/KickedScreen';
+import OfflineExpiredScreen from './components/auth/OfflineExpiredScreen';
 import { getMachineId, verifyAdminToken, setAdminToken, clearAdminToken } from './src/lib/crypto';
 
 const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
@@ -613,213 +615,10 @@ function App() {
   };
 
   // === KICKED SCREEN ===
-  if (isKicked && !isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6 font-sans" style={{ background: '#F7F6F3' }}>
-        {/* Subtle grid pattern */}
-        <div
-          className="fixed inset-0 pointer-events-none opacity-[0.025]"
-          style={{
-            backgroundImage: 'repeating-linear-gradient(0deg,#1A1A1A 0,#1A1A1A 1px,transparent 0,transparent 50%),repeating-linear-gradient(90deg,#1A1A1A 0,#1A1A1A 1px,transparent 0,transparent 50%)',
-            backgroundSize: '40px 40px',
-          }}
-        />
-
-        <div className="relative max-w-sm w-full animate-fade-in">
-          {/* Brand top */}
-          <div className="text-center mb-8">
-            <span className="text-[11px] font-bold uppercase tracking-[0.25em]" style={{ color: '#CFCFCB' }}>
-              PhysiVault
-            </span>
-          </div>
-
-          {/* Main card */}
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}
-          >
-            {/* Red accent top bar */}
-            <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg,#E03E3E,#F87171)' }} />
-
-            <div className="p-8 text-center space-y-6">
-              {/* Icon with ring glow */}
-              <div className="mx-auto relative w-fit">
-                <div
-                  className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto"
-                  style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}
-                >
-                  <ShieldOff className="w-9 h-9 text-[#E03E3E]" />
-                </div>
-                {/* Pulse ring */}
-                <div
-                  className="absolute inset-0 rounded-2xl animate-ping opacity-10"
-                  style={{ background: '#E03E3E' }}
-                />
-              </div>
-
-              {/* Text */}
-              <div className="space-y-2.5">
-                <div
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
-                  style={{ background: '#FEF2F2', color: '#E03E3E', border: '1px solid #FECACA' }}
-                >
-                  <Ban className="w-3 h-3" />
-                  Quyền truy cập bị thu hồi
-                </div>
-                <h1 className="text-xl font-semibold tracking-tight" style={{ color: '#1A1A1A' }}>
-                  Thiết bị này đã bị khóa
-                </h1>
-                <p className="text-sm leading-relaxed" style={{ color: '#787774' }}>
-                  Quản trị viên đã thu hồi quyền truy cập của thiết bị bạn.
-                  Bạn không thể xem tài liệu trên thiết bị này nữa.
-                </p>
-              </div>
-
-              {/* Info rows */}
-              <div
-                className="rounded-xl overflow-hidden text-left"
-                style={{ border: '1px solid #E9E9E7' }}
-              >
-                <div
-                  className="flex items-center justify-between px-4 py-3 text-xs"
-                  style={{ background: '#F7F6F3', borderBottom: '1px solid #E9E9E7' }}
-                >
-                  <span style={{ color: '#AEACA8', fontWeight: 600 }}>TRẠNG THÁI</span>
-                  <span
-                    className="flex items-center gap-1.5 font-bold uppercase tracking-wide"
-                    style={{ color: '#E03E3E' }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#E03E3E] animate-pulse inline-block" />
-                    Đã bị khóa
-                  </span>
-                </div>
-                <div
-                  className="px-4 py-3.5 space-y-1"
-                  style={{ background: '#FFFFFF' }}
-                >
-                  <p className="text-xs font-medium" style={{ color: '#57564F' }}>
-                    Nếu bạn cho rằng đây là nhầm lẫn, hãy liên hệ:
-                  </p>
-                  <p className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>
-                    Thầy Huy — Quản trị viên PhysiVault
-                  </p>
-                </div>
-              </div>
-
-              {/* Contact CTA */}
-              <a
-                href="https://zalo.me"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                style={{ background: '#1A1A1A', color: '#FFFFFF' }}
-              >
-                Liên hệ hỗ trợ
-              </a>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="text-center mt-6">
-            <p className="text-[10px] uppercase tracking-[0.2em] font-bold" style={{ color: '#CFCFCB' }}>
-              PhysiVault · Security System
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (isKicked && !isAdmin) return <KickedScreen />;
 
   // === OFFLINE EXPIRED SCREEN ===
-  if (isOfflineExpired && !isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6 font-sans" style={{ background: '#F7F6F3' }}>
-        {/* Subtle grid pattern */}
-        <div
-          className="fixed inset-0 pointer-events-none opacity-[0.025]"
-          style={{
-            backgroundImage: 'repeating-linear-gradient(0deg,#1A1A1A 0,#1A1A1A 1px,transparent 0,transparent 50%),repeating-linear-gradient(90deg,#1A1A1A 0,#1A1A1A 1px,transparent 0,transparent 50%)',
-            backgroundSize: '40px 40px',
-          }}
-        />
-
-        <div className="relative max-w-sm w-full animate-fade-in">
-          {/* Brand top */}
-          <div className="text-center mb-8">
-            <span className="text-[11px] font-bold uppercase tracking-[0.25em]" style={{ color: '#CFCFCB' }}>
-              PhysiVault
-            </span>
-          </div>
-
-          {/* Main card */}
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}
-          >
-            {/* Orange accent top bar */}
-            <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg,#D9730D,#F59E0B)' }} />
-
-            <div className="p-8 text-center space-y-6">
-              {/* Icon */}
-              <div
-                className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto"
-                style={{ background: '#FFF7ED', border: '1px solid #FED7AA' }}
-              >
-                <WifiOff className="w-9 h-9 text-[#D9730D]" />
-              </div>
-
-              {/* Text */}
-              <div className="space-y-2.5">
-                <div
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
-                  style={{ background: '#FFF7ED', color: '#D9730D', border: '1px solid #FED7AA' }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#D9730D] animate-pulse inline-block" />
-                  Yêu cầu kết nối mạng
-                </div>
-                <h1 className="text-xl font-semibold tracking-tight" style={{ color: '#1A1A1A' }}>
-                  Phiên xác minh đã hết hạn
-                </h1>
-                <p className="text-sm leading-relaxed" style={{ color: '#787774' }}>
-                  Hệ thống không thể xác minh quyền truy cập của bạn khi offline quá 24 giờ.
-                  Vui lòng kết nối mạng để tiếp tục.
-                </p>
-              </div>
-
-              {/* Info box */}
-              <div
-                className="rounded-xl p-4 text-left space-y-2"
-                style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Lưu ý</p>
-                <p className="text-xs leading-relaxed" style={{ color: '#57564F' }}>
-                  Quyền truy cập vẫn còn hiệu lực. Chỉ cần kết nối WiFi hoặc 4G rồi tải lại trang là tiếp tục học được ngay.
-                </p>
-              </div>
-
-              {/* Action */}
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full py-3 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                style={{ background: '#D9730D', color: '#FFFFFF' }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#c4650b'}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#D9730D'}
-              >
-                Tải lại trang
-              </button>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="text-center mt-6">
-            <p className="text-[10px] uppercase tracking-[0.2em] font-bold" style={{ color: '#CFCFCB' }}>
-              PhysiVault · Security System
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (isOfflineExpired && !isAdmin) return <OfflineExpiredScreen />;
 
   return (
     <div className="min-h-screen font-sans" style={{ background: '#F7F6F3', color: '#1A1A1A' }}>
@@ -981,22 +780,22 @@ function App() {
       </div>
 
       {/* ── Mobile Bottom Navigation Bar ── */}
-      {(isActivated || isAdmin) && (
-        <nav
-          className="fixed bottom-0 left-0 right-0 z-40 md:hidden flex items-stretch"
-          style={{ background: '#FFFFFF', borderTop: '1px solid #E9E9E7', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-40 md:hidden flex items-stretch"
+        style={{ background: '#FFFFFF', borderTop: '1px solid #E9E9E7', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        {/* Home — always visible */}
+        <button
+          onClick={() => navigateTo('home')}
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
+          style={{ color: (!currentGrade && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab) ? '#6B7CDB' : '#AEACA8' }}
         >
-          {/* Home */}
-          <button
-            onClick={() => navigateTo('home')}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
-            style={{ color: (!currentGrade && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab) ? '#6B7CDB' : '#AEACA8' }}
-          >
-            <Home className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Tổng quan</span>
-          </button>
+          <Home className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Tổng quan</span>
+        </button>
 
-          {/* Khối lớp — mở menu chọn lớp */}
+        {/* Khối lớp — chỉ hiện khi đã kích hoạt */}
+        {(isActivated || isAdmin) && (
           <button
             onClick={() => setIsMobileMenuOpen(true)}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
@@ -1005,8 +804,10 @@ function App() {
             <FolderOpen className="w-5 h-5" />
             <span className="text-[10px] font-medium">{currentGrade ? `Lớp ${currentGrade}` : 'Khối lớp'}</span>
           </button>
+        )}
 
-          {/* Thi thử */}
+        {/* Thi thử — chỉ hiện khi đã kích hoạt */}
+        {(isActivated || isAdmin) && (
           <button
             onClick={() => navigateTo('examList')}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
@@ -1015,8 +816,10 @@ function App() {
             <FileText className="w-5 h-5" />
             <span className="text-[10px] font-medium">Thi thử</span>
           </button>
+        )}
 
-          {/* Thông báo */}
+        {/* Thông báo — chỉ hiện khi đã kích hoạt */}
+        {(isActivated || isAdmin) && (
           <button
             onClick={() => navigateTo('notification')}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors relative"
@@ -1035,18 +838,10 @@ function App() {
             </div>
             <span className="text-[10px] font-medium">Thông báo</span>
           </button>
+        )}
 
-          {/* Cài đặt */}
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
-            style={{ color: '#AEACA8' }}
-          >
-            <Settings className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Cài đặt</span>
-          </button>
-
-          {/* Phòng TN */}
+        {/* Phòng TN — chỉ hiện khi đã kích hoạt */}
+        {(isActivated || isAdmin) && (
           <button
             onClick={() => navigateTo('simLab')}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
@@ -1055,8 +850,18 @@ function App() {
             <FlaskConical className="w-5 h-5" />
             <span className="text-[10px] font-medium">Phòng TN</span>
           </button>
-        </nav>
-      )}
+        )}
+
+        {/* Cài đặt — always visible */}
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
+          style={{ color: '#AEACA8' }}
+        >
+          <Settings className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Cài đặt</span>
+        </button>
+      </nav>
 
       {/* Chatbot Component - Only show on Dashboard (Overview) */}
       {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && !showNotification && !showSimLab && !showBlog && <Suspense fallback={null}><Chatbot /></Suspense>}
