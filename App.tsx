@@ -455,7 +455,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
         </button>
       </nav>
 
-      {isOnHome && !showAdminDashboard && (
+      {isOnHome && !showAdminDashboard && !isActivated && !isAdmin && (
         <ErrorBoundary><Suspense fallback={null}><Chatbot /></Suspense></ErrorBoundary>
       )}
     </div>
