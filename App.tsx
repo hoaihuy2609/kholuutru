@@ -1,20 +1,19 @@
-import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
-import { GradeLevel, Lesson, Exam, ExamSubmission, BlogPost } from './types';
+﻿import React, { useEffect, useMemo, useCallback, Suspense } from 'react';
+import { Routes, Route, useNavigate, useParams, Navigate } from 'react-router-dom';
+import { GradeLevel, Lesson, Exam } from './types';
 import { CURRICULUM } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
-import Toast, { ToastType } from './components/Toast';
+import Toast from './components/Toast';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
-import { FileText, ChevronRight, FolderOpen, RefreshCw, Settings, Atom, Home, Bell, FlaskConical, Video } from 'lucide-react';
+import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Home, Bell, FlaskConical, Settings } from 'lucide-react';
 import KickedScreen from './components/auth/KickedScreen';
 import OfflineExpiredScreen from './components/auth/OfflineExpiredScreen';
-import { getMachineId, verifyAdminToken, setAdminToken, clearAdminToken } from './src/lib/crypto';
+import { useUIStore } from './src/stores/useUIStore';
+import { useDataStore } from './src/stores/useDataStore';
+import { useExamStore, useBlogStore } from './src/stores/useContentStore';
 
-const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
-  <RefreshCw className={`${className} animate-spin`} style={style} />
-);
-
-// ── Lazy-loaded components (code-split) ──
 const ChapterView = React.lazy(() => import('./components/ChapterView'));
 const LessonView = React.lazy(() => import('./components/LessonView'));
 const SettingsModal = React.lazy(() => import('./components/SettingsModal'));
@@ -31,841 +30,388 @@ const SimulationLab = React.lazy(() => import('./components/SimulationLab'));
 const BlogList = React.lazy(() => import('./components/BlogList'));
 const BlogDetail = React.lazy(() => import('./components/BlogDetail'));
 const AdminBlogEditor = React.lazy(() => import('./components/AdminBlogEditor'));
-// Suspense fallback
+
 const LazyFallback = () => (
   <div className="flex items-center justify-center h-[40vh]">
     <RefreshCw className="w-8 h-8 animate-spin" style={{ color: '#6B7CDB' }} />
   </div>
 );
 
-interface ToastMessage {
-  id: string;
-  message: string;
-  type: ToastType;
-}
+// ──────────────────────────────────────────────────────────────────
+// AppDataSync: bridges useCloudStorage data → Zustand stores
+// ──────────────────────────────────────────────────────────────────
+function AppDataSync() {
+  const cloud = useCloudStorage();
+  const { setLessons, setStoredFiles, setLoading, setIsActivated, setStudentGradeValue } = useDataStore();
+  const { isAdmin, setKicked, setOfflineExpired, setNotificationUnreadCount } = useUIStore();
+  const { getFetchedNotificationIds, getNotifications, verifyAccess } = cloud;
 
-function App() {
-  const [currentGrade, setCurrentGrade] = useState<GradeLevel | null>(null);
-  const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
-  const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
-  const [autoCreateLesson, setAutoCreateLesson] = useState(false);
-
-  const { lessons, storedFiles, loading, isActivated, activateSystem, addLesson, deleteLesson, uploadFiles, deleteFile, verifyAccess, fetchLessonsFromGitHub, syncToGitHub, syncProgress, uploadExamPdf, saveExam, loadExams, deleteExam, saveExamResult, getExamHistory, getLeaderboard, getStudyPlans, saveStudyPlan, updateStudyPlan, deleteStudyPlan, getSchedules, saveSchedule, updateSchedule, deleteSchedule, getNotifications, deleteNotification, createCustomNotification, markNotificationFetched, getFetchedNotificationIds, submitQuestionVote, getQuestionVotes, getBlogs, saveBlog, deleteBlog, syncBlogs, fetchBlogsForEditing } = useCloudStorage();
-
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => verifyAdminToken());
-
-  const toggleAdmin = useCallback((status: boolean) => {
-    if (status) {
-      setAdminToken();
-    } else {
-      clearAdminToken();
+  useEffect(() => { setLessons(cloud.lessons); }, [cloud.lessons]);
+  useEffect(() => { setStoredFiles(cloud.storedFiles); }, [cloud.storedFiles]);
+  useEffect(() => { setLoading(cloud.loading); }, [cloud.loading]);
+  useEffect(() => {
+    setIsActivated(cloud.isActivated);
+    if (cloud.isActivated) {
+      const g = parseInt(localStorage.getItem('physivault_grade') || '0', 10);
+      setStudentGradeValue(g === 10 || g === 11 || g === 12 ? g : null);
     }
-    setIsAdmin(status);
-  }, []);
+  }, [cloud.isActivated]);
 
-  const [isKicked, setIsKicked] = useState(false);
-  const [isOfflineExpired, setIsOfflineExpired] = useState(false);
-
-  // Check access on mount — pauses when tab is hidden to avoid wasted requests
-  React.useEffect(() => {
+  useEffect(() => {
     const check = async () => {
-      if (isActivated && !document.hidden) {
+      if (cloud.isActivated && !document.hidden) {
         const status = await verifyAccess();
-        if (status === 'kicked') {
-          setIsKicked(true);
-          setIsOfflineExpired(false);
-        } else if (status === 'offline_expired') {
-          setIsOfflineExpired(true);
-        } else {
-          setIsOfflineExpired(false);
-        }
+        if (status === 'kicked') { setKicked(true); setOfflineExpired(false); }
+        else if (status === 'offline_expired') { setOfflineExpired(true); }
+        else { setOfflineExpired(false); }
       }
     };
     check();
-    // Check every 5 minutes, but only when tab is visible
-    const interval = setInterval(check, 5 * 60 * 1000);
+    const iv = setInterval(check, 5 * 60 * 1000);
     document.addEventListener('visibilitychange', check);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', check);
-    };
-  }, [isActivated]);
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', check); };
+  }, [cloud.isActivated]);
 
-  // ── Tính unread notification badge — pauses when tab is hidden ──
-  React.useEffect(() => {
-    if (!isActivated) return;
+  useEffect(() => {
+    if (!cloud.isActivated) return;
     const loadUnread = async () => {
-      // Skip network call when tab is not visible
       if (document.hidden) return;
       try {
         if (isAdmin) {
-          // Admin: count unread across all 3 grades
-          const [notifs10, notifs11, notifs12, fetched] = await Promise.all([
-            getNotifications(10),
-            getNotifications(11),
-            getNotifications(12),
-            getFetchedNotificationIds(),
-          ]);
-          const allNotifs = [...notifs10, ...notifs11, ...notifs12];
-          const unread = allNotifs.filter(n => n.fetch_enabled && !fetched.has(n.id)).length;
-          setNotificationUnreadCount(unread);
+          const [n10, n11, n12, fetched] = await Promise.all([getNotifications(10), getNotifications(11), getNotifications(12), getFetchedNotificationIds()]);
+          setNotificationUnreadCount([...n10, ...n11, ...n12].filter(n => n.fetch_enabled && !fetched.has(n.id)).length);
         } else {
           const grade = parseInt(localStorage.getItem('physivault_grade') || '12', 10);
-          const [notifs, fetched] = await Promise.all([
-            getNotifications(grade),
-            getFetchedNotificationIds(),
-          ]);
-          const unread = notifs.filter(n => n.fetch_enabled && !fetched.has(n.id)).length;
-          setNotificationUnreadCount(unread);
+          const [notifs, fetched] = await Promise.all([getNotifications(grade), getFetchedNotificationIds()]);
+          setNotificationUnreadCount(notifs.filter(n => n.fetch_enabled && !fetched.has(n.id)).length);
         }
       } catch { /* silent */ }
     };
     loadUnread();
-    // Reload badge count every 2 minutes; also refresh when user returns to tab
-    const interval = setInterval(loadUnread, 2 * 60 * 1000);
+    const iv = setInterval(loadUnread, 2 * 60 * 1000);
     document.addEventListener('visibilitychange', loadUnread);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', loadUnread);
-    };
-  }, [isActivated, isAdmin]);
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', loadUnread); };
+  }, [cloud.isActivated, isAdmin]);
 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
-  const [showGitHubSync, setShowGitHubSync] = useState(false);
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  // Exam state
-  const [showExamList, setShowExamList] = useState(false);
-  const [showContactBook, setShowContactBook] = useState(false);
-  const [showStudyPlanner, setShowStudyPlanner] = useState(false);
-  const [activeExam, setActiveExam] = useState<Exam | null>(null);
-  const [examSubmission, setExamSubmission] = useState<ExamSubmission | null>(null);
-  const [showNotification, setShowNotification] = useState(false);
-  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
-  const [showSimLab, setShowSimLab] = useState(false);
-  const [showBlog, setShowBlog] = useState(false);
-  const [activeBlog, setActiveBlog] = useState<BlogPost | null>(null);
-  const [activeAdminBlog, setActiveAdminBlog] = useState<BlogPost | null>(null);
-  const [isCreatingBlog, setIsCreatingBlog] = useState(false);
-  const [allBlogs, setAllBlogs] = useState<BlogPost[]>([]); // cache bài viết cho related posts
+  return null;
+}
 
-  // --- PREVENT OVERLAPPING STATES ---
-  const [previewMode, setPreviewMode] = useState<GradeLevel | null>(null);
+// ──────────────────────────────────────────────────────────────────
+// Route pages
+// ──────────────────────────────────────────────────────────────────
+function GradeOverviewPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+  const { level } = useParams<{ level: string }>();
+  const navigate = useNavigate();
+  const { lessons, storedFiles } = useDataStore();
+  const grade = Number(level) as GradeLevel;
+  const gradeData = useMemo(() => CURRICULUM.find(g => g.level === grade), [grade]);
+  if (!gradeData) return <Navigate to="/" replace />;
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center gap-1.5 text-sm" style={{ color: '#787774' }}>
+        <span onClick={() => navigate('/')} className="cursor-pointer hover:text-[#6B7CDB] transition-colors">Tổng quan</span>
+        <ChevronRight className="w-3.5 h-3.5" style={{ color: '#CFCFCB' }} />
+        <span className="font-medium" style={{ color: '#1A1A1A' }}>{gradeData.title}</span>
+      </div>
+      <div>
+        <h1 className="text-2xl font-semibold mb-1" style={{ color: '#1A1A1A' }}>{gradeData.title}</h1>
+        <p className="text-sm" style={{ color: '#787774' }}>Quản lý và theo dõi tiến độ học tập</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {gradeData.chapters.map((chapter) => {
+          const cl = lessons.filter(l => l.chapterId === chapter.id);
+          const fc = cl.reduce((s, l) => s + (storedFiles[l.id]?.length || 0), 0);
+          return (
+            <div key={chapter.id} onClick={() => navigate(`/grade/${grade}/chapter/${chapter.id}`)} className="rounded-xl p-5 cursor-pointer group transition-colors" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB'; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}>
+              <div className="flex items-start justify-between mb-3">
+                <div className="p-2.5 rounded-lg" style={{ background: '#EEF0FB' }}><FolderOpen className="w-5 h-5" style={{ color: '#6B7CDB' }} /></div>
+                <div className="text-right"><div className="text-[10px] uppercase tracking-wider" style={{ color: '#AEACA8' }}>Bài học</div><div className="text-lg font-semibold" style={{ color: '#1A1A1A' }}>{cl.length}</div></div>
+              </div>
+              <h3 className="font-semibold text-sm mb-1 line-clamp-1" style={{ color: '#1A1A1A' }}>{chapter.name}</h3>
+              <p className="text-xs leading-relaxed mb-4 line-clamp-2" style={{ color: '#787774', minHeight: '2.5rem' }}>{chapter.description}</p>
+              <div className="flex items-center justify-between pt-3 text-xs" style={{ borderTop: '1px solid #F1F0EC' }}>
+                <div className="flex items-center gap-1" style={{ color: '#AEACA8' }}><FileText className="w-3.5 h-3.5" /><span>{fc} tài liệu</span></div>
+                <ChevronRight className="w-4 h-4" style={{ color: '#CFCFCB' }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ChapterPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+  const { level, chapterId } = useParams<{ level: string; chapterId: string }>();
+  const navigate = useNavigate();
+  const { lessons, storedFiles } = useDataStore();
+  const { isAdmin, previewMode, showToast } = useUIStore();
   const effectiveIsAdmin = isAdmin && !previewMode;
-  const [studentGradeValue, setStudentGradeValue] = useState<number | null>(() => {
-    const g = parseInt(localStorage.getItem('physivault_grade') || '0', 10);
-    return g === 10 || g === 11 || g === 12 ? g : null;
-  });
+  const grade = Number(level) as GradeLevel;
+  const gradeData = useMemo(() => CURRICULUM.find(g => g.level === grade), [grade]);
+  const chapter = gradeData?.chapters.find(c => c.id === chapterId);
+  const chapterLessons = useMemo(() => lessons.filter(l => l.chapterId === chapterId), [lessons, chapterId]);
+  const chapterFiles = storedFiles[chapterId!] || [];
+  if (!chapter || !chapterId) return <Navigate to={`/grade/${level}`} replace />;
+  const handleCreateLesson = async (name: string) => { try { await cloud.addLesson(name, chapterId); showToast(`Đã tạo bài học: ${name}`, 'success'); } catch { showToast('Lỗi khi tạo bài học', 'error'); } };
+  const handleDeleteLesson = async (lessonId: string) => { const l = lessons.find(x => x.id === lessonId); if (!l) return; if (window.confirm(`Xóa bài học "${l.name}" và tất cả tài liệu?`)) { try { await cloud.deleteLesson(lessonId); showToast(`Đã xóa: ${l.name}`, 'success'); } catch { showToast('Lỗi xóa bài học', 'error'); } } };
+  const handleChapterUpload = async (files: File[], category: string) => { try { showToast('Đang tải lên...', 'warning'); await cloud.uploadFiles(files, chapterId, category); showToast(`Đã tải lên ${files.length} tài liệu`, 'success'); } catch { showToast('Lỗi tải lên', 'error'); } };
+  const handleDeleteChapterFile = async (fileId: string) => { const f = chapterFiles.find(x => x.id === fileId); if (window.confirm(`Xóa tài liệu "${f?.name || 'này'}"?`)) { try { await cloud.deleteFile(fileId, chapterId); showToast('Đã xóa', 'success'); } catch { showToast('Lỗi xóa file', 'error'); } } };
+  return (
+    <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+      <ChapterView chapter={chapter} lessons={chapterLessons} chapterFiles={chapterFiles} isAdmin={effectiveIsAdmin} autoCreate={false} onBack={() => navigate(`/grade/${level}`)} onCreateLesson={handleCreateLesson} onSelectLesson={(lesson: Lesson) => navigate(`/grade/${level}/chapter/${chapterId}/lesson/${lesson.id}`)} onDeleteLesson={handleDeleteLesson} onUploadChapterFile={handleChapterUpload} onDeleteChapterFile={handleDeleteChapterFile} />
+    </Suspense></ErrorBoundary>
+  );
+}
 
-  // Re-read grade from localStorage after activation (grade is set during activateSystem)
-  useEffect(() => {
-    if (isActivated) {
-      const g = parseInt(localStorage.getItem('physivault_grade') || '0', 10);
-      setStudentGradeValue(g === 10 || g === 11 || g === 12 ? g : null);
-    }
-  }, [isActivated]);
+function LessonPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+  const { level, chapterId, lessonId } = useParams<{ level: string; chapterId: string; lessonId: string }>();
+  const navigate = useNavigate();
+  const { lessons, storedFiles } = useDataStore();
+  const { isAdmin, previewMode, showToast } = useUIStore();
+  const effectiveIsAdmin = isAdmin && !previewMode;
+  const lesson = lessons.find(l => l.id === lessonId);
+  const lessonFiles = storedFiles[lessonId!] || [];
+  if (!lesson) return <Navigate to={`/grade/${level}/chapter/${chapterId}`} replace />;
+  const handleUpload = async (files: File[], category?: string) => { try { showToast('Đang tải lên...', 'warning'); await cloud.uploadFiles(files, lesson.id, category); showToast(`Đã tải lên ${files.length} tài liệu`, 'success'); } catch { showToast('Lỗi tải lên', 'error'); } };
+  const handleDelete = async (fileId: string) => { const f = lessonFiles.find(x => x.id === fileId); if (window.confirm(`Xóa tài liệu "${f?.name || 'này'}"?`)) { try { await cloud.deleteFile(fileId, lesson.id); showToast('Đã xóa', 'success'); } catch { showToast('Lỗi xóa file', 'error'); } } };
+  return (
+    <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+      <LessonView lesson={lesson} files={lessonFiles} isAdmin={effectiveIsAdmin} onBack={() => navigate(`/grade/${level}/chapter/${chapterId}`)} onUpload={handleUpload} onDelete={handleDelete} />
+    </Suspense></ErrorBoundary>
+  );
+}
 
-  // ── Centralized navigation helper (memoized to prevent child re-renders) ──
-  const resetNavigation = useCallback(() => {
-    setShowExamList(false);
-    setShowContactBook(false);
-    setShowStudyPlanner(false);
-    setShowNotification(false);
-    setShowSimLab(false);
-    setShowBlog(false);
-    setActiveExam(null);
-    setExamSubmission(null);
-    setCurrentGrade(null);
-    setCurrentChapterId(null);
-    setCurrentLesson(null);
-    setActiveBlog(null);
-    setActiveAdminBlog(null);
-    setIsCreatingBlog(false);
-  }, []);
+function ExamRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+  const navigate = useNavigate();
+  const { isAdmin, previewMode } = useUIStore();
+  const { activeExam, examSubmission, setActiveExam, setExamSubmission, clearExam } = useExamStore();
+  if (activeExam && examSubmission) {
+    return (
+      <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+        <ExamResult exam={activeExam} submission={examSubmission} onRetry={() => setExamSubmission(null)} onBack={() => { clearExam(); navigate('/exams'); }} onSubmitVote={(part, qNum) => cloud.submitQuestionVote(activeExam.id, part, qNum)} onShowToast={useUIStore.getState().showToast} />
+      </Suspense></ErrorBoundary>
+    );
+  }
+  if (activeExam) {
+    return (
+      <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+        <ExamView exam={activeExam} isPreviewMode={!!previewMode} onShowToast={useUIStore.getState().showToast} onBack={() => { clearExam(); navigate('/exams'); }} onSubmit={async (sub) => { setExamSubmission(sub); const { calcScore } = await import('./components/ExamView'); const score = calcScore(sub, activeExam.answers); cloud.saveExamResult(activeExam, score.total, 28, score.correctCount); }} />
+      </Suspense></ErrorBoundary>
+    );
+  }
+  return (
+    <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+      <ExamListPage isAdmin={isAdmin} previewMode={previewMode} onLoadExams={cloud.loadExams} onLoadHistory={cloud.getExamHistory} onSelectExam={(exam: Exam) => { setActiveExam(exam); setExamSubmission(null); }} />
+    </Suspense></ErrorBoundary>
+  );
+}
 
-  type NavTarget = 'home' | 'examList' | 'contactBook' | 'studyPlanner' | 'notification' | 'simLab' | 'blog';
-  const navigateTo = useCallback((target: NavTarget) => {
-    resetNavigation();
-    switch (target) {
-      case 'examList': setShowExamList(true); break;
-      case 'contactBook': setShowContactBook(true); break;
-      case 'studyPlanner': setShowStudyPlanner(true); break;
-      case 'notification': setShowNotification(true); break;
-      case 'simLab': setShowSimLab(true); break;
-      case 'blog': setShowBlog(true); break;
-    }
-    setIsMobileMenuOpen(false);
-  }, [resetNavigation]);
+function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+  const navigate = useNavigate();
+  const { isAdmin, previewMode } = useUIStore();
+  const effectiveIsAdmin = isAdmin && !previewMode;
+  const { activeBlog, activeAdminBlog, isCreatingBlog, allBlogs, setActiveBlog, setActiveAdminBlog, setIsCreatingBlog, setAllBlogs } = useBlogStore();
+  if ((activeAdminBlog || isCreatingBlog) && effectiveIsAdmin) {
+    const back = () => { setActiveAdminBlog(null); setIsCreatingBlog(false); navigate('/blog', { replace: true }); };
+    return (
+      <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+        <AdminBlogEditor blog={activeAdminBlog} saveBlog={cloud.saveBlog} deleteBlog={cloud.deleteBlog} syncBlogs={cloud.syncBlogs} onBack={back} onSaved={() => { setActiveAdminBlog(null); setIsCreatingBlog(false); navigate('/blog', { replace: true }); }} />
+      </Suspense></ErrorBoundary>
+    );
+  }
+  if (activeBlog) {
+    const related = allBlogs.filter(b => b.id !== activeBlog.id && b.is_published).filter(b => b.category === activeBlog.category || (b.tags || []).some(t => (activeBlog.tags || []).includes(t))).slice(0, 4);
+    return (
+      <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+        <BlogDetail blog={activeBlog} onBack={() => setActiveBlog(null)} relatedBlogs={related} onReadRelated={setActiveBlog} />
+      </Suspense></ErrorBoundary>
+    );
+  }
+  return (
+    <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+      <BlogList isAdmin={effectiveIsAdmin} onReadBlog={setActiveBlog} onEditBlog={effectiveIsAdmin ? setActiveAdminBlog : undefined} onCreateBlog={effectiveIsAdmin ? () => setIsCreatingBlog(true) : undefined} onBlogsLoaded={setAllBlogs} getBlogs={cloud.getBlogs} />
+    </Suspense></ErrorBoundary>
+  );
+}
 
-  const selectGrade = useCallback((g: GradeLevel | null) => {
-    resetNavigation();
-    setCurrentGrade(g);
-    setIsMobileMenuOpen(false);
-  }, [resetNavigation]);
-
-  const handlePreviewMode = useCallback((mode: GradeLevel | null) => {
-    setPreviewMode(mode);
-    if (mode) {
-      resetNavigation();
-      setCurrentGrade(mode);
-    } else {
-      setCurrentGrade(null);
-    }
-  }, [resetNavigation]);
-
-  const showToast = useCallback((message: string, type: ToastType = 'success') => {
-    const id = Math.random().toString(36).substring(7);
-    setToasts(prev => [...prev, { id, message, type }]);
-  }, []);
-
-  const removeToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  }, []);
-
-  // Derived state
-  const activeGradeData = useMemo(() =>
-    CURRICULUM.find(g => g.level === currentGrade),
-    [currentGrade]);
-
-  const activeChapterData = useMemo(() =>
-    activeGradeData?.chapters.find(c => c.id === currentChapterId),
-    [activeGradeData, currentChapterId]);
-
-  const chapterLessons = useMemo(() =>
-    lessons.filter(l => l.chapterId === currentChapterId).sort((a, b) => b.createdAt - a.createdAt),
-    [lessons, currentChapterId]);
-
-  // Lesson Actions
-  const handleCreateLesson = async (name: string, chapterId: string) => {
-    try {
-      await addLesson(name, chapterId);
-      showToast(`Đã tạo bài học: ${name}`, 'success');
-    } catch (error) {
-      showToast('Lỗi khi tạo bài học', 'error');
-    }
-  };
-
-  const handleDeleteLesson = async (lessonId: string) => {
-    const lessonToDelete = lessons.find(l => l.id === lessonId);
-    if (!lessonToDelete) return;
-
-    if (window.confirm(`Bạn có chắc chắn muốn xóa bài học "${lessonToDelete.name}" và tất cả tài liệu bên trong không?`)) {
-      try {
-        await deleteLesson(lessonId);
-        showToast(`Đã xóa bài học: ${lessonToDelete.name}`, 'success');
-
-        if (currentLesson?.id === lessonId) {
-          setCurrentLesson(null);
-        }
-      } catch (e) {
-        showToast('Lỗi khi xóa bài học', 'error');
-      }
-    }
-  };
-
-  // File Actions
-  const handleUpload = async (files: File[], category?: string) => {
-    if (!currentLesson) return;
-
-    try {
-      showToast('Đang tải lên...', 'warning');
-      await uploadFiles(files, currentLesson.id, category);
-      showToast(`Đã tải lên ${files.length} tài liệu`, 'success');
-    } catch (e) {
-      showToast('Lỗi tải lên', 'error');
-    }
-  };
-
-  const handleChapterUpload = async (files: File[], category: string) => {
-    if (!currentChapterId) return;
-
-    try {
-      showToast('Đang tải lên...', 'warning');
-      await uploadFiles(files, currentChapterId, category);
-      showToast(`Đã tải lên ${files.length} tài liệu`, 'success');
-    } catch (e) {
-      showToast('Lỗi tải lên', 'error');
-    }
-  };
-
-  const handleDeleteFile = async (fileId: string, targetId: string) => {
-    const fileToDelete = storedFiles[targetId]?.find(f => f.id === fileId);
-
-    if (window.confirm(`Bạn có chắc chắn muốn xóa tài liệu "${fileToDelete?.name || 'này'}" không?`)) {
-      try {
-        await deleteFile(fileId, targetId);
-        showToast(`Đã xóa tài liệu`, 'success');
-      } catch (e) {
-        showToast('Lỗi xóa file', 'error');
-      }
-    }
-  };
+// ──────────────────────────────────────────────────────────────────
+// AppShell: layout (sidebar + mobile nav + modals)
+// ──────────────────────────────────────────────────────────────────
+function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+  const navigate = useNavigate();
+  const path = window.location.pathname;
+  const { isSettingsOpen, setSettingsOpen, isMobileMenuOpen, setMobileMenuOpen, showAdminDashboard, setShowAdminDashboard, showGitHubSync, setShowGitHubSync, toasts, removeToast, isAdmin, previewMode, setPreviewMode, isKicked, isOfflineExpired, notificationUnreadCount, toggleAdmin } = useUIStore();
+  const { lessons, storedFiles, loading, isActivated, studentGradeValue } = useDataStore();
+  const effectiveIsAdmin = isAdmin && !previewMode;
 
   const fileCounts = useMemo(() => {
-    const counts = {
-      [GradeLevel.Grade10]: 0,
-      [GradeLevel.Grade11]: 0,
-      [GradeLevel.Grade12]: 0,
-    };
-
+    const counts = { [GradeLevel.Grade10]: 0, [GradeLevel.Grade11]: 0, [GradeLevel.Grade12]: 0 };
     CURRICULUM.forEach(grade => {
-      let count = 0;
-      grade.chapters.forEach(chapter => {
-        const chapterLessons = lessons.filter(l => l.chapterId === chapter.id);
-        chapterLessons.forEach(lesson => {
-          count += (storedFiles[lesson.id]?.length || 0);
-        });
-      });
-      counts[grade.level] = count;
+      let c = 0;
+      grade.chapters.forEach(ch => { lessons.filter(l => l.chapterId === ch.id).forEach(l => { c += storedFiles[l.id]?.length || 0; }); });
+      counts[grade.level] = c;
     });
-
     return counts;
   }, [storedFiles, lessons]);
 
-  const renderContent = () => {
+  const handlePreviewMode = useCallback((mode: GradeLevel | null) => {
+    setPreviewMode(mode);
+    navigate(mode ? `/grade/${mode}` : '/');
+  }, [setPreviewMode, navigate]);
 
-    // 0. Exam Result
-    if (activeExam && examSubmission) {
-      return (
-        <ExamResult
-          exam={activeExam}
-          submission={examSubmission}
-          onRetry={() => { setExamSubmission(null); }}
-          onBack={() => { setActiveExam(null); setExamSubmission(null); setShowExamList(true); }}
-          onSubmitVote={(part, qNum) => submitQuestionVote(activeExam.id, part, qNum)}
-          onShowToast={showToast}
-        />
-      );
-    }
+  const urlGradeMatch = path.match(/\/grade\/(\d+)/);
+  const currentGradeFromUrl = urlGradeMatch ? (Number(urlGradeMatch[1]) as GradeLevel) : null;
+  const isOnHome = path === '/';
+  const isOnGrade = path.startsWith('/grade/');
+  const isOnExams = path.startsWith('/exams');
+  const isOnNotification = path === '/notifications';
+  const isOnSimLab = path === '/lab';
 
-    // 0b. Exam View
-    if (activeExam && !examSubmission) {
-      return (
-        <ExamView
-          exam={activeExam}
-          isPreviewMode={!!previewMode}
-          onShowToast={showToast}
-          onBack={() => { setActiveExam(null); setShowExamList(true); }}
-          onSubmit={async (sub) => {
-            setExamSubmission(sub);
-            const { calcScore } = await import('./components/ExamView');
-            const score = calcScore(sub, activeExam.answers);
-            saveExamResult(activeExam, score.total, 28, score.correctCount);
-          }}
-        />
-      );
-    }
-
-    // 0c. Exam List
-    if (showExamList) {
-      return (
-        <ExamListPage
-          isAdmin={isAdmin} // true admin status needed to see all exams when not previewing
-          previewMode={previewMode}
-          onLoadExams={loadExams}
-          onLoadHistory={getExamHistory}
-          onSelectExam={(exam) => { setActiveExam(exam); setExamSubmission(null); setShowExamList(false); }}
-        />
-      );
-    }
-
-
-    // 0d. Contact Book (Exam History)
-    if (showContactBook) {
-      return (
-        <ContactBook
-          isAdmin={effectiveIsAdmin}
-          onLoadHistory={getExamHistory}
-        />
-      );
-    }
-
-    // 0e. Study Planner
-    if (showStudyPlanner) {
-      return (
-        <StudyPlanner
-          isAdmin={effectiveIsAdmin}
-          studentGrade={studentGradeValue}
-          onLoadPlans={getStudyPlans}
-          onSavePlan={saveStudyPlan}
-          onUpdatePlan={updateStudyPlan}
-          onDeletePlan={deleteStudyPlan}
-          onLoadSchedules={getSchedules}
-          onSaveSchedule={saveSchedule}
-          onUpdateSchedule={updateSchedule}
-          onDeleteSchedule={deleteSchedule}
-        />
-      );
-    }
-
-    // 0f. Notification Page
-    if (showNotification) {
-      return (
-        <NotificationPage
-          onGetNotifications={getNotifications}
-          onGetFetchedIds={getFetchedNotificationIds}
-          onMarkFetched={markNotificationFetched}
-          onFetchLessons={fetchLessonsFromGitHub}
-          onShowToast={showToast}
-          isAdmin={effectiveIsAdmin}
-          onDeleteNotification={deleteNotification}
-          onCreateNotification={createCustomNotification}
-        />
-      );
-    }
-
-    // 0g. Simulation Lab
-    if (showSimLab) {
-      return (
-        <SimulationLab
-          onBack={() => setShowSimLab(false)}
-        />
-      );
-    }
-
-    if (showBlog) {
-      if (activeAdminBlog || isCreatingBlog) {
-        return (
-          <AdminBlogEditor
-            blog={activeAdminBlog}
-            saveBlog={saveBlog}
-            deleteBlog={deleteBlog}
-            syncBlogs={syncBlogs}
-            onBack={() => {
-              setActiveAdminBlog(null);
-              setIsCreatingBlog(false);
-              // Force BlogList re-mount để phản ánh bài đã xóa/thay đổi
-              setShowBlog(false);
-              setTimeout(() => setShowBlog(true), 0);
-            }}
-            onSaved={(_savedBlog) => {
-              setActiveAdminBlog(null);
-              setIsCreatingBlog(false);
-              setShowBlog(false);
-              setTimeout(() => setShowBlog(true), 0);
-            }}
-          />
-        );
-      }
-      if (activeBlog) {
-        // Tính related blogs: cùng category hoặc chung tags, bỏ bài hiện tại
-        const related = allBlogs
-          .filter(b => b.id !== activeBlog.id && b.is_published)
-          .filter(b => b.category === activeBlog.category || (b.tags || []).some(t => (activeBlog.tags || []).includes(t)))
-          .slice(0, 4);
-        return <BlogDetail blog={activeBlog} onBack={() => setActiveBlog(null)} relatedBlogs={related} onReadRelated={(b) => setActiveBlog(b)} />;
-      }
-      return (
-        <BlogList
-          isAdmin={effectiveIsAdmin}
-          onReadBlog={(blog) => { setActiveBlog(blog); }}
-          onEditBlog={effectiveIsAdmin ? setActiveAdminBlog : undefined}
-          onCreateBlog={effectiveIsAdmin ? () => setIsCreatingBlog(true) : undefined}
-          onBlogsLoaded={setAllBlogs}
-          getBlogs={getBlogs}
-        />
-      );
-
-    }
-
-    // 1. Lesson View (Deepest level)
-    if (currentLesson) {
-      const lessonFiles = storedFiles[currentLesson.id] || [];
-      return (
-        <LessonView
-          lesson={currentLesson}
-          files={lessonFiles}
-          isAdmin={effectiveIsAdmin}
-          onBack={() => setCurrentLesson(null)}
-          onUpload={handleUpload}
-          onDelete={(fileId) => handleDeleteFile(fileId, currentLesson.id)}
-        />
-      );
-    }
-
-    // 2. Chapter View (List of Lessons)
-    if (currentChapterId && activeGradeData) {
-      const chapter = activeGradeData.chapters.find((c) => c.id === currentChapterId);
-      const chapterLessons = lessons.filter((l) => l.chapterId === currentChapterId);
-      const chapterFiles = storedFiles[currentChapterId] || [];
-
-      return (
-        <ChapterView
-          chapter={chapter!}
-          lessons={chapterLessons}
-          chapterFiles={chapterFiles}
-          isAdmin={effectiveIsAdmin}
-          autoCreate={autoCreateLesson}
-          onBack={() => {
-            setCurrentChapterId(null);
-            setAutoCreateLesson(false);
-          }}
-          onCreateLesson={(name) => {
-            handleCreateLesson(name, currentChapterId);
-            setAutoCreateLesson(false);
-          }}
-          onSelectLesson={setCurrentLesson}
-          onDeleteLesson={handleDeleteLesson}
-          onUploadChapterFile={handleChapterUpload}
-          onDeleteChapterFile={(fileId) => handleDeleteFile(fileId, currentChapterId)}
-        />
-      );
-    }
-
-    // 3. Grade Overview (List of Chapters)
-    if (activeGradeData) {
-      return (
-        <div className="space-y-6 animate-fade-in">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-1.5 text-sm" style={{ color: '#787774' }}>
-            <span
-              onClick={() => setCurrentGrade(null)}
-              className="cursor-pointer transition-colors"
-              style={{ color: '#787774' }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#6B7CDB'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#787774'}
-            >
-              Tổng quan
-            </span>
-            <ChevronRight className="w-3.5 h-3.5" style={{ color: '#CFCFCB' }} />
-            <span className="font-medium" style={{ color: '#1A1A1A' }}>{activeGradeData.title}</span>
-          </div>
-
-          {/* Title */}
-          <div>
-            <h1 className="text-2xl font-semibold mb-1" style={{ color: '#1A1A1A' }}>
-              {activeGradeData.title}
-            </h1>
-            <p className="text-sm" style={{ color: '#787774' }}>Quản lý và theo dõi tiến độ học tập</p>
-          </div>
-
-          {/* Chapter Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activeGradeData.chapters.map((chapter) => {
-              const chapterLessons = lessons.filter((l) => l.chapterId === chapter.id);
-              const chapterFileCount = chapterLessons.reduce((sum, lesson) => {
-                return sum + (storedFiles[lesson.id]?.length || 0);
-              }, 0);
-
-              return (
-                <div
-                  key={chapter.id}
-                  onClick={() => setCurrentChapterId(chapter.id)}
-                  className="rounded-xl p-5 cursor-pointer group transition-colors"
-                  style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
-                    (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
-                    (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-                  }}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div
-                      className="p-2.5 rounded-lg"
-                      style={{ background: '#EEF0FB' }}
-                    >
-                      <FolderOpen className="w-5 h-5" style={{ color: '#6B7CDB' }} />
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[10px] uppercase tracking-wider" style={{ color: '#AEACA8' }}>Bài học</div>
-                      <div className="text-lg font-semibold" style={{ color: '#1A1A1A' }}>{chapterLessons.length}</div>
-                    </div>
-                  </div>
-
-                  <h3 className="font-semibold text-sm mb-1 line-clamp-1" style={{ color: '#1A1A1A' }}>
-                    {chapter.name}
-                  </h3>
-                  <p className="text-xs leading-relaxed mb-4 line-clamp-2" style={{ color: '#787774', minHeight: '2.5rem' }}>
-                    {chapter.description}
-                  </p>
-
-                  <div
-                    className="flex items-center justify-between pt-3 text-xs"
-                    style={{ borderTop: '1px solid #F1F0EC' }}
-                  >
-                    <div className="flex items-center gap-1" style={{ color: '#AEACA8' }}>
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>{chapterFileCount} tài liệu</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4" style={{ color: '#CFCFCB' }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      );
-    }
-
-    // 4. Dashboard (Default)
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center h-[50vh]">
-          <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-          <span className="ml-3 text-lg font-medium text-indigo-600">từ từ nó đang load...</span>
-        </div>
-      );
-    }
-
-    return <Dashboard onSelectGrade={setCurrentGrade} fileCounts={fileCounts} isAdmin={effectiveIsAdmin} onLoadLeaderboard={getLeaderboard} previewMode={previewMode} studentGrade={studentGradeValue} />;
-  };
-
-  // === KICKED SCREEN ===
   if (isKicked && !isAdmin) return <KickedScreen />;
-
-  // === OFFLINE EXPIRED SCREEN ===
   if (isOfflineExpired && !isAdmin) return <OfflineExpiredScreen />;
+
+  const sidebarCommonProps = {
+    currentGrade: currentGradeFromUrl,
+    onSelectGrade: (g: GradeLevel | null) => navigate(g ? `/grade/${g}` : '/'),
+    onOpenSettings: () => setSettingsOpen(true),
+    onOpenExamList: (isActivated || isAdmin) ? () => navigate('/exams') : undefined,
+    onOpenContactBook: (isActivated || isAdmin) ? () => navigate('/contact-book') : undefined,
+    onOpenStudyPlanner: (isActivated || isAdmin) ? () => navigate('/planner') : undefined,
+    onOpenNotification: (isActivated || isAdmin) ? () => navigate('/notifications') : undefined,
+    onOpenSimLab: (isActivated || isAdmin) ? () => navigate('/lab') : undefined,
+    onOpenBlog: (isActivated || isAdmin) ? () => navigate('/blog') : undefined,
+    showExamList: isOnExams,
+    showContactBook: path === '/contact-book',
+    showStudyPlanner: path === '/planner',
+    showNotification: isOnNotification,
+    notificationUnreadCount,
+    showSimLab: isOnSimLab,
+    showBlog: path.startsWith('/blog'),
+    isAdmin,
+    previewMode,
+    onSetPreviewMode: handlePreviewMode,
+    studentGrade: studentGradeValue,
+  };
 
   return (
     <div className="min-h-screen font-sans" style={{ background: '#F7F6F3', color: '#1A1A1A' }}>
-
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-40 md:hidden"
-          style={{ background: 'rgba(26,26,26,0.4)' }}
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
+      {isMobileMenuOpen && <div className="fixed inset-0 z-40 md:hidden" style={{ background: 'rgba(26,26,26,0.4)' }} onClick={() => setMobileMenuOpen(false)} />}
 
       {/* Mobile Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 shadow-xl transform transition-transform duration-300 ease-out md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#F1F0EC', borderRight: '1px solid #E9E9E7' }}>
-        <Sidebar
-          currentGrade={currentGrade}
-          onSelectGrade={selectGrade}
-          onOpenSettings={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }}
-          onOpenExamList={(isActivated || isAdmin) ? () => navigateTo('examList') : undefined}
-          onOpenContactBook={(isActivated || isAdmin) ? () => navigateTo('contactBook') : undefined}
-          onOpenStudyPlanner={(isActivated || isAdmin) ? () => navigateTo('studyPlanner') : undefined}
-          onOpenNotification={(isActivated || isAdmin) ? () => navigateTo('notification') : undefined}
-          onOpenSimLab={(isActivated || isAdmin) ? () => navigateTo('simLab') : undefined}
-          onOpenBlog={(isActivated || isAdmin) ? () => navigateTo('blog') : undefined}
-          showExamList={showExamList}
-          showContactBook={showContactBook}
-          showStudyPlanner={showStudyPlanner}
-          showNotification={showNotification}
-          notificationUnreadCount={notificationUnreadCount}
-          showSimLab={showSimLab}
-          showBlog={showBlog}
-          isAdmin={isAdmin}
-          previewMode={previewMode}
-          onSetPreviewMode={handlePreviewMode}
-          studentGrade={studentGradeValue}
-          className="w-full"
-        />
+        <Sidebar {...sidebarCommonProps} onSelectGrade={(g) => { navigate(g ? `/grade/${g}` : '/'); setMobileMenuOpen(false); }} onOpenSettings={() => { setSettingsOpen(true); setMobileMenuOpen(false); }} onOpenExamList={(isActivated || isAdmin) ? () => { navigate('/exams'); setMobileMenuOpen(false); } : undefined} onOpenContactBook={(isActivated || isAdmin) ? () => { navigate('/contact-book'); setMobileMenuOpen(false); } : undefined} onOpenStudyPlanner={(isActivated || isAdmin) ? () => { navigate('/planner'); setMobileMenuOpen(false); } : undefined} onOpenNotification={(isActivated || isAdmin) ? () => { navigate('/notifications'); setMobileMenuOpen(false); } : undefined} onOpenSimLab={(isActivated || isAdmin) ? () => { navigate('/lab'); setMobileMenuOpen(false); } : undefined} onOpenBlog={(isActivated || isAdmin) ? () => { navigate('/blog'); setMobileMenuOpen(false); } : undefined} className="w-full" />
       </div>
 
       {/* Desktop Sidebar */}
-      <Sidebar
-        currentGrade={currentGrade}
-        onSelectGrade={selectGrade}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenExamList={(isActivated || isAdmin) ? () => navigateTo('examList') : undefined}
-        onOpenContactBook={(isActivated || isAdmin) ? () => navigateTo('contactBook') : undefined}
-        onOpenStudyPlanner={(isActivated || isAdmin) ? () => navigateTo('studyPlanner') : undefined}
-        onOpenNotification={(isActivated || isAdmin) ? () => navigateTo('notification') : undefined}
-        onOpenSimLab={(isActivated || isAdmin) ? () => navigateTo('simLab') : undefined}
-        onOpenBlog={(isActivated || isAdmin) ? () => navigateTo('blog') : undefined}
-        showExamList={showExamList}
-        showContactBook={showContactBook}
-        showStudyPlanner={showStudyPlanner}
-        showNotification={showNotification}
-        notificationUnreadCount={notificationUnreadCount}
-        showSimLab={showSimLab}
-        showBlog={showBlog}
-        isAdmin={isAdmin}
-        previewMode={previewMode}
-        onSetPreviewMode={handlePreviewMode}
-        studentGrade={studentGradeValue}
-        className="hidden md:flex"
-      />
+      <Sidebar {...sidebarCommonProps} className="hidden md:flex" />
 
       {/* Settings Modal */}
-      <Suspense fallback={null}>
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          onShowToast={showToast}
-          isAdmin={isAdmin}
-          isActivated={isActivated}
-          lessons={lessons}
-          storedFiles={storedFiles}
-          onActivateSystem={activateSystem}
-          onFetchLessons={fetchLessonsFromGitHub}
-          onToggleAdmin={toggleAdmin}
-          onOpenDashboard={() => {
-            setShowAdminDashboard(true);
-            setIsSettingsOpen(false);
-          }}
-          onLoadExams={loadExams}
-        />
-      </Suspense>
-
+      <ErrorBoundary>
+        <Suspense fallback={null}>
+          <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} onShowToast={useUIStore.getState().showToast} isAdmin={isAdmin} isActivated={isActivated} lessons={lessons} storedFiles={storedFiles} onActivateSystem={cloud.activateSystem} onFetchLessons={cloud.fetchLessonsFromGitHub} onToggleAdmin={toggleAdmin} onOpenDashboard={() => { setShowAdminDashboard(true); setSettingsOpen(false); }} onLoadExams={cloud.loadExams} />
+        </Suspense>
+      </ErrorBoundary>
 
       {showAdminDashboard && (
-        <Suspense fallback={<LazyFallback />}>
-          <AdminDashboard
-            onBack={() => setShowAdminDashboard(false)}
-            onShowToast={showToast}
-            onOpenGitHubSync={() => {
-              setShowAdminDashboard(false);
-              setShowGitHubSync(true);
-            }}
-            onUploadExamPdf={uploadExamPdf}
-            onSaveExam={saveExam}
-            onDeleteExam={deleteExam}
-            onLoadExams={loadExams}
-          />
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<LazyFallback />}>
+            <AdminDashboard onBack={() => setShowAdminDashboard(false)} onShowToast={useUIStore.getState().showToast} onOpenGitHubSync={() => { setShowAdminDashboard(false); setShowGitHubSync(true); }} onUploadExamPdf={cloud.uploadExamPdf} onSaveExam={cloud.saveExam} onDeleteExam={cloud.deleteExam} onLoadExams={cloud.loadExams} />
+          </Suspense>
+        </ErrorBoundary>
       )}
 
       {showGitHubSync && (
-        <Suspense fallback={<LazyFallback />}>
-          <AdminGitHubSync
-            onBack={() => setShowGitHubSync(false)}
-            onShowToast={showToast}
-            lessons={lessons}
-            storedFiles={storedFiles}
-            onAddLesson={addLesson}
-            onDeleteLesson={deleteLesson}
-            onUploadFiles={uploadFiles}
-            onDeleteFile={deleteFile}
-            onSyncToGitHub={syncToGitHub}
-            syncProgress={syncProgress}
-          />
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<LazyFallback />}>
+            <AdminGitHubSync onBack={() => setShowGitHubSync(false)} onShowToast={useUIStore.getState().showToast} lessons={lessons} storedFiles={storedFiles} onAddLesson={cloud.addLesson} onDeleteLesson={cloud.deleteLesson} onUploadFiles={cloud.uploadFiles} onDeleteFile={cloud.deleteFile} onSyncToGitHub={cloud.syncToGitHub} syncProgress={cloud.syncProgress} />
+          </Suspense>
+        </ErrorBoundary>
       )}
 
       {/* Main Content */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen transition-all duration-300 relative">
-
-        {/* Mobile Header — simplified */}
-        <header
-          className="p-3.5 flex items-center justify-center md:hidden sticky top-0 z-30"
-          style={{ background: '#F1F0EC', borderBottom: '1px solid #E9E9E7' }}
-        >
+        <header className="p-3.5 flex items-center justify-center md:hidden sticky top-0 z-30" style={{ background: '#F1F0EC', borderBottom: '1px solid #E9E9E7' }}>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: '#6B7CDB' }}>
-              <Atom className="w-3.5 h-3.5 text-white" />
-            </div>
+            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: '#6B7CDB' }}><Atom className="w-3.5 h-3.5 text-white" /></div>
             <span className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>PhysiVault</span>
           </div>
         </header>
 
         <main className="flex-1 p-4 md:p-8 lg:p-10 pb-24 md:pb-10 max-w-7xl mx-auto w-full">
-          <Suspense fallback={<LazyFallback />}>
-            <div
-              key={`${showExamList}-${showContactBook}-${showStudyPlanner}-${showNotification}-${showSimLab}-${currentGrade}-${currentChapterId}-${currentLesson?.id}-${activeExam?.id}`}
-            >
-              {renderContent()}
-            </div>
-          </Suspense>
+          <Routes>
+            <Route path="/" element={
+              loading
+                ? <div className="flex items-center justify-center h-[50vh]"><RefreshCw className="w-10 h-10 animate-spin" style={{ color: '#6B7CDB' }} /><span className="ml-3 text-lg font-medium" style={{ color: '#6B7CDB' }}>từ từ nó đang load...</span></div>
+                : <Dashboard onSelectGrade={(g) => navigate(g ? `/grade/${g}` : '/')} fileCounts={fileCounts} isAdmin={effectiveIsAdmin} onLoadLeaderboard={cloud.getLeaderboard} previewMode={previewMode} studentGrade={studentGradeValue} />
+            } />
+            <Route path="/grade/:level" element={<GradeOverviewPage cloud={cloud} />} />
+            <Route path="/grade/:level/chapter/:chapterId" element={<ChapterPage cloud={cloud} />} />
+            <Route path="/grade/:level/chapter/:chapterId/lesson/:lessonId" element={<LessonPage cloud={cloud} />} />
+            <Route path="/exams" element={<ExamRoutes cloud={cloud} />} />
+            <Route path="/contact-book" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><ContactBook isAdmin={effectiveIsAdmin} onLoadHistory={cloud.getExamHistory} /></Suspense></ErrorBoundary>} />
+            <Route path="/planner" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><StudyPlanner isAdmin={effectiveIsAdmin} studentGrade={studentGradeValue} onLoadPlans={cloud.getStudyPlans} onSavePlan={cloud.saveStudyPlan} onUpdatePlan={cloud.updateStudyPlan} onDeletePlan={cloud.deleteStudyPlan} onLoadSchedules={cloud.getSchedules} onSaveSchedule={cloud.saveSchedule} onUpdateSchedule={cloud.updateSchedule} onDeleteSchedule={cloud.deleteSchedule} /></Suspense></ErrorBoundary>} />
+            <Route path="/notifications" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><NotificationPage onGetNotifications={cloud.getNotifications} onGetFetchedIds={cloud.getFetchedNotificationIds} onMarkFetched={cloud.markNotificationFetched} onFetchLessons={cloud.fetchLessonsFromGitHub} onShowToast={useUIStore.getState().showToast} isAdmin={effectiveIsAdmin} onDeleteNotification={cloud.deleteNotification} onCreateNotification={cloud.createCustomNotification} /></Suspense></ErrorBoundary>} />
+            <Route path="/lab" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><SimulationLab onBack={() => navigate('/')} /></Suspense></ErrorBoundary>} />
+            <Route path="/blog/*" element={<BlogRoutes cloud={cloud} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </main>
       </div>
 
-      {/* Toast Container — trên mobile đẩy lên trên bottom nav */}
+      {/* Toasts */}
       <div className="fixed bottom-20 md:bottom-0 right-0 p-4 space-y-2 z-50">
-        {toasts.map(toast => (
-          <Toast
-            key={toast.id}
-            message={toast.message}
-            type={toast.type}
-            onClose={() => removeToast(toast.id)}
-          />
-        ))}
+        {toasts.map(t => <Toast key={t.id} message={t.message} type={t.type} onClose={() => removeToast(t.id)} />)}
       </div>
 
-      {/* ── Mobile Bottom Navigation Bar ── */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-40 md:hidden flex items-stretch"
-        style={{ background: '#FFFFFF', borderTop: '1px solid #E9E9E7', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      >
-        {/* Home — always visible */}
-        <button
-          onClick={() => navigateTo('home')}
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
-          style={{ color: (!currentGrade && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab) ? '#6B7CDB' : '#AEACA8' }}
-        >
-          <Home className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Tổng quan</span>
+      {/* Mobile Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden flex items-stretch" style={{ background: '#FFFFFF', borderTop: '1px solid #E9E9E7', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <button onClick={() => navigate('/')} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors" style={{ color: isOnHome ? '#6B7CDB' : '#AEACA8' }}>
+          <Home className="w-5 h-5" /><span className="text-[10px] font-medium">Tổng quan</span>
         </button>
-
-        {/* Khối lớp — chỉ hiện khi đã kích hoạt */}
         {(isActivated || isAdmin) && (
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
-            style={{ color: currentGrade ? '#6B7CDB' : '#AEACA8' }}
-          >
-            <FolderOpen className="w-5 h-5" />
-            <span className="text-[10px] font-medium">{currentGrade ? `Lớp ${currentGrade}` : 'Khối lớp'}</span>
+          <button onClick={() => setMobileMenuOpen(true)} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors" style={{ color: isOnGrade ? '#6B7CDB' : '#AEACA8' }}>
+            <FolderOpen className="w-5 h-5" /><span className="text-[10px] font-medium">{currentGradeFromUrl ? `Lớp ${currentGradeFromUrl}` : 'Khối lớp'}</span>
           </button>
         )}
-
-        {/* Thi thử — chỉ hiện khi đã kích hoạt */}
         {(isActivated || isAdmin) && (
-          <button
-            onClick={() => navigateTo('examList')}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
-            style={{ color: showExamList ? '#6B7CDB' : '#AEACA8' }}
-          >
-            <FileText className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Thi thử</span>
+          <button onClick={() => navigate('/exams')} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors" style={{ color: isOnExams ? '#6B7CDB' : '#AEACA8' }}>
+            <FileText className="w-5 h-5" /><span className="text-[10px] font-medium">Thi thử</span>
           </button>
         )}
-
-        {/* Thông báo — chỉ hiện khi đã kích hoạt */}
         {(isActivated || isAdmin) && (
-          <button
-            onClick={() => navigateTo('notification')}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors relative"
-            style={{ color: showNotification ? '#E03E3E' : '#AEACA8' }}
-          >
-            <div className="relative">
-              <Bell className="w-5 h-5" />
-              {notificationUnreadCount > 0 && (
-                <span
-                  className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] font-black"
-                  style={{ background: '#E03E3E', color: '#fff', lineHeight: 1 }}
-                >
-                  {notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}
-                </span>
-              )}
-            </div>
+          <button onClick={() => navigate('/notifications')} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors relative" style={{ color: isOnNotification ? '#E03E3E' : '#AEACA8' }}>
+            <div className="relative"><Bell className="w-5 h-5" />{notificationUnreadCount > 0 && <span className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] font-black" style={{ background: '#E03E3E', color: '#fff', lineHeight: 1 }}>{notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}</span>}</div>
             <span className="text-[10px] font-medium">Thông báo</span>
           </button>
         )}
-
-        {/* Phòng TN — chỉ hiện khi đã kích hoạt */}
         {(isActivated || isAdmin) && (
-          <button
-            onClick={() => navigateTo('simLab')}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
-            style={{ color: showSimLab ? '#2878BD' : '#AEACA8' }}
-          >
-            <FlaskConical className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Phòng TN</span>
+          <button onClick={() => navigate('/lab')} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors" style={{ color: isOnSimLab ? '#2878BD' : '#AEACA8' }}>
+            <FlaskConical className="w-5 h-5" /><span className="text-[10px] font-medium">Phòng TN</span>
           </button>
         )}
-
-        {/* Cài đặt — always visible */}
-        <button
-          onClick={() => setIsSettingsOpen(true)}
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors"
-          style={{ color: '#AEACA8' }}
-        >
-          <Settings className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Cài đặt</span>
+        <button onClick={() => setSettingsOpen(true)} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors" style={{ color: '#AEACA8' }}>
+          <Settings className="w-5 h-5" /><span className="text-[10px] font-medium">Cài đặt</span>
         </button>
       </nav>
 
-      {/* Chatbot Component - Only show on Dashboard (Overview) */}
-      {!currentGrade && !showAdminDashboard && !showStudyPlanner && !showExamList && !activeExam && !showContactBook && !showNotification && !showSimLab && !showBlog && <Suspense fallback={null}><Chatbot /></Suspense>}
+      {isOnHome && !showAdminDashboard && (
+        <ErrorBoundary><Suspense fallback={null}><Chatbot /></Suspense></ErrorBoundary>
+      )}
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Root
+// ──────────────────────────────────────────────────────────────────
+function App() {
+  const cloud = useCloudStorage();
+  return (
+    <>
+      <AppDataSync />
+      <AppShell cloud={cloud} />
+    </>
   );
 }
 
