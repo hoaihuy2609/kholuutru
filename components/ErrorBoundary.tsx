@@ -16,9 +16,11 @@ interface State {
  * user-friendly reload prompt instead of a blank screen.
  */
 export default class ErrorBoundary extends React.Component<Props, State> {
+  declare props: Readonly<Props>;
+  state: State = { hasError: false, isChunkError: false };
+
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, isChunkError: false };
   }
 
   static getDerivedStateFromError(error: unknown): State {
