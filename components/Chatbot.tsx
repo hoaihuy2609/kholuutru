@@ -71,7 +71,7 @@ const Chatbot: React.FC = () => {
 
                 if (error) {
                     console.error('[Chatbot] Supabase query error:', error);
-                    addMessage('Có lỗi kết nối với "bộ não" của thầy Huy. Bạn thử nhắn lại SĐT xem sao nhé.', 'bot');
+                    addMessage(`Lỗi kết nối (${error.code || error.message || 'unknown'}). Vui lòng thử lại hoặc liên hệ thầy Huy.`, 'bot');
                 } else if (!data) {
                     addMessage('Không tìm thấy thông tin của bạn. Bạn đã đóng học phí chưa nhỉ?', 'bot');
                 } else if (!data.is_active) {
@@ -102,7 +102,8 @@ const Chatbot: React.FC = () => {
                 }
             } catch (err) {
                 console.error('[Chatbot] Unexpected error:', err);
-                addMessage('Có lỗi kết nối với "bộ não" của thầy Huy. Bạn thử nhắn lại SĐT xem sao nhé.', 'bot');
+                const msg = err instanceof Error ? err.message : String(err);
+                addMessage(`Lỗi: ${msg}. Bạn thử lại hoặc liên hệ thầy Huy nhé.`, 'bot');
             } finally {
                 setIsLoading(false);
             }
