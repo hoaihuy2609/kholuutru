@@ -176,8 +176,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                 class_id: newStudent.class_id || null,
                 is_active: true,
                 activation_key: '',
-                machine_id: '',
-                device_limit: 1
+                machine_id: ''
             }]);
 
             if (error) throw error;

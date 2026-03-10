@@ -83,7 +83,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                 machine_id: targetId,
                 activation_key: key,
                 is_active: true,
-                device_limit: 1,
                 grade: adminTargetGrade
             };
 

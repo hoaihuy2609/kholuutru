@@ -17,12 +17,12 @@ ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
 
 -- 2. students: everyone can read (for activation check)
 CREATE POLICY "students_read" ON students FOR SELECT USING (true);
--- FIX: Tách write policy thành 3 riêng:
 -- UPDATE được phép (cần cho activation lưu machine_id và admin kick/unkick)
 CREATE POLICY "students_update" ON students FOR UPDATE USING (true) WITH CHECK (true);
--- INSERT và DELETE chỉ dành cho service role (admin Supabase Dashboard), anon không được
-CREATE POLICY "students_no_insert" ON students FOR INSERT WITH CHECK (false);
-CREATE POLICY "students_no_delete" ON students FOR DELETE USING (false);
+-- INSERT được phép bởi anon (admin panel dùng anon key để thêm học viên)
+CREATE POLICY "students_insert" ON students FOR INSERT WITH CHECK (true);
+-- DELETE được phép bởi anon (admin panel dùng anon key để xóa học viên)
+CREATE POLICY "students_delete" ON students FOR DELETE USING (true);
 
 -- 3. vault_index: everyone can read (for sync/fetch), only service role can write
 CREATE POLICY "vault_index_read" ON vault_index FOR SELECT USING (true);
@@ -64,6 +64,8 @@ CREATE POLICY "classes_write" ON classes FOR ALL USING (true);
 -- =====================================================
 -- QUAN TRỌNG: Nếu đã chạy file cũ, cần DROP policy cũ trước:
 --   DROP POLICY IF EXISTS "students_write" ON students;
+--   DROP POLICY IF EXISTS "students_no_insert" ON students;
+--   DROP POLICY IF EXISTS "students_no_delete" ON students;
 -- Sau đó chạy lại file này để áp dụng policies mới.
 -- =====================================================
 -- IMPORTANT: After running this, verify in Supabase Dashboard:
