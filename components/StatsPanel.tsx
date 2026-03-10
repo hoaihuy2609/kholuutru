@@ -8,7 +8,7 @@ import {
 import {
     TrendingUp, TrendingDown, Users, Award, AlertTriangle,
     Search, Download, RefreshCw, BarChart2, UserX,
-    ChevronRight, Minus, BookOpen, CheckCircle, ArrowLeft,
+    ChevronRight, ChevronUp, ChevronDown, Minus, BookOpen, CheckCircle, ArrowLeft,
     Sparkles, Target, Zap, Star, Brain, ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
 import { ExamResultRecord } from '../types';
@@ -20,6 +20,13 @@ const GRADE_CFG = {
     12: { label: 'Lớp 12', color: '#9065B0', bg: '#F3ECF8' },
 } as const;
 
+const GRADE_OPTIONS = [
+    { value: 10 as const, label: 'Lớp 10', color: '#448361', bg: '#EAF3EE' },
+    { value: 11 as const, label: 'Lớp 11', color: '#6B7CDB', bg: '#EEF0FB' },
+    { value: 12 as const, label: 'Lớp 12', color: '#9065B0', bg: '#F3ECF8' },
+];
+
+// Legacy score buckets (overview tab)
 const SCORE_BUCKETS = [
     { label: '0–2', min: 0, max: 2, fill: '#E03E3E' },
     { label: '2–4', min: 2, max: 4, fill: '#E03E3E' },
@@ -29,6 +36,15 @@ const SCORE_BUCKETS = [
     { label: '7–8', min: 7, max: 8, fill: '#6B7CDB' },
     { label: '8–9', min: 8, max: 9, fill: '#448361' },
     { label: '9–10', min: 9, max: 10.1, fill: '#448361' },
+];
+// New score buckets for exam analysis (6 bands as required)
+const SCORE_BUCKETS_NEW = [
+    { label: '0–2',  min: 0,  max: 2,    fill: '#EF4444' },
+    { label: '2–4',  min: 2,  max: 4,    fill: '#F97316' },
+    { label: '4–6',  min: 4,  max: 6,    fill: '#FBBF24' },
+    { label: '6–8',  min: 6,  max: 8,    fill: '#60A5FA' },
+    { label: '8–9',  min: 8,  max: 9,    fill: '#34D399' },
+    { label: '9–10', min: 9,  max: 10.1, fill: '#10B981' },
 ];
 
 const TOOLTIP_STYLE: React.CSSProperties = {
@@ -48,6 +64,16 @@ function scoreBg(s: number) {
     if (s >= 8) return '#EAF3EE';
     if (s >= 5) return '#FFF3E8';
     return '#FEF0F0';
+}
+function scoreCellBg(s: number): string {
+    if (s >= 8) return '#dcfce7';
+    if (s < 5)  return '#fee2e2';
+    return 'transparent';
+}
+function scoreTextColor(s: number): string {
+    if (s >= 8) return '#166534';
+    if (s < 5)  return '#991b1b';
+    return '#1a1a1a';
 }
 
 // ── StudentProfile ────────────────────────────────────────────────
@@ -88,9 +114,265 @@ function buildProfiles(records: ExamResultRecord[]): StudentProfile[] {
 }
 
 // ── Main component ────────────────────────────────────────────────
+// ── GradebookTable child component ───────────────────────────────
+interface GradebookRow {
+    phone: string;
+    name: string;
+    scores: Record<string, number>;
+    avg: number;
+}
+interface GradebookTableProps {
+    rows: GradebookRow[];
+    examColumns: { id: string; title: string }[];
+    sortAsc: boolean;
+    onToggleSort: () => void;
+}
+const GradebookTable: React.FC<GradebookTableProps> = ({ rows, examColumns, sortAsc, onToggleSort }) => {
+    if (rows.length === 0) {
+        return (
+            <div className="rounded-xl py-16 text-center" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+                <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
+                <p className="text-sm font-medium" style={{ color: '#57564F' }}>Lớp này chưa có dữ liệu bài thi</p>
+                <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Học sinh cần hoàn thành ít nhất 1 bài thi</p>
+            </div>
+        );
+    }
+    return (
+        <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+            {/* Legend */}
+            <div className="px-4 py-2 flex items-center gap-4 text-[11px]" style={{ borderBottom: '1px solid #F1F0EC', background: '#FAFAF9', color: '#AEACA8' }}>
+                <span className="font-semibold" style={{ color: '#57564F' }}>Chú thích:</span>
+                <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm inline-block" style={{ background: '#dcfce7' }} />
+                    <span style={{ color: '#166534' }}>≥ 8 — Giỏi</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm inline-block" style={{ background: '#fee2e2' }} />
+                    <span style={{ color: '#991b1b' }}>&lt; 5 — Chưa đạt</span>
+                </span>
+            </div>
+            {/* Scrollable table */}
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse" style={{ minWidth: 'max-content' }}>
+                    <thead>
+                        <tr style={{ background: '#F7F6F3', borderBottom: '2px solid #E9E9E7' }}>
+                            <th className="px-3 py-3 text-center font-semibold text-xs" style={{ color: '#787774', position: 'sticky', left: 0, background: '#F7F6F3', zIndex: 20, width: 48, boxShadow: '2px 0 4px rgba(0,0,0,0.04)' }}>
+                                STT
+                            </th>
+                            <th className="px-4 py-3 text-left font-semibold text-xs" style={{ color: '#787774', position: 'sticky', left: 48, background: '#F7F6F3', zIndex: 20, minWidth: 160, boxShadow: '2px 0 4px rgba(0,0,0,0.04)' }}>
+                                Tên Học Sinh
+                            </th>
+                            {examColumns.map(col => (
+                                <th key={col.id} className="px-3 py-3 text-center font-semibold text-xs" style={{ color: '#787774', minWidth: 100 }} title={col.title}>
+                                    <div className="max-w-[88px] mx-auto truncate">{col.title}</div>
+                                </th>
+                            ))}
+                            <th
+                                className="px-3 py-3 text-center font-semibold text-xs cursor-pointer select-none"
+                                style={{ color: '#6B7CDB', background: '#EEF0FB', position: 'sticky', right: 0, zIndex: 20, minWidth: 105, boxShadow: '-2px 0 4px rgba(0,0,0,0.04)', whiteSpace: 'nowrap' }}
+                                onClick={onToggleSort}
+                            >
+                                <span className="flex items-center justify-center gap-1">
+                                    Điểm TB
+                                    {sortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                </span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map((row, idx) => {
+                            const rowBase = idx % 2 === 0 ? '#fff' : '#FAFAF9';
+                            const avgBg = scoreCellBg(row.avg) !== 'transparent' ? scoreCellBg(row.avg) : rowBase;
+                            return (
+                                <tr key={row.phone} style={{ borderBottom: '1px solid #F1F0EC' }}>
+                                    <td className="px-3 py-2.5 text-xs text-center" style={{ color: '#AEACA8', position: 'sticky', left: 0, background: rowBase, zIndex: 10, boxShadow: '2px 0 4px rgba(0,0,0,0.04)' }}>
+                                        {idx + 1}
+                                    </td>
+                                    <td className="px-4 py-2.5 font-medium text-sm" style={{ color: '#1A1A1A', position: 'sticky', left: 48, background: rowBase, zIndex: 10, boxShadow: '2px 0 4px rgba(0,0,0,0.04)' }}>
+                                        {row.name}
+                                    </td>
+                                    {examColumns.map(col => {
+                                        const score = row.scores[col.id];
+                                        return (
+                                            <td key={col.id} className="px-3 py-2.5 text-center" style={{ background: rowBase }}>
+                                                {score !== undefined ? (
+                                                    <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold" style={{ background: scoreCellBg(score), color: scoreTextColor(score) }}>
+                                                        {score.toFixed(1)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs" style={{ color: '#D1D0CB' }}>—</span>
+                                                )}
+                                            </td>
+                                        );
+                                    })}
+                                    <td className="px-3 py-2.5 text-center font-bold text-sm" style={{ color: scoreTextColor(row.avg), background: avgBg, position: 'sticky', right: 0, zIndex: 10, boxShadow: '-2px 0 4px rgba(0,0,0,0.04)' }}>
+                                        {row.avg.toFixed(2)}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+            <div className="px-4 py-2.5 text-xs" style={{ borderTop: '1px solid #F1F0EC', color: '#AEACA8' }}>
+                {rows.length} học sinh · {examColumns.length} bài kiểm tra
+            </div>
+        </div>
+    );
+};
+
+// ── ExamAnalysis child component ──────────────────────────────────
+interface ExamAnalysisProps {
+    examRecords: ExamResultRecord[];
+    totalStudentsInGrade: number;
+}
+const ExamAnalysis: React.FC<ExamAnalysisProps> = ({ examRecords, totalStudentsInGrade }) => {
+    const studentBestScores = useMemo(() => {
+        const map = new Map<string, { name: string; phone: string; score: number }>();
+        for (const r of examRecords) {
+            const existing = map.get(r.student_phone);
+            if (!existing || r.score > existing.score) {
+                map.set(r.student_phone, { name: r.student_name, phone: r.student_phone, score: r.score });
+            }
+        }
+        return Array.from(map.values());
+    }, [examRecords]);
+    const count = studentBestScores.length;
+    const scores = useMemo(() => studentBestScores.map(s => s.score), [studentBestScores]);
+    const avgScore  = count > 0 ? scores.reduce((a, b) => a + b, 0) / count : 0;
+    const maxScore  = count > 0 ? Math.max(...scores) : 0;
+    const minScore  = count > 0 ? Math.min(...scores) : 0;
+    const distribution = useMemo(
+        () => SCORE_BUCKETS_NEW.map(b => ({ label: b.label, count: scores.filter(s => s >= b.min && s < b.max).length, fill: b.fill })),
+        [scores],
+    );
+    const topStudents = useMemo(
+        () => [...studentBestScores].filter(s => s.score >= 8).sort((a, b) => b.score - a.score),
+        [studentBestScores],
+    );
+    const concernStudents = useMemo(
+        () => [...studentBestScores].filter(s => s.score < 5).sort((a, b) => a.score - b.score),
+        [studentBestScores],
+    );
+    if (count === 0) {
+        return (
+            <div className="rounded-xl py-16 text-center" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+                <BarChart2 className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
+                <p className="text-sm font-medium" style={{ color: '#57564F' }}>Chưa có kết quả cho bài thi này</p>
+                <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Hãy chọn một bài kiểm tra khác hoặc chờ học sinh nộp bài</p>
+            </div>
+        );
+    }
+    const statCards = [
+        { label: 'Sĩ số lớp',     value: String(totalStudentsInGrade), sub: 'học sinh', color: '#9065B0', bg: '#F3ECF8', Icon: Users       },
+        { label: 'Tham gia',       value: String(count),               sub: 'bài nộp',  color: '#6B7CDB', bg: '#EEF0FB', Icon: BookOpen    },
+        { label: 'Điểm cao nhất',  value: maxScore.toFixed(1),         sub: '/ 10',     color: '#448361', bg: '#EAF3EE', Icon: Award       },
+        { label: 'Điểm thấp nhất', value: minScore.toFixed(1),         sub: '/ 10',     color: '#E03E3E', bg: '#FEF0F0', Icon: TrendingDown },
+        { label: 'Điểm TB đề',     value: avgScore.toFixed(2),         sub: '/ 10',     color: avgScore >= 5 ? '#D9730D' : '#E03E3E', bg: avgScore >= 5 ? '#FFF3E8' : '#FEF0F0', Icon: BarChart2 },
+    ] as const;
+    return (
+        <div className="space-y-4">
+            {/* Stat Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {statCards.map(card => (
+                    <div key={card.label} className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid #E9E9E7', borderLeft: `3px solid ${card.color}` }}>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider leading-tight" style={{ color: '#AEACA8' }}>{card.label}</span>
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: card.bg }}>
+                                <card.Icon className="w-3.5 h-3.5" style={{ color: card.color }} />
+                            </div>
+                        </div>
+                        <div className="text-2xl font-bold" style={{ color: card.color }}>{card.value}</div>
+                        <div className="text-[11px] mt-0.5" style={{ color: '#AEACA8' }}>{card.sub}</div>
+                    </div>
+                ))}
+            </div>
+            {/* Score Distribution */}
+            <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+                <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', borderLeft: '3px solid #D9730D', background: '#FFF3E8' }}>
+                    <h3 className="text-sm font-semibold" style={{ color: '#D9730D' }}>Phổ Điểm Bài Thi</h3>
+                    <p className="text-[11px]" style={{ color: '#AEACA8' }}>Phân bố điểm số của {count} học sinh</p>
+                </div>
+                <div className="p-4">
+                    <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={distribution} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F0EC" vertical={false} />
+                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#AEACA8' }} axisLine={{ stroke: '#E9E9E7' }} tickLine={false} />
+                            <YAxis tick={{ fontSize: 11, fill: '#AEACA8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                            <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [`${v} học sinh`, 'Số lượng']} />
+                            <Bar dataKey="count" name="Số học sinh" radius={[5, 5, 0, 0]}>
+                                {distribution.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.85} />)}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+            {/* Vinh Danh & Cần Chú Ý */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Top scorers */}
+                <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+                    <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid #E9E9E7', borderLeft: '3px solid #448361', background: '#EAF3EE' }}>
+                        <Star className="w-4 h-4 shrink-0" style={{ color: '#448361' }} />
+                        <div>
+                            <h3 className="text-sm font-semibold" style={{ color: '#448361' }}>Bảng Vinh Danh</h3>
+                            <p className="text-[11px]" style={{ color: '#6B9B7B' }}>Học sinh đạt ≥ 8 điểm · {topStudents.length} em</p>
+                        </div>
+                    </div>
+                    <div>
+                        {topStudents.length === 0 ? (
+                            <p className="px-4 py-8 text-sm text-center" style={{ color: '#AEACA8' }}>Không có học sinh đạt ≥ 8 điểm</p>
+                        ) : topStudents.map((s, idx) => (
+                            <div key={s.phone} className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: idx < topStudents.length - 1 ? '1px solid #F1F0EC' : 'none' }}>
+                                <div className="flex items-center gap-2.5">
+                                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: idx === 0 ? '#FEF9C3' : '#EAF3EE', color: idx === 0 ? '#854D0E' : '#448361' }}>
+                                        {idx + 1}
+                                    </span>
+                                    <span className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{s.name}</span>
+                                </div>
+                                <span className="text-sm font-bold px-2.5 py-0.5 rounded-lg" style={{ background: '#dcfce7', color: '#166534' }}>{s.score.toFixed(1)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                {/* Concern students */}
+                <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+                    <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid #E9E9E7', borderLeft: '3px solid #E03E3E', background: '#FEF0F0' }}>
+                        <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: '#E03E3E' }} />
+                        <div>
+                            <h3 className="text-sm font-semibold" style={{ color: '#E03E3E' }}>Nhóm Cần Chú Ý</h3>
+                            <p className="text-[11px]" style={{ color: '#C97C7C' }}>Điểm dưới 5 · {concernStudents.length} em</p>
+                        </div>
+                    </div>
+                    <div>
+                        {concernStudents.length === 0 ? (
+                            <div className="px-4 py-8 text-center">
+                                <p className="text-sm font-medium" style={{ color: '#448361' }}>Tuyệt vời! 🎉</p>
+                                <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Không có học sinh nào dưới 5 điểm</p>
+                            </div>
+                        ) : concernStudents.map((s, idx) => (
+                            <div key={s.phone} className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: idx < concernStudents.length - 1 ? '1px solid #F1F0EC' : 'none' }}>
+                                <div className="flex items-center gap-2.5">
+                                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: '#FEF0F0', color: '#E03E3E' }}>
+                                        {idx + 1}
+                                    </span>
+                                    <span className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{s.name}</span>
+                                </div>
+                                <span className="text-sm font-bold px-2.5 py-0.5 rounded-lg" style={{ background: '#fee2e2', color: '#991b1b' }}>{s.score.toFixed(1)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ── StatsPanel (Main) ─────────────────────────────────────────────
 const StatsPanel: React.FC = () => {
     const [records, setRecords] = useState<ExamResultRecord[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // ── DATA FETCHING — PRESERVED EXACTLY, DO NOT MODIFY ─────────
     const [gradeFilter, setGradeFilter] = useState<number | null>(null);
     const [view, setView] = useState<'overview' | 'student' | 'concern'>('overview');
     const [searchTerm, setSearchTerm] = useState('');
@@ -110,676 +392,345 @@ const StatsPanel: React.FC = () => {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    // ── Filtered records ──
-    const filtered = useMemo(() =>
-        gradeFilter ? records.filter(r => r.grade === gradeFilter) : records,
-        [records, gradeFilter]
+    // ── NEW VIEW STATE ────────────────────────────────────────────
+    const [topView, setTopView] = useState<'new' | 'legacy'>('new');
+    const [selectedGrade, setSelectedGrade] = useState<10 | 11 | 12>(10);
+    const [activeView, setActiveView] = useState<'gradebook' | 'exam-analysis'>('gradebook');
+    const [selectedExamId, setSelectedExamId] = useState<string>('');
+    const [sortAsc, setSortAsc] = useState(false);
+    const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
+
+    // ── NEW VIEW: Derived data (useMemo only, no extra fetches) ───
+    const gradeRecords = useMemo(
+        () => records.filter(r => r.grade === selectedGrade),
+        [records, selectedGrade],
     );
 
-    // ── Aggregate stats ──
-    const totalExams = filtered.length;
-    const avgScore = totalExams > 0 ? filtered.reduce((s, r) => s + r.score, 0) / totalExams : 0;
-    const passRate = totalExams > 0 ? (filtered.filter(r => r.score >= 5).length / totalExams) * 100 : 0;
-    const uniqueStudents = new Set(filtered.map(r => r.student_phone)).size;
+    // Extract sub-class label from student_name.
+    // Supports: "[12A1] Name", "12A1 - Name", "Name - 12A1", or falls back to null.
+    function extractClass(name: string): string | null {
+        const bracketMatch = name.match(/^\[([\w]+)\]/);
+        if (bracketMatch) return bracketMatch[1];
+        const prefixMatch = name.match(/^([A-Za-z0-9]+)\s*-\s*/);
+        if (prefixMatch && /\d/.test(prefixMatch[1])) return prefixMatch[1];
+        const suffixMatch = name.match(/\s*-\s*([A-Za-z0-9]+)$/);
+        if (suffixMatch && /\d/.test(suffixMatch[1])) return suffixMatch[1];
+        return null;
+    }
 
-    // Score distribution
-    const scoreDistribution = SCORE_BUCKETS.map(b => ({
-        label: b.label,
-        count: filtered.filter(r => r.score >= b.min && r.score < b.max).length,
-        fill: b.fill,
-    }));
-
-    // Trend: avg/max/min per exam (chronological)
-    const trendData = useMemo(() => {
-        const examMap: Record<string, { title: string; scores: number[] }> = {};
-        for (const r of filtered) {
-            if (!examMap[r.exam_id]) examMap[r.exam_id] = { title: r.exam_title?.slice(0, 18) || r.exam_id, scores: [] };
-            examMap[r.exam_id].scores.push(r.score);
+    const uniqueClasses = useMemo(() => {
+        const set = new Set<string>();
+        for (const r of gradeRecords) {
+            const cls = extractClass(r.student_name);
+            if (cls) set.add(cls);
         }
-        return Object.values(examMap).map(e => ({
-            name: e.title,
-            avg: parseFloat((e.scores.reduce((a, b) => a + b, 0) / e.scores.length).toFixed(2)),
-            max: parseFloat(Math.max(...e.scores).toFixed(2)),
-            min: parseFloat(Math.min(...e.scores).toFixed(2)),
-        }));
-    }, [filtered]);
+        return Array.from(set).sort();
+    }, [gradeRecords]);
 
-    // Grade comparison (always use all records)
-    const gradeComparison = [10, 11, 12].map(g => {
-        const gr = records.filter(r => r.grade === g);
-        const avg = gr.length > 0 ? gr.reduce((s, r) => s + r.score, 0) / gr.length : 0;
-        const pass = gr.length > 0 ? (gr.filter(r => r.score >= 5).length / gr.length) * 100 : 0;
-        const cfg = GRADE_CFG[g as keyof typeof GRADE_CFG];
-        return { grade: cfg.label, avg: parseFloat(avg.toFixed(2)), passRate: parseFloat(pass.toFixed(1)), count: gr.length, color: cfg.color };
-    });
+    // Reset class filter when grade changes
+    useEffect(() => { setSelectedClassFilter('all'); }, [selectedGrade]);
 
-    // Pie
-    const pieData = [
-        { name: 'Đạt (≥5)', value: filtered.filter(r => r.score >= 5).length, color: '#448361' },
-        { name: 'Chưa đạt (<5)', value: filtered.filter(r => r.score < 5).length, color: '#E03E3E' },
-    ];
+    const filteredByClassRecords = useMemo(
+        () => selectedClassFilter === 'all'
+            ? gradeRecords
+            : gradeRecords.filter(r => extractClass(r.student_name) === selectedClassFilter),
+        [gradeRecords, selectedClassFilter],
+    );
 
-    // Student profiles
-    const profiles = useMemo(() => buildProfiles(filtered), [filtered]);
-    const concernStudents = profiles.filter(s => s.avg < 5 || s.trend < -1).sort((a, b) => a.avg - b.avg);
-
-    const searchedStudents = searchTerm.trim().length >= 2
-        ? profiles.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.phone.includes(searchTerm))
-        : [];
-
-    // ── AI Insights (rule-based) ──
-    const aiInsights = useMemo(() => {
-        if (totalExams < 2 || profiles.length < 1) return null;
-
-        const insights: { icon: React.ElementType; title: string; text: string; type: 'success' | 'warning' | 'danger' | 'info' }[] = [];
-
-        // 1) Overall assessment
-        if (avgScore >= 8) {
-            insights.push({ icon: Star, title: 'Kết quả xuất sắc', text: `Điểm trung bình ${avgScore.toFixed(2)}/10 — lớp đang học rất tốt! Tỷ lệ đạt ${passRate.toFixed(0)}%.`, type: 'success' });
-        } else if (avgScore >= 6.5) {
-            insights.push({ icon: CheckCircle, title: 'Kết quả khá tốt', text: `Điểm trung bình ${avgScore.toFixed(2)}/10 — khá ổn định. Tỷ lệ đạt ${passRate.toFixed(0)}%.`, type: 'success' });
-        } else if (avgScore >= 5) {
-            insights.push({ icon: AlertTriangle, title: 'Cần cải thiện', text: `Điểm trung bình chỉ ${avgScore.toFixed(2)}/10 — nên tập trung vào nhóm học sinh có điểm dưới 5.`, type: 'warning' });
-        } else {
-            insights.push({ icon: AlertTriangle, title: 'Cảnh báo nghiêm trọng', text: `Điểm trung bình ${avgScore.toFixed(2)}/10 — đa số học sinh chưa đạt. Cần rà soát phương pháp giảng dạy.`, type: 'danger' });
+    const examList = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const r of filteredByClassRecords) {
+            if (!map.has(r.exam_id)) map.set(r.exam_id, r.exam_title);
         }
-
-        // 2) Concern students count
-        if (concernStudents.length > 0) {
-            const pct = ((concernStudents.length / profiles.length) * 100).toFixed(0);
-            insights.push({
-                icon: Target,
-                title: `${concernStudents.length} học sinh cần chú ý`,
-                text: `Chiếm ${pct}% tổng số học sinh. Các em có điểm TB dưới 5 hoặc xu hướng giảm điểm liên tục.`,
-                type: concernStudents.length >= profiles.length * 0.3 ? 'danger' : 'warning',
-            });
-        } else {
-            insights.push({ icon: Award, title: 'Không có học sinh cần chú ý đặc biệt', text: 'Tất cả các em đều đạt từ 5 trở lên và không có xu hướng giảm. Rất tốt!', type: 'success' });
+        return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
+    }, [filteredByClassRecords]);
+    useEffect(() => {
+        if (examList.length > 0 && !examList.some(e => e.id === selectedExamId)) {
+            setSelectedExamId(examList[0].id);
+        } else if (examList.length === 0) {
+            setSelectedExamId('');
         }
-
-        // 3) Trend analysis (compare first half vs second half of trendData)
-        if (trendData.length >= 3) {
-            const mid = Math.floor(trendData.length / 2);
-            const firstHalf = trendData.slice(0, mid);
-            const secondHalf = trendData.slice(mid);
-            const avgFirst = firstHalf.reduce((s, d) => s + d.avg, 0) / firstHalf.length;
-            const avgSecond = secondHalf.reduce((s, d) => s + d.avg, 0) / secondHalf.length;
-            const diff = avgSecond - avgFirst;
-
-            if (diff > 0.5) {
-                insights.push({ icon: ArrowUpRight, title: 'Xu hướng tăng điểm', text: `Điểm TB các đề gần đây tăng ${diff.toFixed(2)} so với các đề trước. Học sinh đang tiến bộ!`, type: 'success' });
-            } else if (diff < -0.5) {
-                insights.push({ icon: ArrowDownRight, title: 'Xu hướng giảm điểm', text: `Điểm TB các đề gần đây giảm ${Math.abs(diff).toFixed(2)} so với trước. Nên xem lại độ khó đề hoặc nội dung ôn tập.`, type: 'danger' });
-            } else {
-                insights.push({ icon: Minus, title: 'Điểm số ổn định', text: `Điểm TB gần như không thay đổi qua các đề (biến động ${Math.abs(diff).toFixed(2)}). Lớp duy trì phong độ tốt.`, type: 'info' });
+    }, [examList, selectedExamId]);
+    const gradebookData = useMemo(() => {
+        const studentMap = new Map<string, { name: string; scores: Record<string, number> }>();
+        for (const r of filteredByClassRecords) {
+            if (!studentMap.has(r.student_phone)) {
+                studentMap.set(r.student_phone, { name: r.student_name, scores: {} });
             }
+            studentMap.get(r.student_phone)!.scores[r.exam_id] = r.score;
         }
-
-        // 4) Top performers
-        const topStudents = [...profiles].sort((a, b) => b.avg - a.avg).slice(0, 3);
-        if (topStudents.length > 0 && topStudents[0].scores.length >= 2) {
-            const topNames = topStudents.map(s => s.name).join(', ');
-            insights.push({
-                icon: Star,
-                title: 'Học sinh xuất sắc nhất',
-                text: `${topNames} — với điểm TB lần lượt: ${topStudents.map(s => s.avg.toFixed(2)).join(', ')}.`,
-                type: 'info',
-            });
-        }
-
-        // 5) Grade comparison (only if no grade filter is active)
-        if (!gradeFilter) {
-            const gradesWithData = gradeComparison.filter(g => g.count > 0);
-            if (gradesWithData.length >= 2) {
-                const best = gradesWithData.reduce((a, b) => a.avg > b.avg ? a : b);
-                const worst = gradesWithData.reduce((a, b) => a.avg < b.avg ? a : b);
-                if (best.grade !== worst.grade) {
-                    insights.push({
-                        icon: Zap,
-                        title: 'So sánh giữa các khối',
-                        text: `${best.grade} học tốt nhất (TB: ${best.avg.toFixed(2)}), ${worst.grade} cần hỗ trợ thêm (TB: ${worst.avg.toFixed(2)}).`,
-                        type: 'info',
-                    });
-                }
-            }
-        }
-
-        // 6) Score distribution warning
-        const lowScoreCount = filtered.filter(r => r.score < 4).length;
-        const lowPct = totalExams > 0 ? (lowScoreCount / totalExams) * 100 : 0;
-        if (lowPct > 20) {
-            insights.push({
-                icon: AlertTriangle,
-                title: 'Nhiều bài điểm rất thấp',
-                text: `${lowPct.toFixed(0)}% bài thi có điểm dưới 4 (${lowScoreCount}/${totalExams} bài). Nên xem lại phần kiến thức cơ bản.`,
-                type: 'danger',
-            });
-        }
-
-        return insights;
-    }, [totalExams, avgScore, passRate, profiles, concernStudents, trendData, gradeFilter, gradeComparison, filtered]);
-
-    const selectedProfile = selectedPhone ? profiles.find(p => p.phone === selectedPhone) : null;
-    const selectedChartData = selectedProfile
-        ? selectedProfile.scores.map((score, i) => ({ n: i + 1, score, exam: selectedProfile.exams[i]?.slice(0, 14) || `Bài ${i + 1}` }))
-        : [];
-
-    // Export CSV
-    const exportCSV = () => {
+        const rows = Array.from(studentMap.entries()).map(([phone, data]) => {
+            const vals = Object.values(data.scores);
+            const avg = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+            return { phone, name: data.name, scores: data.scores, avg };
+        });
+        const sorted = [...rows].sort((a, b) => sortAsc ? a.avg - b.avg : b.avg - a.avg);
+        return { rows: sorted, examColumns: examList };
+    }, [filteredByClassRecords, examList, sortAsc]);
+    const selectedExamRecords = useMemo(
+        () => filteredByClassRecords.filter(r => r.exam_id === selectedExamId),
+        [filteredByClassRecords, selectedExamId],
+    );
+    const totalStudentsInGrade = useMemo(
+        () => new Set(filteredByClassRecords.map(r => r.student_phone)).size,
+        [filteredByClassRecords],
+    );
+    const gradeCfg = GRADE_OPTIONS.find(g => g.value === selectedGrade)!;
+    const exportCSVNew = () => {
         const header = 'Tên,SĐT,Đề thi,Điểm,Câu đúng,Tổng câu,Lớp,Thời gian\n';
-        const rows = filtered.map(r =>
+        const csvRows = gradeRecords.map(r =>
             `"${r.student_name}","${r.student_phone}","${r.exam_title}",${r.score},${r.correct_answers},${r.total_questions},${r.grade},"${new Date(r.submitted_at).toLocaleString('vi-VN')}"`
         ).join('\n');
-        const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(['\uFEFF' + header + csvRows], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `physivault_stats_${new Date().toISOString().slice(0, 10)}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+        a.href = url; a.download = `sodiem_lop${selectedGrade}_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click(); URL.revokeObjectURL(url);
     };
+
 
     // ── Render ────────────────────────────────────────────────────
     return (
         <div className="space-y-5 pb-10 animate-fade-in">
 
-            {/* ── Header & Controls ── */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* ══════════════════════════════════════════════════════════
+                SECTION A — Header & Global Controls
+            ══════════════════════════════════════════════════════════ */}
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div>
-                    <h2 className="text-xl font-semibold" style={{ color: '#1A1A1A' }}>Thống kê & Báo cáo</h2>
-                    <p className="text-sm mt-0.5" style={{ color: '#787774' }}>
-                        {loading ? 'Đang tải...' : `${totalExams} lượt làm bài · ${uniqueStudents} học sinh`}
+                    <h2
+                        className="text-2xl font-bold tracking-tight"
+                        style={{ color: '#1A1A1A' }}
+                    >
+                        Sổ Điểm &amp; Quản Lý Học Sinh
+                    </h2>
+                    <p className="text-sm mt-1.5" style={{ color: '#787774' }}>
+                        {loading ? (
+                            'Đang tải dữ liệu…'
+                        ) : (
+                            <>
+                                <span className="font-semibold" style={{ color: gradeCfg.color }}>
+                                    {gradeCfg.label}
+                                </span>
+                                {' · '}
+                                <span>{gradeRecords.length} bản ghi</span>
+                                {' · '}
+                                <span>{totalStudentsInGrade} học sinh</span>
+                            </>
+                        )}
                     </p>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                    {/* Grade filter */}
-                    {([null, 10, 11, 12] as (number | null)[]).map(g => {
-                        const cfg = g ? GRADE_CFG[g as keyof typeof GRADE_CFG] : null;
-                        const isActive = gradeFilter === g;
-                        return (
-                            <button
-                                key={String(g)}
-                                onClick={() => setGradeFilter(g)}
-                                className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
-                                style={{
-                                    background: isActive ? (cfg?.color || '#1A1A1A') : '#F7F6F3',
-                                    color: isActive ? '#fff' : '#787774',
-                                    border: `1px solid ${isActive ? (cfg?.color || '#1A1A1A') : '#E9E9E7'}`,
-                                }}
-                            >
-                                {g ? `Lớp ${g}` : 'Tất cả'}
-                            </button>
-                        );
-                    })}
+
+                <div className="flex items-center gap-2 shrink-0">
                     <button
-                        onClick={fetchData} disabled={loading}
-                        className="p-2 rounded-lg transition-colors"
-                        style={{ background: '#F7F6F3', border: '1px solid #E9E9E7', color: '#787774' }}
-                        title="Tải lại dữ liệu"
+                        onClick={fetchData}
+                        disabled={loading}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80 disabled:opacity-50"
+                        style={{
+                            background: '#fff',
+                            border: '1px solid #E9E9E7',
+                            color: '#57564F',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                        }}
                     >
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        Làm mới
                     </button>
                     <button
-                        onClick={exportCSV}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                        style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #44836133' }}
+                        onClick={exportCSVNew}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                        style={{
+                            background: '#448361',
+                            color: '#fff',
+                            boxShadow: '0 2px 6px rgba(68,131,97,0.25)',
+                        }}
                     >
-                        <Download className="w-3.5 h-3.5" />
+                        <Download className="w-4 h-4" />
                         Xuất CSV
                     </button>
                 </div>
             </div>
 
-            {/* ── Sub-tabs ── */}
-            <div className="flex items-center gap-1 border-b" style={{ borderColor: '#E9E9E7' }}>
-                {[
-                    { key: 'overview', label: 'Tổng quan', Icon: BarChart2 },
-                    { key: 'student', label: 'Chi tiết học sinh', Icon: Search },
-                    { key: 'concern', label: `Cần chú ý (${concernStudents.length})`, Icon: AlertTriangle },
-                ].map(({ key, label, Icon }) => (
-                    <button
-                        key={key}
-                        onClick={() => { setView(key as any); setSelectedPhone(null); }}
-                        className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors border-b-2"
+            {/* ══════════════════════════════════════════════════════════
+                SECTION B — Cascading Toolbar
+            ══════════════════════════════════════════════════════════ */}
+            <div
+                className="rounded-2xl flex flex-wrap items-center gap-2 p-2"
+                style={{
+                    background: '#fff',
+                    border: '1px solid #E9E9E7',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                }}
+            >
+                {/* ── Group 1: Grade Selector ── */}
+                <div
+                    className="flex items-center gap-1 p-1 rounded-xl"
+                    style={{ background: '#F7F6F3' }}
+                >
+                    {GRADE_OPTIONS.map(g => {
+                        const isActive = selectedGrade === g.value;
+                        return (
+                            <button
+                                key={g.value}
+                                onClick={() => setSelectedGrade(g.value)}
+                                className="px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-all"
+                                style={{
+                                    background: isActive ? g.color : 'transparent',
+                                    color: isActive ? '#fff' : '#787774',
+                                    boxShadow: isActive ? `0 2px 6px ${g.color}40` : 'none',
+                                }}
+                            >
+                                {g.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Divider */}
+                <div className="self-stretch w-px" style={{ background: '#E9E9E7' }} />
+
+                {/* ── Group 1b: Class Selector ── */}
+                <div className="flex items-center gap-2">
+                    <span
+                        className="text-[11px] font-semibold uppercase tracking-wider shrink-0"
+                        style={{ color: '#AEACA8' }}
+                    >
+                        Lớp:
+                    </span>
+                    <select
+                        value={selectedClassFilter}
+                        onChange={e => setSelectedClassFilter(e.target.value)}
+                        className="text-[13px] font-semibold rounded-xl px-3 py-1.5 outline-none cursor-pointer transition-all"
                         style={{
-                            color: view === key ? '#6B7CDB' : '#787774',
-                            borderColor: view === key ? '#6B7CDB' : 'transparent',
-                            marginBottom: '-1px',
+                            background: selectedClassFilter === 'all' ? '#F7F6F3' : '#EEF0FB',
+                            border: `1px solid ${selectedClassFilter === 'all' ? '#E9E9E7' : '#6B7CDB44'}`,
+                            color: selectedClassFilter === 'all' ? '#787774' : '#6B7CDB',
                         }}
                     >
-                        <Icon className="w-3.5 h-3.5" />
-                        {label}
-                    </button>
-                ))}
+                        <option value="all">Tất cả lớp</option>
+                        {uniqueClasses.map(cls => (
+                            <option key={cls} value={cls}>{cls}</option>
+                        ))}
+                        {uniqueClasses.length === 0 && (
+                            <option disabled value="">— Chưa phân lớp —</option>
+                        )}
+                    </select>
+                </div>
+
+                {/* Divider */}
+                <div className="self-stretch w-px" style={{ background: '#E9E9E7' }} />
+
+                {/* ── Group 2: View Mode Toggle ── */}
+                <div
+                    className="flex items-center gap-1 p-1 rounded-xl"
+                    style={{ background: '#F7F6F3' }}
+                >
+                    {(
+                        [
+                            {
+                                key: 'gradebook' as const,
+                                label: 'Sổ Điểm Lớp',
+                                Icon: BookOpen,
+                                activeColor: '#6B7CDB',
+                                activeBg: '#EEF0FB',
+                            },
+                            {
+                                key: 'exam-analysis' as const,
+                                label: 'Phân Tích Đề Thi',
+                                Icon: BarChart2,
+                                activeColor: '#D9730D',
+                                activeBg: '#FFF3E8',
+                            },
+                        ] as const
+                    ).map(tab => {
+                        const isActive = activeView === tab.key;
+                        return (
+                            <button
+                                key={tab.key}
+                                onClick={() => setActiveView(tab.key)}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-all"
+                                style={{
+                                    background: isActive ? tab.activeBg : 'transparent',
+                                    color: isActive ? tab.activeColor : '#787774',
+                                    border: isActive
+                                        ? `1px solid ${tab.activeColor}33`
+                                        : '1px solid transparent',
+                                }}
+                            >
+                                <tab.Icon className="w-3.5 h-3.5" />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* ── Group 3: Exam Selector (exam-analysis only) ── */}
+                {activeView === 'exam-analysis' && (
+                    <>
+                        <div className="self-stretch w-px" style={{ background: '#E9E9E7' }} />
+                        <div className="flex items-center gap-2 px-1 flex-1 min-w-0">
+                            <span
+                                className="text-[11px] font-semibold uppercase tracking-wider shrink-0"
+                                style={{ color: '#AEACA8' }}
+                            >
+                                Đề thi:
+                            </span>
+                            <select
+                                value={selectedExamId}
+                                onChange={e => setSelectedExamId(e.target.value)}
+                                className="flex-1 min-w-0 text-sm font-medium rounded-xl px-3 py-1.5 outline-none transition-all cursor-pointer"
+                                style={{
+                                    background: '#FFF3E8',
+                                    border: '1px solid #D9730D33',
+                                    color: '#92400E',
+                                    maxWidth: '340px',
+                                }}
+                            >
+                                {examList.length === 0 ? (
+                                    <option value="">— Chưa có bài thi nào —</option>
+                                ) : (
+                                    examList.map(e => (
+                                        <option key={e.id} value={e.id}>{e.title}</option>
+                                    ))
+                                )}
+                            </select>
+                        </div>
+                    </>
+                )}
             </div>
 
-            {loading && (
-                <div className="flex items-center justify-center py-24">
-                    <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} />
-                    <span className="ml-3 text-sm" style={{ color: '#787774' }}>Đang tải dữ liệu thống kê...</span>
-                </div>
-            )}
-
-            {/* ════════════════════════════════════════════════
-                OVERVIEW VIEW
-            ════════════════════════════════════════════════ */}
-            {!loading && view === 'overview' && (
-                <>
-                    {/* Stat cards */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        {[
-                            { label: 'Lượt làm bài', value: totalExams, sub: 'bài thi', color: '#6B7CDB', bg: '#EEF0FB', Icon: BookOpen },
-                            { label: 'Điểm trung bình', value: avgScore.toFixed(2), sub: '/ 10 điểm', color: scoreColor(avgScore), bg: scoreBg(avgScore), Icon: Award },
-                            { label: 'Tỷ lệ đạt', value: `${passRate.toFixed(1)}%`, sub: '≥ 5 điểm', color: passRate >= 70 ? '#448361' : '#D9730D', bg: passRate >= 70 ? '#EAF3EE' : '#FFF3E8', Icon: CheckCircle },
-                            { label: 'Học sinh', value: uniqueStudents, sub: 'đã thi', color: '#9065B0', bg: '#F3ECF8', Icon: Users },
-                        ].map(card => (
-                            <div key={card.label} className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid #E9E9E7', borderLeft: `3px solid ${card.color}` }}>
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>{card.label}</span>
-                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: card.bg, color: card.color }}>
-                                        <card.Icon className="w-3.5 h-3.5" />
-                                    </div>
-                                </div>
-                                <div className="text-2xl font-bold" style={{ color: card.color }}>{card.value}</div>
-                                <div className="text-[11px] mt-0.5" style={{ color: '#AEACA8' }}>{card.sub}</div>
-                            </div>
-                        ))}
+            {/* ══════════════════════════════════════════════════════════
+                SECTION C — Dynamic Main Content
+            ══════════════════════════════════════════════════════════ */}
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-32 gap-3">
+                    <div
+                        className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                        style={{ background: '#EEF0FB' }}
+                    >
+                        <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} />
                     </div>
-
-                    {totalExams === 0 ? (
-                        <div className="rounded-xl py-16 text-center" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                            <BarChart2 className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
-                            <p className="text-sm font-medium" style={{ color: '#57564F' }}>Chưa có dữ liệu bài thi</p>
-                            <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Học sinh cần hoàn thành ít nhất 1 bài thi để xem thống kê</p>
-                        </div>
-                    ) : (
-                        <>
-                            {/* Row 1: line chart + pie */}
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                                {/* Trend Line Chart */}
-                                <div className="lg:col-span-2 rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                    <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', borderLeft: '3px solid #6B7CDB', background: '#EEF0FB' }}>
-                                        <h3 className="text-sm font-semibold" style={{ color: '#6B7CDB' }}>Điểm trung bình theo từng đề</h3>
-                                        <p className="text-[11px]" style={{ color: '#AEACA8' }}>Min / Trung bình / Max từng đề thi</p>
-                                    </div>
-                                    <div className="p-4">
-                                        <ResponsiveContainer width="100%" height={210}>
-                                            <LineChart data={trendData} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#F1F0EC" vertical={false} />
-                                                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#AEACA8' }} axisLine={{ stroke: '#E9E9E7' }} tickLine={false} />
-                                                <YAxis domain={[0, 10]} tick={{ fontSize: 10, fill: '#AEACA8' }} axisLine={false} tickLine={false} />
-                                                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                                                <ReferenceLine y={5} stroke="#E03E3E" strokeDasharray="4 4" strokeOpacity={0.4} />
-                                                <Line type="monotone" dataKey="max" stroke="#448361" strokeWidth={1.5} dot={{ r: 2 }} name="Cao nhất" strokeDasharray="5 3" />
-                                                <Line type="monotone" dataKey="avg" stroke="#6B7CDB" strokeWidth={2.5} dot={{ r: 4, fill: '#6B7CDB' }} activeDot={{ r: 6 }} name="Trung bình" />
-                                                <Line type="monotone" dataKey="min" stroke="#E03E3E" strokeWidth={1.5} dot={{ r: 2 }} name="Thấp nhất" strokeDasharray="5 3" />
-                                                <Legend iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
-                                            </LineChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-
-                                {/* Pie Chart */}
-                                <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                    <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', borderLeft: '3px solid #448361', background: '#EAF3EE' }}>
-                                        <h3 className="text-sm font-semibold" style={{ color: '#448361' }}>Tỷ lệ Đạt / Không đạt</h3>
-                                    </div>
-                                    <div className="p-4 flex flex-col items-center gap-3">
-                                        <ResponsiveContainer width="100%" height={160}>
-                                            <PieChart>
-                                                <Pie data={pieData} cx="50%" cy="50%" innerRadius={48} outerRadius={72} dataKey="value" paddingAngle={3}>
-                                                    {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                                                </Pie>
-                                                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [`${v} bài`, '']} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                        <div className="flex gap-4 text-xs">
-                                            {pieData.map(p => (
-                                                <div key={p.name} className="flex items-center gap-1.5">
-                                                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: p.color }} />
-                                                    <span style={{ color: '#787774' }}>{p.name}</span>
-                                                    <span className="font-bold" style={{ color: p.color }}>{p.value}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Score Distribution */}
-                            <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', borderLeft: '3px solid #D9730D', background: '#FFF3E8' }}>
-                                    <h3 className="text-sm font-semibold" style={{ color: '#D9730D' }}>Phổ điểm (Histogram)</h3>
-                                    <p className="text-[11px]" style={{ color: '#AEACA8' }}>Phân phối điểm số của tất cả lượt làm bài</p>
-                                </div>
-                                <div className="p-4">
-                                    <ResponsiveContainer width="100%" height={180}>
-                                        <BarChart data={scoreDistribution} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F0EC" vertical={false} />
-                                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#AEACA8' }} axisLine={{ stroke: '#E9E9E7' }} tickLine={false} />
-                                            <YAxis tick={{ fontSize: 11, fill: '#AEACA8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                                            <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [`${v} bài`, 'Số lượng']} />
-                                            <Bar dataKey="count" name="Số bài" radius={[4, 4, 0, 0]}>
-                                                {scoreDistribution.map((entry, i) => <Cell key={i} fill={entry.fill} fillOpacity={0.85} />)}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-
-                            {/* Grade Comparison */}
-                            <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', borderLeft: '3px solid #9065B0', background: '#F3ECF8' }}>
-                                    <h3 className="text-sm font-semibold" style={{ color: '#9065B0' }}>So sánh các khối lớp</h3>
-                                    <p className="text-[11px]" style={{ color: '#AEACA8' }}>Điểm trung bình và tỷ lệ đạt theo từng khối</p>
-                                </div>
-                                <div className="p-4 space-y-4">
-                                    {/* Summary cards */}
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {gradeComparison.map(g => (
-                                            <div key={g.grade} className="rounded-lg p-3 text-center" style={{ background: '#FAFAF9', border: '1px solid #F1F0EC' }}>
-                                                <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: '#AEACA8' }}>{g.grade}</div>
-                                                <div className="text-2xl font-bold" style={{ color: g.color }}>{g.count > 0 ? g.avg.toFixed(2) : '—'}</div>
-                                                <div className="text-[11px] mt-0.5" style={{ color: '#787774' }}>
-                                                    {g.count > 0 ? `${g.passRate}% đạt · ${g.count} bài` : 'Chưa có dữ liệu'}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {/* Grouped bar chart */}
-                                    <ResponsiveContainer width="100%" height={170}>
-                                        <BarChart data={gradeComparison} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F0EC" vertical={false} />
-                                            <XAxis dataKey="grade" tick={{ fontSize: 11, fill: '#AEACA8' }} axisLine={{ stroke: '#E9E9E7' }} tickLine={false} />
-                                            <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: '#AEACA8' }} axisLine={false} tickLine={false} />
-                                            <Tooltip contentStyle={TOOLTIP_STYLE} />
-                                            <ReferenceLine y={5} stroke="#E03E3E" strokeDasharray="4 4" strokeOpacity={0.4} />
-                                            <Bar dataKey="avg" name="Điểm TB" radius={[5, 5, 0, 0]} maxBarSize={60}>
-                                                {gradeComparison.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-
-                            {/* ════════════════════════════════════════════════
-                                AI INSIGHTS PANEL (Teacher)
-                            ════════════════════════════════════════════════ */}
-                            {aiInsights && aiInsights.length > 0 && (
-                                <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                    <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid #E9E9E7', background: 'linear-gradient(135deg, #EEF0FB 0%, #F3ECF8 100%)', borderLeft: '3px solid #6B7CDB' }}>
-                                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6B7CDB, #9065B0)' }}>
-                                            <Brain className="w-3.5 h-3.5 text-white" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-sm font-semibold" style={{ color: '#6B7CDB' }}>Nhận xét thông minh</h3>
-                                            <p className="text-[11px]" style={{ color: '#AEACA8' }}>Phân tích tự động dựa trên dữ liệu {gradeFilter ? `Lớp ${gradeFilter}` : 'toàn trường'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="p-4 space-y-3">
-                                        {aiInsights.map((insight, idx) => {
-                                            const colorMap = {
-                                                success: { bg: '#EAF3EE', border: '#44836133', color: '#448361', iconBg: '#D1FAE5' },
-                                                warning: { bg: '#FFF3E8', border: '#D9730D33', color: '#D9730D', iconBg: '#FEF3C7' },
-                                                danger: { bg: '#FEF0F0', border: '#E03E3E33', color: '#E03E3E', iconBg: '#FEE2E2' },
-                                                info: { bg: '#EEF0FB', border: '#6B7CDB33', color: '#6B7CDB', iconBg: '#E0E7FF' },
-                                            };
-                                            const c = colorMap[insight.type];
-                                            const Icon = insight.icon;
-                                            return (
-                                                <div
-                                                    key={idx}
-                                                    className="flex items-start gap-3 rounded-xl p-3.5 transition-all"
-                                                    style={{ background: c.bg, border: `1px solid ${c.border}` }}
-                                                >
-                                                    <div
-                                                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                                                        style={{ background: c.iconBg }}
-                                                    >
-                                                        <Icon className="w-4 h-4" style={{ color: c.color }} />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <div className="text-sm font-semibold mb-0.5" style={{ color: c.color }}>
-                                                            {insight.title}
-                                                        </div>
-                                                        <div className="text-xs leading-relaxed" style={{ color: '#57564F' }}>
-                                                            {insight.text}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                        <div className="flex items-center gap-1.5 pt-1 text-[10px]" style={{ color: '#AEACA8' }}>
-                                            <Sparkles className="w-3 h-3" />
-                                            <span>Phân tích tự động · Cập nhật realtime theo dữ liệu bài thi</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </>
-                    )}
-                </>
-            )}
-
-            {/* ════════════════════════════════════════════════
-                STUDENT DETAIL VIEW
-            ════════════════════════════════════════════════ */}
-            {!loading && view === 'student' && (
-                <div className="space-y-4">
-                    {!selectedPhone && (
-                        <>
-                            {/* Search box */}
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#AEACA8' }} />
-                                <input
-                                    type="text"
-                                    placeholder="Tìm theo tên hoặc số điện thoại học sinh..."
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none"
-                                    style={{ background: '#fff', border: '1px solid #E9E9E7', color: '#1A1A1A', transition: 'border-color 0.15s' }}
-                                    onFocus={e => (e.currentTarget.style.borderColor = '#6B7CDB')}
-                                    onBlur={e => (e.currentTarget.style.borderColor = '#E9E9E7')}
-                                />
-                            </div>
-
-                            {searchTerm.trim().length < 2 && (
-                                <div className="rounded-xl py-12 text-center" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                    <Search className="w-8 h-8 mx-auto mb-2" style={{ color: '#CFCFCB' }} />
-                                    <p className="text-sm" style={{ color: '#AEACA8' }}>Nhập ít nhất 2 ký tự để tìm kiếm học sinh</p>
-                                </div>
-                            )}
-
-                            {searchTerm.trim().length >= 2 && (
-                                <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                    {searchedStudents.length === 0 ? (
-                                        <div className="py-10 text-center text-sm italic" style={{ color: '#AEACA8' }}>
-                                            <UserX className="w-8 h-8 mx-auto mb-2" style={{ color: '#CFCFCB' }} />
-                                            Không tìm thấy học sinh nào
-                                        </div>
-                                    ) : searchedStudents.map((s, idx) => {
-                                        const cfg = GRADE_CFG[s.grade as keyof typeof GRADE_CFG];
-                                        return (
-                                            <div
-                                                key={s.phone}
-                                                className="flex items-center justify-between px-4 py-3 cursor-pointer transition-colors"
-                                                style={{ borderBottom: idx < searchedStudents.length - 1 ? '1px solid #F1F0EC' : 'none', background: '#fff' }}
-                                                onMouseEnter={e => (e.currentTarget.style.background = '#FAFAF9')}
-                                                onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
-                                                onClick={() => setSelectedPhone(s.phone)}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold" style={{ background: cfg?.bg, color: cfg?.color }}>
-                                                        {s.name.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{s.name}</div>
-                                                        <div className="text-xs" style={{ color: '#AEACA8' }}>{s.phone} · {cfg?.label} · {s.scores.length} bài thi</div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-lg font-bold" style={{ color: scoreColor(s.avg) }}>{s.avg.toFixed(2)}</span>
-                                                    <ChevronRight className="w-4 h-4" style={{ color: '#AEACA8' }} />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </>
-                    )}
-
-                    {/* Selected student detail */}
-                    {selectedPhone && selectedProfile && (
-                        <div className="space-y-4 animate-fade-in">
-                            <button onClick={() => setSelectedPhone(null)} className="flex items-center gap-1.5 text-sm font-medium transition-colors" style={{ color: '#6B7CDB' }}>
-                                <ArrowLeft className="w-4 h-4" />
-                                Quay lại kết quả tìm kiếm
-                            </button>
-
-                            {/* Info card */}
-                            <div className="rounded-xl p-5" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                <div className="flex items-center gap-3 mb-5">
-                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold" style={{ background: '#EEF0FB', color: '#6B7CDB' }}>
-                                        {selectedProfile.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
-                                        <div className="text-base font-semibold" style={{ color: '#1A1A1A' }}>{selectedProfile.name}</div>
-                                        <div className="text-xs mt-0.5" style={{ color: '#787774' }}>{selectedPhone} · {GRADE_CFG[selectedProfile.grade as keyof typeof GRADE_CFG]?.label}</div>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    {[
-                                        { label: 'Số bài thi', value: selectedProfile.scores.length, color: '#6B7CDB' },
-                                        { label: 'Điểm TB', value: selectedProfile.avg.toFixed(2), color: scoreColor(selectedProfile.avg) },
-                                        { label: 'Cao nhất', value: selectedProfile.best.toFixed(2), color: '#448361' },
-                                        { label: 'Thấp nhất', value: selectedProfile.worst.toFixed(2), color: scoreColor(selectedProfile.worst) },
-                                    ].map(stat => (
-                                        <div key={stat.label} className="rounded-lg p-3 text-center" style={{ background: '#FAFAF9', border: '1px solid #F1F0EC' }}>
-                                            <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#AEACA8' }}>{stat.label}</div>
-                                            <div className="text-xl font-bold" style={{ color: stat.color }}>{stat.value}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Student area chart */}
-                            <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', borderLeft: '3px solid #6B7CDB', background: '#EEF0FB' }}>
-                                    <h3 className="text-sm font-semibold" style={{ color: '#6B7CDB' }}>Tiến trình điểm số</h3>
-                                    <p className="text-[11px]" style={{ color: '#AEACA8' }}>Lịch sử từng bài thi theo thứ tự thời gian</p>
-                                </div>
-                                <div className="p-4">
-                                    <ResponsiveContainer width="100%" height={210}>
-                                        <AreaChart data={selectedChartData} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
-                                            <defs>
-                                                <linearGradient id="studGrad" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#6B7CDB" stopOpacity={0.2} />
-                                                    <stop offset="95%" stopColor="#6B7CDB" stopOpacity={0} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#F1F0EC" vertical={false} />
-                                            <XAxis dataKey="exam" tick={{ fontSize: 10, fill: '#AEACA8' }} axisLine={{ stroke: '#E9E9E7' }} tickLine={false} />
-                                            <YAxis domain={[0, 10]} tick={{ fontSize: 10, fill: '#AEACA8' }} axisLine={false} tickLine={false} />
-                                            <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number) => [`${v.toFixed(2)} điểm`, '']} />
-                                            <ReferenceLine y={5} stroke="#E03E3E" strokeDasharray="4 4" strokeOpacity={0.4} />
-                                            <Area type="linear" dataKey="score" stroke="#6B7CDB" strokeWidth={2.5} fill="url(#studGrad)" dot={{ r: 4, fill: '#6B7CDB' }} activeDot={{ r: 6 }} name="Điểm" />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-
-                            {/* Exam history table */}
-                            <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAF9' }}>
-                                    <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Lịch sử từng bài thi</h3>
-                                </div>
-                                {records
-                                    .filter(r => r.student_phone === selectedPhone)
-                                    .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
-                                    .map((r, i, arr) => (
-                                        <div key={r.id || i} className="flex items-center justify-between px-4 py-3" style={{ borderBottom: i < arr.length - 1 ? '1px solid #F1F0EC' : 'none' }}>
-                                            <div>
-                                                <div className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{r.exam_title}</div>
-                                                <div className="text-xs mt-0.5" style={{ color: '#AEACA8' }}>
-                                                    {new Date(r.submitted_at).toLocaleDateString('vi-VN')} · {r.correct_answers}/{r.total_questions} câu đúng
-                                                </div>
-                                            </div>
-                                            <span className="text-sm font-bold px-2.5 py-1 rounded-lg" style={{ color: scoreColor(r.score), background: scoreBg(r.score) }}>
-                                                {r.score.toFixed(2)}
-                                            </span>
-                                        </div>
-                                    ))
-                                }
-                            </div>
-                        </div>
-                    )}
+                    <div className="text-center">
+                        <p className="text-sm font-semibold" style={{ color: '#57564F' }}>
+                            Đang tải dữ liệu
+                        </p>
+                        <p className="text-xs mt-0.5" style={{ color: '#AEACA8' }}>
+                            Vui lòng chờ trong giây lát…
+                        </p>
+                    </div>
                 </div>
-            )}
-
-            {/* ════════════════════════════════════════════════
-                CONCERN STUDENTS VIEW
-            ════════════════════════════════════════════════ */}
-            {!loading && view === 'concern' && (
-                <div className="space-y-4">
-                    {concernStudents.length === 0 ? (
-                        <div className="rounded-xl py-16 text-center" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: '#EAF3EE' }}>
-                                <Award className="w-6 h-6" style={{ color: '#448361' }} />
-                            </div>
-                            <p className="text-sm font-semibold" style={{ color: '#57564F' }}>Tất cả học sinh đều ổn! 🎉</p>
-                            <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Không có học sinh nào cần đặc biệt chú ý</p>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg" style={{ background: '#FFF3E8', border: '1px solid #D9730D22' }}>
-                                <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: '#D9730D' }} />
-                                <span className="text-sm" style={{ color: '#D9730D' }}>
-                                    <strong>{concernStudents.length} học sinh</strong> cần chú ý — điểm TB dưới 5 hoặc có xu hướng giảm
-                                </span>
-                            </div>
-
-                            <div className="rounded-xl overflow-hidden" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
-                                {concernStudents.map((s, i) => {
-                                    const TIcon = s.trend > 0 ? TrendingUp : s.trend < 0 ? TrendingDown : Minus;
-                                    const trendColor = s.trend > 0 ? '#448361' : s.trend < 0 ? '#E03E3E' : '#787774';
-                                    const cfg = GRADE_CFG[s.grade as keyof typeof GRADE_CFG];
-                                    return (
-                                        <div
-                                            key={s.phone}
-                                            className="flex items-center justify-between px-4 py-3 cursor-pointer transition-colors"
-                                            style={{ borderBottom: i < concernStudents.length - 1 ? '1px solid #F1F0EC' : 'none', background: s.avg < 3 ? '#FEF8F8' : '#fff' }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = '#FAFAF9')}
-                                            onMouseLeave={e => (e.currentTarget.style.background = s.avg < 3 ? '#FEF8F8' : '#fff')}
-                                            onClick={() => { setView('student'); setSearchTerm(s.name); setSelectedPhone(s.phone); }}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold" style={{ background: '#FEF0F0', color: '#E03E3E' }}>
-                                                    {s.name.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{s.name}</div>
-                                                    <div className="text-xs" style={{ color: '#AEACA8' }}>{s.phone} · {cfg?.label} · {s.scores.length} bài</div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-right">
-                                                    <div className="text-sm font-bold" style={{ color: '#E03E3E' }}>{s.avg.toFixed(2)}</div>
-                                                    <div className="text-[10px]" style={{ color: '#AEACA8' }}>điểm TB</div>
-                                                </div>
-                                                <div className="flex items-center gap-1 text-xs font-semibold" style={{ color: trendColor }}>
-                                                    <TIcon className="w-3.5 h-3.5" />
-                                                    {s.trend > 0 ? '+' : ''}{s.trend.toFixed(2)}
-                                                </div>
-                                                <ChevronRight className="w-4 h-4" style={{ color: '#AEACA8' }} />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </>
-                    )}
-                </div>
+            ) : activeView === 'gradebook' ? (
+                <GradebookTable
+                    rows={gradebookData.rows}
+                    examColumns={gradebookData.examColumns}
+                    sortAsc={sortAsc}
+                    onToggleSort={() => setSortAsc(s => !s)}
+                />
+            ) : (
+                <ExamAnalysis
+                    examRecords={selectedExamRecords}
+                    totalStudentsInGrade={totalStudentsInGrade}
+                />
             )}
         </div>
     );
