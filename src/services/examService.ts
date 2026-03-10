@@ -242,10 +242,19 @@ export const saveExamResult = async (exam: Exam, score: number, totalQuestions: 
 };
 
 export const getExamHistory = async (phoneFilter?: string) => {
+    let normalizedPhone = phoneFilter ? phoneFilter.trim() : '';
+    if (!normalizedPhone) {
+        const sdtStr = localStorage.getItem('pv_activated_sdt');
+        if (sdtStr) {
+            normalizedPhone = sdtStr.trim();
+            if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) normalizedPhone = '0' + normalizedPhone;
+        }
+    }
+    if (!normalizedPhone) return [];
     try {
-        let query = supabase.from('exam_results').select('*').order('submitted_at', { ascending: false });
-        if (phoneFilter) query = query.eq('student_phone', phoneFilter);
-        const { data, error } = await query;
+        const { data, error } = await supabase.from('exam_results').select('*')
+            .eq('student_phone', normalizedPhone)
+            .order('submitted_at', { ascending: false });
         if (error) throw error;
         return data;
     } catch (e) { console.error('Lỗi khi lấy lịch sử làm bài:', e); return []; }
