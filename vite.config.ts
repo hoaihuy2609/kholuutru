@@ -20,8 +20,10 @@ export default defineConfig(({ mode }) => {
         manifest: false,
         devOptions: { enabled: false },
         workbox: {
-          // Precache all build artifacts (app shell)
-          globPatterns: ['**/*.{js,css,html,svg,woff2,woff,ttf}'],
+          // Precache only app-shell artifacts — fonts are excluded to avoid
+          // precaching 59 KaTeX font files (~1 MB) for users who never view math.
+          // Fonts are cached on first use via the runtimeCaching rule below.
+          globPatterns: ['**/*.{js,css,html,svg}'],
           // SPA navigation fallback — serve cached shell when offline
           navigateFallback: 'index.html',
           navigateFallbackDenylist: [/^\/manifest\.json$/, /^\/icon-/],
@@ -58,6 +60,16 @@ export default defineConfig(({ mode }) => {
                 cacheName: 'supabase-storage',
                 cacheableResponse: { statuses: [0, 200] },
                 expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              },
+            },
+            // ── Local bundled fonts (KaTeX) — cache-first, 1 year ──
+            {
+              urlPattern: /\/assets\/[^/]+\.(?:woff2?|ttf)$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'local-fonts',
+                cacheableResponse: { statuses: [0, 200] },
+                expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 365 },
               },
             },
             // ── Google Fonts CSS — stale-while-revalidate ──
@@ -132,8 +144,11 @@ export default defineConfig(({ mode }) => {
             if (/\/node_modules\/(katex|rehype-katex|remark-math|rehype-raw|react-markdown|rehype-|remark-|unified|hast|mdast|micromark|vfile|bail|extend|is-plain|decode-named|character-entities|zwitch|comma-separated|space-separated|property-information|hastscript|stringify-entities|ccount|longest-streak|trim-lines|markdown-table|trough)/.test(n)) return 'vendor-content';
             // Supabase
             if (n.includes('/node_modules/@supabase/')) return 'vendor-supabase';
-            // Crypto / Zip utils
-            if (/\/node_modules\/(jszip|crypto-js)\//.test(n)) return 'vendor-utils';
+            // JSZip — dynamically imported (admin-only sync), keep separate so it
+            // is NOT eagerly loaded with crypto-js on startup.
+            if (n.includes('/node_modules/jszip/')) return 'vendor-jszip';
+            // Crypto utils — statically required at startup (activation check)
+            if (n.includes('/node_modules/crypto-js/')) return 'vendor-utils';
           },
         },
       },

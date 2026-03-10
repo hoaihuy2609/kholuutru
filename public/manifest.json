@@ -3,7 +3,9 @@
   "short_name": "PhysiVault",
   "description": "Quản lý và lưu trữ tài liệu Vật Lý một cách dễ dàng, hiệu quả.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "prefer_related_applications": false,
   "background_color": "#F7F6F3",
   "theme_color": "#F7F6F3",
   "icons": [

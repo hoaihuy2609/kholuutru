@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { useState, useEffect, useRef } from 'react';
-import JSZip from 'jszip';
+import type JSZip from 'jszip'; // type-only — runtime import is deferred to call-sites
 import { Lesson, StoredFile, FileStorage } from '../../types';
 
 // Shared utilities (extracted)
@@ -272,6 +272,7 @@ export const useCloudStorage = () => {
 
                 const totalChunks = zIdsToDownload.length;
                 const processZipPart = async (fileId: string): Promise<void> => {
+                    const { default: JSZip } = await import('jszip');
                     const arrayBuf = await fetchViaCloudflareProxy(fileId);
                     const zip = new JSZip();
                     const unzipped = await zip.loadAsync(arrayBuf);
@@ -392,7 +393,8 @@ export const useCloudStorage = () => {
         };
 
         const MAX_CHUNK_SIZE = 18 * 1024 * 1024;
-        const zipChunks: JSZip[] = [];
+        const { default: JSZip } = await import('jszip');
+        const zipChunks: InstanceType<typeof JSZip>[] = [];
         let currentZip = new JSZip();
         let currentChunkSize = 0;
         const chunkPayloadIds: string[][] = [];

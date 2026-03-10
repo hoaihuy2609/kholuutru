@@ -1,4 +1,4 @@
-import JSZip from 'jszip';
+import type JSZip from 'jszip'; // type-only — runtime import is deferred to call-sites
 import { supabase } from '../lib/supabase';
 import { dbGet, dbSet } from '../lib/db';
 import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
@@ -66,6 +66,7 @@ export const uploadExamPdf = async (file: File, onProgress?: (pct: number) => vo
 };
 
 export const saveExam = async (exams: Exam[]): Promise<void> => {
+    const { default: JSZip } = await import('jszip');
     const examVersions: Record<string, string> = {};
     const chunkContents: Record<string, string[]> = {};
     const zipFileIds: string[] = [];
@@ -176,6 +177,7 @@ export const loadExams = async (): Promise<Exam[]> => {
     );
 
     const processChunk = async (chunkFileId: string): Promise<void> => {
+        const { default: JSZip } = await import('jszip');
         const buf = await fetchViaCloudflareProxy(chunkFileId);
         const zip = new JSZip();
         const unzipped = await zip.loadAsync(buf);
