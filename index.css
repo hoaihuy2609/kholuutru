@@ -325,6 +325,17 @@ body {
     box-shadow: var(--shadow-sm);
 }
 
+/* ── Interactive chapter/lesson cards (replaces JS onMouseEnter/Leave) ── */
+.pv-chapter-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+.pv-chapter-card:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-md);
+}
+
 /* ==================== Buttons ==================== */
 .btn {
     display: inline-flex;

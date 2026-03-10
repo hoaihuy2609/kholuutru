@@ -27,11 +27,17 @@
   <!-- Preconnect for Performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Supabase API — preconnect to avoid 100–200 ms DNS lookup on first request -->
+  <link rel="preconnect" href="https://ndhcwrczwbehyznnxzou.supabase.co" crossorigin />
+  <link rel="dns-prefetch" href="https://ndhcwrczwbehyznnxzou.supabase.co" />
 
-  <!-- Fonts: Only load weights actually used (400,500,600,700) -->
+  <!-- Fonts: load asynchronously (non-render-blocking) -->
   <link rel="preload" as="style"
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </noscript>
 
   <!-- Critical inline styles (before any JS/CSS loads) -->
   <style>

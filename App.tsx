@@ -130,7 +130,7 @@ function GradeOverviewPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage
           const cl = lessons.filter(l => l.chapterId === chapter.id);
           const fc = cl.reduce((s, l) => s + (storedFiles[l.id]?.length || 0), 0);
           return (
-            <div key={chapter.id} onClick={() => navigate(`/grade/${grade}/chapter/${chapter.id}`)} className="rounded-xl p-5 cursor-pointer group transition-colors" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB'; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}>
+            <div key={chapter.id} onClick={() => navigate(`/grade/${grade}/chapter/${chapter.id}`)} className="rounded-xl p-5 cursor-pointer group pv-chapter-card">
               <div className="flex items-start justify-between mb-3">
                 <div className="p-2.5 rounded-lg" style={{ background: '#EEF0FB' }}><FolderOpen className="w-5 h-5" style={{ color: '#6B7CDB' }} /></div>
                 <div className="text-right"><div className="text-[10px] uppercase tracking-wider" style={{ color: '#AEACA8' }}>Bài học</div><div className="text-lg font-semibold" style={{ color: '#1A1A1A' }}>{cl.length}</div></div>

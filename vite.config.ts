@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  const isProd = mode === 'production';
   return {
     server: {
       port: 3000,
@@ -22,34 +23,48 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, '.'),
       }
     },
+    // Strip console.log / debugger from production builds
+    esbuild: isProd ? { drop: ['console', 'debugger'] } : {},
     build: {
       target: 'es2020',
       sourcemap: false,
       cssCodeSplit: true,
-      // esbuild is faster than rollup's default minifier and produces similar output size
       minify: 'esbuild',
-      // Suppress false-positive chunk size warnings for intentionally large vendor bundles
+      // Suppress size warnings for intentionally large vendor bundles
       chunkSizeWarningLimit: 1000,
       rollupOptions: {
-        // Treeshake aggressively — safe since all our deps are pure modules
         treeshake: {
-          moduleSideEffects: false,
+          // Only tree-shake pure property reads — do NOT set moduleSideEffects: false
+          // as it causes side-effectful packages (react-dom, supabase) to produce empty chunks.
           propertyReadSideEffects: false,
         },
         output: {
-          manualChunks: {
-            // Core React — cached long-term, rarely changes
-            'vendor-react': ['react', 'react-dom'],
-            // Charts — only loaded by StatsPanel, ContactBook, ExamResult
-            'vendor-recharts': ['recharts'],
-            // Math rendering — only loaded by BlogDetail, LessonView
-            'vendor-katex': ['katex', 'rehype-katex', 'remark-math', 'rehype-raw'],
-            // Markdown — only loaded by Blog, Chatbot
-            'vendor-markdown': ['react-markdown'],
-            // Cloud/DB — loaded by useCloudStorage
-            'vendor-supabase': ['@supabase/supabase-js'],
-            // Utils — loaded by useCloudStorage
-            'vendor-utils': ['jszip', 'crypto-js'],
+          // Merge micro-chunks smaller than 10 kB into their importers,
+          // eliminating the ~25 tiny lucide-react icon files from the build.
+          experimentalMinChunkSize: 10_000,
+          manualChunks(id) {
+            // Normalize Windows backslashes for reliable matching
+            const n = id.replace(/\\/g, '/');
+            if (!n.includes('/node_modules/')) return undefined;
+
+            // React runtime — react, react-dom, react-is, scheduler
+            if (/\/node_modules\/(react|react-dom|react-is|scheduler)\//.test(n)) return 'vendor-react';
+            // Router
+            if (/\/node_modules\/(react-router|@remix-run)\//.test(n)) return 'vendor-router';
+            // State
+            if (n.includes('/node_modules/zustand/')) return 'vendor-state';
+            // Icons
+            if (n.includes('/node_modules/lucide-react/')) return 'vendor-icons';
+            // Charts
+            if (/\/node_modules\/(recharts|d3-|victory-vendor)/.test(n)) return 'vendor-recharts';
+            // Math + Markdown — merged to avoid circular deps between
+            // rehype-katex (needs katex) and unified ecosystem (needs rehype-katex).
+            // Both are always loaded together by BlogDetail/LessonView anyway.
+            if (/\/node_modules\/(katex|rehype-katex|remark-math|rehype-raw|react-markdown|rehype-|remark-|unified|hast|mdast|micromark|vfile|bail|extend|is-plain|decode-named|character-entities|zwitch|comma-separated|space-separated|property-information|hastscript|stringify-entities|ccount|longest-streak|trim-lines|markdown-table|trough)/.test(n)) return 'vendor-content';
+            // Supabase
+            if (n.includes('/node_modules/@supabase/')) return 'vendor-supabase';
+            // Crypto / Zip utils
+            if (/\/node_modules\/(jszip|crypto-js)\//.test(n)) return 'vendor-utils';
           },
         },
       },

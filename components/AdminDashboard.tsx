@@ -1,6 +1,6 @@
 import { supabase } from '../src/lib/supabase';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import {
     Users, UserPlus, Trash2, Search, RefreshCw,
     ShieldCheck, Monitor, Phone,
@@ -9,7 +9,7 @@ import {
     Edit3, GraduationCap, Building2, Settings2, BarChart2, BookOpen, Plus, Newspaper
 } from 'lucide-react';
 import ExamManager from './ExamManager';
-import StatsPanel from './StatsPanel';
+const StatsPanel = React.lazy(() => import('./StatsPanel'));
 import { Exam } from '../types';
 
 interface Student {
@@ -364,7 +364,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
             <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6 custom-scrollbar">
 
                 {/* ── Stats Tab ── */}
-                {activeTab === 'stats' && <StatsPanel />}
+                {activeTab === 'stats' && (
+                    <Suspense fallback={<div className="flex items-center justify-center py-24"><RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} /></div>}>
+                        <StatsPanel />
+                    </Suspense>
+                )}
 
                 {/* ── Exam Tab ── */}
                 {activeTab === 'exams' && onUploadExamPdf && onSaveExam && onDeleteExam && onLoadExams && (
