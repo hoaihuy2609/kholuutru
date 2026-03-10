@@ -2,10 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
-import { registerSW } from 'virtual:pwa-register';
-
-// Register service worker (autoUpdate — silently installs updates in bg)
-registerSW({ immediate: false });
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

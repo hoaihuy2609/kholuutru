@@ -147,9 +147,9 @@ export const useCloudStorage = () => {
                     activation_key: key,
                 }).eq('phone', phoneStr);
             } catch (err) {
-                console.warn("Supabase check failed during activation, falling back to local verification.");
-            }
-            localStorage.setItem(STORAGE_ACTIVATION_KEY, 'true');
+                return false;
+        }
+        localStorage.setItem(STORAGE_ACTIVATION_KEY, 'true');
             if (sdt) localStorage.setItem('pv_activated_sdt', sdt);
             if (dbGrade) localStorage.setItem(STORAGE_GRADE_KEY, dbGrade.toString());
             setIsActivated(true);
@@ -158,7 +158,7 @@ export const useCloudStorage = () => {
         return false;
     };
 
-    const verifyAccess = async (): Promise<'ok' | 'kicked' | 'offline_expired'> => {
+    const verifyAccess = async (): Promise<'ok' | 'kicked'> => {
         const sdt = localStorage.getItem('pv_activated_sdt');
         const isCurrentlyActivated = localStorage.getItem(STORAGE_ACTIVATION_KEY) === 'true';
         if (!isCurrentlyActivated || !sdt) return 'ok';
@@ -172,12 +172,10 @@ export const useCloudStorage = () => {
                 setIsActivated(false);
                 return 'kicked';
             }
-            localStorage.setItem('pv_last_check', Date.now().toString());
             return 'ok';
-        } catch (e) {
-            const lastCheck = localStorage.getItem('pv_last_check');
-            if (!lastCheck) return 'offline_expired';
-            return (Date.now() - parseInt(lastCheck)) > 24 * 60 * 60 * 1000 ? 'offline_expired' : 'ok';
+        } catch {
+            // Network error — transient, don't penalize (app is online-only)
+            return 'ok';
         }
     };
 

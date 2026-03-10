@@ -24,7 +24,6 @@ interface UIStore {
 
   // Access screens
   isKicked: boolean;
-  isOfflineExpired: boolean;
 
   // Notification badge
   notificationUnreadCount: number;
@@ -42,7 +41,6 @@ interface UIStore {
   setPreviewMode: (mode: GradeLevel | null) => void;
 
   setKicked: (v: boolean) => void;
-  setOfflineExpired: (v: boolean) => void;
   setNotificationUnreadCount: (n: number) => void;
 }
 
@@ -58,7 +56,6 @@ export const useUIStore = create<UIStore>((set) => ({
   previewMode: null,
 
   isKicked: false,
-  isOfflineExpired: false,
   notificationUnreadCount: 0,
 
   setSettingsOpen: (v) => set({ isSettingsOpen: v }),
@@ -86,6 +83,5 @@ export const useUIStore = create<UIStore>((set) => ({
   setPreviewMode: (mode) => set({ previewMode: mode }),
 
   setKicked: (v) => set({ isKicked: v }),
-  setOfflineExpired: (v) => set({ isOfflineExpired: v }),
   setNotificationUnreadCount: (n) => set({ notificationUnreadCount: n }),
 }));

@@ -9,7 +9,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
 import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Home, Bell, FlaskConical, Settings } from 'lucide-react';
 import KickedScreen from './components/auth/KickedScreen';
-import OfflineExpiredScreen from './components/auth/OfflineExpiredScreen';
 import { useUIStore } from './src/stores/useUIStore';
 import { useDataStore } from './src/stores/useDataStore';
 import { useExamStore, useBlogStore } from './src/stores/useContentStore';
@@ -49,7 +48,6 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const setStudentGradeValue = useDataStore(state => state.setStudentGradeValue);
   const isAdmin = useUIStore(state => state.isAdmin);
   const setKicked = useUIStore(state => state.setKicked);
-  const setOfflineExpired = useUIStore(state => state.setOfflineExpired);
   const setNotificationUnreadCount = useUIStore(state => state.setNotificationUnreadCount);
   const { getFetchedNotificationIds, getNotifications, verifyAccess } = cloud;
 
@@ -68,16 +66,14 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     const check = async () => {
       if (cloud.isActivated && !document.hidden) {
         const status = await verifyAccess();
-        if (status === 'kicked') { setKicked(true); setOfflineExpired(false); }
-        else if (status === 'offline_expired') { setOfflineExpired(true); }
-        else { setOfflineExpired(false); }
+        if (status === 'kicked') setKicked(true);
       }
     };
     check();
     const iv = setInterval(check, 5 * 60 * 1000);
     document.addEventListener('visibilitychange', check);
     return () => { clearInterval(iv); document.removeEventListener('visibilitychange', check); };
-  }, [cloud.isActivated, verifyAccess, setKicked, setOfflineExpired]);
+  }, [cloud.isActivated, verifyAccess, setKicked]);
 
   useEffect(() => {
     if (!cloud.isActivated) return;
@@ -276,7 +272,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     isSettingsOpen, setSettingsOpen, isMobileMenuOpen, setMobileMenuOpen,
     showAdminDashboard, setShowAdminDashboard, showGitHubSync, setShowGitHubSync,
     toasts, removeToast, isAdmin, previewMode, setPreviewMode,
-    isKicked, isOfflineExpired, notificationUnreadCount, toggleAdmin,
+    isKicked, notificationUnreadCount, toggleAdmin,
   } = useUIStore(useShallow(state => ({
     isSettingsOpen: state.isSettingsOpen,
     setSettingsOpen: state.setSettingsOpen,
@@ -292,7 +288,6 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     previewMode: state.previewMode,
     setPreviewMode: state.setPreviewMode,
     isKicked: state.isKicked,
-    isOfflineExpired: state.isOfflineExpired,
     notificationUnreadCount: state.notificationUnreadCount,
     toggleAdmin: state.toggleAdmin,
   })));
@@ -329,7 +324,6 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const isOnSimLab = path === '/lab';
 
   if (isKicked && !isAdmin) return <KickedScreen />;
-  if (isOfflineExpired && !isAdmin) return <OfflineExpiredScreen />;
 
   const sidebarCommonProps = {
     currentGrade: currentGradeFromUrl,
