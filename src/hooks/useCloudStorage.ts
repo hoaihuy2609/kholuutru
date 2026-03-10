@@ -139,29 +139,39 @@ export const useCloudStorage = () => {
     const activateSystem = async (key: string, sdt: string = "", grade?: number): Promise<boolean> => {
         const machineId = getMachineId();
         const expectedKey = generateActivationKey(machineId, sdt);
-        if (key === expectedKey) {
-            const phoneStr = normalizePhone(sdt);
-            if (!phoneStr) return false;
-            let dbGrade = grade;
-            try {
-                const { data, error } = await supabase.from('students').select('is_active, grade').eq('phone', phoneStr).single();
-                if (error || !data || !data.is_active) return false;
-                if (data.grade) dbGrade = data.grade;
-                // Lưu machine_id và activation_key (hashed) lên Supabase để verifyAccess() có thể xác thực
-                await supabase.from('students').update({
-                    machine_id: machineId,
-                    activation_key: CryptoJS.SHA256(key).toString(),
-                }).eq('phone', phoneStr);
-            } catch (err) {
+        if (key !== expectedKey) return false;
+
+        const phoneStr = normalizePhone(sdt);
+        if (!phoneStr) return false;
+
+        let dbGrade = grade;
+        try {
+            const { data, error } = await supabase.from('students').select('is_active, grade').eq('phone', phoneStr).maybeSingle();
+            if (error) {
+                console.error('[activateSystem] Supabase error:', error);
+                // Network error — key đã khớp, cho phép kích hoạt offline
+            } else if (data === null) {
+                // Không tìm thấy SĐT trong DB — chưa đăng ký
                 return false;
+            } else {
+                if (data.is_active === false) return false;
+                if (data.grade) dbGrade = data.grade;
+            }
+            // Lưu machine_id và activation_key lên Supabase
+            await supabase.from('students').update({
+                machine_id: machineId,
+                activation_key: CryptoJS.SHA256(key).toString(),
+            }).eq('phone', phoneStr);
+        } catch (err) {
+            console.error('[activateSystem] unexpected error:', err);
+            // Lỗi mạng — key đã khớp, tiếp tục kích hoạt
         }
+
         localStorage.setItem(STORAGE_ACTIVATION_KEY, 'true');
-            if (sdt) localStorage.setItem('pv_activated_sdt', sdt);
-            if (dbGrade) localStorage.setItem(STORAGE_GRADE_KEY, dbGrade.toString());
-            setIsActivated(true);
-            return true;
-        }
-        return false;
+        if (sdt) localStorage.setItem('pv_activated_sdt', sdt);
+        if (dbGrade) localStorage.setItem(STORAGE_GRADE_KEY, dbGrade.toString());
+        setIsActivated(true);
+        return true;
     };
 
     const verifyAccess = async (): Promise<'ok' | 'kicked'> => {
@@ -172,15 +182,24 @@ export const useCloudStorage = () => {
         try {
             const phoneStr = normalizePhone(sdt);
             if (!phoneStr) return 'ok';
-            const { data, error } = await supabase.from('students').select('is_active, machine_id').eq('phone', phoneStr).single();
-            if (error || !data || !data.is_active || data.machine_id !== machineId) {
+            const { data, error } = await supabase.from('students').select('is_active, machine_id').eq('phone', phoneStr).maybeSingle();
+            // Lỗi mạng hoặc Supabase timeout — không phạt học viên
+            if (error) return 'ok';
+            // Không tìm thấy record (bị xóa khỏi DB) hoặc bị vô hiệu hóa rõ ràng
+            if (data === null || data.is_active === false) {
+                localStorage.removeItem(STORAGE_ACTIVATION_KEY);
+                setIsActivated(false);
+                return 'kicked';
+            }
+            // machine_id không khớp — thiết bị khác
+            if (data.machine_id && data.machine_id !== machineId) {
                 localStorage.removeItem(STORAGE_ACTIVATION_KEY);
                 setIsActivated(false);
                 return 'kicked';
             }
             return 'ok';
         } catch {
-            // Network error — transient, don't penalize (app is online-only)
+            // Network error — transient, don't penalize
             return 'ok';
         }
     };
