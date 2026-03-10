@@ -53,15 +53,26 @@ const Chatbot: React.FC = () => {
             }
             setIsLoading(true);
             try {
-                const machineId = getMachineId();
+                let machineId: string;
+                try {
+                    machineId = getMachineId();
+                } catch (e) {
+                    console.error('[Chatbot] getMachineId() failed:', e);
+                    addMessage('Có lỗi khi xác định thiết bị. Hãy thử lại hoặc dùng trình duyệt khác nhé.', 'bot');
+                    setIsLoading(false);
+                    return;
+                }
 
                 const { data, error } = await supabase
                     .from('students')
                     .select('is_active, machine_id')
                     .eq('phone', phoneStr)
-                    .single();
+                    .maybeSingle();
 
-                if (error || !data) {
+                if (error) {
+                    console.error('[Chatbot] Supabase query error:', error);
+                    addMessage('Có lỗi kết nối với "bộ não" của thầy Huy. Bạn thử nhắn lại SĐT xem sao nhé.', 'bot');
+                } else if (!data) {
                     addMessage('Không tìm thấy thông tin của bạn. Bạn đã đóng học phí chưa nhỉ?', 'bot');
                 } else if (!data.is_active) {
                     addMessage('Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ thầy Huy nhé.', 'bot');
@@ -75,6 +86,7 @@ const Chatbot: React.FC = () => {
                             .eq('phone', phoneStr);
 
                         if (updateError) {
+                            console.error('[Chatbot] machine_id update error:', updateError);
                             addMessage('Có lỗi khi lưu thông tin thiết bị. Hãy thử lại nha.', 'bot');
                             setIsLoading(false);
                             return;
@@ -88,7 +100,8 @@ const Chatbot: React.FC = () => {
                     localStorage.setItem('pv_pending_sdt', phoneStr);
                     setStep('done');
                 }
-            } catch {
+            } catch (err) {
+                console.error('[Chatbot] Unexpected error:', err);
                 addMessage('Có lỗi kết nối với "bộ não" của thầy Huy. Bạn thử nhắn lại SĐT xem sao nhé.', 'bot');
             } finally {
                 setIsLoading(false);
