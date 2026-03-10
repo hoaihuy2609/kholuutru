@@ -7,6 +7,7 @@ import Dashboard from './components/Dashboard';
 import Toast from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
+import { getActivatedPhone } from './src/utils/phone';
 import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Home, Bell, FlaskConical, Settings } from 'lucide-react';
 import KickedScreen from './components/auth/KickedScreen';
 import { useUIStore } from './src/stores/useUIStore';
@@ -220,7 +221,7 @@ function ExamRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   }
   return (
     <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-      <ExamListPage isAdmin={isAdmin} previewMode={previewMode} onLoadExams={cloud.loadExams} onLoadHistory={cloud.getExamHistory} onSelectExam={(exam: Exam) => { setActiveExam(exam); setExamSubmission(null); }} />
+      <ExamListPage isAdmin={isAdmin} previewMode={previewMode} onLoadExams={cloud.loadExams} onLoadHistory={(isAdmin && !previewMode) ? cloud.getExamHistory : () => { const phone = getActivatedPhone(); if (!phone) return Promise.resolve([]); return cloud.getExamHistory(phone); }} onSelectExam={(exam: Exam) => { setActiveExam(exam); setExamSubmission(null); }} />
     </Suspense></ErrorBoundary>
   );
 }

@@ -74,8 +74,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         const key = generateActivationKey(targetId, sdt);
         setGeneratedKey(key);
         try {
-            let phoneStr = String(sdt).trim();
-            if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
+            const { normalizePhone } = await import('../src/utils/phone');
+            let phoneStr = normalizePhone(sdt) || String(sdt).trim();
 
             const payload = {
                 phone: phoneStr,

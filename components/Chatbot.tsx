@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Bot, User, RefreshCw, Copy, Check } from 'lucide-react';
 import { getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
 import { supabase } from '../src/lib/supabase';
+import { normalizePhone } from '../src/utils/phone';
 
 const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
     <RefreshCw className={`${className} animate-spin`} style={style} />
@@ -45,9 +46,8 @@ const Chatbot: React.FC = () => {
         addMessage(userText, 'user');
 
         if (step === 'intro' || step === 'ask_phone') {
-            let phoneStr = userText.replace(/\D/g, '');
-            if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
-            if (!/^\d{10,11}$/.test(phoneStr)) {
+            const phoneStr = normalizePhone(userText);
+            if (!phoneStr) {
                 setTimeout(() => addMessage('Vui lòng nhập số điện thoại hợp lệ (10-11 chữ số) đã đăng ký với thầy Huy nhé.', 'bot'), 500);
                 return;
             }

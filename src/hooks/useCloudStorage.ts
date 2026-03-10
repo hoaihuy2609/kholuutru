@@ -168,7 +168,7 @@ export const useCloudStorage = () => {
         }
 
         localStorage.setItem(STORAGE_ACTIVATION_KEY, 'true');
-        if (sdt) localStorage.setItem('pv_activated_sdt', sdt);
+        if (sdt) localStorage.setItem('pv_activated_sdt', phoneStr || sdt);
         if (dbGrade) localStorage.setItem(STORAGE_GRADE_KEY, dbGrade.toString());
         setIsActivated(true);
         return true;

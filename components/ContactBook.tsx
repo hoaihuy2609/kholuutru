@@ -30,14 +30,9 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
             // Học sinh: truyền SDT để chỉ lấy lịch sử của mình
             let phoneToQuery: string | undefined = undefined;
             if (!isAdmin) {
-                const sdtStr = localStorage.getItem('pv_activated_sdt');
-                if (sdtStr) {
-                    let normalizedPhone = sdtStr.trim();
-                    if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
-                        normalizedPhone = '0' + normalizedPhone;
-                    }
-                    phoneToQuery = normalizedPhone;
-                }
+                const { getActivatedPhone } = await import('../src/utils/phone');
+                const normalizedPhone = getActivatedPhone();
+                if (normalizedPhone) phoneToQuery = normalizedPhone;
             }
             const data = await onLoadHistory(phoneToQuery);
             setHistory(data || []);
