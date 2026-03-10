@@ -8,6 +8,11 @@ const BLOG_LOCAL_KEY = 'physivault_blogs_local';
 
 export const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> => {
     try {
+        if (isAdmin) {
+            const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
+            if (local.length > 0) return local;
+        }
+
         const { data: indexRow } = await supabase.from('blog_index')
             .select('telegram_file_id').order('updated_at', { ascending: false }).limit(1).maybeSingle();
 

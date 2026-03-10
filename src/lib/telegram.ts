@@ -4,6 +4,9 @@ export const ADMIN_AUTH_HEADER = `Bearer ${import.meta.env.VITE_ADMIN_KEY || ''}
 if (!TELEGRAM_CHAT_ID || !CLOUDFLARE_PROXY_URL) console.error('[telegram] Missing VITE_TELEGRAM_CHAT_ID or VITE_CLOUDFLARE_PROXY_URL');
 
 export const fetchViaCloudflareProxy = async (fileId: string): Promise<ArrayBuffer> => {
+    if (!CLOUDFLARE_PROXY_URL) {
+        throw new Error('CLOUDFLARE_PROXY_URL chưa được cấu hình. Kiểm tra biến môi trường VITE_CLOUDFLARE_PROXY_URL.');
+    }
     const maxRetries = 3;
     const FETCH_TIMEOUT_MS = 60_000;
     let lastError: any = null;
@@ -25,6 +28,11 @@ export const fetchViaCloudflareProxy = async (fileId: string): Promise<ArrayBuff
                     throw new Error(`Cloudflare Proxy Error: ${proxyRes.status} - ${errorMsg}`);
                 }
                 continue;
+            }
+            // Detect HTML responses (e.g. SPA fallback, error pages) that should be binary data
+            const contentType = proxyRes.headers.get('content-type') || '';
+            if (contentType.includes('text/html')) {
+                throw new Error('Server trả về HTML thay vì dữ liệu. Kiểm tra VITE_CLOUDFLARE_PROXY_URL hoặc Cloudflare Worker.');
             }
             return await proxyRes.arrayBuffer();
         } catch (e: any) {
