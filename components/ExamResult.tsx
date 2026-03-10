@@ -13,8 +13,6 @@ interface ExamResultProps {
     onShowToast?: (msg: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
-const tf_keys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
-
 // Chuẩn hoá đáp án trả lời ngắn — dùng chung, không khai báo lại trong map
 const normalizeSA = (s: string) => s.trim().replace(',', '.').toLowerCase();
 

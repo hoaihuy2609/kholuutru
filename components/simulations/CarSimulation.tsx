@@ -15,20 +15,13 @@ const getPhysicsState = (t: number) => {
   // Clamp time
   const time = Math.max(0, Math.min(t, TOTAL_TIME));
 
-  if (time <= 4) {
-    // Section 1: t in [0, 4]
+  if (time <= 6) {
+    // Sections 1 & 2: t in [0, 6]
     // v(t) = -2t + 8
     // x(t) = -t^2 + 8t (assuming x(0)=0)
     v = -2 * time + 8;
     x = -Math.pow(time, 2) + 8 * time;
-    section = 1;
-  } else if (time <= 6) {
-    // Section 2: t in [4, 6]
-    // v(t) = -2t + 8
-    // x(t) = -t^2 + 8t (continuous from previous)
-    v = -2 * time + 8;
-    x = -Math.pow(time, 2) + 8 * time;
-    section = 2;
+    section = time <= 4 ? 1 : 2;
   } else {
     // Section 3: t in [6, 9]
     // v(t) = -4

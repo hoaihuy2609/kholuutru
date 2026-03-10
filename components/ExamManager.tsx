@@ -279,7 +279,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
         setSaving(true);
         try {
             const exam: Exam = {
-                id: `exam_${Date.now()}`,
+                id: crypto.randomUUID(),
                 title: title.trim(),
                 pdfTelegramFileId: pdfFileId,
                 pdfFileName,

@@ -416,6 +416,10 @@ body {
     border-left: 3px solid var(--accent-orange);
 }
 
+.toast.info {
+    border-left: 3px solid var(--accent);
+}
+
 /* ==================== Tooltip ==================== */
 .tooltip {
     position: relative;

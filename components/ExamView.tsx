@@ -193,6 +193,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
         timerRef.current = setInterval(() => {
             setSecondsLeft(prev => {
                 if (prev <= 1) {
+                    if (timerRef.current) clearInterval(timerRef.current);
                     handleSubmitFinalRef.current();
                     return 0;
                 }

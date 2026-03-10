@@ -96,7 +96,7 @@ export default function KickedScreen() {
 
             {/* Contact CTA */}
             <a
-              href="https://zalo.me"
+              href="https://www.facebook.com/groups/1657860147904528/user/100079937809863"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"

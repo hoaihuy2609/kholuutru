@@ -1,7 +1,7 @@
 import CryptoJS from 'crypto-js';
 
-const SYSTEM_SALT = "PHV_SECURITY_2026_BY_HUY";
-const XOR_KEY = 'PHV2026';
+const SYSTEM_SALT = import.meta.env.VITE_SYSTEM_SALT;
+const XOR_KEY = import.meta.env.VITE_XOR_KEY;
 const XOR_KEY_BYTES = new TextEncoder().encode(XOR_KEY);
 const XOR_KEY_LEN = XOR_KEY_BYTES.length;
 
@@ -123,7 +123,7 @@ export const checkActivationStatus = (): boolean => {
 };
 
 // ── AES-GCM encryption (Web Crypto API — hardware-accelerated) ──
-const AES_KEY_RAW = 'PHV2026_AES256_KEY_PADDING_OK_!!';
+const AES_KEY_RAW = import.meta.env.VITE_AES_KEY;
 const AES_MAGIC = new Uint8Array([0x50, 0x56, 0x41, 0x45]); // "PVAE" magic header
 
 let _aesKeyCache: CryptoKey | null = null;

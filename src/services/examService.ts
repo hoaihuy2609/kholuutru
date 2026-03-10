@@ -4,6 +4,7 @@ import { dbGet, dbSet } from '../lib/db';
 import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
 import { aesEncrypt, smartDecrypt, fnvHash } from '../lib/crypto';
 import { Exam } from '../../types';
+import { normalizePhone, getActivatedPhone } from '../utils/phone';
 
 const EXAM_CHUNK_SIZE = 50;
 const EXAM_CONCURRENCY = 8;
@@ -65,7 +66,11 @@ export const uploadExamPdf = async (file: File, onProgress?: (pct: number) => vo
     });
 };
 
+let _saveExamLock = false;
 export const saveExam = async (exams: Exam[]): Promise<void> => {
+    if (_saveExamLock) throw new Error('Đang lưu đề thi, vui lòng đợi...');
+    _saveExamLock = true;
+    try {
     const { default: JSZip } = await import('jszip');
     const examVersions: Record<string, string> = {};
     const chunkContents: Record<string, string[]> = {};
@@ -130,6 +135,7 @@ export const saveExam = async (exams: Exam[]): Promise<void> => {
     localStorage.setItem('pv_exam_versions', JSON.stringify(examVersions));
     localStorage.setItem('pv_exam_chunks_map', JSON.stringify(newChunkMap));
     await dbSet('physivault_exams', exams);
+    } finally { _saveExamLock = false; }
 };
 
 export const loadExams = async (): Promise<Exam[]> => {
@@ -219,10 +225,8 @@ export const deleteExam = async (examId: string, allExams: Exam[]): Promise<void
 };
 
 export const saveExamResult = async (exam: Exam, score: number, totalQuestions: number, correctAnswers: number): Promise<void> => {
-    const sdtStr = localStorage.getItem('pv_activated_sdt');
-    if (!sdtStr) return;
-    let normalizedPhone = sdtStr.trim();
-    if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) normalizedPhone = '0' + normalizedPhone;
+    const normalizedPhone = getActivatedPhone();
+    if (!normalizedPhone) return;
 
     let studentName = 'Học sinh';
     let grade = exam.grade;
@@ -246,11 +250,7 @@ export const saveExamResult = async (exam: Exam, score: number, totalQuestions: 
 export const getExamHistory = async (phoneFilter?: string) => {
     // phoneFilter = undefined → admin mode: lấy TẤT CẢ lịch sử, không filter
     // phoneFilter = 'SDT'    → học sinh: chỉ lấy lịch sử của SDT đó
-    let normalizedPhone: string | null = null;
-    if (phoneFilter !== undefined) {
-        normalizedPhone = phoneFilter.trim();
-        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) normalizedPhone = '0' + normalizedPhone;
-    }
+    const normalizedPhone = phoneFilter !== undefined ? normalizePhone(phoneFilter) : null;
     try {
         let query = supabase.from('exam_results').select('*').order('submitted_at', { ascending: false });
         if (normalizedPhone) query = query.eq('student_phone', normalizedPhone);

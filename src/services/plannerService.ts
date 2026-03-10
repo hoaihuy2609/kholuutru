@@ -1,13 +1,12 @@
 import { supabase } from '../lib/supabase';
 import { StudyPlanItem, ScheduleItem } from '../../types';
+import { getActivatedPhone } from '../utils/phone';
 
 // ── Study Plans ──
 
 export const getStudyPlans = async (): Promise<StudyPlanItem[]> => {
-    const sdtStr = localStorage.getItem('pv_activated_sdt');
-    if (!sdtStr) return [];
-    let normalizedPhone = sdtStr.trim();
-    if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) normalizedPhone = '0' + normalizedPhone;
+    const normalizedPhone = getActivatedPhone();
+    if (!normalizedPhone) return [];
 
     try {
         const { data, error } = await supabase.from('study_plans').select('*')
@@ -18,10 +17,8 @@ export const getStudyPlans = async (): Promise<StudyPlanItem[]> => {
 };
 
 export const saveStudyPlan = async (taskName: string, dueDate: string, color: string = '#6B7CDB') => {
-    const sdtStr = localStorage.getItem('pv_activated_sdt');
-    if (!sdtStr) return null;
-    let normalizedPhone = sdtStr.trim();
-    if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) normalizedPhone = '0' + normalizedPhone;
+    const normalizedPhone = getActivatedPhone();
+    if (!normalizedPhone) return null;
 
     try {
         const { data, error } = await supabase.from('study_plans').insert({

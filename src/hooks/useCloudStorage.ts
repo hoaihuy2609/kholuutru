@@ -7,6 +7,7 @@ import { Lesson, StoredFile, FileStorage } from '../../types';
 import { dbGet, dbSet, dbSetBatch } from '../lib/db';
 import { xorObfuscate, xorDeobfuscate, fnvHash, getMachineId, generateActivationKey, checkActivationStatus, aesEncrypt, smartDecrypt } from '../lib/crypto';
 import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
+import { normalizePhone } from '../utils/phone';
 
 // Service modules (extracted)
 import * as examService from '../services/examService';
@@ -88,10 +89,14 @@ export const useCloudStorage = () => {
         return () => clearTimeout(_dbSyncTimers.current[STORAGE_FILES_KEY]);
     }, [storedFiles, loading]);
 
+    // Lock refs to prevent concurrent fetch/sync race conditions
+    const _fetchLock = useRef<Record<number, boolean>>({});
+    const _syncLock = useRef<Record<number, boolean>>({});
+
     // ── Lesson CRUD ──
 
     const addLesson = async (name: string, chapterId: string) => {
-        const newLesson: Lesson = { id: Date.now().toString(), name, chapterId, createdAt: Date.now() };
+        const newLesson: Lesson = { id: crypto.randomUUID(), name, chapterId, createdAt: Date.now() };
         setLessons(prev => [newLesson, ...prev]);
     };
 
@@ -109,7 +114,7 @@ export const useCloudStorage = () => {
                 const blob = new Blob([arrayBuffer], { type: file.type });
                 const url = URL.createObjectURL(blob);
                 resolve({
-                    id: Date.now().toString() + Math.random().toString(36).substring(7),
+                    id: crypto.randomUUID(),
                     name: file.name, type: file.type, size: file.size,
                     url, uploadDate: Date.now(), category,
                 });
@@ -134,8 +139,8 @@ export const useCloudStorage = () => {
         const machineId = getMachineId();
         const expectedKey = generateActivationKey(machineId, sdt);
         if (key === expectedKey) {
-            let phoneStr = String(sdt).trim();
-            if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
+            const phoneStr = normalizePhone(sdt);
+            if (!phoneStr) return false;
             let dbGrade = grade;
             try {
                 const { data, error } = await supabase.from('students').select('is_active, grade').eq('phone', phoneStr).single();
@@ -164,8 +169,8 @@ export const useCloudStorage = () => {
         if (!isCurrentlyActivated || !sdt) return 'ok';
         const machineId = getMachineId();
         try {
-            let phoneStr = String(sdt).trim();
-            if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
+            const phoneStr = normalizePhone(sdt);
+            if (!phoneStr) return 'ok';
             const { data, error } = await supabase.from('students').select('is_active, machine_id').eq('phone', phoneStr).single();
             if (error || !data || !data.is_active || data.machine_id !== machineId) {
                 localStorage.removeItem(STORAGE_ACTIVATION_KEY);
@@ -182,6 +187,8 @@ export const useCloudStorage = () => {
     // ── Telegram Cloud Sync: Fetch ──
 
     const fetchLessonsFromGitHub = async (grade: number, onProgress?: (pct: number) => void): Promise<{ success: boolean; lessonCount: number; fileCount: number; skipped?: boolean }> => {
+        if (_fetchLock.current[grade]) return { success: true, lessonCount: 0, fileCount: 0, skipped: true };
+        _fetchLock.current[grade] = true;
         console.log(`[Fetch] Bắt đầu fetch Lớp ${grade}`);
         const t_fetch_total = performance.now();
 
@@ -333,11 +340,15 @@ export const useCloudStorage = () => {
 
             return { success: true, lessonCount: totalLessonCount, fileCount: totalFileCount };
         } catch (err: any) { throw new Error(`Sync thất bại: ${err.message}`); }
+        finally { _fetchLock.current[grade] = false; }
     };
 
     // ── Telegram Cloud Sync: Push ──
 
     const syncToGitHub = async (grade: number, lessonsToSync: Lesson[], filesToSync: FileStorage): Promise<string> => {
+        if (_syncLock.current[grade]) throw new Error('Đang sync, vui lòng đợi...');
+        _syncLock.current[grade] = true;
+        try {
         setSyncProgress(1);
         if (lessonsToSync.length === 0 && Object.keys(filesToSync).length === 0) {
             throw new Error('Này bro, chưa có bài giảng hay tài liệu nào để Sync đâu! Hãy thêm ít nhất 1 bài nhé.');
@@ -522,6 +533,7 @@ export const useCloudStorage = () => {
         } catch (notifErr) { console.error('[Notification] Không tạo được thông báo:', notifErr); }
 
         return finalFileId;
+        } finally { _syncLock.current[grade] = false; }
     };
 
     return {

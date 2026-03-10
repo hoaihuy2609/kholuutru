@@ -82,11 +82,11 @@ const Chatbot: React.FC = () => {
                         }
                     }
 
-                    const key = generateActivationKey(machineId, userText);
+                    const key = generateActivationKey(machineId, phoneStr);
                     addMessage('Xác thực thành công! Mã kích hoạt của bạn là:', 'bot');
                     addMessage(key, 'bot');
                     addMessage('Bạn hãy copy mã này và dán vào phần "Mở khóa học viên" trong Cài đặt nhé.', 'bot');
-                    localStorage.setItem('pv_pending_sdt', userText);
+                    localStorage.setItem('pv_pending_sdt', phoneStr);
                     setStep('done');
                 }
             } catch {

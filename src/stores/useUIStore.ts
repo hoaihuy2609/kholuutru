@@ -64,7 +64,7 @@ export const useUIStore = create<UIStore>((set) => ({
   setShowGitHubSync: (v) => set({ showGitHubSync: v }),
 
   showToast: (message, type = 'success', duration = 4000) => {
-    const id = Math.random().toString(36).substring(7);
+    const id = crypto.randomUUID();
     set((state) => ({ toasts: [...state.toasts, { id, message, type }] }));
     // Auto-dismiss sau duration ms
     setTimeout(() => {

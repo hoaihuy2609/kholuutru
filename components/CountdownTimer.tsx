@@ -18,7 +18,9 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin }) => {
         const d = new Date();
         d.setDate(d.getDate() + 1);
         d.setHours(8, 0, 0, 0);
-        return d.toISOString().slice(0, 16);
+        // Use local time format for datetime-local input (avoid UTC shift from toISOString)
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
 
     const [tempDate, setTempDate] = useState(examDate || getDefaultDate());

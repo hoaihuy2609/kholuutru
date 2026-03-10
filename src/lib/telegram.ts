@@ -1,6 +1,6 @@
-export const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || '-1003889339240';
-export const CLOUDFLARE_PROXY_URL = import.meta.env.VITE_CLOUDFLARE_PROXY_URL || 'https://physivault-proxy.hoaihuy2609.workers.dev';
-export const ADMIN_AUTH_HEADER = `Bearer ${import.meta.env.VITE_ADMIN_KEY || 'PV_ADMIN_SECURE_KEY_2026'}`;
+export const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
+export const CLOUDFLARE_PROXY_URL = import.meta.env.VITE_CLOUDFLARE_PROXY_URL;
+export const ADMIN_AUTH_HEADER = `Bearer ${import.meta.env.VITE_ADMIN_KEY}`;
 
 export const fetchViaCloudflareProxy = async (fileId: string): Promise<ArrayBuffer> => {
     const maxRetries = 3;

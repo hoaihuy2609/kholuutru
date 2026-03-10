@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { NotificationItem } from '../../types';
+import { normalizePhone, getActivatedPhone } from '../utils/phone';
 
 // ── Notifications ──
 
@@ -13,10 +14,8 @@ export const getNotifications = async (grade: number): Promise<NotificationItem[
 };
 
 export const markNotificationFetched = async (notificationId: string): Promise<boolean> => {
-    const sdtStr = localStorage.getItem('pv_activated_sdt');
-    if (!sdtStr) return false;
-    let normalizedPhone = sdtStr.trim();
-    if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) normalizedPhone = '0' + normalizedPhone;
+    const normalizedPhone = getActivatedPhone();
+    if (!normalizedPhone) return false;
     try {
         const { error } = await supabase.from('notification_fetches').insert({
             notification_id: notificationId, student_phone: normalizedPhone,
@@ -43,10 +42,8 @@ export const createCustomNotification = async (message: string, grade: number): 
 };
 
 export const getFetchedNotificationIds = async (): Promise<Set<string>> => {
-    const sdtStr = localStorage.getItem('pv_activated_sdt');
-    if (!sdtStr) return new Set();
-    let normalizedPhone = sdtStr.trim();
-    if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) normalizedPhone = '0' + normalizedPhone;
+    const normalizedPhone = getActivatedPhone();
+    if (!normalizedPhone) return new Set();
     try {
         const { data, error } = await supabase.from('notification_fetches')
             .select('notification_id').eq('student_phone', normalizedPhone);
@@ -58,10 +55,8 @@ export const getFetchedNotificationIds = async (): Promise<Set<string>> => {
 // ── Voting ──
 
 export const submitQuestionVote = async (examId: string, partName: string, questionNumber: number) => {
-    const sdtStr = localStorage.getItem('pv_activated_sdt');
-    if (!sdtStr) return { success: false, error: 'Chưa kích hoạt' };
-    let normalizedPhone = sdtStr.trim();
-    if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) normalizedPhone = '0' + normalizedPhone;
+    const normalizedPhone = getActivatedPhone();
+    if (!normalizedPhone) return { success: false, error: 'Chưa kích hoạt' };
 
     try {
         const { data: existingVotes, error: countError } = await supabase.from('question_votes')
