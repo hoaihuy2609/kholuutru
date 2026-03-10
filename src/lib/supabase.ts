@@ -36,5 +36,14 @@ export const supabase: SupabaseClient = new Proxy(
         set(_t, prop, value) {
             return Reflect.set(getSupabase(), prop, value);
         },
+        has(_t, prop) {
+            return Reflect.has(getSupabase(), prop);
+        },
+        ownKeys(_t) {
+            return Reflect.ownKeys(getSupabase());
+        },
+        getOwnPropertyDescriptor(_t, prop) {
+            return Reflect.getOwnPropertyDescriptor(getSupabase(), prop);
+        },
     },
 );

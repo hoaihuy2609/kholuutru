@@ -413,7 +413,7 @@ export const useCloudStorage = () => {
             const fileName = `g${grade}_${p.chapterId}_${p.lessons[0]?.id || 'ch'}.bin`;
             const contentBytes = encrypted.byteLength;
 
-            if (currentChunkSize > 0 && currentChunkSize + contentBytes > MAX_CHUNK_SIZE) {
+            if (currentChunkSize + contentBytes > MAX_CHUNK_SIZE && currentChunkSize > 0) {
                 chunkPayloadIds.push(currentPayloadIds);
                 currentPayloadIds = [];
                 zipChunks.push(currentZip);
