@@ -1,6 +1,7 @@
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
@@ -10,7 +11,75 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       host: '0.0.0.0',
     },
-    plugins: [react()],
+    plugins: [
+      react(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        injectRegister: 'auto',
+        // Don't overwrite the existing /public/manifest.json
+        manifest: false,
+        devOptions: { enabled: false },
+        workbox: {
+          // Precache all build artifacts (app shell)
+          globPatterns: ['**/*.{js,css,html,svg,woff2,woff,ttf}'],
+          // SPA navigation fallback — serve cached shell when offline
+          navigateFallback: 'index.html',
+          navigateFallbackDenylist: [/^\/manifest\.json$/, /^\/icon-/],
+          clientsClaim: true,
+          skipWaiting: true,
+          runtimeCaching: [
+            // ── Supabase Auth — never cache (always needs fresh tokens) ──
+            {
+              urlPattern: ({ url }) =>
+                url.hostname.endsWith('.supabase.co') &&
+                url.pathname.startsWith('/auth/'),
+              handler: 'NetworkOnly',
+            },
+            // ── Supabase REST API — network-first, 10 s timeout, 24 h cache ──
+            {
+              urlPattern: ({ url }) =>
+                url.hostname.endsWith('.supabase.co') &&
+                url.pathname.startsWith('/rest/'),
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'supabase-rest',
+                networkTimeoutSeconds: 10,
+                cacheableResponse: { statuses: [0, 200] },
+                expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 },
+              },
+            },
+            // ── Supabase Storage (PDFs, uploads) — cache-first, 7-day expiry ──
+            {
+              urlPattern: ({ url }) =>
+                url.hostname.endsWith('.supabase.co') &&
+                url.pathname.startsWith('/storage/'),
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'supabase-storage',
+                cacheableResponse: { statuses: [0, 200] },
+                expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              },
+            },
+            // ── Google Fonts CSS — stale-while-revalidate ──
+            {
+              urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
+              handler: 'StaleWhileRevalidate',
+              options: { cacheName: 'google-fonts-css' },
+            },
+            // ── Google Fonts files — cache-first, 1 year ──
+            {
+              urlPattern: /^https:\/\/fonts\.gstatic\.com\//,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'google-fonts-files',
+                cacheableResponse: { statuses: [0, 200] },
+                expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              },
+            },
+          ],
+        },
+      }),
+    ],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
