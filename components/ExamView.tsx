@@ -185,18 +185,22 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
         onSubmit(submission);
     }, [submitted, mc, tf, sa, exam.id, onSubmit, isPreviewMode, onShowToast]);
 
+    // Giữ ref luôn trỏ tới handleSubmitFinal mới nhất, tránh timer re-create mỗi lần user chọn đáp án
+    const handleSubmitFinalRef = useRef(handleSubmitFinal);
+    useEffect(() => { handleSubmitFinalRef.current = handleSubmitFinal; }, [handleSubmitFinal]);
+
     useEffect(() => {
         timerRef.current = setInterval(() => {
             setSecondsLeft(prev => {
                 if (prev <= 1) {
-                    handleSubmitFinal();
+                    handleSubmitFinalRef.current();
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [handleSubmitFinal]);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps — intentionally mount-only
 
     const toggleMC = (i: number, letter: string) =>
         setMC(prev => { const arr = [...prev]; arr[i] = arr[i] === letter ? '' : letter; return arr; });
@@ -239,12 +243,14 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                             <FileText className="w-3.5 h-3.5" style={{ color: '#E03E3E' }} />
                         </div>
                         <p className="font-semibold text-sm truncate" style={{ color: '#E5E5E4' }}>{exam.title}</p>
-                        <span
-                            className="hidden md:inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded shrink-0"
-                            style={{ background: '#3B3B3B', color: '#AEACA8' }}
-                        >
-                            Chỉ xem
-                        </span>
+                        {isPreviewMode && (
+                            <span
+                                className="hidden md:inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded shrink-0"
+                                style={{ background: '#3B3B3B', color: '#AEACA8' }}
+                            >
+                                Chỉ xem
+                            </span>
+                        )}
                     </div>
                     <p className="text-[10px] mt-0.5" style={{ color: '#AEACA8' }}>{answeredCount}/{totalQ} câu đã làm</p>
                 </div>

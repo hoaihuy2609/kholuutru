@@ -13,10 +13,16 @@ ALTER TABLE study_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE question_votes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE blog_index ENABLE ROW LEVEL SECURITY;
+ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
 
--- 2. students: everyone can read (for activation check), no public write
+-- 2. students: everyone can read (for activation check)
 CREATE POLICY "students_read" ON students FOR SELECT USING (true);
-CREATE POLICY "students_write" ON students FOR ALL USING (false);
+-- FIX: Tách write policy thành 3 riêng:
+-- UPDATE được phép (cần cho activation lưu machine_id và admin kick/unkick)
+CREATE POLICY "students_update" ON students FOR UPDATE USING (true) WITH CHECK (true);
+-- INSERT và DELETE chỉ dành cho service role (admin Supabase Dashboard), anon không được
+CREATE POLICY "students_no_insert" ON students FOR INSERT WITH CHECK (false);
+CREATE POLICY "students_no_delete" ON students FOR DELETE USING (false);
 
 -- 3. vault_index: everyone can read (for sync/fetch), only service role can write
 CREATE POLICY "vault_index_read" ON vault_index FOR SELECT USING (true);
@@ -51,6 +57,14 @@ CREATE POLICY "blog_index_read" ON blog_index FOR SELECT USING (true);
 CREATE POLICY "blog_index_write" ON blog_index FOR INSERT WITH CHECK (true);
 CREATE POLICY "blog_index_update" ON blog_index FOR UPDATE USING (true);
 
+-- 11. FIX: classes table (missing previously) — admin manages via anon key
+CREATE POLICY "classes_read" ON classes FOR SELECT USING (true);
+CREATE POLICY "classes_write" ON classes FOR ALL USING (true);
+
+-- =====================================================
+-- QUAN TRỌNG: Nếu đã chạy file cũ, cần DROP policy cũ trước:
+--   DROP POLICY IF EXISTS "students_write" ON students;
+-- Sau đó chạy lại file này để áp dụng policies mới.
 -- =====================================================
 -- IMPORTANT: After running this, verify in Supabase Dashboard:
 -- Authentication → Policies → Each table should show "RLS enabled"

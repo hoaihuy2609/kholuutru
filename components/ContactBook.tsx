@@ -26,14 +26,18 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
     const load = async () => {
         setLoading(true);
         try {
-            const sdtStr = localStorage.getItem('pv_activated_sdt');
-            let phoneToQuery = undefined;
-            if (!isAdmin && sdtStr) {
-                let normalizedPhone = sdtStr.trim();
-                if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
-                    normalizedPhone = '0' + normalizedPhone;
+            // Admin: truyền undefined để getExamHistory lấy TẤT CẢ (không filter theo phone)
+            // Học sinh: truyền SDT để chỉ lấy lịch sử của mình
+            let phoneToQuery: string | undefined = undefined;
+            if (!isAdmin) {
+                const sdtStr = localStorage.getItem('pv_activated_sdt');
+                if (sdtStr) {
+                    let normalizedPhone = sdtStr.trim();
+                    if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) {
+                        normalizedPhone = '0' + normalizedPhone;
+                    }
+                    phoneToQuery = normalizedPhone;
                 }
-                phoneToQuery = normalizedPhone;
             }
             const data = await onLoadHistory(phoneToQuery);
             setHistory(data || []);

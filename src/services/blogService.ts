@@ -1,19 +1,13 @@
 import { supabase } from '../lib/supabase';
 import { dbGet, dbSet } from '../lib/db';
-import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL } from '../lib/telegram';
+import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
 import { xorObfuscate, xorDeobfuscate } from '../lib/crypto';
 import { BlogPost } from '../../types';
 
 const BLOG_LOCAL_KEY = 'physivault_blogs_local';
-import { ADMIN_AUTH_HEADER } from '../lib/telegram';
 
 export const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> => {
     try {
-        if (isAdmin) {
-            const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-            if (local.length > 0) return local;
-        }
-
         const { data: indexRow } = await supabase.from('blog_index')
             .select('telegram_file_id').order('updated_at', { ascending: false }).limit(1).maybeSingle();
 
@@ -35,6 +29,7 @@ export const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> => {
         return isAdmin ? local : local.filter(b => b.is_published);
     }
 };
+
 
 export const saveBlog = async (blog: Partial<BlogPost>): Promise<BlogPost | null> => {
     try {

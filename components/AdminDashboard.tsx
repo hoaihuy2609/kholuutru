@@ -257,7 +257,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
             icon: <Users className="w-5 h-5" />,
             accent: '#6B7CDB',
             bg: '#EEF0FB',
-            sub: <span className="flex items-center gap-1 text-[11px]" style={{ color: '#6B7CDB' }}><TrendingUp className="w-3 h-3" /> +12% so với tháng trước</span>,
+            sub: <span className="text-[11px]" style={{ color: '#787774' }}>Tổng số tài khoản trong hệ thống</span>,
         },
         {
             label: 'Đã kích hoạt',

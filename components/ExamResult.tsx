@@ -15,6 +15,9 @@ interface ExamResultProps {
 
 const tf_keys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
 
+// Chuẩn hoá đáp án trả lời ngắn — dùng chung, không khai báo lại trong map
+const normalizeSA = (s: string) => s.trim().replace(',', '.').toLowerCase();
+
 const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
@@ -285,7 +288,6 @@ const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBa
                     <div className="p-4 space-y-2">
                         {submission.sa.map((stuAns, i) => {
                             const correct = exam.answers.sa[i];
-                            const normalizeSA = (s: string) => s.trim().replace(',', '.').toLowerCase();
                             const isRight = stuAns && correct && normalizeSA(stuAns) === normalizeSA(correct);
                             const isWrong = stuAns && correct && normalizeSA(stuAns) !== normalizeSA(correct);
                             return (

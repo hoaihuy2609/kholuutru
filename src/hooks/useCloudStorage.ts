@@ -103,19 +103,28 @@ export const useCloudStorage = () => {
     const uploadFiles = async (files: File[], targetId: string, category?: string) => {
         const filePromises = files.map(file => new Promise<StoredFile>((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = (e) => resolve({
-                id: Date.now().toString() + Math.random().toString(36).substring(7),
-                name: file.name, type: file.type, size: file.size,
-                url: e.target?.result as string, uploadDate: Date.now(), category,
-            });
+            reader.onload = (e) => {
+                // Dùng ArrayBuffer + createObjectURL thay vì base64 (tiết kiệm ~33% bộ nhớ)
+                const arrayBuffer = e.target?.result as ArrayBuffer;
+                const blob = new Blob([arrayBuffer], { type: file.type });
+                const url = URL.createObjectURL(blob);
+                resolve({
+                    id: Date.now().toString() + Math.random().toString(36).substring(7),
+                    name: file.name, type: file.type, size: file.size,
+                    url, uploadDate: Date.now(), category,
+                });
+            };
             reader.onerror = reject;
-            reader.readAsDataURL(file);
+            reader.readAsArrayBuffer(file);
         }));
         const newStoredFiles = await Promise.all(filePromises);
         setStoredFiles(prev => ({ ...prev, [targetId]: [...(prev[targetId] || []), ...newStoredFiles] }));
     };
 
     const deleteFile = async (fileId: string, targetId: string) => {
+        // Revoke Object URL để giải phóng bộ nhớ
+        const file = storedFiles[targetId]?.find(f => f.id === fileId);
+        if (file?.url?.startsWith('blob:')) URL.revokeObjectURL(file.url);
         setStoredFiles(prev => ({ ...prev, [targetId]: prev[targetId]?.filter(f => f.id !== fileId) || [] }));
     };
 
@@ -132,6 +141,11 @@ export const useCloudStorage = () => {
                 const { data, error } = await supabase.from('students').select('is_active, grade').eq('phone', phoneStr).single();
                 if (error || !data || !data.is_active) return false;
                 if (data.grade) dbGrade = data.grade;
+                // Lưu machine_id và activation_key lên Supabase để verifyAccess() có thể xác thực
+                await supabase.from('students').update({
+                    machine_id: machineId,
+                    activation_key: key,
+                }).eq('phone', phoneStr);
             } catch (err) {
                 console.warn("Supabase check failed during activation, falling back to local verification.");
             }
@@ -191,7 +205,7 @@ export const useCloudStorage = () => {
 
             const lastFetchedId = localStorage.getItem(`pv_last_fetched_index_${grade}`);
             if (lastFetchedId && lastFetchedId === indexFileId) {
-                speculativeIndexPromise?.catch(() => {});
+                speculativeIndexPromise?.catch(() => { });
                 console.log(`[Fetch] ⚡ Skip — đã có bản mới nhất (${(performance.now() - t_fetch_total).toFixed(0)}ms)`);
                 if (onProgress) onProgress(100);
                 return { success: true, lessonCount: 0, fileCount: 0, skipped: true };
@@ -459,7 +473,7 @@ export const useCloudStorage = () => {
             lessonVersions,
         };
         const indexEncrypted = await aesEncrypt(JSON.stringify(indexPayload));
-        const indexBlob = new Blob([indexEncrypted], { type: 'application/octet-stream' });
+        const indexBlob = new Blob([indexEncrypted.buffer as ArrayBuffer], { type: 'application/octet-stream' });
         const indexForm = new FormData();
         indexForm.append('chat_id', TELEGRAM_CHAT_ID);
         indexForm.append('document', indexBlob, `index_grade${grade}_v3.json`);

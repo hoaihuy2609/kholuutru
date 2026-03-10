@@ -39,12 +39,12 @@ const SCORE_BUCKETS = [
 ];
 // New score buckets for exam analysis (6 bands as required)
 const SCORE_BUCKETS_NEW = [
-    { label: '0–2',  min: 0,  max: 2,    fill: '#EF4444' },
-    { label: '2–4',  min: 2,  max: 4,    fill: '#F97316' },
-    { label: '4–6',  min: 4,  max: 6,    fill: '#FBBF24' },
-    { label: '6–8',  min: 6,  max: 8,    fill: '#60A5FA' },
-    { label: '8–9',  min: 8,  max: 9,    fill: '#34D399' },
-    { label: '9–10', min: 9,  max: 10.1, fill: '#10B981' },
+    { label: '0–2', min: 0, max: 2, fill: '#EF4444' },
+    { label: '2–4', min: 2, max: 4, fill: '#F97316' },
+    { label: '4–6', min: 4, max: 6, fill: '#FBBF24' },
+    { label: '6–8', min: 6, max: 8, fill: '#60A5FA' },
+    { label: '8–9', min: 8, max: 9, fill: '#34D399' },
+    { label: '9–10', min: 9, max: 10.1, fill: '#10B981' },
 ];
 
 const TOOLTIP_STYLE: React.CSSProperties = {
@@ -67,12 +67,12 @@ function scoreBg(s: number) {
 }
 function scoreCellBg(s: number): string {
     if (s >= 8) return '#dcfce7';
-    if (s < 5)  return '#fee2e2';
+    if (s < 5) return '#fee2e2';
     return 'transparent';
 }
 function scoreTextColor(s: number): string {
     if (s >= 8) return '#166534';
-    if (s < 5)  return '#991b1b';
+    if (s < 5) return '#991b1b';
     return '#1a1a1a';
 }
 
@@ -239,9 +239,9 @@ const ExamAnalysis: React.FC<ExamAnalysisProps> = ({ examRecords, totalStudentsI
     }, [examRecords]);
     const count = studentBestScores.length;
     const scores = useMemo(() => studentBestScores.map(s => s.score), [studentBestScores]);
-    const avgScore  = count > 0 ? scores.reduce((a, b) => a + b, 0) / count : 0;
-    const maxScore  = count > 0 ? Math.max(...scores) : 0;
-    const minScore  = count > 0 ? Math.min(...scores) : 0;
+    const avgScore = count > 0 ? scores.reduce((a, b) => a + b, 0) / count : 0;
+    const maxScore = count > 0 ? Math.max(...scores) : 0;
+    const minScore = count > 0 ? Math.min(...scores) : 0;
     const distribution = useMemo(
         () => SCORE_BUCKETS_NEW.map(b => ({ label: b.label, count: scores.filter(s => s >= b.min && s < b.max).length, fill: b.fill })),
         [scores],
@@ -264,11 +264,11 @@ const ExamAnalysis: React.FC<ExamAnalysisProps> = ({ examRecords, totalStudentsI
         );
     }
     const statCards = [
-        { label: 'Sĩ số lớp',     value: String(totalStudentsInGrade), sub: 'học sinh', color: '#9065B0', bg: '#F3ECF8', Icon: Users       },
-        { label: 'Tham gia',       value: String(count),               sub: 'bài nộp',  color: '#6B7CDB', bg: '#EEF0FB', Icon: BookOpen    },
-        { label: 'Điểm cao nhất',  value: maxScore.toFixed(1),         sub: '/ 10',     color: '#448361', bg: '#EAF3EE', Icon: Award       },
-        { label: 'Điểm thấp nhất', value: minScore.toFixed(1),         sub: '/ 10',     color: '#E03E3E', bg: '#FEF0F0', Icon: TrendingDown },
-        { label: 'Điểm TB đề',     value: avgScore.toFixed(2),         sub: '/ 10',     color: avgScore >= 5 ? '#D9730D' : '#E03E3E', bg: avgScore >= 5 ? '#FFF3E8' : '#FEF0F0', Icon: BarChart2 },
+        { label: 'Sĩ số lớp', value: String(totalStudentsInGrade), sub: 'học sinh', color: '#9065B0', bg: '#F3ECF8', Icon: Users },
+        { label: 'Tham gia', value: String(count), sub: 'bài nộp', color: '#6B7CDB', bg: '#EEF0FB', Icon: BookOpen },
+        { label: 'Điểm cao nhất', value: maxScore.toFixed(1), sub: '/ 10', color: '#448361', bg: '#EAF3EE', Icon: Award },
+        { label: 'Điểm thấp nhất', value: minScore.toFixed(1), sub: '/ 10', color: '#E03E3E', bg: '#FEF0F0', Icon: TrendingDown },
+        { label: 'Điểm TB đề', value: avgScore.toFixed(2), sub: '/ 10', color: avgScore >= 5 ? '#D9730D' : '#E03E3E', bg: avgScore >= 5 ? '#FFF3E8' : '#FEF0F0', Icon: BarChart2 },
     ] as const;
     return (
         <div className="space-y-4">
@@ -377,10 +377,6 @@ const StatsPanel: React.FC = () => {
     const [studentClassMap, setStudentClassMap] = useState<Record<string, string>>({});
 
     // ── DATA FETCHING — PRESERVED EXACTLY, DO NOT MODIFY ─────────
-    const [gradeFilter, setGradeFilter] = useState<number | null>(null);
-    const [view, setView] = useState<'overview' | 'student' | 'concern'>('overview');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -416,7 +412,6 @@ const StatsPanel: React.FC = () => {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     // ── NEW VIEW STATE ────────────────────────────────────────────
-    const [topView, setTopView] = useState<'new' | 'legacy'>('new');
     const [selectedGrade, setSelectedGrade] = useState<10 | 11 | 12>(10);
     const [activeView, setActiveView] = useState<'gradebook' | 'exam-analysis'>('gradebook');
     const [selectedExamId, setSelectedExamId] = useState<string>('');

@@ -53,16 +53,16 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const setNotificationUnreadCount = useUIStore(state => state.setNotificationUnreadCount);
   const { getFetchedNotificationIds, getNotifications, verifyAccess } = cloud;
 
-  useEffect(() => { setLessons(cloud.lessons); }, [cloud.lessons]);
-  useEffect(() => { setStoredFiles(cloud.storedFiles); }, [cloud.storedFiles]);
-  useEffect(() => { setLoading(cloud.loading); }, [cloud.loading]);
+  useEffect(() => { setLessons(cloud.lessons); }, [cloud.lessons, setLessons]);
+  useEffect(() => { setStoredFiles(cloud.storedFiles); }, [cloud.storedFiles, setStoredFiles]);
+  useEffect(() => { setLoading(cloud.loading); }, [cloud.loading, setLoading]);
   useEffect(() => {
     setIsActivated(cloud.isActivated);
     if (cloud.isActivated) {
       const g = parseInt(localStorage.getItem('physivault_grade') || '0', 10);
       setStudentGradeValue(g === 10 || g === 11 || g === 12 ? g : null);
     }
-  }, [cloud.isActivated]);
+  }, [cloud.isActivated, setIsActivated, setStudentGradeValue]);
 
   useEffect(() => {
     const check = async () => {
@@ -77,7 +77,7 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     const iv = setInterval(check, 5 * 60 * 1000);
     document.addEventListener('visibilitychange', check);
     return () => { clearInterval(iv); document.removeEventListener('visibilitychange', check); };
-  }, [cloud.isActivated]);
+  }, [cloud.isActivated, verifyAccess, setKicked, setOfflineExpired]);
 
   useEffect(() => {
     if (!cloud.isActivated) return;
@@ -98,7 +98,7 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     const iv = setInterval(loadUnread, 2 * 60 * 1000);
     document.addEventListener('visibilitychange', loadUnread);
     return () => { clearInterval(iv); document.removeEventListener('visibilitychange', loadUnread); };
-  }, [cloud.isActivated, isAdmin]);
+  }, [cloud.isActivated, isAdmin, getNotifications, getFetchedNotificationIds, setNotificationUnreadCount]);
 
   return null;
 }
@@ -217,7 +217,7 @@ function ExamRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   if (activeExam) {
     return (
       <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-        <ExamView exam={activeExam} isPreviewMode={!!previewMode} onShowToast={useUIStore.getState().showToast} onBack={() => { clearExam(); navigate('/exams'); }} onSubmit={async (sub) => { setExamSubmission(sub); const { calcScore } = await import('./components/ExamView'); const score = calcScore(sub, activeExam.answers); cloud.saveExamResult(activeExam, score.total, 28, score.correctCount); }} />
+        <ExamView exam={activeExam} isPreviewMode={!!previewMode} onShowToast={useUIStore.getState().showToast} onBack={() => { clearExam(); navigate('/exams'); }} onSubmit={async (sub) => { setExamSubmission(sub); const { calcScore } = await import('./components/ExamView'); const score = calcScore(sub, activeExam.answers); const totalQ = (activeExam.answers.mc?.length ?? 0) + (activeExam.answers.tf?.length ?? 0) * 4 + (activeExam.answers.sa?.length ?? 0); cloud.saveExamResult(activeExam, score.total, totalQ, score.correctCount); }} />
       </Suspense></ErrorBoundary>
     );
   }

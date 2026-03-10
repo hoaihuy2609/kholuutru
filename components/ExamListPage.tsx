@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ClipboardList, Clock, Play, RefreshCw, FileText, Lock, CheckCircle } from 'lucide-react';
 import { Exam } from '../types';
 
@@ -63,6 +63,8 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
     const [localStudentGrade] = useState(() => parseInt(localStorage.getItem('physivault_grade') || '12', 10));
     const studentGrade = previewMode || localStudentGrade;
     const [activeTab, setActiveTab] = useState<number>(studentGrade);
+    // Track prefetch timeouts để cleanup khi unmount
+    const prefetchTimeoutsRef = useRef<number[]>([]);
 
     useEffect(() => {
         if (previewMode) setActiveTab(previewMode);
@@ -88,15 +90,26 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
             });
             setDoneMap(map);
             // Prefetch PDFs in background after list is loaded (1 by 1, no rush)
-            const gradedExams = sorted.filter(e => (!e.grade && studentGrade === 12) || e.grade === studentGrade);
+            // grade = 0/undefined = đề chung, hiện cho tất cả khối
+            const gradedExams = sorted.filter(e => !e.grade || e.grade === studentGrade);
+            // Cleanup timeouts cũ trước khi tạo mới
+            prefetchTimeoutsRef.current.forEach(id => clearTimeout(id));
+            prefetchTimeoutsRef.current = [];
             gradedExams.forEach((exam, i) => {
-                setTimeout(() => prefetchExamPdf(exam), i * 2000); // stagger 2s each
+                const id = window.setTimeout(() => prefetchExamPdf(exam), i * 2000); // stagger 2s each
+                prefetchTimeoutsRef.current.push(id);
             });
         } catch { /* silent */ }
         finally { setLoading(false); }
     };
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => {
+        load();
+        return () => {
+            // Cleanup tất cả prefetch timeouts khi component unmount
+            prefetchTimeoutsRef.current.forEach(id => clearTimeout(id));
+        };
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const scoringInfo = [
         { label: 'Trắc nghiệm', sub: '18 câu × 0.25đ', max: '4.5 đ', color: '#6B7CDB', bg: '#EEF0FB' },
@@ -189,7 +202,8 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
                     </div>
                 </div>
             ) : (() => {
-                const filteredExams = exams.filter(e => (!e.grade && activeTab === 12) || e.grade === activeTab);
+                // grade = 0/undefined = đề chung, hiện cho tất cả khối
+                const filteredExams = exams.filter(e => !e.grade || e.grade === activeTab);
                 if (filteredExams.length === 0) {
                     return (
                         <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>

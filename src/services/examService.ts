@@ -117,7 +117,7 @@ export const saveExam = async (exams: Exam[]): Promise<void> => {
     // Upload Master Index
     const masterIndex = { examVersions, chunkContents, zipFileIds, savedAt: Date.now() };
     const indexEncrypted = await aesEncrypt(JSON.stringify(masterIndex));
-    const indexBlob = new Blob([indexEncrypted], { type: 'application/octet-stream' });
+    const indexBlob = new Blob([indexEncrypted.buffer as ArrayBuffer], { type: 'application/octet-stream' });
     const masterFileId = await uploadBlobToTelegram(indexBlob, 'exam_index.bin');
 
     const { error: sbError } = await supabase
@@ -242,21 +242,19 @@ export const saveExamResult = async (exam: Exam, score: number, totalQuestions: 
 };
 
 export const getExamHistory = async (phoneFilter?: string) => {
-    let normalizedPhone = phoneFilter ? phoneFilter.trim() : '';
-    if (!normalizedPhone) {
-        const sdtStr = localStorage.getItem('pv_activated_sdt');
-        if (sdtStr) {
-            normalizedPhone = sdtStr.trim();
-            if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) normalizedPhone = '0' + normalizedPhone;
-        }
+    // phoneFilter = undefined → admin mode: lấy TẤT CẢ lịch sử, không filter
+    // phoneFilter = 'SDT'    → học sinh: chỉ lấy lịch sử của SDT đó
+    let normalizedPhone: string | null = null;
+    if (phoneFilter !== undefined) {
+        normalizedPhone = phoneFilter.trim();
+        if (normalizedPhone.length === 9 && !normalizedPhone.startsWith('0')) normalizedPhone = '0' + normalizedPhone;
     }
-    if (!normalizedPhone) return [];
     try {
-        const { data, error } = await supabase.from('exam_results').select('*')
-            .eq('student_phone', normalizedPhone)
-            .order('submitted_at', { ascending: false });
+        let query = supabase.from('exam_results').select('*').order('submitted_at', { ascending: false });
+        if (normalizedPhone) query = query.eq('student_phone', normalizedPhone);
+        const { data, error } = await query;
         if (error) throw error;
-        return data;
+        return data || [];
     } catch (e) { console.error('Lỗi khi lấy lịch sử làm bài:', e); return []; }
 };
 
