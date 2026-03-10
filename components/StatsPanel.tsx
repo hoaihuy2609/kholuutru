@@ -371,6 +371,10 @@ const ExamAnalysis: React.FC<ExamAnalysisProps> = ({ examRecords, totalStudentsI
 const StatsPanel: React.FC = () => {
     const [records, setRecords] = useState<ExamResultRecord[]>([]);
     const [loading, setLoading] = useState(true);
+    // classMap: id -> name
+    const [classMap, setClassMap] = useState<Record<string, string>>({});
+    // studentClassMap: phone -> class_id
+    const [studentClassMap, setStudentClassMap] = useState<Record<string, string>>({});
 
     // ── DATA FETCHING — PRESERVED EXACTLY, DO NOT MODIFY ─────────
     const [gradeFilter, setGradeFilter] = useState<number | null>(null);
@@ -381,11 +385,30 @@ const StatsPanel: React.FC = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const { data } = await supabase
-                .from('exam_results')
-                .select('*')
-                .order('submitted_at', { ascending: true });
-            setRecords((data as ExamResultRecord[]) || []);
+            const [resultsRes, classesRes, studentsRes] = await Promise.all([
+                supabase
+                    .from('exam_results')
+                    .select('*')
+                    .order('submitted_at', { ascending: true }),
+                supabase
+                    .from('classes')
+                    .select('id, name'),
+                supabase
+                    .from('students')
+                    .select('phone, class_id'),
+            ]);
+            setRecords((resultsRes.data as ExamResultRecord[]) || []);
+            const newClassMap: Record<string, string> = {};
+            for (const c of (classesRes.data || [])) {
+                newClassMap[(c as { id: string; name: string }).id] = (c as { id: string; name: string }).name;
+            }
+            setClassMap(newClassMap);
+            const newStudentClassMap: Record<string, string> = {};
+            for (const s of (studentsRes.data || [])) {
+                const row = s as { phone: string; class_id: string };
+                if (row.phone && row.class_id) newStudentClassMap[row.phone] = row.class_id;
+            }
+            setStudentClassMap(newStudentClassMap);
         } catch (e) { console.error(e); }
         setLoading(false);
     }, []);
@@ -406,26 +429,15 @@ const StatsPanel: React.FC = () => {
         [records, selectedGrade],
     );
 
-    // Extract sub-class label from student_name.
-    // Supports: "[12A1] Name", "12A1 - Name", "Name - 12A1", or falls back to null.
-    function extractClass(name: string): string | null {
-        const bracketMatch = name.match(/^\[([\w]+)\]/);
-        if (bracketMatch) return bracketMatch[1];
-        const prefixMatch = name.match(/^([A-Za-z0-9]+)\s*-\s*/);
-        if (prefixMatch && /\d/.test(prefixMatch[1])) return prefixMatch[1];
-        const suffixMatch = name.match(/\s*-\s*([A-Za-z0-9]+)$/);
-        if (suffixMatch && /\d/.test(suffixMatch[1])) return suffixMatch[1];
-        return null;
-    }
-
     const uniqueClasses = useMemo(() => {
         const set = new Set<string>();
         for (const r of gradeRecords) {
-            const cls = extractClass(r.student_name);
-            if (cls) set.add(cls);
+            const classId = studentClassMap[r.student_phone];
+            const className = classId ? classMap[classId] : undefined;
+            if (className) set.add(className);
         }
         return Array.from(set).sort();
-    }, [gradeRecords]);
+    }, [gradeRecords, studentClassMap, classMap]);
 
     // Reset class filter when grade changes
     useEffect(() => { setSelectedClassFilter('all'); }, [selectedGrade]);
@@ -433,8 +445,12 @@ const StatsPanel: React.FC = () => {
     const filteredByClassRecords = useMemo(
         () => selectedClassFilter === 'all'
             ? gradeRecords
-            : gradeRecords.filter(r => extractClass(r.student_name) === selectedClassFilter),
-        [gradeRecords, selectedClassFilter],
+            : gradeRecords.filter(r => {
+                const classId = studentClassMap[r.student_phone];
+                const className = classId ? classMap[classId] : undefined;
+                return className === selectedClassFilter;
+            }),
+        [gradeRecords, selectedClassFilter, studentClassMap, classMap],
     );
 
     const examList = useMemo(() => {
