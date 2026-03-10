@@ -13,7 +13,12 @@ interface ExportData {
 }
 
 export const exportData = (lessons: Lesson[], files: FileStorage) => {
-    const rawData: ExportData = { version: 1.1, exportedAt: Date.now(), lessons, files };
+    // Strip transient blob URLs — they're session-specific and invalid after import
+    const sanitizedFiles: FileStorage = {};
+    for (const [key, arr] of Object.entries(files)) {
+        sanitizedFiles[key] = arr.map(({ url, ...rest }) => rest as StoredFile);
+    }
+    const rawData: ExportData = { version: 1.1, exportedAt: Date.now(), lessons, files: sanitizedFiles };
     const finalContent = JSON.stringify(rawData);
     const blob = new Blob([finalContent], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -33,7 +38,8 @@ export const importData = async (file: File) => {
             try {
                 let content = e.target?.result as string;
                 let data: ExportData = JSON.parse(content);
-                if (!data.lessons || !data.files) throw new Error("INVALID_FORMAT");
+                if (!Array.isArray(data.lessons) || typeof data.files !== 'object' || data.files === null)
+                    throw new Error("INVALID_FORMAT");
 
                 const currentLessons = await dbGet(STORAGE_LESSONS_KEY) || [];
                 const currentFiles = await dbGet(STORAGE_FILES_KEY) || {};

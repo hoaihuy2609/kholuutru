@@ -1,6 +1,7 @@
-export const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
-export const CLOUDFLARE_PROXY_URL = import.meta.env.VITE_CLOUDFLARE_PROXY_URL;
-export const ADMIN_AUTH_HEADER = `Bearer ${import.meta.env.VITE_ADMIN_KEY}`;
+export const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID || '';
+export const CLOUDFLARE_PROXY_URL = import.meta.env.VITE_CLOUDFLARE_PROXY_URL || '';
+export const ADMIN_AUTH_HEADER = `Bearer ${import.meta.env.VITE_ADMIN_KEY || ''}`;
+if (!TELEGRAM_CHAT_ID || !CLOUDFLARE_PROXY_URL) console.error('[telegram] Missing VITE_TELEGRAM_CHAT_ID or VITE_CLOUDFLARE_PROXY_URL');
 
 export const fetchViaCloudflareProxy = async (fileId: string): Promise<ArrayBuffer> => {
     const maxRetries = 3;

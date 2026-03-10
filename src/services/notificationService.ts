@@ -59,20 +59,25 @@ export const submitQuestionVote = async (examId: string, partName: string, quest
     if (!normalizedPhone) return { success: false, error: 'Chưa kích hoạt' };
 
     try {
-        const { data: existingVotes, error: countError } = await supabase.from('question_votes')
-            .select('id, part_name, question_number').eq('exam_id', examId).eq('student_phone', normalizedPhone);
-        if (countError) throw countError;
-        if (existingVotes && existingVotes.length >= 3) return { success: false, error: 'Bạn đã hết 3 lượt vote cho đề này.' };
-        if (existingVotes?.find(v => v.part_name === partName && v.question_number === questionNumber))
-            return { success: false, error: 'Bạn đã vote cho câu này rồi.' };
-
-        const { error } = await supabase.from('question_votes').insert({
+        // Insert first — rely on DB unique constraint to prevent duplicates (race-safe)
+        const { error: insertError } = await supabase.from('question_votes').insert({
             exam_id: examId, student_phone: normalizedPhone, part_name: partName, question_number: questionNumber
         });
-        if (error) {
-            if (error.code === '23505') return { success: false, error: 'Bạn đã vote cho câu này rồi.' };
-            throw error;
+        if (insertError) {
+            if (insertError.code === '23505') return { success: false, error: 'Bạn đã vote cho câu này rồi.' };
+            throw insertError;
         }
+
+        // After successful insert, check if over limit and rollback if needed
+        const { count, error: countError } = await supabase.from('question_votes')
+            .select('id', { count: 'exact', head: true }).eq('exam_id', examId).eq('student_phone', normalizedPhone);
+        if (!countError && count !== null && count > 3) {
+            await supabase.from('question_votes').delete()
+                .eq('exam_id', examId).eq('student_phone', normalizedPhone)
+                .eq('part_name', partName).eq('question_number', questionNumber);
+            return { success: false, error: 'Bạn đã hết 3 lượt vote cho đề này.' };
+        }
+
         return { success: true };
     } catch (e: any) { console.error('Lỗi khi submit vote:', e); return { success: false, error: e.message || 'Lỗi hệ thống' }; }
 };

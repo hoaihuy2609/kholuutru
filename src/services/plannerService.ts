@@ -30,16 +30,20 @@ export const saveStudyPlan = async (taskName: string, dueDate: string, color: st
 };
 
 export const updateStudyPlan = async (id: string, updates: Partial<StudyPlanItem>) => {
+    const normalizedPhone = getActivatedPhone();
+    if (!normalizedPhone) return false;
     try {
-        const { error } = await supabase.from('study_plans').update(updates).eq('id', id);
+        const { error } = await supabase.from('study_plans').update(updates).eq('id', id).eq('student_phone', normalizedPhone);
         if (error) throw error;
         return true;
     } catch (e) { console.error('Lỗi cập nhật kế hoạch:', e); return false; }
 };
 
 export const deleteStudyPlan = async (id: string) => {
+    const normalizedPhone = getActivatedPhone();
+    if (!normalizedPhone) return false;
     try {
-        const { error } = await supabase.from('study_plans').delete().eq('id', id);
+        const { error } = await supabase.from('study_plans').delete().eq('id', id).eq('student_phone', normalizedPhone);
         if (error) throw error;
         return true;
     } catch (e) { console.error('Lỗi xóa kế hoạch:', e); return false; }

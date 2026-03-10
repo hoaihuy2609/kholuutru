@@ -1,9 +1,10 @@
 import CryptoJS from 'crypto-js';
 
-const SYSTEM_SALT = import.meta.env.VITE_SYSTEM_SALT;
-const XOR_KEY = import.meta.env.VITE_XOR_KEY;
+const SYSTEM_SALT = import.meta.env.VITE_SYSTEM_SALT || '';
+const XOR_KEY = import.meta.env.VITE_XOR_KEY || '';
+if (!SYSTEM_SALT || !XOR_KEY) console.error('[crypto] Missing VITE_SYSTEM_SALT or VITE_XOR_KEY — encryption will be insecure!');
 const XOR_KEY_BYTES = new TextEncoder().encode(XOR_KEY);
-const XOR_KEY_LEN = XOR_KEY_BYTES.length;
+const XOR_KEY_LEN = XOR_KEY_BYTES.length || 1; // prevent division by zero
 
 export const xorObfuscate = (data: string): string => {
     const bytes = new TextEncoder().encode(data);
@@ -25,8 +26,9 @@ export const xorObfuscate = (data: string): string => {
     let binaryParts: string[] = [];
     for (let i = 0; i < len; i += CHUNK_SIZE) {
         const chunk = result.subarray(i, i + CHUNK_SIZE);
-        // @ts-ignore
-        binaryParts.push(String.fromCharCode.apply(null, chunk));
+        let s = '';
+        for (let j = 0; j < chunk.length; j++) s += String.fromCharCode(chunk[j]);
+        binaryParts.push(s);
     }
     return btoa(binaryParts.join(''));
 };
@@ -123,7 +125,8 @@ export const checkActivationStatus = (): boolean => {
 };
 
 // ── AES-GCM encryption (Web Crypto API — hardware-accelerated) ──
-const AES_KEY_RAW = import.meta.env.VITE_AES_KEY;
+const AES_KEY_RAW = import.meta.env.VITE_AES_KEY || '';
+if (!AES_KEY_RAW) console.error('[crypto] Missing VITE_AES_KEY — AES encryption will fail!');
 const AES_MAGIC = new Uint8Array([0x50, 0x56, 0x41, 0x45]); // "PVAE" magic header
 
 let _aesKeyCache: CryptoKey | null = null;

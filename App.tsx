@@ -84,7 +84,8 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
           const [n10, n11, n12, fetched] = await Promise.all([getNotifications(10), getNotifications(11), getNotifications(12), getFetchedNotificationIds()]);
           setNotificationUnreadCount([...n10, ...n11, ...n12].filter(n => n.fetch_enabled && !fetched.has(n.id)).length);
         } else {
-          const grade = parseInt(localStorage.getItem('physivault_grade') || '12', 10);
+          const grade = parseInt(localStorage.getItem('physivault_grade') || '0', 10);
+          if (grade < 10 || grade > 12) return; // no grade set yet — skip notification check
           const [notifs, fetched] = await Promise.all([getNotifications(grade), getFetchedNotificationIds()]);
           setNotificationUnreadCount(notifs.filter(n => n.fetch_enabled && !fetched.has(n.id)).length);
         }

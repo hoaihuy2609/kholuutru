@@ -45,16 +45,15 @@ const Chatbot: React.FC = () => {
         addMessage(userText, 'user');
 
         if (step === 'intro' || step === 'ask_phone') {
-            if (!/^\d{10,11}$/.test(userText.replace(/\D/g, ''))) {
+            let phoneStr = userText.replace(/\D/g, '');
+            if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
+            if (!/^\d{10,11}$/.test(phoneStr)) {
                 setTimeout(() => addMessage('Vui lòng nhập số điện thoại hợp lệ (10-11 chữ số) đã đăng ký với thầy Huy nhé.', 'bot'), 500);
                 return;
             }
             setIsLoading(true);
             try {
                 const machineId = getMachineId();
-                let phoneStr = String(userText).trim();
-                // Format before checking: Supabase currently expects phone numbers starting with '0' for active validation
-                if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
 
                 const { data, error } = await supabase
                     .from('students')

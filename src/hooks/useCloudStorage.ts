@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { useState, useEffect, useRef } from 'react';
+import CryptoJS from 'crypto-js';
 import type JSZip from 'jszip'; // type-only — runtime import is deferred to call-sites
 import { Lesson, StoredFile, FileStorage } from '../../types';
 
@@ -146,10 +147,10 @@ export const useCloudStorage = () => {
                 const { data, error } = await supabase.from('students').select('is_active, grade').eq('phone', phoneStr).single();
                 if (error || !data || !data.is_active) return false;
                 if (data.grade) dbGrade = data.grade;
-                // Lưu machine_id và activation_key lên Supabase để verifyAccess() có thể xác thực
+                // Lưu machine_id và activation_key (hashed) lên Supabase để verifyAccess() có thể xác thực
                 await supabase.from('students').update({
                     machine_id: machineId,
-                    activation_key: key,
+                    activation_key: CryptoJS.SHA256(key).toString(),
                 }).eq('phone', phoneStr);
             } catch (err) {
                 return false;
