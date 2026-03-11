@@ -145,7 +145,7 @@ export const loadExams = async (): Promise<Exam[]> => {
     // Resolve master index file_id (Supabase first, localStorage fallback)
     let fileId: string | null = null;
     try {
-        const { data } = await supabase.from('vault_index').select('telegram_file_id').eq('grade', 0).single();
+        const { data } = await supabase.from('vault_index').select('telegram_file_id').eq('grade', 0).maybeSingle();
         fileId = data?.telegram_file_id || null;
     } catch { /* offline */ }
 

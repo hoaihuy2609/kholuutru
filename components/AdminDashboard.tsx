@@ -4,9 +4,9 @@ import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import {
     Users, UserPlus, Trash2, Search, RefreshCw,
     ShieldCheck, Monitor, Phone,
-    TrendingUp, ShieldAlert, LayoutDashboard,
+    ShieldAlert, LayoutDashboard,
     UserMinus, RotateCcw, Ban, ArrowLeft, X, CloudUpload, ClipboardList,
-    Edit3, GraduationCap, Building2, Settings2, BarChart2, BookOpen, Plus, Newspaper
+    Edit3, GraduationCap, Building2, Settings2, BarChart2
 } from 'lucide-react';
 import ExamManager from './ExamManager';
 const StatsPanel = React.lazy(() => import('./StatsPanel'));
@@ -88,7 +88,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
 
     const refreshStudents = async () => {
         setLoading(true);
-        console.log("[Admin] Đang tải danh sách học sinh từ Supabase...");
         try {
             const { data, error } = await supabase.from('students').select('*').order('created_at', { ascending: false });
             if (error) throw error;
@@ -163,8 +162,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         e.preventDefault();
         if (!newStudent.sdt || !newStudent.name) return;
         setIsSubmitting(true);
-        console.log("[Admin] Đang thêm học viên lên Supabase:", newStudent);
-
         try {
             let phoneStr = String(newStudent.sdt).trim();
             if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
@@ -236,10 +233,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     }), [students, searchTerm, gradeFilter, classFilter]);
 
     const classesForGrade = gradeFilter ? classes.filter(c => c.grade === gradeFilter) : classes;
-    const getClassName = (classId?: string) => {
-        if (!classId) return null;
-        return classes.find(c => c.id === classId)?.name || null;
-    };
 
     const stats = {
         total: students.length,

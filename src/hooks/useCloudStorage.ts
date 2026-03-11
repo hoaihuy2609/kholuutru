@@ -222,7 +222,7 @@ export const useCloudStorage = () => {
             const t1 = performance.now();
             let indexFileId = cachedIndexFileId;
             try {
-                const { data } = await supabase.from('vault_index').select('telegram_file_id').eq('grade', grade).single();
+                const { data } = await supabase.from('vault_index').select('telegram_file_id').eq('grade', grade).maybeSingle();
                 if (data?.telegram_file_id) indexFileId = data.telegram_file_id;
             } catch (e) { console.error("Lỗi lấy index từ Supabase", e); }
             console.log(`[Fetch] Giai đoạn 1 (Supabase): ${(performance.now() - t1).toFixed(0)}ms`);
