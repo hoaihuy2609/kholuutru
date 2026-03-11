@@ -123,7 +123,7 @@ export const saveExam = async (exams: Exam[]): Promise<void> => {
     // Upload Master Index
     const masterIndex = { examVersions, chunkContents, zipFileIds, savedAt: Date.now() };
     const indexEncrypted = await aesEncrypt(JSON.stringify(masterIndex));
-    const indexBlob = new Blob([indexEncrypted.buffer as ArrayBuffer], { type: 'application/octet-stream' });
+    const indexBlob = new Blob([indexEncrypted], { type: 'application/octet-stream' });
     const masterFileId = await uploadBlobToTelegram(indexBlob, 'exam_index.bin');
 
     const { error: sbError } = await supabase
