@@ -137,12 +137,12 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ studentName, st
             onClick={onClose}
         >
             <div
-                className="w-full overflow-hidden"
-                style={{ maxWidth: '640px', background: '#FFFFFF', borderRadius: '20px', boxShadow: '0 24px 64px rgba(0,0,0,0.28)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+                className="w-full"
+                style={{ maxWidth: '620px', borderRadius: '20px', boxShadow: '0 24px 64px rgba(0,0,0,0.32)', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'linear-gradient(160deg, #5C6FCC 0%, #7B4FA6 100%)' }}
                 onClick={e => e.stopPropagation()}
             >
-                {/* ── Hero Header ── */}
-                <div className="relative px-6 pt-6 pb-5" style={{ background: 'linear-gradient(135deg, #5C6FCC 0%, #7B4FA6 100%)' }}>
+                {/* ── Hero ── */}
+                <div className="relative px-6 pt-6 pb-12 shrink-0">
                     <button
                         onClick={onClose}
                         className="absolute top-4 right-4 p-1.5 rounded-full transition-all"
@@ -153,10 +153,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ studentName, st
                         <X className="w-4 h-4" />
                     </button>
                     <div className="flex items-center gap-4 mb-5">
-                        <div
-                            className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black text-white shrink-0"
-                            style={{ background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.32)' }}
-                        >
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black text-white shrink-0" style={{ background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.32)' }}>
                             {initials}
                         </div>
                         <div>
@@ -174,54 +171,56 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ studentName, st
                     </div>
                 </div>
 
-                {/* ── Table ── */}
-                <div style={{ overflowY: 'auto', flex: 1 }}>
-                    {sorted.length === 0 ? (
-                        <div className="py-16 text-center">
-                            <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
-                            <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có bài thi nào</p>
-                        </div>
-                    ) : (
-                        <table className="w-full text-sm border-collapse">
-                            <thead>
-                                <tr style={{ background: '#F7F6F3', borderBottom: '2px solid #E9E9E7' }}>
-                                    <th className="px-5 py-3 text-center text-xs font-semibold" style={{ color: '#AEACA8', width: 44 }}>#</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold" style={{ color: '#787774' }}>Bài Thi</th>
-                                    <th className="px-5 py-3 text-center text-xs font-semibold" style={{ color: '#787774', width: 80 }}>Điểm</th>
-                                    <th className="px-5 py-3 text-center text-xs font-semibold" style={{ color: '#787774', width: 110 }}>Ngày Thi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sorted.map((r, idx) => (
-                                    <tr key={`${r.exam_id}-${idx}`} style={{ borderBottom: '1px solid #F1F0EC', background: idx % 2 === 0 ? '#fff' : '#FAFAF9' }}>
-                                        <td className="px-5 py-3 text-center text-xs font-medium" style={{ color: '#CFCFCB' }}>{idx + 1}</td>
-                                        <td className="px-5 py-3 text-sm font-medium" style={{ color: '#1A1A1A' }}>{r.exam_title}</td>
-                                        <td className="px-5 py-3 text-center">
-                                            <span className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold" style={{ background: scoreCellBg(r.score) || '#F1F0EC', color: scoreTextColor(r.score) }}>
-                                                {r.score.toFixed(1)}
-                                            </span>
-                                        </td>
-                                        <td className="px-5 py-3 text-center text-xs" style={{ color: '#AEACA8' }}>
-                                            {new Date(r.submitted_at).toLocaleDateString('vi-VN')}
-                                        </td>
+                {/* ── Raised white card ── */}
+                <div
+                    style={{ flex: 1, overflow: 'hidden', marginTop: '-28px', marginLeft: '12px', marginRight: '12px', borderRadius: '20px 20px 0 0', background: '#FFFFFF', boxShadow: '0 -8px 28px rgba(0,0,0,0.14)', display: 'flex', flexDirection: 'column' }}
+                >
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        {sorted.length === 0 ? (
+                            <div className="py-16 text-center">
+                                <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
+                                <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có bài thi nào</p>
+                            </div>
+                        ) : (
+                            <table className="w-full text-sm border-collapse">
+                                <thead>
+                                    <tr style={{ background: '#F7F6F3', borderBottom: '2px solid #E9E9E7' }}>
+                                        <th className="px-5 py-3 text-center text-xs font-semibold" style={{ color: '#AEACA8', width: 44 }}>#</th>
+                                        <th className="px-5 py-3 text-left text-xs font-semibold" style={{ color: '#787774' }}>Bài Thi</th>
+                                        <th className="px-5 py-3 text-center text-xs font-semibold" style={{ color: '#787774', width: 80 }}>Điểm</th>
+                                        <th className="px-5 py-3 text-center text-xs font-semibold" style={{ color: '#787774', width: 110 }}>Ngày Thi</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
-
-                {/* ── Footer ── */}
-                <div className="px-6 py-4 flex justify-end" style={{ borderTop: '1px solid #F1F0EC', background: '#FAFAF9' }}>
-                    <button
-                        onClick={onClose}
-                        className="px-5 py-2 rounded-xl text-sm font-semibold transition-opacity"
-                        style={{ background: 'linear-gradient(135deg,#5C6FCC,#7B4FA6)', color: '#fff', boxShadow: '0 2px 8px rgba(92,111,204,0.35)' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.88'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
-                    >
-                        Đóng
-                    </button>
+                                </thead>
+                                <tbody>
+                                    {sorted.map((r, idx) => (
+                                        <tr key={`${r.exam_id}-${idx}`} style={{ borderBottom: '1px solid #F1F0EC', background: idx % 2 === 0 ? '#fff' : '#FAFAF9' }}>
+                                            <td className="px-5 py-3 text-center text-xs font-medium" style={{ color: '#CFCFCB' }}>{idx + 1}</td>
+                                            <td className="px-5 py-3 text-sm font-medium" style={{ color: '#1A1A1A' }}>{r.exam_title}</td>
+                                            <td className="px-5 py-3 text-center">
+                                                <span className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold" style={{ background: scoreCellBg(r.score) || '#F1F0EC', color: scoreTextColor(r.score) }}>
+                                                    {r.score.toFixed(1)}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-3 text-center text-xs" style={{ color: '#AEACA8' }}>
+                                                {new Date(r.submitted_at).toLocaleDateString('vi-VN')}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                    <div className="px-6 py-4 flex justify-end shrink-0" style={{ borderTop: '1px solid #F1F0EC', background: '#FAFAF9' }}>
+                        <button
+                            onClick={onClose}
+                            className="px-5 py-2 rounded-xl text-sm font-semibold transition-opacity"
+                            style={{ background: 'linear-gradient(135deg,#5C6FCC,#7B4FA6)', color: '#fff', boxShadow: '0 2px 8px rgba(92,111,204,0.35)' }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.88'}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+                        >
+                            Đóng
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
