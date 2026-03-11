@@ -132,77 +132,76 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ studentName, st
     const maskedPhone = studentPhone.length >= 6 ? studentPhone.slice(0, 3) + ' **** ' + studentPhone.slice(-2) : studentPhone;
     return (
         <div
-            className="fixed inset-0 z-[80] flex items-center justify-center p-4"
-            style={{ background: 'rgba(26,26,26,0.5)' }}
+            className="fixed inset-0 flex items-center justify-center p-4"
+            style={{ background: 'rgba(15,15,25,0.65)', backdropFilter: 'blur(6px)', zIndex: 9999 }}
             onClick={onClose}
         >
             <div
                 className="w-full overflow-hidden"
-                style={{ maxWidth: '560px', background: '#FFFFFF', border: '1px solid #E9E9E7', borderRadius: '16px', boxShadow: '0 12px 40px rgba(0,0,0,0.18)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+                style={{ maxWidth: '640px', background: '#FFFFFF', borderRadius: '20px', boxShadow: '0 24px 64px rgba(0,0,0,0.28)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
                 onClick={e => e.stopPropagation()}
             >
-                {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E9E9E7', background: '#EEF0FB' }}>
-                    <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: '#6B7CDB' }}>
+                {/* ── Hero Header ── */}
+                <div className="relative px-6 pt-6 pb-5" style={{ background: 'linear-gradient(135deg, #5C6FCC 0%, #7B4FA6 100%)' }}>
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 p-1.5 rounded-full transition-all"
+                        style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.28)'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.15)'}
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                    <div className="flex items-center gap-4 mb-5">
+                        <div
+                            className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black text-white shrink-0"
+                            style={{ background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.32)' }}
+                        >
                             {initials}
                         </div>
                         <div>
-                            <h3 className="text-base font-bold" style={{ color: '#1A1A1A' }}>{studentName}</h3>
-                            <p className="text-xs mt-0.5" style={{ color: '#787774' }}>{maskedPhone} · {sorted.length} bài thi</p>
+                            <h3 className="text-xl font-bold text-white leading-tight">{studentName}</h3>
+                            <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.68)' }}>{maskedPhone} · {sorted.length} bài thi</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="flex gap-4">
-                            <div className="text-center">
-                                <div className="text-xl font-bold" style={{ color: scoreTextColor(avg) }}>{avg.toFixed(2)}</div>
-                                <div className="text-[10px] uppercase tracking-wider" style={{ color: '#AEACA8' }}>Điểm TB</div>
+                    <div className="grid grid-cols-3 gap-3">
+                        {([{ label: 'Điểm TB', value: avg.toFixed(2) }, { label: 'Cao nhất', value: best.toFixed(1) }, { label: 'Thấp nhất', value: worst.toFixed(1) }]).map(card => (
+                            <div key={card.label} className="rounded-xl px-3 py-3 text-center" style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                                <div className="text-2xl font-black text-white leading-none">{card.value}</div>
+                                <div className="text-[10px] mt-1 font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.6)' }}>{card.label}</div>
                             </div>
-                            <div className="text-center">
-                                <div className="text-xl font-bold" style={{ color: scoreTextColor(best) }}>{best.toFixed(1)}</div>
-                                <div className="text-[10px] uppercase tracking-wider" style={{ color: '#AEACA8' }}>Cao nhất</div>
-                            </div>
-                        </div>
-                        <button
-                            onClick={onClose}
-                            className="p-1.5 rounded-lg transition-colors"
-                            style={{ color: '#787774' }}
-                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
-                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
+                        ))}
                     </div>
                 </div>
 
-                {/* Table */}
+                {/* ── Table ── */}
                 <div style={{ overflowY: 'auto', flex: 1 }}>
                     {sorted.length === 0 ? (
-                        <div className="py-12 text-center">
-                            <BookOpen className="w-8 h-8 mx-auto mb-2" style={{ color: '#CFCFCB' }} />
-                            <p className="text-sm" style={{ color: '#AEACA8' }}>Chưa có bài thi nào</p>
+                        <div className="py-16 text-center">
+                            <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
+                            <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có bài thi nào</p>
                         </div>
                     ) : (
                         <table className="w-full text-sm border-collapse">
                             <thead>
                                 <tr style={{ background: '#F7F6F3', borderBottom: '2px solid #E9E9E7' }}>
-                                    <th className="px-4 py-2.5 text-center text-xs font-semibold" style={{ color: '#787774', width: 40 }}>#</th>
-                                    <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: '#787774' }}>Bài Thi</th>
-                                    <th className="px-4 py-2.5 text-center text-xs font-semibold" style={{ color: '#787774', width: 75 }}>Điểm</th>
-                                    <th className="px-4 py-2.5 text-center text-xs font-semibold" style={{ color: '#787774', width: 105 }}>Ngày Thi</th>
+                                    <th className="px-5 py-3 text-center text-xs font-semibold" style={{ color: '#AEACA8', width: 44 }}>#</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold" style={{ color: '#787774' }}>Bài Thi</th>
+                                    <th className="px-5 py-3 text-center text-xs font-semibold" style={{ color: '#787774', width: 80 }}>Điểm</th>
+                                    <th className="px-5 py-3 text-center text-xs font-semibold" style={{ color: '#787774', width: 110 }}>Ngày Thi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {sorted.map((r, idx) => (
                                     <tr key={`${r.exam_id}-${idx}`} style={{ borderBottom: '1px solid #F1F0EC', background: idx % 2 === 0 ? '#fff' : '#FAFAF9' }}>
-                                        <td className="px-4 py-2.5 text-center text-xs" style={{ color: '#AEACA8' }}>{idx + 1}</td>
-                                        <td className="px-4 py-2.5 text-sm" style={{ color: '#1A1A1A' }}>{r.exam_title}</td>
-                                        <td className="px-4 py-2.5 text-center">
-                                            <span className="inline-block px-2 py-0.5 rounded text-xs font-bold" style={{ background: scoreCellBg(r.score), color: scoreTextColor(r.score) }}>
+                                        <td className="px-5 py-3 text-center text-xs font-medium" style={{ color: '#CFCFCB' }}>{idx + 1}</td>
+                                        <td className="px-5 py-3 text-sm font-medium" style={{ color: '#1A1A1A' }}>{r.exam_title}</td>
+                                        <td className="px-5 py-3 text-center">
+                                            <span className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold" style={{ background: scoreCellBg(r.score) || '#F1F0EC', color: scoreTextColor(r.score) }}>
                                                 {r.score.toFixed(1)}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-2.5 text-center text-xs" style={{ color: '#AEACA8' }}>
+                                        <td className="px-5 py-3 text-center text-xs" style={{ color: '#AEACA8' }}>
                                             {new Date(r.submitted_at).toLocaleDateString('vi-VN')}
                                         </td>
                                     </tr>
@@ -212,18 +211,14 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ studentName, st
                     )}
                 </div>
 
-                {/* Footer */}
-                <div className="px-5 py-3 flex items-center justify-between text-xs" style={{ borderTop: '1px solid #E9E9E7', background: '#FAFAF9' }}>
-                    <span style={{ color: '#AEACA8' }}>
-                        {sorted.length} bài · Thấp nhất:{' '}
-                        <span style={{ color: scoreTextColor(worst), fontWeight: 600 }}>{worst.toFixed(1)}</span>
-                    </span>
+                {/* ── Footer ── */}
+                <div className="px-6 py-4 flex justify-end" style={{ borderTop: '1px solid #F1F0EC', background: '#FAFAF9' }}>
                     <button
                         onClick={onClose}
-                        className="px-4 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                        style={{ background: '#EEF0FB', color: '#6B7CDB' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#DDE1F8'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#EEF0FB'}
+                        className="px-5 py-2 rounded-xl text-sm font-semibold transition-opacity"
+                        style={{ background: 'linear-gradient(135deg,#5C6FCC,#7B4FA6)', color: '#fff', boxShadow: '0 2px 8px rgba(92,111,204,0.35)' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.88'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
                     >
                         Đóng
                     </button>
