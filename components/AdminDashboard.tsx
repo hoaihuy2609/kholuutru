@@ -1,6 +1,6 @@
 import { supabase } from '../src/lib/supabase';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import {
     Users, UserPlus, Trash2, Search, RefreshCw,
     ShieldCheck, Monitor, Phone,
@@ -223,7 +223,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         } catch (e: any) { onShowToast('Lỗi khi mở khóa học viên: ' + e.message, 'error'); }
     };
 
-    const filteredStudents = (students || []).filter(s => {
+    const filteredStudents = useMemo(() => (students || []).filter(s => {
         if (!s) return false;
         const sdt = s.sdt || '';
         const name = s.name || '';
@@ -233,7 +233,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         // Special filter: 'unassigned' = students without any class
         const matchUnassigned = classFilter === 'unassigned' ? (!s.class_id || s.class_id === '') : true;
         return matchSearch && matchGrade && (classFilter === 'unassigned' ? matchUnassigned : matchClass);
-    });
+    }), [students, searchTerm, gradeFilter, classFilter]);
 
     const classesForGrade = gradeFilter ? classes.filter(c => c.grade === gradeFilter) : classes;
     const getClassName = (classId?: string) => {
@@ -568,11 +568,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredStudents.map((s, idx) => {
+                                        filteredStudents.map((s) => {
                                             const isKicked = s.status === 'KICKED';
                                             return (
                                                 <tr
-                                                    key={idx}
+                                                    key={s.sdt}
                                                     style={{
                                                         borderBottom: '1px solid #F1F0EC',
                                                         background: isKicked ? '#FEF8F8' : 'transparent',

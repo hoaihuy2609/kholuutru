@@ -232,7 +232,7 @@ export const saveExamResult = async (exam: Exam, score: number, totalQuestions: 
     let studentName = 'Học sinh';
     let grade = exam.grade;
     try {
-        const { data } = await supabase.from('students').select('name, grade').eq('phone', normalizedPhone).single();
+        const { data } = await supabase.from('students').select('name, grade').eq('phone', normalizedPhone).maybeSingle();
         if (data?.name) studentName = data.name;
         if (data?.grade) grade = data.grade;
     } catch (e) { console.error('Không lấy được thông tin học sinh', e); }
