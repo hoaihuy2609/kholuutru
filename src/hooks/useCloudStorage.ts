@@ -156,12 +156,12 @@ export const useCloudStorage = () => {
             } else {
                 if (data.is_active === false) return false;
                 if (data.grade) dbGrade = data.grade;
+                // Chỉ update machine_id và activation_key khi data hợp lệ
+                await supabase.from('students').update({
+                    machine_id: machineId,
+                    activation_key: CryptoJS.SHA256(key).toString(),
+                }).eq('phone', phoneStr);
             }
-            // Lưu machine_id và activation_key lên Supabase
-            await supabase.from('students').update({
-                machine_id: machineId,
-                activation_key: CryptoJS.SHA256(key).toString(),
-            }).eq('phone', phoneStr);
         } catch (err) {
             console.error('[activateSystem] unexpected error:', err);
             // Lỗi mạng — key đã khớp, tiếp tục kích hoạt

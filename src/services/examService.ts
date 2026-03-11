@@ -148,11 +148,12 @@ export const loadExams = async (): Promise<Exam[]> => {
         const { data } = await supabase.from('vault_index').select('telegram_file_id').eq('grade', 0).single();
         fileId = data?.telegram_file_id || null;
     } catch { /* offline */ }
-    if (!fileId) fileId = localStorage.getItem('pv_last_fetched_exam_index');
+
+    const lastFetchedId = localStorage.getItem('pv_last_fetched_exam_index');
+    if (!fileId) fileId = lastFetchedId;
     if (!fileId) return cachedExams;
 
     // Fast path: already up-to-date
-    const lastFetchedId = localStorage.getItem('pv_last_fetched_exam_index');
     if (fileId === lastFetchedId && cachedExams.length > 0) return cachedExams;
 
     // Download and decrypt master index

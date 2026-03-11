@@ -40,7 +40,7 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
         finally { setLoading(false); }
     };
 
-    useEffect(() => { load(); }, [isAdmin]);
+    useEffect(() => { load(); }, [isAdmin, onLoadHistory]);
 
     const formatDate = (isoStr: string) => {
         const d = new Date(isoStr);
