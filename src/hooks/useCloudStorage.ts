@@ -504,7 +504,7 @@ export const useCloudStorage = () => {
             lessonVersions,
         };
         const indexEncrypted = await aesEncrypt(JSON.stringify(indexPayload));
-        const indexBlob = new Blob([indexEncrypted.buffer as ArrayBuffer], { type: 'application/octet-stream' });
+        const indexBlob = new Blob([indexEncrypted], { type: 'application/octet-stream' });
         const indexForm = new FormData();
         indexForm.append('chat_id', TELEGRAM_CHAT_ID);
         indexForm.append('document', indexBlob, `index_grade${grade}_v3.json`);
