@@ -8,7 +8,7 @@ import {
 import {
     TrendingUp, TrendingDown, Users, Award, AlertTriangle,
     Search, Download, RefreshCw, BarChart2, UserX,
-    ChevronRight, ChevronUp, ChevronDown, Minus, BookOpen, CheckCircle, ArrowLeft,
+    ChevronRight, ChevronUp, ChevronDown, Minus, BookOpen, CheckCircle, ArrowLeft, X,
     Sparkles, Target, Zap, Star, Brain, ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
 import { ExamResultRecord } from '../types';
@@ -113,6 +113,126 @@ function buildProfiles(records: ExamResultRecord[]): StudentProfile[] {
     });
 }
 
+// ── StudentDetailModal ────────────────────────────────────────────
+interface StudentDetailModalProps {
+    studentName: string;
+    studentPhone: string;
+    records: ExamResultRecord[];
+    onClose: () => void;
+}
+const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ studentName, studentPhone, records, onClose }) => {
+    const sorted = useMemo(
+        () => [...records].sort((a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime()),
+        [records],
+    );
+    const avg = sorted.length > 0 ? sorted.reduce((s, r) => s + r.score, 0) / sorted.length : 0;
+    const best = sorted.length > 0 ? Math.max(...sorted.map(r => r.score)) : 0;
+    const worst = sorted.length > 0 ? Math.min(...sorted.map(r => r.score)) : 0;
+    const initials = studentName.trim().split(/\s+/).filter(Boolean).map(p => p[0]).join('').toUpperCase().slice(0, 2);
+    const maskedPhone = studentPhone.length >= 6 ? studentPhone.slice(0, 3) + ' **** ' + studentPhone.slice(-2) : studentPhone;
+    return (
+        <div
+            className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+            style={{ background: 'rgba(26,26,26,0.5)' }}
+            onClick={onClose}
+        >
+            <div
+                className="w-full overflow-hidden"
+                style={{ maxWidth: '560px', background: '#FFFFFF', border: '1px solid #E9E9E7', borderRadius: '16px', boxShadow: '0 12px 40px rgba(0,0,0,0.18)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E9E9E7', background: '#EEF0FB' }}>
+                    <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: '#6B7CDB' }}>
+                            {initials}
+                        </div>
+                        <div>
+                            <h3 className="text-base font-bold" style={{ color: '#1A1A1A' }}>{studentName}</h3>
+                            <p className="text-xs mt-0.5" style={{ color: '#787774' }}>{maskedPhone} · {sorted.length} bài thi</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="flex gap-4">
+                            <div className="text-center">
+                                <div className="text-xl font-bold" style={{ color: scoreTextColor(avg) }}>{avg.toFixed(2)}</div>
+                                <div className="text-[10px] uppercase tracking-wider" style={{ color: '#AEACA8' }}>Điểm TB</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-xl font-bold" style={{ color: scoreTextColor(best) }}>{best.toFixed(1)}</div>
+                                <div className="text-[10px] uppercase tracking-wider" style={{ color: '#AEACA8' }}>Cao nhất</div>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="p-1.5 rounded-lg transition-colors"
+                            style={{ color: '#787774' }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Table */}
+                <div style={{ overflowY: 'auto', flex: 1 }}>
+                    {sorted.length === 0 ? (
+                        <div className="py-12 text-center">
+                            <BookOpen className="w-8 h-8 mx-auto mb-2" style={{ color: '#CFCFCB' }} />
+                            <p className="text-sm" style={{ color: '#AEACA8' }}>Chưa có bài thi nào</p>
+                        </div>
+                    ) : (
+                        <table className="w-full text-sm border-collapse">
+                            <thead>
+                                <tr style={{ background: '#F7F6F3', borderBottom: '2px solid #E9E9E7' }}>
+                                    <th className="px-4 py-2.5 text-center text-xs font-semibold" style={{ color: '#787774', width: 40 }}>#</th>
+                                    <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: '#787774' }}>Bài Thi</th>
+                                    <th className="px-4 py-2.5 text-center text-xs font-semibold" style={{ color: '#787774', width: 75 }}>Điểm</th>
+                                    <th className="px-4 py-2.5 text-center text-xs font-semibold" style={{ color: '#787774', width: 105 }}>Ngày Thi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sorted.map((r, idx) => (
+                                    <tr key={`${r.exam_id}-${idx}`} style={{ borderBottom: '1px solid #F1F0EC', background: idx % 2 === 0 ? '#fff' : '#FAFAF9' }}>
+                                        <td className="px-4 py-2.5 text-center text-xs" style={{ color: '#AEACA8' }}>{idx + 1}</td>
+                                        <td className="px-4 py-2.5 text-sm" style={{ color: '#1A1A1A' }}>{r.exam_title}</td>
+                                        <td className="px-4 py-2.5 text-center">
+                                            <span className="inline-block px-2 py-0.5 rounded text-xs font-bold" style={{ background: scoreCellBg(r.score), color: scoreTextColor(r.score) }}>
+                                                {r.score.toFixed(1)}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-2.5 text-center text-xs" style={{ color: '#AEACA8' }}>
+                                            {new Date(r.submitted_at).toLocaleDateString('vi-VN')}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="px-5 py-3 flex items-center justify-between text-xs" style={{ borderTop: '1px solid #E9E9E7', background: '#FAFAF9' }}>
+                    <span style={{ color: '#AEACA8' }}>
+                        {sorted.length} bài · Thấp nhất:{' '}
+                        <span style={{ color: scoreTextColor(worst), fontWeight: 600 }}>{worst.toFixed(1)}</span>
+                    </span>
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                        style={{ background: '#EEF0FB', color: '#6B7CDB' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#DDE1F8'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#EEF0FB'}
+                    >
+                        Đóng
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ── Main component ────────────────────────────────────────────────
 // ── GradebookTable child component ───────────────────────────────
 interface GradebookRow {
@@ -126,8 +246,9 @@ interface GradebookTableProps {
     examColumns: { id: string; title: string }[];
     sortAsc: boolean;
     onToggleSort: () => void;
+    onSelectStudent?: (phone: string, name: string) => void;
 }
-const GradebookTable: React.FC<GradebookTableProps> = ({ rows, examColumns, sortAsc, onToggleSort }) => {
+const GradebookTable: React.FC<GradebookTableProps> = ({ rows, examColumns, sortAsc, onToggleSort, onSelectStudent }) => {
     if (rows.length === 0) {
         return (
             <div className="rounded-xl py-16 text-center" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
@@ -188,7 +309,12 @@ const GradebookTable: React.FC<GradebookTableProps> = ({ rows, examColumns, sort
                                     <td className="px-3 py-2.5 text-xs text-center" style={{ color: '#AEACA8', position: 'sticky', left: 0, background: rowBase, zIndex: 10, boxShadow: '2px 0 4px rgba(0,0,0,0.04)' }}>
                                         {idx + 1}
                                     </td>
-                                    <td className="px-4 py-2.5 font-medium text-sm" style={{ color: '#1A1A1A', position: 'sticky', left: 48, background: rowBase, zIndex: 10, boxShadow: '2px 0 4px rgba(0,0,0,0.04)' }}>
+                                    <td
+                                        className="px-4 py-2.5 font-medium text-sm cursor-pointer"
+                                        style={{ color: '#6B7CDB', position: 'sticky', left: 48, background: rowBase, zIndex: 10, boxShadow: '2px 0 4px rgba(0,0,0,0.04)', textDecoration: 'underline', textDecorationColor: '#6B7CDB66' }}
+                                        onClick={() => onSelectStudent?.(row.phone, row.name)}
+                                        title="Xem bảng điểm cá nhân"
+                                    >
                                         {row.name}
                                     </td>
                                     {examColumns.map(col => {
@@ -417,6 +543,8 @@ const StatsPanel: React.FC = () => {
     const [selectedExamId, setSelectedExamId] = useState<string>('');
     const [sortAsc, setSortAsc] = useState(false);
     const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
+    const [selectedStudentPhone, setSelectedStudentPhone] = useState<string>('');
+    const [selectedStudentName, setSelectedStudentName] = useState<string>('');
 
     // ── NEW VIEW: Derived data (useMemo only, no extra fetches) ───
     const gradeRecords = useMemo(
@@ -736,11 +864,22 @@ const StatsPanel: React.FC = () => {
                     examColumns={gradebookData.examColumns}
                     sortAsc={sortAsc}
                     onToggleSort={() => setSortAsc(s => !s)}
+                    onSelectStudent={(phone, name) => { setSelectedStudentPhone(phone); setSelectedStudentName(name); }}
                 />
             ) : (
                 <ExamAnalysis
                     examRecords={selectedExamRecords}
                     totalStudentsInGrade={totalStudentsInGrade}
+                />
+            )}
+
+            {/* Student detail modal */}
+            {selectedStudentPhone && (
+                <StudentDetailModal
+                    studentName={selectedStudentName}
+                    studentPhone={selectedStudentPhone}
+                    records={filteredByClassRecords.filter(r => r.student_phone === selectedStudentPhone)}
+                    onClose={() => setSelectedStudentPhone('')}
                 />
             )}
         </div>
