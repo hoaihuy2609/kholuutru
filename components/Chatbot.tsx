@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Bot, User, RefreshCw, Copy, Check } from 'lucide-react';
 import { getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
-import { supabase } from '../src/lib/supabase';
+import { supabase, SupabaseConfigError } from '../src/lib/supabase';
 import { normalizePhone } from '../src/utils/phone';
 
 const Loader2 = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
@@ -102,8 +102,12 @@ const Chatbot: React.FC = () => {
                 }
             } catch (err) {
                 console.error('[Chatbot] Unexpected error:', err);
-                const msg = err instanceof Error ? err.message : String(err);
-                addMessage(`Lỗi: ${msg}. Bạn thử lại hoặc liên hệ thầy Huy nhé.`, 'bot');
+                if (err instanceof SupabaseConfigError) {
+                    addMessage('Hệ thống đang bảo trì. Vui lòng thử lại sau hoặc liên hệ thầy Huy nhé.', 'bot');
+                } else {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    addMessage(`Lỗi: ${msg}. Bạn thử lại hoặc liên hệ thầy Huy nhé.`, 'bot');
+                }
             } finally {
                 setIsLoading(false);
             }

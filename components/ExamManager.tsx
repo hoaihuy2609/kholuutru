@@ -53,7 +53,7 @@ const ExamManager: React.FC<ExamManagerProps> = ({
     // Load exams on mount
     useEffect(() => {
         onLoadExams().then(data => { setExams(data); setLoadingExams(false); }).catch(() => setLoadingExams(false));
-    }, []);
+    }, [onLoadExams]);
 
     const handleDeleteExam = async (examId: string, title: string) => {
         if (!window.confirm(`Xóa đề thi "${title}"?`)) return;
