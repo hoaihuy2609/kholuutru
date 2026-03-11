@@ -540,11 +540,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr style={{ background: '#FAFAF9' }}>
-                                        {['Học viên', 'Lớp', 'Số điện thoại', 'Mã máy', 'Kích hoạt', 'Trạng thái', 'Quản lý'].map((h, i) => (
+                                        {['Học viên', 'Lớp', 'Số điện thoại', 'Mã máy', 'Trạng thái', 'Quản lý'].map((h, i) => (
                                             <th
                                                 key={h}
                                                 className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider"
-                                                style={{ color: '#AEACA8', textAlign: i === 6 ? 'right' : 'left', borderBottom: '1px solid #E9E9E7' }}
+                                                style={{ color: '#AEACA8', textAlign: i === 5 ? 'right' : 'left', borderBottom: '1px solid #E9E9E7' }}
                                             >
                                                 {h}
                                             </th>
@@ -554,7 +554,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                 <tbody>
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={7} className="px-5 py-16 text-center">
+                                            <td colSpan={6} className="px-5 py-16 text-center">
                                                 <div className="flex flex-col items-center gap-3">
                                                     <Loader2 className="w-8 h-8" style={{ color: '#6B7CDB' } as React.CSSProperties} />
                                                     <p className="text-sm" style={{ color: '#787774' }}>Đang nạp dữ liệu từ Supabase...</p>
@@ -563,7 +563,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                         </tr>
                                     ) : filteredStudents.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-5 py-16 text-center text-sm italic" style={{ color: '#AEACA8' }}>
+                                            <td colSpan={6} className="px-5 py-16 text-center text-sm italic" style={{ color: '#AEACA8' }}>
                                                 Không tìm thấy học viên nào phù hợp.
                                             </td>
                                         </tr>
@@ -646,19 +646,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                                                             </span>
                                                         )}
                                                     </td>
-                                                    {/* Key */}
-                                                    <td className="px-5 py-4">
-                                                        {s.key ? (
-                                                            <span
-                                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium"
-                                                                style={{ background: '#EEF0FB', color: '#6B7CDB', border: '1px solid #6B7CDB22' }}
-                                                            >
-                                                                {s.key}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-xs" style={{ color: '#CFCFCB' }}>—</span>
-                                                        )}
-                                                    </td>
+
                                                     {/* Status */}
                                                     <td className="px-5 py-4">
                                                         {isKicked ? (
