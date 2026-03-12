@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Clock, ChevronLeft, Send, AlertTriangle, CheckCircle, RefreshCw, FileText } from 'lucide-react';
 import { Exam, ExamTFAnswer, ExamSubmission } from '../types';
+import ExamCountdownTimer from './ExamCountdownTimer';
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
 const PDF_CACHE_DB = 'pv_pdf_cache';
@@ -108,13 +109,11 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     const [mc, setMC] = useState<string[]>(emptyMC());
     const [tf, setTF] = useState<ExamTFAnswer[]>(emptyTF());
     const [sa, setSA] = useState<string[]>(emptySA());
-    const [secondsLeft, setSecondsLeft] = useState(exam.duration * 60);
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
     const [pdfLoading, setPdfLoading] = useState(true);
     const [showConfirm, setShowConfirm] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const startTime = useRef(Date.now());
-    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const ACCENT = '#6B7CDB';
     const tf_keys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
@@ -175,7 +174,6 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
         }
         if (submitted) return;
         setSubmitted(true);
-        if (timerRef.current) clearInterval(timerRef.current);
         const submission: ExamSubmission = {
             examId: exam.id,
             mc, tf, sa,
@@ -185,24 +183,6 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
         onSubmit(submission);
     }, [submitted, mc, tf, sa, exam.id, onSubmit, isPreviewMode, onShowToast]);
 
-    // Giữ ref luôn trỏ tới handleSubmitFinal mới nhất, tránh timer re-create mỗi lần user chọn đáp án
-    const handleSubmitFinalRef = useRef(handleSubmitFinal);
-    useEffect(() => { handleSubmitFinalRef.current = handleSubmitFinal; }, [handleSubmitFinal]);
-
-    useEffect(() => {
-        timerRef.current = setInterval(() => {
-            setSecondsLeft(prev => {
-                if (prev <= 1) {
-                    if (timerRef.current) clearInterval(timerRef.current);
-                    handleSubmitFinalRef.current();
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps — intentionally mount-only
-
     const toggleMC = (i: number, letter: string) =>
         setMC(prev => { const arr = [...prev]; arr[i] = arr[i] === letter ? '' : letter; return arr; });
 
@@ -211,9 +191,6 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
 
     const setSAVal = (i: number, v: string) =>
         setSA(prev => { const arr = [...prev]; arr[i] = v; return arr; });
-
-    const pct = secondsLeft / (exam.duration * 60);
-    const isUrgent = secondsLeft <= 120;
 
     const answeredCount = mc.filter(Boolean).length
         + tf.filter(t => t.a || t.b || t.c || t.d).length
@@ -256,30 +233,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                     <p className="text-[10px] mt-0.5" style={{ color: '#AEACA8' }}>{answeredCount}/{totalQ} câu đã làm</p>
                 </div>
 
-                {/* Timer */}
-                <div
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg font-mono font-bold text-sm transition-all"
-                    style={{
-                        background: isUrgent ? 'rgba(224, 62, 62, 0.1)' : '#3B3B3B',
-                        color: isUrgent ? '#E03E3E' : '#C7C4B8',
-                        border: `1px solid ${isUrgent ? 'rgba(224, 62, 62, 0.2)' : 'transparent'}`,
-                        animation: isUrgent ? 'pulse 1s infinite' : 'none',
-                    }}
-                >
-                    <Clock className="w-4 h-4 shrink-0" />
-                    {formatTime(secondsLeft)}
-                </div>
-            </div>
-
-            {/* Timer progress bar */}
-            <div className="w-full h-1 shrink-0" style={{ background: '#333' }}>
-                <div
-                    className="h-full transition-all duration-1000"
-                    style={{
-                        width: `${pct * 100}%`,
-                        background: isUrgent ? 'linear-gradient(90deg,#E03E3E,#F87171)' : `linear-gradient(90deg,${ACCENT},#93ACFF)`,
-                    }}
-                />
+                <ExamCountdownTimer initialSeconds={exam.duration * 60} onTimeUp={handleSubmitFinal} />
             </div>
 
             {/* ── Main Content ── */}
@@ -446,9 +400,6 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                 <p className="text-sm mt-1" style={{ color: '#AEACA8' }}>
                                     Bạn đã làm <strong style={{ color: '#fff' }}>{answeredCount}/{totalQ}</strong> câu.
                                     Sau khi nộp không thể sửa được nữa.
-                                </p>
-                                <p className="text-sm mt-1 font-mono" style={{ color: '#D9730D' }}>
-                                    Còn lại: {formatTime(secondsLeft)}
                                 </p>
                             </div>
                             <div className="flex gap-3">

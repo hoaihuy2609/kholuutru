@@ -8,8 +8,10 @@ import {
     UserMinus, RotateCcw, Ban, ArrowLeft, X, CloudUpload, ClipboardList,
     Edit3, GraduationCap, Building2, Settings2, BarChart2
 } from 'lucide-react';
-import ExamManager from './ExamManager';
+import { useDebounce } from 'use-debounce';
+
 const StatsPanel = React.lazy(() => import('./StatsPanel'));
+const ExamManager = React.lazy(() => import('./ExamManager'));
 import { Exam } from '../types';
 
 interface Student {
@@ -61,6 +63,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [newStudent, setNewStudent] = useState({ sdt: '', name: '', grade: 12, class_id: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -224,13 +227,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
         if (!s) return false;
         const sdt = s.sdt || '';
         const name = s.name || '';
-        const matchSearch = sdt.includes(searchTerm) || name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchSearch = sdt.includes(debouncedSearchTerm) || name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
         const matchGrade = gradeFilter === null || s.grade === gradeFilter;
         const matchClass = classFilter === null || s.class_id === classFilter;
         // Special filter: 'unassigned' = students without any class
         const matchUnassigned = classFilter === 'unassigned' ? (!s.class_id || s.class_id === '') : true;
         return matchSearch && matchGrade && (classFilter === 'unassigned' ? matchUnassigned : matchClass);
-    }), [students, searchTerm, gradeFilter, classFilter]);
+    }), [students, debouncedSearchTerm, gradeFilter, classFilter]);
 
     const classesForGrade = gradeFilter ? classes.filter(c => c.grade === gradeFilter) : classes;
 
@@ -364,13 +367,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
 
                 {/* ── Exam Tab ── */}
                 {activeTab === 'exams' && onUploadExamPdf && onSaveExam && onDeleteExam && onLoadExams && (
-                    <ExamManager
-                        onShowToast={onShowToast}
-                        onUploadExamPdf={onUploadExamPdf}
-                        onSaveExam={onSaveExam}
-                        onDeleteExam={onDeleteExam}
-                        onLoadExams={onLoadExams}
-                    />
+                    <Suspense fallback={<div className="flex items-center justify-center py-24"><RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} /></div>}>
+                        <ExamManager
+                            onShowToast={onShowToast}
+                            onUploadExamPdf={onUploadExamPdf}
+                            onSaveExam={onSaveExam}
+                            onDeleteExam={onDeleteExam}
+                            onLoadExams={onLoadExams}
+                        />
+                    </Suspense>
                 )}
 
                 {/* ── Students Tab ── */}
