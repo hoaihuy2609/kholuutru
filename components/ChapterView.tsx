@@ -13,6 +13,8 @@ interface LessonProgress {
 }
 type ProgressMap = Record<string, LessonProgress>;
 
+const DEFAULT_PROGRESS: LessonProgress = { status: 'none', note: '', updatedAt: 0 };
+
 const STORAGE_KEY = 'physivault_lesson_progress';
 const SECTION_NOTE_KEY = 'physivault_section_notes';
 
@@ -292,6 +294,10 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
     onSelectLesson(lesson);
   }, [onSelectLesson]);
 
+  const handleDeleteLesson = useCallback((lessonId: string) => {
+    onDeleteLesson(lessonId);
+  }, [onDeleteLesson]);
+
   // ── Answer Panel State ───────────────────────────────────────
   interface AnswerPanelState {
     numQuestionsInput: string;
@@ -342,7 +348,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
 
   // ── Progress helpers ────────────────────────
   const getLP = useCallback((id: string): LessonProgress =>
-    progress[id] ?? { status: 'none', note: '', updatedAt: 0 }
+    progress[id] ?? DEFAULT_PROGRESS
     , [progress]);
 
   const cycleStatus = useCallback((e: React.MouseEvent, lessonId: string) => {
@@ -737,7 +743,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
                         onSelectLesson={handleLessonSelect}
                         cycleStatus={cycleStatus} 
                         saveNote={saveNote}
-                        onDeleteLesson={onDeleteLesson}
+                        onDeleteLesson={handleDeleteLesson}
                     />
                   );
                 })}
