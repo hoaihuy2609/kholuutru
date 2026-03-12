@@ -146,11 +146,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ studentName, st
     return (
         <div
             className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in"
-            style={{
-                background: 'rgba(247,246,243,0.72)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
-            }}
+            style={{ background: 'rgba(26,26,26,0.45)' }}
             onClick={onClose}
         >
             <div
@@ -914,6 +910,7 @@ const StatsPanel: React.FC = () => {
 };
 
 export default StatsPanel;
+
 
 
 
