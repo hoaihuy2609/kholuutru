@@ -156,115 +156,101 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ studentName, st
             <div
                 className="w-full overflow-hidden animate-scale-in"
                 style={{
-                    maxWidth: '680px',
-                    maxHeight: '92vh',
+                    maxWidth: '560px',
                     background: '#FFFFFF',
                     border: '1px solid #E9E9E7',
-                    borderRadius: '12px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                    borderRadius: '16px',
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
+                    maxHeight: '80vh',
                     display: 'flex',
                     flexDirection: 'column',
                 }}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div
-                    className="flex items-center justify-between px-5 py-3.5 shrink-0"
-                    style={{ borderBottom: '1px solid #E9E9E7' }}
-                >
-                    <div className="min-w-0 pr-4">
-                        <h3 className="font-semibold text-base truncate" style={{ color: '#1A1A1A' }}>
-                            Bảng điểm học sinh
-                        </h3>
-                        <p className="text-xs mt-0.5 truncate" style={{ color: '#AEACA8' }}>
-                            {studentName} · {maskedPhone} · {sorted.length} bài thi
-                        </p>
+                <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E9E9E7', background: '#EEF0FB' }}>
+                    <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: '#6B7CDB' }}>
+                            {initials}
+                        </div>
+                        <div>
+                            <h3 className="text-base font-bold" style={{ color: '#1A1A1A' }}>{studentName}</h3>
+                            <p className="text-xs mt-0.5" style={{ color: '#787774' }}>{maskedPhone} · {sorted.length} bài thi</p>
+                        </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-1.5 rounded-md transition-colors shrink-0"
-                        style={{ color: '#787774' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                        title="Đóng (Esc)"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <div className="flex gap-4">
+                            <div className="text-center">
+                                <div className="text-xl font-bold" style={{ color: scoreTextColor(avg) }}>{avg.toFixed(2)}</div>
+                                <div className="text-[10px] uppercase tracking-wider" style={{ color: '#AEACA8' }}>Điểm TB</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-xl font-bold" style={{ color: scoreTextColor(best) }}>{best.toFixed(1)}</div>
+                                <div className="text-[10px] uppercase tracking-wider" style={{ color: '#AEACA8' }}>Cao nhất</div>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="p-1.5 rounded-lg transition-colors"
+                            style={{ color: '#787774' }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                            title="Đóng (Esc)"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
 
-                {/* Scrollable body */}
-                <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                    <div className="rounded-xl p-4 flex items-center gap-4" style={{ border: '1px solid #E9E9E7', background: '#FAFAF9' }}>
-                        <div
-                            className="w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black shrink-0"
-                            style={{ background: '#EEF0FB', color: '#6B7CDB', border: '1px solid #DDE2F7' }}
-                        >
-                            {initials || 'HS'}
+                {/* Table */}
+                <div style={{ overflowY: 'auto', flex: 1 }}>
+                    {sorted.length === 0 ? (
+                        <div className="py-12 text-center">
+                            <BookOpen className="w-8 h-8 mx-auto mb-2" style={{ color: '#CFCFCB' }} />
+                            <p className="text-sm" style={{ color: '#AEACA8' }}>Chưa có bài thi nào</p>
                         </div>
-                        <div className="min-w-0">
-                            <div className="text-sm font-semibold truncate" style={{ color: '#1A1A1A' }}>{studentName}</div>
-                            <div className="text-xs mt-0.5 truncate" style={{ color: '#787774' }}>{maskedPhone}</div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3">
-                        {([
-                            { label: 'Điểm TB', value: avg.toFixed(2), bg: '#EEF0FB', color: '#6B7CDB' },
-                            { label: 'Cao nhất', value: best.toFixed(1), bg: '#EAF3EE', color: '#448361' },
-                            { label: 'Thấp nhất', value: worst.toFixed(1), bg: '#FEF0F0', color: '#E03E3E' },
-                        ]).map(card => (
-                            <div key={card.label} className="rounded-xl px-3 py-3 text-center" style={{ background: card.bg, border: '1px solid #E9E9E7' }}>
-                                <div className="text-2xl font-black leading-none" style={{ color: card.color }}>{card.value}</div>
-                                <div className="text-[10px] mt-1 font-semibold uppercase tracking-wider" style={{ color: '#787774' }}>{card.label}</div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
-                        {sorted.length === 0 ? (
-                            <div className="py-14 text-center">
-                                <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
-                                <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có bài thi nào</p>
-                            </div>
-                        ) : (
-                            <table className="w-full text-sm border-collapse">
-                                <thead>
-                                    <tr style={{ background: '#F7F6F3', borderBottom: '2px solid #E9E9E7' }}>
-                                        <th className="px-5 py-3 text-center text-xs font-semibold" style={{ color: '#AEACA8', width: 44 }}>#</th>
-                                        <th className="px-5 py-3 text-left text-xs font-semibold" style={{ color: '#787774' }}>Bài Thi</th>
-                                        <th className="px-5 py-3 text-center text-xs font-semibold" style={{ color: '#787774', width: 80 }}>Điểm</th>
-                                        <th className="px-5 py-3 text-center text-xs font-semibold" style={{ color: '#787774', width: 110 }}>Ngày Thi</th>
+                    ) : (
+                        <table className="w-full text-sm border-collapse">
+                            <thead>
+                                <tr style={{ background: '#F7F6F3', borderBottom: '2px solid #E9E9E7' }}>
+                                    <th className="px-4 py-2.5 text-center text-xs font-semibold" style={{ color: '#787774', width: 40 }}>#</th>
+                                    <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: '#787774' }}>Bài Thi</th>
+                                    <th className="px-4 py-2.5 text-center text-xs font-semibold" style={{ color: '#787774', width: 75 }}>Điểm</th>
+                                    <th className="px-4 py-2.5 text-center text-xs font-semibold" style={{ color: '#787774', width: 105 }}>Ngày Thi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sorted.map((r, idx) => (
+                                    <tr key={`${r.exam_id}-${idx}`} style={{ borderBottom: '1px solid #F1F0EC', background: idx % 2 === 0 ? '#fff' : '#FAFAF9' }}>
+                                        <td className="px-4 py-2.5 text-center text-xs" style={{ color: '#AEACA8' }}>{idx + 1}</td>
+                                        <td className="px-4 py-2.5 text-sm" style={{ color: '#1A1A1A' }}>{r.exam_title}</td>
+                                        <td className="px-4 py-2.5 text-center">
+                                            <span className="inline-block px-2 py-0.5 rounded text-xs font-bold" style={{ background: scoreCellBg(r.score), color: scoreTextColor(r.score) }}>
+                                                {r.score.toFixed(1)}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-2.5 text-center text-xs" style={{ color: '#AEACA8' }}>
+                                            {new Date(r.submitted_at).toLocaleDateString('vi-VN')}
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {sorted.map((r, idx) => (
-                                        <tr key={`${r.exam_id}-${idx}`} style={{ borderBottom: '1px solid #F1F0EC', background: idx % 2 === 0 ? '#fff' : '#FAFAF9' }}>
-                                            <td className="px-5 py-3 text-center text-xs font-medium" style={{ color: '#CFCFCB' }}>{idx + 1}</td>
-                                            <td className="px-5 py-3 text-sm font-medium" style={{ color: '#1A1A1A' }}>{r.exam_title}</td>
-                                            <td className="px-5 py-3 text-center">
-                                                <span className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold" style={{ background: scoreCellBg(r.score) || '#F1F0EC', color: scoreTextColor(r.score) }}>
-                                                    {r.score.toFixed(1)}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-3 text-center text-xs" style={{ color: '#AEACA8' }}>
-                                                {new Date(r.submitted_at).toLocaleDateString('vi-VN')}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
-                    </div>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
 
                 {/* Footer */}
-                <div className="px-5 py-3 flex justify-end shrink-0" style={{ borderTop: '1px solid #E9E9E7', background: '#FAFAF9' }}>
+                <div className="px-5 py-3 flex items-center justify-between text-xs" style={{ borderTop: '1px solid #E9E9E7', background: '#FAFAF9' }}>
+                    <span style={{ color: '#AEACA8' }}>
+                        {sorted.length} bài · Thấp nhất:{' '}
+                        <span style={{ color: scoreTextColor(worst), fontWeight: 600 }}>{worst.toFixed(1)}</span>
+                    </span>
                     <button
                         onClick={onClose}
-                        className="px-5 py-2 rounded-xl text-sm font-semibold transition-opacity"
-                        style={{ background: '#6B7CDB', color: '#fff', boxShadow: '0 2px 8px rgba(107,124,219,0.25)' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.88'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+                        className="px-4 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                        style={{ background: '#EEF0FB', color: '#6B7CDB' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#DDE1F8'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#EEF0FB'}
                     >
                         Đóng
                     </button>
@@ -928,5 +914,6 @@ const StatsPanel: React.FC = () => {
 };
 
 export default StatsPanel;
+
 
 
