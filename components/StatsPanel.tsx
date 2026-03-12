@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../src/lib/supabase';
 import {
     BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -130,54 +130,95 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ studentName, st
     const worst = sorted.length > 0 ? Math.min(...sorted.map(r => r.score)) : 0;
     const initials = studentName.trim().split(/\s+/).filter(Boolean).map(p => p[0]).join('').toUpperCase().slice(0, 2);
     const maskedPhone = studentPhone.length >= 6 ? studentPhone.slice(0, 3) + ' **** ' + studentPhone.slice(-2) : studentPhone;
+
+    useEffect(() => {
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = prevOverflow; };
+    }, []);
+
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handleEscape);
+        return () => window.removeEventListener('keydown', handleEscape);
+    }, [onClose]);
+
     return (
         <div
-            className="fixed inset-0 flex items-center justify-center p-4"
-            style={{ background: 'rgba(15,15,25,0.65)', backdropFilter: 'blur(6px)', zIndex: 9999 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in"
+            style={{ background: 'rgba(26,26,26,0.45)' }}
             onClick={onClose}
         >
             <div
-                className="w-full"
-                style={{ maxWidth: '620px', borderRadius: '20px', boxShadow: '0 24px 64px rgba(0,0,0,0.32)', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'linear-gradient(160deg, #5C6FCC 0%, #7B4FA6 100%)' }}
+                className="w-full overflow-hidden animate-scale-in"
+                style={{
+                    maxWidth: '680px',
+                    maxHeight: '92vh',
+                    background: '#FFFFFF',
+                    border: '1px solid #E9E9E7',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                }}
                 onClick={e => e.stopPropagation()}
             >
-                {/* ── Hero ── */}
-                <div className="relative px-6 pt-6 pb-12 shrink-0">
+                {/* Header */}
+                <div
+                    className="flex items-center justify-between px-5 py-3.5 shrink-0"
+                    style={{ borderBottom: '1px solid #E9E9E7' }}
+                >
+                    <div className="min-w-0 pr-4">
+                        <h3 className="font-semibold text-base truncate" style={{ color: '#1A1A1A' }}>
+                            Bảng điểm học sinh
+                        </h3>
+                        <p className="text-xs mt-0.5 truncate" style={{ color: '#AEACA8' }}>
+                            {studentName} · {maskedPhone} · {sorted.length} bài thi
+                        </p>
+                    </div>
                     <button
                         onClick={onClose}
-                        className="absolute top-4 right-4 p-1.5 rounded-full transition-all"
-                        style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.28)'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.15)'}
+                        className="p-1.5 rounded-md transition-colors shrink-0"
+                        style={{ color: '#787774' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                        title="Đóng (Esc)"
                     >
                         <X className="w-4 h-4" />
                     </button>
-                    <div className="flex items-center gap-4 mb-5">
-                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black text-white shrink-0" style={{ background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.32)' }}>
-                            {initials}
+                </div>
+
+                {/* Scrollable body */}
+                <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                    <div className="rounded-xl p-4 flex items-center gap-4" style={{ border: '1px solid #E9E9E7', background: '#FAFAF9' }}>
+                        <div
+                            className="w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black shrink-0"
+                            style={{ background: '#EEF0FB', color: '#6B7CDB', border: '1px solid #DDE2F7' }}
+                        >
+                            {initials || 'HS'}
                         </div>
-                        <div>
-                            <h3 className="text-xl font-bold text-white leading-tight">{studentName}</h3>
-                            <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.68)' }}>{maskedPhone} · {sorted.length} bài thi</p>
+                        <div className="min-w-0">
+                            <div className="text-sm font-semibold truncate" style={{ color: '#1A1A1A' }}>{studentName}</div>
+                            <div className="text-xs mt-0.5 truncate" style={{ color: '#787774' }}>{maskedPhone}</div>
                         </div>
                     </div>
+
                     <div className="grid grid-cols-3 gap-3">
-                        {([{ label: 'Điểm TB', value: avg.toFixed(2) }, { label: 'Cao nhất', value: best.toFixed(1) }, { label: 'Thấp nhất', value: worst.toFixed(1) }]).map(card => (
-                            <div key={card.label} className="rounded-xl px-3 py-3 text-center" style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.2)' }}>
-                                <div className="text-2xl font-black text-white leading-none">{card.value}</div>
-                                <div className="text-[10px] mt-1 font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.6)' }}>{card.label}</div>
+                        {([
+                            { label: 'Điểm TB', value: avg.toFixed(2), bg: '#EEF0FB', color: '#6B7CDB' },
+                            { label: 'Cao nhất', value: best.toFixed(1), bg: '#EAF3EE', color: '#448361' },
+                            { label: 'Thấp nhất', value: worst.toFixed(1), bg: '#FEF0F0', color: '#E03E3E' },
+                        ]).map(card => (
+                            <div key={card.label} className="rounded-xl px-3 py-3 text-center" style={{ background: card.bg, border: '1px solid #E9E9E7' }}>
+                                <div className="text-2xl font-black leading-none" style={{ color: card.color }}>{card.value}</div>
+                                <div className="text-[10px] mt-1 font-semibold uppercase tracking-wider" style={{ color: '#787774' }}>{card.label}</div>
                             </div>
                         ))}
                     </div>
-                </div>
 
-                {/* ── Raised white card ── */}
-                <div
-                    style={{ flex: 1, overflow: 'hidden', marginTop: '-28px', marginLeft: '12px', marginRight: '12px', borderRadius: '20px 20px 0 0', background: '#FFFFFF', boxShadow: '0 -8px 28px rgba(0,0,0,0.14)', display: 'flex', flexDirection: 'column' }}
-                >
-                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
                         {sorted.length === 0 ? (
-                            <div className="py-16 text-center">
+                            <div className="py-14 text-center">
                                 <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
                                 <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có bài thi nào</p>
                             </div>
@@ -210,17 +251,19 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ studentName, st
                             </table>
                         )}
                     </div>
-                    <div className="px-6 py-4 flex justify-end shrink-0" style={{ borderTop: '1px solid #F1F0EC', background: '#FAFAF9' }}>
-                        <button
-                            onClick={onClose}
-                            className="px-5 py-2 rounded-xl text-sm font-semibold transition-opacity"
-                            style={{ background: 'linear-gradient(135deg,#5C6FCC,#7B4FA6)', color: '#fff', boxShadow: '0 2px 8px rgba(92,111,204,0.35)' }}
-                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.88'}
-                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
-                        >
-                            Đóng
-                        </button>
-                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-5 py-3 flex justify-end shrink-0" style={{ borderTop: '1px solid #E9E9E7', background: '#FAFAF9' }}>
+                    <button
+                        onClick={onClose}
+                        className="px-5 py-2 rounded-xl text-sm font-semibold transition-opacity"
+                        style={{ background: '#6B7CDB', color: '#fff', boxShadow: '0 2px 8px rgba(107,124,219,0.25)' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.88'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+                    >
+                        Đóng
+                    </button>
                 </div>
             </div>
         </div>
@@ -881,3 +924,4 @@ const StatsPanel: React.FC = () => {
 };
 
 export default StatsPanel;
+
