@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, UploadCloud, Eye, BookOpen, Zap, CheckCircle2, Circle, X, RotateCcw, ClipboardList, Download } from 'lucide-react';
 import SearchBar from './SearchBar';
+import { useDebounce } from 'use-debounce';
 import { Chapter, Lesson, StoredFile } from '../types';
 
 // ── Progress Types ──────────────────────────────────────────
@@ -138,7 +139,6 @@ const ProgressBar: React.FC<{ total: number; done: number; inProgress: number }>
   );
 };
 
-// ── Pure sort helper (outside component – no closure deps) ──────
 function sortFiles(files: StoredFile[], option: 'newest' | 'oldest' | 'az' | 'za') {
   return [...files].sort((a, b) => {
     switch (option) {
@@ -150,6 +150,94 @@ function sortFiles(files: StoredFile[], option: 'newest' | 'oldest' | 'az' | 'za
     }
   });
 }
+
+// ── Lesson Card ───────────────────────────────────────────
+const LessonCard = React.memo(({ lesson, lp, isDone, isAdmin, onSelectLesson, cycleStatus, saveNote, onDeleteLesson }: {
+  lesson: Lesson; lp: LessonProgress; isDone: boolean; isAdmin: boolean;
+  onSelectLesson: (lesson: Lesson) => void;
+  cycleStatus: (e: React.MouseEvent, lessonId: string) => void;
+  saveNote: (lessonId: string, note: string) => void;
+  onDeleteLesson: (lessonId: string) => void;
+}) => {
+  return (
+    <div
+      onClick={() => onSelectLesson(lesson)}
+      className="flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer transition-colors group"
+      style={{
+        background: isDone ? '#F7FBF8' : '#FFFFFF',
+        border: '1px solid #E9E9E7',
+        opacity: isDone ? 0.82 : 1,
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.background = isDone ? '#EEF7F3' : '#F7F6F3';
+        (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.background = isDone ? '#F7FBF8' : '#FFFFFF';
+        (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
+      }}
+    >
+      {!isAdmin && (
+        <StatusBtn status={lp.status} onClick={e => cycleStatus(e, lesson.id)} />
+      )}
+
+      <div
+        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+        style={{ background: isDone ? '#EAF3EE' : '#F1F0EC' }}
+      >
+        <Folder className="w-4 h-4" style={{ color: isDone ? '#448361' : '#787774' }} />
+      </div>
+
+      <div className="overflow-hidden min-w-0" style={{ minWidth: 80 }}>
+        <h4
+          className="text-sm font-medium truncate"
+          style={{
+            color: isDone ? '#448361' : '#1A1A1A',
+            textDecoration: isDone ? 'line-through' : 'none',
+            textDecorationColor: '#44836180',
+          }}
+        >
+          {lesson.name}
+        </h4>
+        <p className="text-[10px] uppercase mt-0.5" style={{ color: '#AEACA8' }}>
+          {new Date(lesson.createdAt).toLocaleDateString('vi-VN')}
+        </p>
+      </div>
+
+      {!isAdmin && !isDone && (
+        <InlineNote
+          lessonId={lesson.id}
+          note={lp.note}
+          onSave={saveNote}
+        />
+      )}
+
+      {!isAdmin && isDone && (
+        <span
+          className="flex-1 text-right text-[10px] font-semibold"
+          style={{ color: '#448361' }}
+        >
+          ✓ Xong
+        </span>
+      )}
+
+      <div className="flex items-center gap-1 shrink-0">
+        {isAdmin && (
+          <button
+            onClick={e => { e.stopPropagation(); onDeleteLesson(lesson.id); }}
+            className="p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+            style={{ color: '#E03E3E' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FEE2E2'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+        <ChevronRight className="w-4 h-4" style={{ color: '#AEACA8' }} />
+      </div>
+    </div>
+  );
+});
 
 // ── Main Component ───────────────────────────────────────────
 interface ChapterViewProps {
@@ -182,6 +270,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
   const [newLessonName, setNewLessonName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'az' | 'za'>('az');
   const [trueFalseSort, setTrueFalseSort] = useState<'newest' | 'oldest' | 'az' | 'za'>('az');
   const [advancedSort, setAdvancedSort] = useState<'newest' | 'oldest' | 'az' | 'za'>('az');
@@ -198,6 +287,10 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
       return updated;
     });
   }, []);
+
+  const handleLessonSelect = useCallback((lesson: Lesson) => {
+    onSelectLesson(lesson);
+  }, [onSelectLesson]);
 
   // ── Answer Panel State ───────────────────────────────────────
   interface AnswerPanelState {
@@ -287,7 +380,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
   );
 
   const filteredLessons = useMemo(() => lessons
-    .filter(l => (l.name || '').toLowerCase().normalize('NFC').includes(searchTerm.toLowerCase().trim().normalize('NFC')))
+    .filter(l => (l.name || '').toLowerCase().normalize('NFC').includes(debouncedSearchTerm.toLowerCase().trim().normalize('NFC')))
     .sort((a, b) => {
       switch (sortOption) {
         case 'newest': return b.createdAt - a.createdAt;
@@ -296,7 +389,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
         case 'za': return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
         default: return 0;
       }
-    }), [lessons, searchTerm, sortOption]);
+    }), [lessons, debouncedSearchTerm, sortOption]);
 
   // Progress summary
   const doneCount = useMemo(() => lessons.filter(l => getLP(l.id).status === 'done').length, [lessons, getLP]);
@@ -635,89 +728,17 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
                   const isDone = lp.status === 'done';
 
                   return (
-                    <div
-                      key={lesson.id}
-                      onClick={() => onSelectLesson(lesson)}
-                      className="flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer transition-colors group"
-                      style={{
-                        background: isDone ? '#F7FBF8' : '#FFFFFF',
-                        border: '1px solid #E9E9E7',
-                        opacity: isDone ? 0.82 : 1,
-                      }}
-                      onMouseEnter={e => {
-                        (e.currentTarget as HTMLElement).style.background = isDone ? '#EEF7F3' : '#F7F6F3';
-                        (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
-                      }}
-                      onMouseLeave={e => {
-                        (e.currentTarget as HTMLElement).style.background = isDone ? '#F7FBF8' : '#FFFFFF';
-                        (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
-                      }}
-                    >
-                      {/* Status button — chỉ học sinh thấy */}
-                      {!isAdmin && (
-                        <StatusBtn status={lp.status} onClick={e => cycleStatus(e, lesson.id)} />
-                      )}
-
-                      {/* Folder icon */}
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: isDone ? '#EAF3EE' : '#F1F0EC' }}
-                      >
-                        <Folder className="w-4 h-4" style={{ color: isDone ? '#448361' : '#787774' }} />
-                      </div>
-
-                      {/* Name + date */}
-                      <div className="overflow-hidden min-w-0" style={{ minWidth: 80 }}>
-                        <h4
-                          className="text-sm font-medium truncate"
-                          style={{
-                            color: isDone ? '#448361' : '#1A1A1A',
-                            textDecoration: isDone ? 'line-through' : 'none',
-                            textDecorationColor: '#44836180',
-                          }}
-                        >
-                          {lesson.name}
-                        </h4>
-                        <p className="text-[10px] uppercase mt-0.5" style={{ color: '#AEACA8' }}>
-                          {new Date(lesson.createdAt).toLocaleDateString('vi-VN')}
-                        </p>
-                      </div>
-
-                      {/* Inline note (chỉ học sinh, không hiện khi done) */}
-                      {!isAdmin && !isDone && (
-                        <InlineNote
-                          lessonId={lesson.id}
-                          note={lp.note}
-                          onSave={saveNote}
-                        />
-                      )}
-
-                      {/* Done badge */}
-                      {!isAdmin && isDone && (
-                        <span
-                          className="flex-1 text-right text-[10px] font-semibold"
-                          style={{ color: '#448361' }}
-                        >
-                          ✓ Xong
-                        </span>
-                      )}
-
-                      {/* Right side actions */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        {isAdmin && (
-                          <button
-                            onClick={e => { e.stopPropagation(); onDeleteLesson(lesson.id); }}
-                            className="p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100"
-                            style={{ color: '#E03E3E' }}
-                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FEE2E2'}
-                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <ChevronRight className="w-4 h-4" style={{ color: '#AEACA8' }} />
-                      </div>
-                    </div>
+                    <LessonCard 
+                        key={lesson.id} 
+                        lesson={lesson} 
+                        lp={lp} 
+                        isDone={isDone} 
+                        isAdmin={isAdmin} 
+                        onSelectLesson={handleLessonSelect}
+                        cycleStatus={cycleStatus} 
+                        saveNote={saveNote}
+                        onDeleteLesson={onDeleteLesson}
+                    />
                   );
                 })}
               </div>

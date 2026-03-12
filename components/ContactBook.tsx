@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BookOpenCheck, RefreshCw, Calendar, CheckCircle, Target, TrendingUp, TrendingDown, Minus, Flame, Trophy, Hash } from 'lucide-react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine, CartesianGrid } from 'recharts';
+import { useDebounce } from 'use-debounce';
 import { ExamResultRecord } from '../types';
 
 interface ContactBookProps {
@@ -12,10 +13,82 @@ const ACCENT = '#9065B0';
 const ACCENT_LIGHT = '#F3ECF8';
 const ACCENT_BORDER = '#D8BFE8';
 
+const formatDate = (isoStr: string) => {
+    const d = new Date(isoStr);
+    return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+};
+
+const getScoreColor = (score: number) => {
+    if (score >= 8) return '#448361';
+    if (score >= 5) return '#D9730D';
+    return '#E03E3E';
+};
+
+const getScoreBg = (score: number) => {
+    if (score >= 8) return '#EAF3EE';
+    if (score >= 5) return '#FFF3E8';
+    return '#FEF2F2';
+};
+
+const HistoryRow = React.memo(({ record, isLast, isAdmin }: { record: ExamResultRecord, isLast: boolean, isAdmin: boolean }) => {
+    const scoreColor = getScoreColor(record.score);
+    const scoreBg = getScoreBg(record.score);
+    return (
+        <div
+            className="md:grid items-center px-4 py-3 transition-colors flex flex-col md:flex-row gap-2 md:gap-0"
+            style={{
+                gridTemplateColumns: isAdmin ? '1fr 150px 110px 80px' : '1fr 110px 80px',
+                background: '#FFFFFF',
+                borderBottom: isLast ? 'none' : '1px solid #F1F0EC',
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FAFAF9'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FFFFFF'}
+        >
+            {/* Exam title + date */}
+            <div className="min-w-0">
+                <div className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }}>
+                    {record.exam_title}
+                </div>
+                <div className="flex items-center gap-1 mt-0.5 text-xs" style={{ color: '#AEACA8' }}>
+                    <Calendar className="w-3 h-3" />
+                    {formatDate(record.submitted_at)}
+                </div>
+            </div>
+
+            {/* Student (admin only) */}
+            {isAdmin && (
+                <div className="text-xs" style={{ color: '#787774' }}>
+                    <div className="font-medium truncate">{record.student_name}</div>
+                    <div style={{ color: '#AEACA8' }}>{record.student_phone}</div>
+                </div>
+            )}
+
+            {/* Correct answers */}
+            <div className="text-center">
+                <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: '#F1F0EC', color: '#57564F' }}>
+                    <CheckCircle className="w-3 h-3" style={{ color: '#448361' }} />
+                    {record.correct_answers}/{record.total_questions}
+                </span>
+            </div>
+
+            {/* Score */}
+            <div className="text-right">
+                <span
+                    className="inline-block text-sm font-bold tabular-nums px-2 py-0.5 rounded-md"
+                    style={{ color: scoreColor, background: scoreBg }}
+                >
+                    {record.score.toFixed(2)}
+                </span>
+            </div>
+        </div>
+    );
+});
+
 const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => {
     const [history, setHistory] = useState<ExamResultRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
     const [activeTab, setActiveTab] = useState<'history' | 'analytics'>('history');
 
     const [targetScore, setTargetScore] = useState<number>(() => {
@@ -42,23 +115,6 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
 
     useEffect(() => { load(); }, [isAdmin, onLoadHistory]);
 
-    const formatDate = (isoStr: string) => {
-        const d = new Date(isoStr);
-        return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    };
-
-    const getScoreColor = (score: number) => {
-        if (score >= 8) return '#448361';
-        if (score >= 5) return '#D9730D';
-        return '#E03E3E';
-    };
-
-    const getScoreBg = (score: number) => {
-        if (score >= 8) return '#EAF3EE';
-        if (score >= 5) return '#FFF3E8';
-        return '#FEF2F2';
-    };
-
     const handleTargetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let val = parseFloat(e.target.value);
         if (isNaN(val)) val = 0;
@@ -68,15 +124,17 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
         localStorage.setItem('pv_target_score', val.toString());
     };
 
-    const filteredHistory = history.filter(record => {
-        if (!searchTerm) return true;
-        const term = searchTerm.toLowerCase();
-        return (
-            record.exam_title?.toLowerCase().includes(term) ||
-            record.student_name?.toLowerCase().includes(term) ||
-            record.student_phone?.includes(term)
-        );
-    });
+    const filteredHistory = useMemo(() => {
+        return history.filter(record => {
+            if (!debouncedSearchTerm) return true;
+            const term = debouncedSearchTerm.toLowerCase();
+            return (
+                record.exam_title?.toLowerCase().includes(term) ||
+                record.student_name?.toLowerCase().includes(term) ||
+                record.student_phone?.includes(term)
+            );
+        });
+    }, [history, debouncedSearchTerm]);
 
     // Analytics
     const chartData = [...history].sort((a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime()).map((r, i) => ({
@@ -214,60 +272,14 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                             </div>
 
                             {/* Table rows */}
-                            {filteredHistory.map((record, idx) => {
-                                const scoreColor = getScoreColor(record.score);
-                                const scoreBg = getScoreBg(record.score);
-                                return (
-                                    <div
-                                        key={record.id}
-                                        className="md:grid items-center px-4 py-3 transition-colors flex flex-col md:flex-row gap-2 md:gap-0"
-                                        style={{
-                                            gridTemplateColumns: isAdmin ? '1fr 150px 110px 80px' : '1fr 110px 80px',
-                                            background: '#FFFFFF',
-                                            borderBottom: idx < filteredHistory.length - 1 ? '1px solid #F1F0EC' : 'none',
-                                        }}
-                                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FAFAF9'}
-                                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FFFFFF'}
-                                    >
-                                        {/* Exam title + date */}
-                                        <div className="min-w-0">
-                                            <div className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }}>
-                                                {record.exam_title}
-                                            </div>
-                                            <div className="flex items-center gap-1 mt-0.5 text-xs" style={{ color: '#AEACA8' }}>
-                                                <Calendar className="w-3 h-3" />
-                                                {formatDate(record.submitted_at)}
-                                            </div>
-                                        </div>
-
-                                        {/* Student (admin only) */}
-                                        {isAdmin && (
-                                            <div className="text-xs" style={{ color: '#787774' }}>
-                                                <div className="font-medium truncate">{record.student_name}</div>
-                                                <div style={{ color: '#AEACA8' }}>{record.student_phone}</div>
-                                            </div>
-                                        )}
-
-                                        {/* Correct answers */}
-                                        <div className="text-center">
-                                            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: '#F1F0EC', color: '#57564F' }}>
-                                                <CheckCircle className="w-3 h-3" style={{ color: '#448361' }} />
-                                                {record.correct_answers}/{record.total_questions}
-                                            </span>
-                                        </div>
-
-                                        {/* Score */}
-                                        <div className="text-right">
-                                            <span
-                                                className="inline-block text-sm font-bold tabular-nums px-2 py-0.5 rounded-md"
-                                                style={{ color: scoreColor, background: scoreBg }}
-                                            >
-                                                {record.score.toFixed(2)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {filteredHistory.map((record, idx) => (
+                                <HistoryRow
+                                    key={record.id}
+                                    record={record}
+                                    isLast={idx === filteredHistory.length - 1}
+                                    isAdmin={isAdmin}
+                                />
+                            ))}
                         </div>
                     )}
                 </div>
