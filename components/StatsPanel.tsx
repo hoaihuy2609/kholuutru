@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../src/lib/supabase';
 import {
     BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -143,11 +144,13 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ studentName, st
         return () => window.removeEventListener('keydown', handleEscape);
     }, [onClose]);
 
-    return (
+    const portalTarget = typeof document !== 'undefined' ? document.body : null;
+    if (!portalTarget) return null;
+
+    return createPortal(
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
             style={{ background: 'rgba(26,26,26,0.45)' }}
-            onClick={onClose}
         >
             <div
                 className="w-full overflow-hidden animate-scale-in"
@@ -252,10 +255,10 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ studentName, st
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        portalTarget,
     );
 };
-
 // ── Main component ────────────────────────────────────────────────
 // ── GradebookTable child component ───────────────────────────────
 interface GradebookRow {
@@ -910,6 +913,7 @@ const StatsPanel: React.FC = () => {
 };
 
 export default StatsPanel;
+
 
 
 
