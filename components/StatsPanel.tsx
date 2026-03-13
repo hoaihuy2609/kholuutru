@@ -642,14 +642,30 @@ const StatsPanel: React.FC = () => {
     );
     const gradeCfg = GRADE_OPTIONS.find(g => g.value === selectedGrade)!;
     const exportCSVNew = () => {
-        const header = 'Tên,SĐT,Đề thi,Điểm,Câu đúng,Tổng câu,Lớp,Thời gian\n';
-        const csvRows = gradeRecords.map(r =>
-            `"${r.student_name}","${r.student_phone}","${r.exam_title}",${r.score},${r.correct_answers},${r.total_questions},${r.grade},"${new Date(r.submitted_at).toLocaleString('vi-VN')}"`
-        ).join('\n');
+        const { examColumns, rows } = gradebookData;
+        
+        const headerCols = ['"Họ tên"', ...examColumns.map(e => `"${e.title}"`), '"Điểm TB"'];
+        const header = headerCols.join(',') + '\n';
+        
+        const csvRows = rows.map(row => {
+            const scores = examColumns.map(exam => {
+                const score = row.scores[exam.id];
+                return score !== undefined ? score.toFixed(2) : '""';
+            });
+            return [
+                `"${row.name}"`,
+                ...scores,
+                row.avg.toFixed(2)
+            ].join(',');
+        }).join('\n');
+
+        const classNameDisplay = selectedClassFilter === 'all' ? 'TatCa' : selectedClassFilter.replace(/\s+/g, '_');
+        const fileName = `Diem_Lop${selectedGrade}_${classNameDisplay}_${new Date().toISOString().slice(0, 10)}.csv`;
+
         const blob = new Blob(['\uFEFF' + header + csvRows], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = `sodiem_lop${selectedGrade}_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.href = url; a.download = fileName;
         a.click(); URL.revokeObjectURL(url);
     };
 
