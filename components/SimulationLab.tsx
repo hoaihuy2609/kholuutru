@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown, FlaskConical, ArrowLeft, Activity, Zap, Atom } from 'lucide-react';
+import { useUIStore } from '../src/stores/useUIStore';
 
 // ── Import các simulation từ Google AI Studio ──────────────────────
 import CarSimulation from './simulations/CarSimulation';
@@ -72,6 +73,12 @@ interface SimulationLabProps {
 const SimulationLab: React.FC<SimulationLabProps> = ({ onBack }) => {
     const [selectedSim, setSelectedSim] = useState<SimulationItem | null>(null);
     const [expandedGrades, setExpandedGrades] = useState<Record<number, boolean>>({ 10: true, 11: true, 12: true });
+    const setSimulationFullscreen = useUIStore(state => state.setSimulationFullscreen);
+
+    // Dọn dẹp cờ màn hình rộng nếu user rẽ hướng ra trang khác
+    useEffect(() => {
+        return () => setSimulationFullscreen(false);
+    }, [setSimulationFullscreen]);
 
     const toggleGrade = (grade: number) => {
         setExpandedGrades(prev => ({ ...prev, [grade]: !prev[grade] }));
@@ -93,7 +100,7 @@ const SimulationLab: React.FC<SimulationLabProps> = ({ onBack }) => {
                 {/* Header */}
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={() => setSelectedSim(null)}
+                        onClick={() => { setSelectedSim(null); setSimulationFullscreen(false); }}
                         className="p-2 rounded-lg transition-colors"
                         style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
                         onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
@@ -288,7 +295,7 @@ const SimulationLab: React.FC<SimulationLabProps> = ({ onBack }) => {
                                                     return (
                                                         <div
                                                             key={sim.id}
-                                                            onClick={() => setSelectedSim(sim)}
+                                                            onClick={() => { setSelectedSim(sim); setSimulationFullscreen(true); }}
                                                             className="rounded-xl overflow-hidden cursor-pointer transition-all group"
                                                             style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}
                                                             onMouseEnter={e => {

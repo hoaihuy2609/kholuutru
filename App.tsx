@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useCallback, Suspense } from 'react';
+import React, { useEffect, useMemo, useCallback, Suspense } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate } from 'react-router-dom';
 import { GradeLevel, Lesson, Exam } from './types';
 import { CURRICULUM } from './constants';
@@ -274,7 +274,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     isSettingsOpen, setSettingsOpen, isMobileMenuOpen, setMobileMenuOpen,
     showAdminDashboard, setShowAdminDashboard, showGitHubSync, setShowGitHubSync,
     toasts, removeToast, isAdmin, previewMode, setPreviewMode,
-    isKicked, notificationUnreadCount, toggleAdmin,
+    isKicked, notificationUnreadCount, toggleAdmin, isSimulationFullscreen,
   } = useUIStore(useShallow(state => ({
     isSettingsOpen: state.isSettingsOpen,
     setSettingsOpen: state.setSettingsOpen,
@@ -292,6 +292,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     isKicked: state.isKicked,
     notificationUnreadCount: state.notificationUnreadCount,
     toggleAdmin: state.toggleAdmin,
+    isSimulationFullscreen: state.isSimulationFullscreen,
   })));
   const { lessons, storedFiles, loading, isActivated, studentGradeValue } = useDataStore(useShallow(state => ({
     lessons: state.lessons,
@@ -360,7 +361,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
       </div>
 
       {/* Desktop Sidebar */}
-      <Sidebar {...sidebarCommonProps} className="hidden md:flex" />
+      {!isSimulationFullscreen && <Sidebar {...sidebarCommonProps} className="hidden md:flex" />}
 
       {/* Settings Modal */}
       <ErrorBoundary>
@@ -386,7 +387,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen transition-all duration-300 relative">
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 relative ${isSimulationFullscreen ? '' : 'md:ml-64'}`}>
         <header className="p-3.5 flex items-center justify-center md:hidden sticky top-0 z-30" style={{ background: '#F1F0EC', borderBottom: '1px solid #E9E9E7' }}>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: '#6B7CDB' }}><Atom className="w-3.5 h-3.5 text-white" /></div>

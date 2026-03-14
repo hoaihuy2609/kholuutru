@@ -332,6 +332,11 @@ export default function WaterBoilingSimulation() {
     const lpx = px * scaleX;
     const lpy = py * scaleY;
 
+    // Chặn click vọt ra ngoài vùng biên của biểu đồ
+    if (lpx < pad.left || lpx > W - pad.right || lpy < pad.top || lpy > H - pad.bottom) {
+        return;
+    }
+
     const t = tMin + (lpx - pad.left) / (W - pad.left - pad.right) * (tMax - tMin);
     const m = mMin + (1 - (lpy - pad.top) / (H - pad.top - pad.bottom)) * (mMax - mMin);
 
@@ -454,8 +459,6 @@ export default function WaterBoilingSimulation() {
                 <polyline points="246,54 246,40 321,40 321,122" fill="none" stroke="#93c5fd" strokeWidth="1.4" />
                 <polyline points="321,148 321,192 50,192 50,170" fill="none" stroke="#93c5fd" strokeWidth="1.4" />
                 <circle cx="50" cy="170" r="3" fill="#93c5fd" />
-
-                <circle cx="50" cy="135" r="3" fill={isRunning ? "#f87171" : "#d4d4d0"} className="transition-colors duration-300" />
 
                 <text x="190" y="86" textAnchor="middle" fontSize="8.5" fill="#b8b8b4" fontFamily="sans-serif" fontWeight="500">NHIỆT LƯỢNG KẾ</text>
                 
