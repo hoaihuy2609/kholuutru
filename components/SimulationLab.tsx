@@ -3,6 +3,7 @@ import { ChevronRight, ChevronDown, FlaskConical, ArrowLeft, Activity, Zap, Atom
 
 // ── Import các simulation từ Google AI Studio ──────────────────────
 import CarSimulation from './simulations/CarSimulation';
+import WaterBoilingSimulation from './simulations/WaterBoilingSimulation';
 
 // ── Danh sách thí nghiệm ──────────────────────────────────────────
 export interface SimulationItem {
@@ -49,6 +50,15 @@ const SIMULATIONS: SimulationItem[] = [
         thumbnail: '🚗',
         aiStudioUrl: 'https://ai.studio/apps/1019ba63-7aa7-479c-b53d-ee1d0f2cd4dd',
         component: CarSimulation,
+    },
+    {
+        id: 'water-boiling',
+        title: 'Đo Nhiệt Hoá Hơi Riêng',
+        description: 'Thực hành xác định nhiệt hóa hơi riêng L của nước tại 100°C bằng số liệu thực tế.',
+        category: 'thermodynamics',
+        grade: 12,
+        thumbnail: '⚗',
+        component: WaterBoilingSimulation,
     },
     // ── Thêm thí nghiệm mới ở đây ──
 ];
