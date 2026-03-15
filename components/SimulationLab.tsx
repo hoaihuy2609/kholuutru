@@ -5,6 +5,7 @@ import { useUIStore } from '../src/stores/useUIStore';
 // ── Import các simulation từ Google AI Studio ──────────────────────
 import CarSimulation from './simulations/CarSimulation';
 import WaterBoilingSimulation from './simulations/WaterBoilingSimulation';
+import IceMeltingSimulation from './simulations/IceMeltingSimulation';
 
 // ── Danh sách thí nghiệm ──────────────────────────────────────────
 export interface SimulationItem {
@@ -61,7 +62,15 @@ const SIMULATIONS: SimulationItem[] = [
         thumbnail: '⚗',
         component: WaterBoilingSimulation,
     },
-    // ── Thêm thí nghiệm mới ở đây ──
+    {
+        id: 'ice-melting',
+        title: 'Đo Nhiệt Nóng Chảy Riêng',
+        description: 'Thực hành xác định nhiệt nóng chảy riêng λ của nước đá bằng số liệu thực tế.',
+        category: 'thermodynamics',
+        grade: 12,
+        thumbnail: '❄',
+        component: IceMeltingSimulation,
+    },
 ];
 
 const GRADE_ORDER = [10, 11, 12];
