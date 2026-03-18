@@ -68,13 +68,10 @@ export const useUIStore = create<UIStore>((set) => ({
   setShowAdminDashboard: (v) => set({ showAdminDashboard: v }),
   setShowGitHubSync: (v) => set({ showGitHubSync: v }),
 
-  showToast: (message, type = 'success', duration = 4000) => {
+  showToast: (message, type = 'success', _duration = 4000) => {
+    // Timer auto-dismiss được xử lý bởi Toast component (tránh 2 timer chạy song song)
     const id = crypto.randomUUID();
     set((state) => ({ toasts: [...state.toasts, { id, message, type }] }));
-    // Auto-dismiss sau duration ms
-    setTimeout(() => {
-      set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));
-    }, duration);
   },
   removeToast: (id) =>
     set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
