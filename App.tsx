@@ -8,7 +8,7 @@ import Toast from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
 import { getActivatedPhone } from './src/utils/phone';
-import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Home, Bell, FlaskConical, Settings, ScanLine } from 'lucide-react';
+import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Home, Bell, FlaskConical, Settings } from 'lucide-react';
 import KickedScreen from './components/auth/KickedScreen';
 import { useUIStore } from './src/stores/useUIStore';
 import { useDataStore } from './src/stores/useDataStore';
@@ -31,8 +31,6 @@ const SimulationLab = React.lazy(() => import('./components/SimulationLab'));
 const BlogList = React.lazy(() => import('./components/BlogList'));
 const BlogDetail = React.lazy(() => import('./components/BlogDetail'));
 const AdminBlogEditor = React.lazy(() => import('./components/AdminBlogEditor'));
-const OMRScanner = React.lazy(() => import('./components/OMRScanner'));
-const AnswerSheetTemplate = React.lazy(() => import('./components/AnswerSheetTemplate'));
 
 const LazyFallback = () => (
   <div className="flex items-center justify-center h-[40vh]">
@@ -327,7 +325,6 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const isOnExams = path.startsWith('/exams');
   const isOnNotification = path === '/notifications';
   const isOnSimLab = path === '/lab';
-  const isOnScanner = path === '/scanner';
 
   if (isKicked && !isAdmin) return <KickedScreen />;
 
@@ -341,7 +338,6 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     onOpenNotification: (isActivated || isAdmin) ? () => navigate('/notifications') : undefined,
     onOpenSimLab: (isActivated || isAdmin) ? () => navigate('/lab') : undefined,
     onOpenBlog: (isActivated || isAdmin) ? () => navigate('/blog') : undefined,
-    onOpenScanner: (isActivated || isAdmin) ? () => navigate('/scanner') : undefined,
     showExamList: isOnExams,
     showContactBook: path === '/contact-book',
     showStudyPlanner: path === '/planner',
@@ -349,7 +345,6 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     notificationUnreadCount,
     showSimLab: isOnSimLab,
     showBlog: path.startsWith('/blog'),
-    showScanner: isOnScanner,
     isAdmin,
     previewMode,
     onSetPreviewMode: handlePreviewMode,
@@ -362,7 +357,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 
       {/* Mobile Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 shadow-xl transform transition-transform duration-300 ease-out md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#F1F0EC', borderRight: '1px solid #E9E9E7' }}>
-        <Sidebar {...sidebarCommonProps} onSelectGrade={(g) => { navigate(g ? `/grade/${g}` : '/'); setMobileMenuOpen(false); }} onOpenSettings={() => { setSettingsOpen(true); setMobileMenuOpen(false); }} onOpenExamList={(isActivated || isAdmin) ? () => { navigate('/exams'); setMobileMenuOpen(false); } : undefined} onOpenContactBook={(isActivated || isAdmin) ? () => { navigate('/contact-book'); setMobileMenuOpen(false); } : undefined} onOpenStudyPlanner={(isActivated || isAdmin) ? () => { navigate('/planner'); setMobileMenuOpen(false); } : undefined} onOpenNotification={(isActivated || isAdmin) ? () => { navigate('/notifications'); setMobileMenuOpen(false); } : undefined}      onOpenSimLab={(isActivated || isAdmin) ? () => { navigate('/lab'); setMobileMenuOpen(false); } : undefined} onOpenBlog={(isActivated || isAdmin) ? () => { navigate('/blog'); setMobileMenuOpen(false); } : undefined} onOpenScanner={(isActivated || isAdmin) ? () => { navigate('/scanner'); setMobileMenuOpen(false); } : undefined} className="w-full" />
+        <Sidebar {...sidebarCommonProps} onSelectGrade={(g) => { navigate(g ? `/grade/${g}` : '/'); setMobileMenuOpen(false); }} onOpenSettings={() => { setSettingsOpen(true); setMobileMenuOpen(false); }} onOpenExamList={(isActivated || isAdmin) ? () => { navigate('/exams'); setMobileMenuOpen(false); } : undefined} onOpenContactBook={(isActivated || isAdmin) ? () => { navigate('/contact-book'); setMobileMenuOpen(false); } : undefined} onOpenStudyPlanner={(isActivated || isAdmin) ? () => { navigate('/planner'); setMobileMenuOpen(false); } : undefined} onOpenNotification={(isActivated || isAdmin) ? () => { navigate('/notifications'); setMobileMenuOpen(false); } : undefined} onOpenSimLab={(isActivated || isAdmin) ? () => { navigate('/lab'); setMobileMenuOpen(false); } : undefined} onOpenBlog={(isActivated || isAdmin) ? () => { navigate('/blog'); setMobileMenuOpen(false); } : undefined} className="w-full" />
       </div>
 
       {/* Desktop Sidebar */}
@@ -416,8 +411,6 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
             <Route path="/notifications" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><NotificationPage onGetNotifications={cloud.getNotifications} onGetFetchedIds={cloud.getFetchedNotificationIds} onMarkFetched={cloud.markNotificationFetched} onFetchLessons={cloud.fetchLessonsFromGitHub} onShowToast={useUIStore.getState().showToast} isAdmin={effectiveIsAdmin} onDeleteNotification={cloud.deleteNotification} onCreateNotification={cloud.createCustomNotification} /></Suspense></ErrorBoundary>} />
             <Route path="/lab" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><SimulationLab onBack={() => navigate('/')} /></Suspense></ErrorBoundary>} />
             <Route path="/blog/*" element={<BlogRoutes cloud={cloud} />} />
-            <Route path="/scanner" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><OMRScanner onBack={() => navigate('/')} /></Suspense></ErrorBoundary>} />
-            <Route path="/scanner/template" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><AnswerSheetTemplate onBack={() => navigate('/scanner')} /></Suspense></ErrorBoundary>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
@@ -454,8 +447,6 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
             <FlaskConical className="w-5 h-5" /><span className="text-[10px] font-medium">Phòng TN</span>
           </button>
         )}
-        {/* Nút Chấm điểm ẩn khỏi mobile bottom nav (7 nút quá nhiều trên màn nhỏ) */}
-        {/* Vẫn có thể truy cập qua Sidebar hoặc URL /scanner */}
         <button onClick={() => setSettingsOpen(true)} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors" style={{ color: '#AEACA8' }}>
           <Settings className="w-5 h-5" /><span className="text-[10px] font-medium">Cài đặt</span>
         </button>
