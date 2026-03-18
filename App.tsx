@@ -366,7 +366,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
       {/* Settings Modal */}
       <ErrorBoundary>
         <Suspense fallback={null}>
-          <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} onShowToast={useUIStore.getState().showToast} isAdmin={isAdmin} isActivated={isActivated} lessons={lessons} storedFiles={storedFiles} onActivateSystem={cloud.activateSystem} onFetchLessons={cloud.fetchLessonsFromGitHub} onToggleAdmin={toggleAdmin} onOpenDashboard={() => { setShowAdminDashboard(true); setSettingsOpen(false); }} onLoadExams={cloud.loadExams} />
+          <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} onShowToast={useUIStore.getState().showToast} isAdmin={isAdmin} isActivated={isActivated} lessons={lessons} storedFiles={storedFiles} onActivateSystem={cloud.activateSystem} onFetchLessons={cloud.fetchLessonsFromCloud} onToggleAdmin={toggleAdmin} onOpenDashboard={() => { setShowAdminDashboard(true); setSettingsOpen(false); }} onLoadExams={cloud.loadExams} />
         </Suspense>
       </ErrorBoundary>
 
@@ -381,7 +381,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
       {showGitHubSync && (
         <ErrorBoundary>
           <Suspense fallback={<LazyFallback />}>
-            <AdminGitHubSync onBack={() => setShowGitHubSync(false)} onShowToast={useUIStore.getState().showToast} lessons={lessons} storedFiles={storedFiles} onAddLesson={cloud.addLesson} onDeleteLesson={cloud.deleteLesson} onUploadFiles={cloud.uploadFiles} onDeleteFile={cloud.deleteFile} onSyncToGitHub={cloud.syncToGitHub} syncProgress={cloud.syncProgress} />
+            <AdminGitHubSync onBack={() => setShowGitHubSync(false)} onShowToast={useUIStore.getState().showToast} lessons={lessons} storedFiles={storedFiles} onAddLesson={cloud.addLesson} onDeleteLesson={cloud.deleteLesson} onUploadFiles={cloud.uploadFiles} onDeleteFile={cloud.deleteFile} onSyncToGitHub={cloud.syncToCloud} syncProgress={cloud.syncProgress} />
           </Suspense>
         </ErrorBoundary>
       )}
