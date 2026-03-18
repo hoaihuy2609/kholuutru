@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Clock, ChevronLeft, Send, AlertTriangle, CheckCircle, RefreshCw, FileText } from 'lucide-react';
 import { Exam, ExamTFAnswer, ExamSubmission } from '../types';
 import ExamCountdownTimer from './ExamCountdownTimer';
+import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
 const PDF_CACHE_DB = 'pv_pdf_cache';
@@ -136,7 +137,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
 
                 // ② Lấy PDF qua Cloudflare Proxy (nhanh, an toàn, đã ẩn Token)
                 let blob: Blob | null = null;
-                const proxyUrl = `https://physivault-proxy.hoaihuy2609.workers.dev/getFile/${exam.pdfTelegramFileId}`;
+                const proxyUrl = `${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`;
                 const res = await fetch(proxyUrl);
 
                 if (res.ok) {

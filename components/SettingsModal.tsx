@@ -108,7 +108,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         if (await onActivateSystem(key, sdt)) {
             onShowToast('Kích hoạt thành công! Đang tải bài giảng...', 'success');
             setStudentKeyInput('');
-            // Auto-fetch bài giảng từ GitHub
+            // Auto-fetch bài giảng từ Hệ thống
             setIsFetchingLessons(true);
             setFetchProgress(0);
             try {

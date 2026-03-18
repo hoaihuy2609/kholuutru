@@ -206,7 +206,7 @@ export const useCloudStorage = () => {
 
     // ── Telegram Cloud Sync: Fetch ──
 
-    const fetchLessonsFromGitHub = async (grade: number, onProgress?: (pct: number) => void): Promise<{ success: boolean; lessonCount: number; fileCount: number; skipped?: boolean }> => {
+    const fetchLessonsFromCloud = async (grade: number, onProgress?: (pct: number) => void): Promise<{ success: boolean; lessonCount: number; fileCount: number; skipped?: boolean }> => {
         if (_fetchLock.current[grade]) return { success: true, lessonCount: 0, fileCount: 0, skipped: true };
         _fetchLock.current[grade] = true;
         console.log(`[Fetch] Bắt đầu fetch Lớp ${grade}`);
@@ -365,7 +365,7 @@ export const useCloudStorage = () => {
 
     // ── Telegram Cloud Sync: Push ──
 
-    const syncToGitHub = async (grade: number, lessonsToSync: Lesson[], filesToSync: FileStorage): Promise<string> => {
+    const syncToCloud = async (grade: number, lessonsToSync: Lesson[], filesToSync: FileStorage): Promise<string> => {
         if (_syncLock.current[grade]) throw new Error('Đang sync, vui lòng đợi...');
         _syncLock.current[grade] = true;
         try {
@@ -560,7 +560,7 @@ export const useCloudStorage = () => {
         lessons, storedFiles, loading, isActivated, syncProgress,
         addLesson, deleteLesson, uploadFiles, deleteFile,
         activateSystem, verifyAccess,
-        fetchLessonsFromGitHub, syncToGitHub,
+        fetchLessonsFromCloud, syncToCloud,
         // Re-exported from services (backward compatible API)
         uploadExamPdf: examService.uploadExamPdf,
         saveExam: examService.saveExam,

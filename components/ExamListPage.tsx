@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ClipboardList, Clock, Play, RefreshCw, FileText, Lock, CheckCircle } from 'lucide-react';
 import { Exam } from '../types';
+import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 
 const PDF_CACHE_DB = 'pv_pdf_cache';
 const PDF_CACHE_STORE = 'pdfs';
@@ -35,7 +36,7 @@ const _savePdfBlob = async (examId: string, blob: Blob) => {
 const prefetchExamPdf = async (exam: Exam) => {
     try {
         if (await _isPdfCached(exam.id)) return; // already cached
-        const res = await fetch(`https://physivault-proxy.hoaihuy2609.workers.dev/getFile/${exam.pdfTelegramFileId}`);
+        const res = await fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`);
         if (res.ok) {
             const buffer = await res.arrayBuffer();
             const blob = new Blob([buffer], { type: 'application/pdf' });
