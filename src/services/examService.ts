@@ -1,4 +1,3 @@
-import type JSZip from 'jszip'; // type-only — runtime import is deferred to call-sites
 import { supabase } from '../lib/supabase';
 import { dbGet, dbSet } from '../lib/db';
 import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';

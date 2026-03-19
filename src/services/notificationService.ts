@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { NotificationItem } from '../../types';
-import { normalizePhone, getActivatedPhone } from '../utils/phone';
+import { getActivatedPhone } from '../utils/phone';
 
 // ── Notifications ──
 

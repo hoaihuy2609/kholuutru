@@ -1,12 +1,11 @@
 import { supabase } from '../lib/supabase';
 import { useState, useEffect, useRef } from 'react';
-import CryptoJS from 'crypto-js';
-import type JSZip from 'jszip'; // type-only — runtime import is deferred to call-sites
 import { Lesson, StoredFile, FileStorage } from '../../types';
+import CryptoJS from 'crypto-js';
 
 // Shared utilities (extracted)
 import { dbGet, dbSet, dbSetBatch } from '../lib/db';
-import { xorObfuscate, xorDeobfuscate, fnvHash, getMachineId, generateActivationKey, checkActivationStatus, aesEncrypt, smartDecrypt } from '../lib/crypto';
+import { fnvHash, getMachineId, generateActivationKey, checkActivationStatus, aesEncrypt, smartDecrypt } from '../lib/crypto';
 import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
 import { normalizePhone } from '../utils/phone';
 
@@ -17,8 +16,7 @@ import * as notificationService from '../services/notificationService';
 import * as blogService from '../services/blogService';
 
 // Re-export utilities for external consumers
-export { fetchViaCloudflareProxy } from '../lib/telegram';
-export { xorObfuscate, xorDeobfuscate, getMachineId, generateActivationKey, checkActivationStatus } from '../lib/crypto';
+export { getMachineId, generateActivationKey, checkActivationStatus } from '../lib/crypto';
 export { exportData, importData } from './exportImport';
 
 // Storage Keys
@@ -27,13 +25,6 @@ const STORAGE_LESSONS_KEY = 'physivault_lessons';
 const STORAGE_ACTIVATION_KEY = 'physivault_activated';
 const STORAGE_GRADE_KEY = 'physivault_grade';
 
-interface ExportData {
-    version: number;
-    exportedAt: number;
-    lessons: Lesson[];
-    files: { [lessonId: string]: StoredFile[] };
-    isEncrypted?: boolean;
-}
 
 export const useCloudStorage = () => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -270,7 +261,6 @@ export const useCloudStorage = () => {
                 const CONCURRENCY = 8;
                 let downloadedParts = 0;
                 let zIdsToDownload: string[] = allZipIds;
-                let isIncremental = false;
 
                 if (indexData.chunkContents && indexData.lessonVersions) {
                     const localVersions: Record<string, string> = JSON.parse(localStorage.getItem(`pv_lesson_versions_${grade}`) || '{}');
@@ -291,7 +281,6 @@ export const useCloudStorage = () => {
                     const chunkContents = indexData.chunkContents as Record<string, string[]>;
                     zIdsToDownload = allZipIds.filter(zipId => (chunkContents[zipId] || []).some(id => changedIds.has(id)));
                     for (const id of deletedIds) { newLessonsMap.delete(id); delete newFiles[id]; if (id.startsWith('ch_')) delete newFiles[id.substring(3)]; }
-                    isIncremental = true;
                     console.log(`[Fetch] Incremental: ${changedIds.size} thay đổi, ${deletedIds.length} xóa → tải ${zIdsToDownload.length}/${allZipIds.length} chunk(s)`);
                 }
 
