@@ -27,7 +27,8 @@ export const markNotificationFetched = async (notificationId: string): Promise<b
 
 export const deleteNotification = async (notificationId: string): Promise<boolean> => {
     try {
-        const { error } = await supabase.from('notifications').delete().eq('id', notificationId);
+        // ✅ Admin Ops Fix: dùng RPC SECURITY DEFINER
+        const { error } = await supabase.rpc('admin_delete_notification', { p_id: notificationId });
         if (error) throw error;
         return true;
     } catch (e) { console.error('Lỗi xóa thông báo:', e); return false; }
@@ -35,7 +36,8 @@ export const deleteNotification = async (notificationId: string): Promise<boolea
 
 export const createCustomNotification = async (message: string, grade: number): Promise<boolean> => {
     try {
-        const { error } = await supabase.from('notifications').insert({ message, grade, fetch_enabled: false });
+        // ✅ Admin Ops Fix: dùng RPC SECURITY DEFINER
+        const { error } = await supabase.rpc('admin_create_custom_notification', { p_message: message, p_grade: grade });
         if (error) throw error;
         return true;
     } catch (e) { console.error('Lỗi tạo thông báo:', e); return false; }

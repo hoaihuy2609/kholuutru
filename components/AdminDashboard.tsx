@@ -101,7 +101,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                 machineId: row.machine_id || '',
                 key: row.activation_key || '',
                 status: row.is_active === false ? 'KICKED' : (row.machine_id ? 'ACTIVATED' : 'PENDING'),
-                grade: row.grade || 12,
+                grade: row.grade ?? 12,
                 class_id: row.class_id || '',
             }));
             setStudents(normalized);
@@ -117,7 +117,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const handleAddClass = async () => {
         if (!newClassName.trim()) return;
         try {
-            const { error } = await supabase.from('classes').insert([{ name: newClassName.trim(), grade: newClassGrade }]);
+            // ✅ Admin Ops Fix: dùng RPC
+            const { error } = await supabase.rpc('admin_add_class', { p_name: newClassName.trim(), p_grade: newClassGrade });
             if (error) throw error;
             onShowToast(`Đã tạo lớp ${newClassName.trim()}!`, 'success');
             setNewClassName('');
@@ -128,7 +129,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const handleUpdateClass = async () => {
         if (!editingClass || !newClassName.trim()) return;
         try {
-            const { error } = await supabase.from('classes').update({ name: newClassName.trim(), grade: newClassGrade }).eq('id', editingClass.id);
+            // ✅ Admin Ops Fix: dùng RPC
+            const { error } = await supabase.rpc('admin_update_class', { p_id: String(editingClass.id), p_name: newClassName.trim(), p_grade: newClassGrade });
             if (error) throw error;
             onShowToast(`Đã cập nhật lớp!`, 'success');
             setEditingClass(null);
@@ -141,7 +143,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const handleDeleteClass = async (cls: ClassInfo) => {
         if (!window.confirm(`Xóa lớp "${cls.name}"? Học sinh trong lớp sẽ chuyển sang trạng thái "Chưa xếp lớp".`)) return;
         try {
-            const { error } = await supabase.from('classes').delete().eq('id', cls.id);
+            // ✅ Admin Ops Fix: dùng RPC
+            const { error } = await supabase.rpc('admin_delete_class', { p_id: String(cls.id) });
             if (error) throw error;
             onShowToast(`Đã xóa lớp ${cls.name}!`, 'warning');
             if (classFilter === cls.id) setClassFilter(null);
@@ -152,7 +155,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
 
     const handleUpdateStudentClass = async (sdt: string, classId: string | null) => {
         try {
-            const { error } = await supabase.from('students').update({ class_id: classId }).eq('phone', sdt);
+            // ✅ Admin Ops Fix: dùng RPC
+            const { error } = await supabase.rpc('admin_update_student_class', { p_phone: sdt, p_class_id: classId ?? '' });
             if (error) throw error;
             onShowToast('Đã cập nhật lớp cho học viên!', 'success');
             refreshStudents();
@@ -169,15 +173,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
             let phoneStr = String(newStudent.sdt).trim();
             if (phoneStr.length === 9 && !phoneStr.startsWith('0')) phoneStr = '0' + phoneStr;
 
-            const { error } = await supabase.from('students').insert([{
-                phone: phoneStr,
-                name: newStudent.name.trim(),
-                grade: newStudent.grade,
-                class_id: newStudent.class_id || null,
-                is_active: true,
-                activation_key: '',
-                machine_id: ''
-            }]);
+            // ✅ Admin Ops Fix: dùng RPC
+            const { error } = await supabase.rpc('admin_add_student', {
+                p_phone: phoneStr,
+                p_name: newStudent.name.trim(),
+                p_grade: newStudent.grade,
+                p_class_id: newStudent.class_id || '',
+            });
 
             if (error) throw error;
 
@@ -196,7 +198,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const handleDeleteStudent = async (sdt: string) => {
         if (!window.confirm(`Bạn có chắc muốn xóa học viên ${sdt} không?`)) return;
         try {
-            const { error } = await supabase.from('students').delete().eq('phone', sdt);
+            // ✅ Admin Ops Fix: dùng RPC
+            const { error } = await supabase.rpc('admin_delete_student', { p_phone: sdt });
             if (error) throw error;
             onShowToast('Đã xóa học viên!', 'warning');
             setTimeout(refreshStudents, 500);
@@ -206,7 +209,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const handleKickStudent = async (sdt: string, name: string) => {
         if (!window.confirm(`Bạn có chắc muốn KICK học viên "${name}" (${sdt}) không?\n\nHọc viên sẽ không thể truy cập tài liệu nữa.`)) return;
         try {
-            const { error } = await supabase.from('students').update({ is_active: false }).eq('phone', sdt);
+            // ✅ Admin Ops Fix: dùng RPC
+            const { error } = await supabase.rpc('admin_kick_student', { p_phone: sdt });
             if (error) throw error;
             onShowToast(`Đã kick học viên ${name}!`, 'success');
             setTimeout(refreshStudents, 500);
@@ -216,7 +220,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
     const handleUnkickStudent = async (sdt: string, name: string) => {
         if (!window.confirm(`Mở khóa cho học viên "${name}" (${sdt})?\n\nHọc viên sẽ cần kích hoạt lại từ đầu.`)) return;
         try {
-            const { error } = await supabase.from('students').update({ is_active: true, machine_id: '', activation_key: '' }).eq('phone', sdt);
+            // ✅ Admin Ops Fix: dùng RPC
+            const { error } = await supabase.rpc('admin_unkick_student', { p_phone: sdt });
             if (error) throw error;
             onShowToast(`Đã mở khóa cho ${name}!`, 'success');
             setTimeout(refreshStudents, 500);

@@ -39,6 +39,7 @@ DROP POLICY IF EXISTS "exam_results_insert"     ON exam_results;
 DROP POLICY IF EXISTS "study_plans_all"         ON study_plans;
 DROP POLICY IF EXISTS "schedules_all"           ON schedules;
 DROP POLICY IF EXISTS "schedules_select"        ON schedules;
+DROP POLICY IF EXISTS "schedules_write"         ON schedules;
 
 DROP POLICY IF EXISTS "votes_read"              ON question_votes;
 DROP POLICY IF EXISTS "votes_select"            ON question_votes;
@@ -132,8 +133,10 @@ CREATE POLICY "study_plans_all" ON study_plans FOR ALL USING (true);
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- BƯỚC 9: schedules — chỉ SELECT cho anon (⚠️ Tech Debt Fix)
 --   Admin ghi dữ liệu thời khóa biểu qua service_role
+--   ✅ Học sinh được ghi lịch cá nhân qua schedules_write
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CREATE POLICY "schedules_select" ON schedules FOR SELECT USING (true);
+CREATE POLICY "schedules_write"  ON schedules FOR ALL    USING (true) WITH CHECK (true);
 
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -246,8 +249,145 @@ GRANT EXECUTE ON FUNCTION admin_insert_notification(text, int, boolean) TO anon;
 
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+-- BƯỚC 16 ⭐ ADMIN OPS FIX — RPCs cho toàn bộ thao tác Admin
+-- anon key bị REVOKE write trên students, classes, notifications
+-- → Admin Frontend PHẢI dùng các RPC dưới đây
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+-- [1] Upsert student (SettingsModal: tạo mã kích hoạt)
+DROP FUNCTION IF EXISTS admin_upsert_student(text, text, text, text, boolean, int);
+CREATE OR REPLACE FUNCTION admin_upsert_student(
+    p_phone          text,
+    p_name           text,
+    p_machine_id     text,
+    p_activation_key text,
+    p_is_active      boolean,
+    p_grade          int
+) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    INSERT INTO students (phone, name, machine_id, activation_key, is_active, grade)
+    VALUES (p_phone, p_name, p_machine_id, p_activation_key, p_is_active, p_grade)
+    ON CONFLICT (phone) DO UPDATE SET
+        name           = EXCLUDED.name,
+        machine_id     = EXCLUDED.machine_id,
+        activation_key = EXCLUDED.activation_key,
+        is_active      = EXCLUDED.is_active,
+        grade          = EXCLUDED.grade;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_upsert_student(text, text, text, text, boolean, int) TO anon;
+
+-- [2] Thêm học sinh mới (AdminDashboard)
+DROP FUNCTION IF EXISTS admin_add_student(text, text, int, text);
+CREATE OR REPLACE FUNCTION admin_add_student(
+    p_phone    text,
+    p_name     text,
+    p_grade    int,
+    p_class_id text
+) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    INSERT INTO students (phone, name, grade, class_id, is_active, activation_key, machine_id)
+    VALUES (p_phone, p_name, p_grade, NULLIF(p_class_id, ''), true, '', '');
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_add_student(text, text, int, text) TO anon;
+
+-- [3] Cập nhật lớp cho học sinh (AdminDashboard)
+DROP FUNCTION IF EXISTS admin_update_student_class(text, text);
+CREATE OR REPLACE FUNCTION admin_update_student_class(
+    p_phone    text,
+    p_class_id text
+) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    UPDATE students SET class_id = NULLIF(p_class_id, '') WHERE phone = p_phone;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_update_student_class(text, text) TO anon;
+
+-- [4] Xóa học sinh (AdminDashboard)
+DROP FUNCTION IF EXISTS admin_delete_student(text);
+CREATE OR REPLACE FUNCTION admin_delete_student(p_phone text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    DELETE FROM students WHERE phone = p_phone;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_delete_student(text) TO anon;
+
+-- [5] Kick học sinh (AdminDashboard)
+DROP FUNCTION IF EXISTS admin_kick_student(text);
+CREATE OR REPLACE FUNCTION admin_kick_student(p_phone text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    UPDATE students SET is_active = false WHERE phone = p_phone;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_kick_student(text) TO anon;
+
+-- [6] Unkick học sinh (AdminDashboard)
+DROP FUNCTION IF EXISTS admin_unkick_student(text);
+CREATE OR REPLACE FUNCTION admin_unkick_student(p_phone text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    UPDATE students SET is_active = true, machine_id = '', activation_key = '' WHERE phone = p_phone;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_unkick_student(text) TO anon;
+
+-- [7] Quản lý lớp học (AdminDashboard)
+DROP FUNCTION IF EXISTS admin_add_class(text, int);
+CREATE OR REPLACE FUNCTION admin_add_class(p_name text, p_grade int)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    INSERT INTO classes (name, grade) VALUES (p_name, p_grade);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_add_class(text, int) TO anon;
+
+DROP FUNCTION IF EXISTS admin_update_class(text, text, int);
+CREATE OR REPLACE FUNCTION admin_update_class(p_id text, p_name text, p_grade int)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    UPDATE classes SET name = p_name, grade = p_grade WHERE id::text = p_id;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_update_class(text, text, int) TO anon;
+
+DROP FUNCTION IF EXISTS admin_delete_class(text);
+CREATE OR REPLACE FUNCTION admin_delete_class(p_id text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    DELETE FROM classes WHERE id::text = p_id;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_delete_class(text) TO anon;
+
+-- [8] Xóa / Tạo thông báo tùy chỉnh (notificationService)
+DROP FUNCTION IF EXISTS admin_delete_notification(text);
+CREATE OR REPLACE FUNCTION admin_delete_notification(p_id text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    DELETE FROM notifications WHERE id::text = p_id;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_delete_notification(text) TO anon;
+
+DROP FUNCTION IF EXISTS admin_create_custom_notification(text, int);
+CREATE OR REPLACE FUNCTION admin_create_custom_notification(p_message text, p_grade int)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    INSERT INTO notifications (message, grade, fetch_enabled) VALUES (p_message, p_grade, false);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_create_custom_notification(text, int) TO anon;
+
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- XONG! Verify bằng cách kiểm tra trong Dashboard:
 --   Authentication → Policies → mỗi bảng phải có RLS enabled
---   Database → Functions → phải thấy 3 hàm RPC:
---     activate_device, admin_upsert_vault_index, admin_insert_notification
+--   Database → Functions → phải thấy các hàm RPC:
+--     activate_device, admin_upsert_vault_index, admin_insert_notification,
+--     admin_upsert_student, admin_add_student, admin_update_student_class,
+--     admin_delete_student, admin_kick_student, admin_unkick_student,
+--     admin_add_class, admin_update_class, admin_delete_class,
+--     admin_delete_notification, admin_create_custom_notification
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

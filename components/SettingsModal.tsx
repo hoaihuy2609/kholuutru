@@ -86,7 +86,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                 grade: adminTargetGrade
             };
 
-            const { error } = await supabase.from('students').upsert(payload, { onConflict: 'phone' });
+            // ✅ Admin Ops Fix: Dùng RPC SECURITY DEFINER thay vì anon key trực tiếp
+            const { error } = await supabase.rpc('admin_upsert_student', {
+                p_phone: phoneStr,
+                p_name: name || 'Học sinh mới',
+                p_machine_id: targetId,
+                p_activation_key: key,
+                p_is_active: true,
+                p_grade: adminTargetGrade,
+            });
             if (error) throw error;
 
             onShowToast('Đã tạo mã và đồng bộ lên Supabase!', 'success');
