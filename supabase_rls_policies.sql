@@ -277,29 +277,38 @@ END;
 $$;
 GRANT EXECUTE ON FUNCTION admin_upsert_student(text, text, text, text, boolean, int) TO anon;
 
--- [2] Thêm học sinh mới (AdminDashboard)
+-- [2] Thêm học sinh mới (AdminDashboard) — ép class_id sang uuid
 DROP FUNCTION IF EXISTS admin_add_student(text, text, int, text);
 CREATE OR REPLACE FUNCTION admin_add_student(
     p_phone    text,
     p_name     text,
     p_grade    int,
-    p_class_id text
+    p_class_id text DEFAULT ''
 ) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
-    INSERT INTO students (phone, name, grade, class_id, is_active, activation_key, machine_id)
-    VALUES (p_phone, p_name, p_grade, NULLIF(p_class_id, ''), true, '', '');
+    IF p_class_id IS NULL OR p_class_id = '' THEN
+        INSERT INTO students (phone, name, grade, class_id, is_active, activation_key, machine_id)
+        VALUES (p_phone, p_name, p_grade, NULL, true, '', '');
+    ELSE
+        INSERT INTO students (phone, name, grade, class_id, is_active, activation_key, machine_id)
+        VALUES (p_phone, p_name, p_grade, p_class_id::uuid, true, '', '');
+    END IF;
 END;
 $$;
 GRANT EXECUTE ON FUNCTION admin_add_student(text, text, int, text) TO anon;
 
--- [3] Cập nhật lớp cho học sinh (AdminDashboard)
+-- [3] Cập nhật lớp cho học sinh — ép class_id sang uuid
 DROP FUNCTION IF EXISTS admin_update_student_class(text, text);
 CREATE OR REPLACE FUNCTION admin_update_student_class(
     p_phone    text,
     p_class_id text
 ) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
-    UPDATE students SET class_id = NULLIF(p_class_id, '') WHERE phone = p_phone;
+    IF p_class_id IS NULL OR p_class_id = '' THEN
+        UPDATE students SET class_id = NULL WHERE phone = p_phone;
+    ELSE
+        UPDATE students SET class_id = p_class_id::uuid WHERE phone = p_phone;
+    END IF;
 END;
 $$;
 GRANT EXECUTE ON FUNCTION admin_update_student_class(text, text) TO anon;
