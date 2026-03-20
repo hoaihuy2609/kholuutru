@@ -114,7 +114,8 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
         gLessons.forEach(l => { if (storedFiles[l.id]) gFiles[l.id] = storedFiles[l.id]; });
         // ✅ Bao gồm file cấp chương (storedFiles[chapterId]) — trước đây bị bỏ sót!
         gData.chapters.forEach(ch => { if (storedFiles[ch.id]?.length) gFiles[ch.id] = storedFiles[ch.id]; });
-        if (gLessons.length === 0) { onShowToast(`Lớp ${grade} chưa có bài giảng nào!`, 'warning'); return; }
+        const hasChapterFiles = gData.chapters.some(ch => (storedFiles[ch.id]?.length ?? 0) > 0);
+        if (gLessons.length === 0 && !hasChapterFiles) { onShowToast(`Lớp ${grade} chưa có tài liệu nào!`, 'warning'); return; }
         setSyncStatus(prev => ({ ...prev, [grade]: 'syncing' }));
         setSyncMsg(prev => ({ ...prev, [grade]: '' }));
         try {
@@ -420,19 +421,20 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                     )}
 
                     {/* Chapters */}
-                    {gradeLessons.length === 0 ? (
+                    {gradeLessons.length === 0 && !gradeData?.chapters.some(ch => (storedFiles[ch.id]?.length ?? 0) > 0) ? (
                         <div className="py-12 text-center">
                             <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
-                            <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có bài giảng nào</p>
+                            <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có tài liệu nào</p>
                         </div>
                     ) : (
                         <div>
                             {gradeData?.chapters.map(chapter => {
                                 const chapterLessons = gradeLessons.filter(l => l.chapterId === chapter.id)
                                     .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-                                if (chapterLessons.length === 0) return null;
+                                const chapterDirectFiles = storedFiles[chapter.id] || [];
+                                if (chapterLessons.length === 0 && chapterDirectFiles.length === 0) return null;
                                 const isExpanded = expandedChapters.has(chapter.id);
-                                const chFileCount = chapterLessons.reduce((s, l) => s + (storedFiles[l.id]?.length || 0), 0);
+                                const chFileCount = chapterLessons.reduce((s, l) => s + (storedFiles[l.id]?.length || 0), 0) + chapterDirectFiles.length;
 
                                 // Category counts for chapter
                                 const chCatCounts: Record<string, number> = {};
@@ -486,6 +488,35 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                                         {/* Lesson Rows */}
                                         {isExpanded && (
                                             <div style={{ borderTop: '1px solid #F1F0EC' }}>
+                                                {/* ✅ BUG 2B FIX: Chapter-level files section */}
+                                                {chapterDirectFiles.length > 0 && (
+                                                    <div style={{ borderBottom: '1px solid #F1F0EC', background: '#FFFDF5' }}>
+                                                        <div className="flex items-center gap-2 px-5 py-2" style={{ borderBottom: '1px solid #F8F7F5' }}>
+                                                            <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: '#D97706' }}>
+                                                                📁 File cấp Chương ({chapterDirectFiles.length})
+                                                            </span>
+                                                            <span className="text-[10px]" style={{ color: '#AEACA8' }}>— Hiển thị cho toàn bộ bài trong chương này</span>
+                                                        </div>
+                                                        {chapterDirectFiles.map(file => (
+                                                            <div
+                                                                key={file.id}
+                                                                className="flex items-center gap-2 group/cf"
+                                                                style={{ padding: '6px 20px 6px 52px', borderBottom: '1px solid #F8F7F5' }}
+                                                            >
+                                                                <FileText className="w-3 h-3 shrink-0" style={{ color: '#D97706' }} />
+                                                                <span className="text-[12px] flex-1 truncate" style={{ color: '#57564F' }}>{file.name}</span>
+                                                                <span className="text-[10px] shrink-0" style={{ color: '#AEACA8' }}>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                                                                <button
+                                                                    onClick={() => handleDeleteFile(file.id, chapter.id, file.name)}
+                                                                    className="opacity-0 group-hover/cf:opacity-100 p-1 rounded hover:text-red-500 transition-all"
+                                                                    title="Xóa file"
+                                                                >
+                                                                    <Trash2 className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                                 {chapterLessons.map(lesson => {
                                                     const lessonFiles = storedFiles[lesson.id] || [];
                                                     const isLessonExpanded = expandedLessons.has(lesson.id);

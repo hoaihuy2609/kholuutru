@@ -147,11 +147,13 @@ export const useCloudStorage = () => {
             } else {
                 if (data.is_active === false) return false;
                 if (data.grade) dbGrade = data.grade;
-                // Chỉ update machine_id và activation_key khi data hợp lệ
-                await supabase.from('students').update({
-                    machine_id: machineId,
-                    activation_key: CryptoJS.SHA256(key).toString(),
-                }).eq('phone', phoneStr);
+                // ✅ BUG 1 FIX: Dùng RPC SECURITY DEFINER thay vì UPDATE trực tiếp
+                // anon key không còn cần quyền UPDATE trên bảng students nữa
+                await supabase.rpc('activate_device', {
+                    p_phone: phoneStr,
+                    p_machine_id: machineId,
+                    p_activation_key: CryptoJS.SHA256(key).toString(),
+                });
             }
         } catch (err) {
             console.error('[activateSystem] unexpected error:', err);
@@ -505,7 +507,13 @@ export const useCloudStorage = () => {
         if (!indexRes.ok) { setSyncProgress(0); throw new Error(`Lỗi upload Index: ${indexRes.statusText}`); }
 
         const finalFileId = (await indexRes.json()).result.document.file_id;
-        const { error: sbError } = await supabase.from('vault_index').upsert({ grade, telegram_file_id: finalFileId, updated_at: Date.now() }, { onConflict: 'grade' });
+        // ✅ BUG 3 FIX: Dùng RPC SECURITY DEFINER để admin upsert vault_index
+        // anon key bị REVOKE INSERT/UPDATE trên vault_index nên KHÔNG thể gọi trực tiếp
+        const { error: sbError } = await supabase.rpc('admin_upsert_vault_index', {
+            p_grade: grade,
+            p_telegram_file_id: finalFileId,
+            // updated_at tự được fill bởi DEFAULT now() phía Postgres
+        });
         if (sbError) throw new Error("Supabase từ chối lưu: " + sbError.message);
 
         localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
@@ -535,9 +543,12 @@ export const useCloudStorage = () => {
         // Auto-create notification
         try {
             const gradeLabel = grade === 12 ? 'Lớp 12' : grade === 11 ? 'Lớp 11' : 'Lớp 10';
-            await supabase.from('notifications').insert({
-                message: `Thầy vừa cập nhật tài liệu mới cho ${gradeLabel}! Hãy bấm nút bên dưới để tải về ngay nhé.`,
-                grade, fetch_enabled: true,
+            // ✅ BUG 4 FIX: Dùng RPC SECURITY DEFINER để admin insert notification
+            // anon key bị REVOKE INSERT trên notifications nên KHÔNG thể gọi trực tiếp
+            await supabase.rpc('admin_insert_notification', {
+                p_message: `Thầy vừa cập nhật tài liệu mới cho ${gradeLabel}! Hãy bấm nút bên dưới để tải về ngay nhé.`,
+                p_grade: grade,
+                p_fetch_enabled: true,
             });
         } catch (notifErr) { console.error('[Notification] Không tạo được thông báo:', notifErr); }
 

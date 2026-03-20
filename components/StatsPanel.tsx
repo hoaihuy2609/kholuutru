@@ -13,6 +13,7 @@ import {
     Sparkles, Target, Zap, Star, Brain, ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
 import { ExamResultRecord } from '../types';
+import { useUIStore } from '../src/stores/useUIStore';
 
 // ── Grade config ──────────────────────────────────────────────────
 const GRADE_CFG = {
@@ -527,6 +528,8 @@ const StatsPanel: React.FC = () => {
     const [classMap, setClassMap] = useState<Record<string, string>>({});
     // studentClassMap: phone -> class_id
     const [studentClassMap, setStudentClassMap] = useState<Record<string, string>>({});
+    // allStudents: danh sách toàn bộ học sinh (dùng để tính sĩ số thực)
+    const [allStudents, setAllStudents] = useState<Array<{ phone: string; class_id: string | null; grade: number }>>([]);
 
     // ── DATA FETCHING — PRESERVED EXACTLY, DO NOT MODIFY ─────────
 
@@ -543,7 +546,7 @@ const StatsPanel: React.FC = () => {
                     .select('id, name'),
                 supabase
                     .from('students')
-                    .select('phone, class_id'),
+                    .select('phone, class_id, grade'),
             ]);
             setRecords((resultsRes.data as ExamResultRecord[]) || []);
             const newClassMap: Record<string, string> = {};
@@ -552,13 +555,23 @@ const StatsPanel: React.FC = () => {
             }
             setClassMap(newClassMap);
             const newStudentClassMap: Record<string, string> = {};
+            const newAllStudents: Array<{ phone: string; class_id: string | null; grade: number }> = [];
             for (const s of (studentsRes.data || [])) {
-                const row = s as { phone: string; class_id: string };
+                const row = s as { phone: string; class_id: string | null; grade: number };
                 if (row.phone && row.class_id) newStudentClassMap[row.phone] = row.class_id;
+                if (row.phone && row.grade != null) newAllStudents.push({ phone: row.phone, class_id: row.class_id ?? null, grade: row.grade });
             }
             setStudentClassMap(newStudentClassMap);
-        } catch (e) { console.error(e); }
-        setLoading(false);
+            setAllStudents(newAllStudents);
+        } catch (e) {
+            console.error(e);
+            useUIStore.getState().showToast(
+                navigator.onLine ? 'Lỗi tải dữ liệu, thử lại sau.' : 'Mất kết nối mạng.',
+                'error',
+            );
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     useEffect(() => { fetchData(); }, [fetchData]);
@@ -580,13 +593,15 @@ const StatsPanel: React.FC = () => {
 
     const uniqueClasses = useMemo(() => {
         const set = new Set<string>();
-        for (const r of gradeRecords) {
-            const classId = studentClassMap[r.student_phone];
-            const className = classId ? classMap[classId] : undefined;
+        // ✅ BUG 2A FIX: Class dropdown giờ lấy data từ allStudents thay vì gradeRecords,
+        // giúp hiển thị tất cả các lớp của khối, không chỉ các lớp có học sinh tham gia thi.
+        for (const s of allStudents) {
+            if (s.grade !== selectedGrade) continue;
+            const className = s.class_id ? classMap[s.class_id] : undefined;
             if (className) set.add(className);
         }
         return Array.from(set).sort();
-    }, [gradeRecords, studentClassMap, classMap]);
+    }, [allStudents, selectedGrade, classMap]);
 
     // Reset class filter when grade changes
     useEffect(() => { setSelectedClassFilter('all'); }, [selectedGrade]);
@@ -636,26 +651,34 @@ const StatsPanel: React.FC = () => {
         () => filteredByClassRecords.filter(r => r.exam_id === selectedExamId),
         [filteredByClassRecords, selectedExamId],
     );
-    const totalStudentsInGrade = useMemo(
-        () => new Set(filteredByClassRecords.map(r => r.student_phone)).size,
-        [filteredByClassRecords],
-    );
+    // ✅ BUG 2A FIX: Sĩ số thực lấy từ bảng students (có filter theo khối và lớp đang chọn)
+    const totalStudentsInGrade = useMemo(() => {
+        return allStudents.filter(s => {
+            if (s.grade !== selectedGrade) return false;
+            if (selectedClassFilter === 'all') return true;
+            const studentClassName = s.class_id ? classMap[s.class_id] : null;
+            return studentClassName === selectedClassFilter;
+        }).length;
+    }, [allStudents, selectedGrade, selectedClassFilter, classMap]);
     const gradeCfg = GRADE_OPTIONS.find(g => g.value === selectedGrade)!;
+    const escapeCsv = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
+
     const exportCSVNew = () => {
         const { examColumns, rows } = gradebookData;
-        
-        const headerCols = ['"Họ tên"', ...examColumns.map(e => `"${e.title}"`), '"Điểm TB"'];
+
+        // Escape tên đề thi trong header — tránh CSV injection
+        const headerCols = [escapeCsv('Họ tên'), ...examColumns.map(e => escapeCsv(e.title)), escapeCsv('Điểm TB')];
         const header = headerCols.join(',') + '\n';
-        
+
         const csvRows = rows.map(row => {
             const scores = examColumns.map(exam => {
                 const score = row.scores[exam.id];
-                return score !== undefined ? score.toFixed(2) : '""';
+                return score !== undefined ? score.toFixed(2) : '';
             });
             return [
-                `"${row.name}"`,
+                escapeCsv(row.name),   // ✅ BUG 3A FIX: escape tên học sinh
                 ...scores,
-                row.avg.toFixed(2)
+                row.avg.toFixed(2),
             ].join(',');
         }).join('\n');
 

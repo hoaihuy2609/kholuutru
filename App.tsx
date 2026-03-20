@@ -85,8 +85,20 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
           const [n10, n11, n12, fetched] = await Promise.all([getNotifications(10), getNotifications(11), getNotifications(12), getFetchedNotificationIds()]);
           setNotificationUnreadCount([...n10, ...n11, ...n12].filter(n => n.fetch_enabled && !fetched.has(n.id)).length);
         } else {
-          const grade = parseInt(localStorage.getItem('physivault_grade') || '0', 10);
-          if (grade < 10 || grade > 12) return; // no grade set yet — skip notification check
+          let grade = parseInt(localStorage.getItem('physivault_grade') || '0', 10);
+          // ✅ BUG 3C FIX: fallback lấy grade từ Supabase nếu localStorage bị xóa
+          if (grade < 10 || grade > 12) {
+            const phone = localStorage.getItem('pv_activated_sdt');
+            if (!phone) return;
+            try {
+              const { supabase: sb } = await import('./src/lib/supabase');
+              const { data } = await sb.from('students').select('grade').eq('phone', phone).maybeSingle();
+              if (data?.grade) {
+                grade = data.grade;
+                localStorage.setItem('physivault_grade', String(grade)); // re-cache
+              } else return;
+            } catch { return; }
+          }
           const [notifs, fetched] = await Promise.all([getNotifications(grade), getFetchedNotificationIds()]);
           setNotificationUnreadCount(notifs.filter(n => n.fetch_enabled && !fetched.has(n.id)).length);
         }
