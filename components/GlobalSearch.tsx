@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { CURRICULUM } from '../constants';
 import { Lesson } from '../types';
 import { useDataStore } from '../src/stores/useDataStore';
+import { useExamStore } from '../src/stores/useContentStore';
 
 interface SearchResult {
   id: string;
@@ -246,6 +247,16 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
     onClose();
     if (result.category === 'file') {
       navigate(result.path, { state: { previewFileId: result.id.replace('file-', '') } });
+    } else if (result.category === 'exam') {
+      const examId = result.id.replace('ex-', '');
+      const exam = exams.find(e => e.id === examId);
+      if (exam) {
+        useExamStore.getState().setActiveExam(exam);
+        useExamStore.getState().setExamSubmission(null);
+        navigate('/exams');
+      } else {
+        navigate('/exams', { state: { selectedExamId: examId } });
+      }
     } else {
       navigate(result.path);
     }
