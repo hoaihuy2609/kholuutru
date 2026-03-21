@@ -418,8 +418,11 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                     if (lowerCat.includes('lý thuyết trọng tâm')) {
                       itemColor = '#D9730D'; itemBg = '#FFF3E8';   // Cam
                       Icon = BookOpen;
-                    } else if (lowerCat.includes('đúng/sai')) {
+                    } else if (lowerCat.includes('lý thuyết (đúng/sai)')) {
                       itemColor = '#6B7CDB'; itemBg = '#EEF0FB';   // Xanh nước biển
+                      Icon = FileText;
+                    } else if (lowerCat.includes('đúng/sai')) {
+                      itemColor = '#448361'; itemBg = '#EAF3EE';   // Xanh lá (chương & khác)
                       Icon = FileText;
                     } else if (lowerCat.includes('nâng cao')) {
                       itemColor = '#9065B0'; itemBg = '#F3ECF8';   // Tím
