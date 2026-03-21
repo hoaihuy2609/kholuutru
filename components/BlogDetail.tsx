@@ -6,6 +6,7 @@ import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import { BlogPost } from '../types';
 import { Calendar, ChevronLeft, Tag, Clock, Copy, Check, List } from 'lucide-react';
+import PhysicsSolution from './PhysicsSolution';
 
 interface BlogDetailProps {
     blog: BlogPost;
@@ -119,9 +120,38 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
         }
     };
 
-    // Header ID helper cho markdown headings
     const makeId = (text: string) =>
         String(text).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+    let parsedSolution = null;
+    try {
+        const parsed = JSON.parse(blog.content);
+        if (parsed.type === 'physics_solution') {
+            parsedSolution = parsed;
+        }
+    } catch (e) { }
+
+    if (parsedSolution) {
+        return (
+            <div className="max-w-4xl mx-auto p-4 md:p-8 animate-fade-in relative pb-20">
+                <button
+                    onClick={onBack}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        fontSize: '13px', fontWeight: 500, color: '#787774',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        marginBottom: '28px', padding: '6px 10px 6px 4px', borderRadius: '8px',
+                        transition: 'all 0.15s'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#F1F0EC'; e.currentTarget.style.color = '#1A1A1A'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#787774'; }}
+                >
+                    <ChevronLeft style={{ width: '16px', height: '16px' }} /> Quay lại
+                </button>
+                <PhysicsSolution data={parsedSolution.data} />
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-4xl mx-auto p-4 md:p-8 animate-fade-in relative pb-20">

@@ -72,7 +72,17 @@ function StepPreview({ step, index }: { step: any; index: number }) {
 
 const emptyStep = () => ({ title: "", text: "", formula: "", formula2: "" });
 
-export default function SolutionEditor() {
+interface SolutionEditorProps {
+  blog?: any;
+  saveBlog?: (blog: any) => Promise<any>;
+  deleteBlog?: (id: string) => Promise<boolean>;
+  syncBlogs?: () => Promise<any>;
+  onSaved?: (blog: any) => void;
+  onBack?: () => void;
+  switchToMarkdown?: () => void;
+}
+
+export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onBack, switchToMarkdown }: SolutionEditorProps) {
   const [examName,   setExamName]   = useState("");
   const [questionNo, setQuestionNo] = useState("");
   const [qText,      setQText]      = useState("");
@@ -83,6 +93,24 @@ export default function SolutionEditor() {
 
   const activeRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const showToast = useUIStore(state => state.showToast);
+
+  // Load existing data if editing
+  useEffect(() => {
+    if (blog && blog.content) {
+      try {
+        const parsed = JSON.parse(blog.content);
+        if (parsed.type === 'physics_solution' && parsed.data) {
+          setExamName(parsed.data.exam_name || "");
+          setQuestionNo(parsed.data.question_no || "");
+          setQText(parsed.data.question_text || "");
+          setQFormula(parsed.data.question_latex || "");
+          setSteps(parsed.data.steps && parsed.data.steps.length > 0 ? parsed.data.steps : [emptyStep()]);
+        }
+      } catch (e) {
+        console.error("Failed to parse physics solution data", e);
+      }
+    }
+  }, [blog]);
 
   const insertSnippet = useCallback((tex: string) => {
     const el = activeRef.current;
@@ -130,19 +158,43 @@ export default function SolutionEditor() {
     }
     setSaving(true);
     try {
-      const { error } = await supabase.from("solutions").insert({
-        exam_name:      examName,
-        question_no:    questionNo,
-        question_text:  qText,
-        question_latex: qFormula,
-        steps,
-      });
-      if (error) throw error;
-      showToast("Đã lưu bài giải thành công!", "success");
-      // Optional: clear form
-      setQText("");
-      setQFormula("");
-      setSteps([emptyStep()]);
+      const solutionData = {
+        type: 'physics_solution',
+        data: {
+          exam_name: examName,
+          question_no: questionNo,
+          question_text: qText,
+          question_latex: qFormula,
+          steps,
+        }
+      };
+      
+      const payload = {
+        id: blog?.id,
+        title: `[Giải chi tiết] ${examName} - ${questionNo}`,
+        summary: qText || 'Hướng dẫn giải bài tập vật lý chi tiết từng bước bằng LaTeX.',
+        content: JSON.stringify(solutionData),
+        category: 'Lời giải',
+        is_published: true, // auto publish cho tiện
+      };
+
+      if (saveBlog) {
+        const saved = await saveBlog(payload);
+        if (saved) {
+           showToast("Đã lưu bài viết! Đang đồng bộ...", "warning");
+           if (syncBlogs) await syncBlogs();
+           showToast("Đã lưu và đồng bộ thành công!", "success");
+           if (onSaved) onSaved(saved);
+        } else {
+           throw new Error("Lưu thất bại.");
+        }
+      } else {
+        // Fallback for standalone mode (if still used)
+        const { error } = await supabase.from("solutions").insert(solutionData.data);
+        if (error) throw error;
+        showToast("Đã lưu vào solutions table (chế độ standalone)!", "success");
+        setQText(""); setQFormula(""); setSteps([emptyStep()]);
+      }
     } catch (err: any) {
       showToast("Lỗi: " + err.message, "error");
     } finally {
@@ -309,10 +361,38 @@ export default function SolutionEditor() {
 
       <div className="se-root">
         <div className="se-topbar">
-          <div className="se-logo">PhysiVault <span>Giải bài</span></div>
-          <button className="btn-save" onClick={handleSave} disabled={saving}>
-            {saving ? "Đang lưu..." : "💾 Bấm Lưu"}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {onBack && (
+              <button 
+                onClick={onBack}
+                style={{
+                  background: 'none', border: 'none', color: 'var(--muted)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                  fontSize: '13px', padding: 0, fontFamily: 'Nunito', fontWeight: 600
+                }}
+              >
+                ← Quay lại
+              </button>
+            )}
+            <div className="se-logo">PhysiVault <span>Giải bài</span></div>
+          </div>
+          
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+             {switchToMarkdown && (
+               <button
+                  onClick={switchToMarkdown}
+                  style={{
+                    background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--border)",
+                    padding: "6px 12px", borderRadius: "6px", fontSize: "12px", cursor: "pointer", fontFamily: 'Nunito', fontWeight: 600
+                  }}
+               >
+                 Thường (Markdown)
+               </button>
+             )}
+            <button className="btn-save" onClick={handleSave} disabled={saving}>
+              {saving ? "Đang lưu..." : "💾 Bấm Lưu"}
+            </button>
+          </div>
         </div>
 
         <div className="se-body">

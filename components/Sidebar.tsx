@@ -418,18 +418,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
 
           {!previewMode && (
             <>
-              {onOpenSolutionEditor && (
-                <button
-                  onClick={onOpenSolutionEditor}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors mb-1"
-                  style={{ color: '#57564F' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                >
-                  <FileText className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
-                  Soạn Lời Giải (LaTeX)
-                </button>
-              )}
               <button
                 id="tour-settings-btn"
                 onClick={onOpenSettings}

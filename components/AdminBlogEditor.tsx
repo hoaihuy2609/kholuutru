@@ -11,6 +11,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
+import SolutionEditor from './SolutionEditor';
 
 interface AdminBlogEditorProps {
     blog: BlogPost | null;
@@ -24,6 +25,7 @@ interface AdminBlogEditorProps {
 const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
 const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
+    const [editorMode, setEditorMode] = useState<'markdown' | 'solution'>('markdown');
     const [pendingSync, setPendingSync] = useState(false); // flag cần sync lên Telegram
     const [isSyncingBlog, setIsSyncingBlog] = useState(false);
 
@@ -48,6 +50,17 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                 is_published: blog.is_published,
                 grade: blog.grade ?? 0,
             });
+            
+            try {
+                const parsed = JSON.parse(blog.content || '{}');
+                if (parsed.type === 'physics_solution') {
+                    setEditorMode('solution');
+                }
+            } catch (e) {
+                setEditorMode('markdown');
+            }
+        } else {
+            setEditorMode('markdown');
         }
     }, [blog]);
 
@@ -184,6 +197,18 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         { icon: <AlignJustify className="w-4 h-4" />, tip: 'Căn đều', action: () => insertTextAtCursor('<div align="justify">\n\n', '\n\n</div>') },
     ];
 
+    if (editorMode === 'solution') {
+        return <SolutionEditor
+            blog={blog}
+            onBack={onBack}
+            onSaved={onSaved}
+            saveBlog={saveBlog}
+            syncBlogs={syncBlogs}
+            deleteBlog={deleteBlog}
+            switchToMarkdown={() => setEditorMode('markdown')}
+        />;
+    }
+
     return (
         <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20">
             {/* Toast */}
@@ -222,6 +247,21 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                 >
                     <ChevronLeft className="w-4 h-4" /> Quay lại
                 </button>
+
+                <div className="flex items-center gap-3 bg-white p-1 rounded-xl border border-[#E9E9E7]">
+                    <button
+                        onClick={() => setEditorMode('markdown')}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${editorMode === 'markdown' ? 'bg-[#EEF0FB] text-[#6B7CDB]' : 'text-[#787774] hover:bg-gray-50'}`}
+                    >
+                        Markdown
+                    </button>
+                    <button
+                        onClick={() => setEditorMode('solution')}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${editorMode === 'solution' ? 'bg-[#EEF0FB] text-[#6B7CDB]' : 'text-[#787774] hover:bg-gray-50'}`}
+                    >
+                        Lời Giải (LaTeX)
+                    </button>
+                </div>
 
                 <div className="flex items-center gap-3 flex-wrap">
                     {blog && (
