@@ -224,7 +224,7 @@ const LessonCard = React.memo(({ lesson, lp, isDone, isAdmin, onSelectLesson, cy
         </span>
       )}
 
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-3 shrink-0 ml-auto">
         {isAdmin && (
           <button
             onClick={e => { e.stopPropagation(); onDeleteLesson(lesson.id); }}
