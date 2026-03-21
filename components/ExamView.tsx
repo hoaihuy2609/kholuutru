@@ -248,11 +248,32 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                             <p className="text-sm" style={{ color: '#AEACA8' }}>Đang tải đề thi...</p>
                         </div>
                     ) : pdfUrl ? (
-                        <iframe
-                            src={`${pdfUrl}#toolbar=0`}
-                            className="w-full h-full border-0 block"
-                            title="PDF Preview"
-                        />
+                        <>
+                            {/* Desktop: iframe nhúng */}
+                            <iframe
+                                src={`${pdfUrl}#toolbar=0`}
+                                className="w-full h-full border-0 hidden md:block"
+                                title="PDF Preview"
+                            />
+                            {/* Mobile: nút mở PDF trong tab mới (Chrome Android không render PDF trong iframe) */}
+                            <div className="flex md:hidden flex-col items-center justify-center h-full gap-4" style={{ background: '#1A1A1A' }}>
+                                <FileText className="w-12 h-12" style={{ color: ACCENT }} />
+                                <p className="text-sm font-semibold" style={{ color: '#E5E5E4' }}>{exam.title}</p>
+                                <p className="text-xs text-center px-6" style={{ color: '#AEACA8' }}>
+                                    Bấm nút bên dưới để xem đề thi.<br/>Sau đó quay lại tab này để làm bài.
+                                </p>
+                                <a
+                                    href={pdfUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-6 py-3 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all active:scale-95"
+                                    style={{ background: ACCENT }}
+                                >
+                                    <FileText className="w-4 h-4" />
+                                    Xem đề thi
+                                </a>
+                            </div>
+                        </>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full gap-2" style={{ background: '#1A1A1A' }}>
                             <AlertTriangle className="w-8 h-8" style={{ color: '#D9730D' }} />
