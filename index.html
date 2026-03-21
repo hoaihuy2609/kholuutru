@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 
 <head>
@@ -6,19 +6,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- SEO Meta Tags -->
-  <title>PhysiVault - Kho Lưu Trữ Vật Lý Thông Minh</title>
+  <title>PhysiVault - Kho L╞░u Trß╗» Vß║¡t L├╜ Th├┤ng Minh</title>
   <meta name="description"
-    content="Quản lý và lưu trữ tài liệu Vật Lý một cách dễ dàng, hiệu quả. Hỗ trợ lớp 10, 11, 12 với giao diện thân thiện và tính năng tìm kiếm mạnh mẽ." />
-  <meta name="keywords" content="vật lý, tài liệu vật lý, học vật lý, lớp 10, lớp 11, lớp 12, physivault" />
+    content="Quß║ún l├╜ v├á l╞░u trß╗» t├ái liß╗çu Vß║¡t L├╜ mß╗Öt c├ích dß╗à d├áng, hiß╗çu quß║ú. Hß╗ù trß╗ú lß╗¢p 10, 11, 12 vß╗¢i giao diß╗çn th├ón thiß╗çn v├á t├¡nh n─âng t├¼m kiß║┐m mß║ính mß║╜." />
+  <meta name="keywords" content="vß║¡t l├╜, t├ái liß╗çu vß║¡t l├╜, hß╗ìc vß║¡t l├╜, lß╗¢p 10, lß╗¢p 11, lß╗¢p 12, physivault" />
   <meta name="author" content="PhysiVault" />
   <meta name="robots" content="noindex, nofollow" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="PhysiVault - Kho Lưu Trữ Vật Lý Thông Minh" />
-  <meta property="og:description" content="Quản lý và lưu trữ tài liệu Vật Lý một cách dễ dàng, hiệu quả" />
+  <meta property="og:title" content="PhysiVault - Kho L╞░u Trß╗» Vß║¡t L├╜ Th├┤ng Minh" />
+  <meta property="og:description" content="Quß║ún l├╜ v├á l╞░u trß╗» t├ái liß╗çu Vß║¡t L├╜ mß╗Öt c├ích dß╗à d├áng, hiß╗çu quß║ú" />
 
-  <!-- Robots: private app — prevent indexing -->
+  <!-- Robots: private app ΓÇö prevent indexing -->
   <meta name="robots" content="noindex, nofollow" />
 
   <!-- Theme Color (warm palette) -->
@@ -31,7 +31,7 @@
   <!-- Preconnect for Performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <!-- Supabase API — preconnect to avoid 100–200 ms DNS lookup on first request -->
+  <!-- Supabase API ΓÇö preconnect to avoid 100ΓÇô200 ms DNS lookup on first request -->
   <link rel="preconnect" href="https://ndhcwrczwbehyznnxzou.supabase.co" crossorigin />
   <link rel="dns-prefetch" href="https://ndhcwrczwbehyznnxzou.supabase.co" />
 
@@ -57,7 +57,7 @@
       margin: 0;
     }
 
-    /* ── Splash screen ── */
+    /* ΓöÇΓöÇ Splash screen ΓöÇΓöÇ */
     #pv-splash {
       position: fixed;
       inset: 0;
@@ -174,11 +174,11 @@
 <body>
   <noscript>
     <div style="padding: 2rem; text-align: center; background: #FFF3E8; color: #92400e; font-family: sans-serif;">
-      Bạn cần bật JavaScript để sử dụng PhysiVault.
+      Bß║ín cß║ºn bß║¡t JavaScript ─æß╗â sß╗¡ dß╗Ñng PhysiVault.
     </div>
   </noscript>
 
-  <!-- ── Splash screen (shown while JS/React loads) ── -->
+  <!-- ΓöÇΓöÇ Splash screen (shown while JS/React loads) ΓöÇΓöÇ -->
   <div id="pv-splash" aria-hidden="true">
     <div class="pv-splash-icon">
       <!-- Physics atom icon (inline, no dependency) -->
@@ -232,8 +232,8 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(regs) {
         regs.forEach(function(sw) {
-          var scriptUrl = sw.active ? sw.active.scriptURL : (sw.waiting ? sw.waiting.scriptURL : (sw.installing ? sw.installing.scriptURL : ''));
-          if (scriptUrl && scriptUrl.includes('sw-push')) return;
+          // Keep the push notification service worker alive
+          if (sw.active && sw.active.scriptURL && sw.active.scriptURL.includes('sw-push')) return;
           sw.unregister();
         });
       });
