@@ -272,7 +272,15 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                             <p className="text-sm" style={{ color: '#AEACA8' }}>Đang tải đề thi...</p>
                         </div>
                     ) : pdfUrl ? (
-                        <div ref={pdfWrapperRef} className="absolute inset-0 overflow-y-auto overflow-x-hidden flex flex-col items-center bg-[#1A1A1A] pb-10" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3B3B3B #1A1A1A' }}>
+                        <>
+                            {/* Desktop: iframe nhúng */}
+                            <iframe
+                                src={`${pdfUrl}#toolbar=0`}
+                                className="w-full h-full border-0 hidden md:block"
+                                title="PDF Preview"
+                            />
+                            {/* Mobile/Tablet: dùng React-PDF để hiện mượt và sắc nét */}
+                            <div ref={pdfWrapperRef} className="absolute inset-0 overflow-y-auto overflow-x-hidden flex md:hidden flex-col items-center bg-[#1A1A1A] pb-10" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3B3B3B #1A1A1A' }}>
                             <Document 
                                 file={pdfUrl} 
                                 onLoadSuccess={onDocumentLoadSuccess} 
@@ -293,6 +301,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                 ))}
                             </Document>
                         </div>
+                        </>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full gap-2" style={{ background: '#1A1A1A' }}>
                             <AlertTriangle className="w-8 h-8" style={{ color: '#D9730D' }} />
