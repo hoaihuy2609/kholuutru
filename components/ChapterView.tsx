@@ -3,6 +3,7 @@ import { ArrowLeft, Plus, Folder, Trash2, ChevronRight, ArrowUpDown, FileText, U
 import SearchBar from './SearchBar';
 import { useDebounce } from 'use-debounce';
 import { Chapter, Lesson, StoredFile } from '../types';
+import { useLocation } from 'react-router-dom';
 
 // ── Progress Types ──────────────────────────────────────────
 type ProgressStatus = 'none' | 'done';
@@ -277,6 +278,17 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
   const [trueFalseSort, setTrueFalseSort] = useState<'newest' | 'oldest' | 'az' | 'za'>('az');
   const [advancedSort, setAdvancedSort] = useState<'newest' | 'oldest' | 'az' | 'za'>('az');
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    const state = location.state as { previewFileId?: string };
+    if (state?.previewFileId) {
+      const file = chapterFiles.find(f => f.id === state.previewFileId);
+      if (file) {
+        setPreviewFile(file);
+      }
+    }
+  }, [location.state, chapterFiles]);
   const [uploadCategory, setUploadCategory] = useState<string>('');
   const [progress, setProgress] = useState<ProgressMap>(loadProgress);
   const [sectionNotes, setSectionNotes] = useState<Record<string, string>>(loadSectionNotes);

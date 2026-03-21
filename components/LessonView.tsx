@@ -2,6 +2,7 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { ArrowLeft, FileText, Trash2, UploadCloud, Download, Eye, ArrowUpDown, X, RotateCcw, ClipboardList } from 'lucide-react';
 import { Lesson, StoredFile } from '../types';
 import SearchBar from './SearchBar';
+import { useLocation } from 'react-router-dom';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -35,6 +36,17 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(LESSON_CATEGORIES[0]);
+  const location = useLocation();
+
+  useEffect(() => {
+    const state = location.state as { previewFileId?: string };
+    if (state?.previewFileId) {
+      const file = files.find(f => f.id === state.previewFileId);
+      if (file) {
+        setPreviewFile(file);
+      }
+    }
+  }, [location.state, files]);
 
   // Answer panel (only meaningful on desktop, wiped each time PDF opens)
   const [panel, setPanel] = useState<AnswerPanelState>({
