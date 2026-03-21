@@ -4,6 +4,11 @@ import { Exam, ExamTFAnswer, ExamSubmission } from '../types';
 import ExamCountdownTimer from './ExamCountdownTimer';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
 const PDF_CACHE_DB = 'pv_pdf_cache';
 const PDF_CACHE_STORE = 'pdfs';
@@ -114,6 +119,25 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     const [pdfLoading, setPdfLoading] = useState(true);
     const [showConfirm, setShowConfirm] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    
+    // PDF rendering states
+    const [numPages, setNumPages] = useState<number>(0);
+    const [pdfWidth, setPdfWidth] = useState<number>(0);
+    const pdfWrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!pdfWrapperRef.current) return;
+        const observer = new ResizeObserver((entries) => {
+            setPdfWidth(entries[0].contentRect.width);
+        });
+        observer.observe(pdfWrapperRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+        setNumPages(numPages);
+    };
+
     const startTime = useRef(Date.now());
 
     const ACCENT = '#6B7CDB';
@@ -248,32 +272,25 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                             <p className="text-sm" style={{ color: '#AEACA8' }}>Đang tải đề thi...</p>
                         </div>
                     ) : pdfUrl ? (
-                        <>
-                            {/* Desktop: iframe nhúng */}
-                            <iframe
-                                src={`${pdfUrl}#toolbar=0`}
-                                className="w-full h-full border-0 hidden md:block"
-                                title="PDF Preview"
-                            />
-                            {/* Mobile: nút mở PDF trong tab mới (Chrome Android không render PDF trong iframe) */}
-                            <div className="flex md:hidden flex-col items-center justify-center h-full gap-4" style={{ background: '#1A1A1A' }}>
-                                <FileText className="w-12 h-12" style={{ color: ACCENT }} />
-                                <p className="text-sm font-semibold" style={{ color: '#E5E5E4' }}>{exam.title}</p>
-                                <p className="text-xs text-center px-6" style={{ color: '#AEACA8' }}>
-                                    Bấm nút bên dưới để xem đề thi.<br/>Sau đó quay lại tab này để làm bài.
-                                </p>
-                                <a
-                                    href={pdfUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-6 py-3 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all active:scale-95"
-                                    style={{ background: ACCENT }}
-                                >
-                                    <FileText className="w-4 h-4" />
-                                    Xem đề thi
-                                </a>
-                            </div>
-                        </>
+                        <div ref={pdfWrapperRef} className="absolute inset-0 overflow-y-auto overflow-x-hidden flex flex-col items-center bg-[#1A1A1A] pb-10" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3B3B3B #1A1A1A' }}>
+                            <Document 
+                                file={pdfUrl} 
+                                onLoadSuccess={onDocumentLoadSuccess} 
+                                loading={<div className="flex flex-col items-center justify-center p-12 gap-3"><RefreshCw className="w-8 h-8 animate-spin" style={{ color: ACCENT }} /><p className="text-sm" style={{ color: '#AEACA8' }}>Đang render trang PDF...</p></div>}
+                                error={<div className="flex flex-col items-center justify-center p-12 gap-2 text-[#AEACA8] text-sm"><AlertTriangle className="w-8 h-8 text-red-500 mb-2"/>Lỗi render PDF. Vui lòng tải lại trang.</div>}
+                            >
+                                {Array.from(new Array(numPages), (el, index) => (
+                                    <div key={`page_${index + 1}`} className="mb-4 lg:mb-6 shadow-[0_4px_16px_rgba(0,0,0,0.5)]">
+                                        <Page 
+                                            pageNumber={index + 1} 
+                                            width={pdfWidth > 0 ? (pdfWidth > 800 ? 800 : pdfWidth - 16) : undefined}
+                                            renderTextLayer={false}
+                                            renderAnnotationLayer={false}
+                                        />
+                                    </div>
+                                ))}
+                            </Document>
+                        </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full gap-2" style={{ background: '#1A1A1A' }}>
                             <AlertTriangle className="w-8 h-8" style={{ color: '#D9730D' }} />
