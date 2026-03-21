@@ -210,7 +210,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
     }
 
     return (
-        <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20">
+        <div className="max-w-[1920px] w-full mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20">
             {/* Toast */}
             {toast && (
                 <div

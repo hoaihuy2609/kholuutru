@@ -225,7 +225,7 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
   };
 
   return (
-    <div className="max-w-[1600px] w-full mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20 font-sans">
+    <div className="max-w-[1920px] w-full mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20 font-sans">
       <style>{`.katex { color: #1A1A1A !important; }`}</style>
 
       {/* Top Bar */}

@@ -431,7 +431,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-8 lg:p-10 pb-24 md:pb-10 max-w-7xl mx-auto w-full">
+        <main className={`flex-1 p-4 md:p-8 lg:p-10 pb-24 md:pb-10 mx-auto w-full ${hideSidebar ? 'max-w-[1920px] px-4 md:px-8 lg:px-12' : 'max-w-7xl'}`}>
           <Routes>
             <Route path="/" element={
               loading
