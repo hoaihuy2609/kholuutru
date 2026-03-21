@@ -3,7 +3,9 @@ import katex from "katex";
 import "katex/dist/katex.min.css";
 import { supabase } from "../src/lib/supabase";
 import { useUIStore } from "../src/stores/useUIStore";
-import { ChevronLeft, Save, Trash2, ArrowUp, ArrowDown, Plus, Eye, BookOpen, Layers } from 'lucide-react';
+import { ChevronLeft, Save, Trash2, ArrowUp, ArrowDown, Plus, Eye, BookOpen, Layers, X } from 'lucide-react';
+
+const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
 const SNIPPETS = [
   { label: "Phân số",      tex: "\\frac{a}{b}",                   display: "a/b" },
@@ -78,26 +80,48 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
   const [saving,     setSaving]     = useState(false);
   const [activeField, setActiveField] = useState<string | null>(null);
 
+  // Cài đặt xuất bản state
+  const [category, setCategory] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [isPublished, setIsPublished] = useState(false);
+  const [grade, setGrade] = useState(0);
+  const [wordCount, setWordCount] = useState(0);
+  const [charCount, setCharCount] = useState(0);
+
   const activeRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const showToast = useUIStore(state => state.showToast);
 
   // Load existing data if editing
   useEffect(() => {
-    if (blog && blog.content) {
-      try {
-        const parsed = JSON.parse(blog.content);
-        if (parsed.type === 'physics_solution' && parsed.data) {
-          setExamName(parsed.data.exam_name || "");
-          setQuestionNo(parsed.data.question_no || "");
-          setQText(parsed.data.question_text || "");
-          setQFormula(parsed.data.question_latex || "");
-          setSteps(parsed.data.steps && parsed.data.steps.length > 0 ? parsed.data.steps : [emptyStep()]);
+    if (blog) {
+      setCategory(blog.category || "");
+      setTags(blog.tags || []);
+      setIsPublished(!!blog.is_published);
+      setGrade(blog.grade || 0);
+
+      if (blog.content) {
+        try {
+          const parsed = JSON.parse(blog.content);
+          if (parsed.type === 'physics_solution' && parsed.data) {
+            setExamName(parsed.data.exam_name || "");
+            setQuestionNo(parsed.data.question_no || "");
+            setQText(parsed.data.question_text || "");
+            setQFormula(parsed.data.question_latex || "");
+            setSteps(parsed.data.steps && parsed.data.steps.length > 0 ? parsed.data.steps : [emptyStep()]);
+          }
+        } catch (e) {
+          console.error("Failed to parse physics solution data", e);
         }
-      } catch (e) {
-        console.error("Failed to parse physics solution data", e);
       }
     }
   }, [blog]);
+
+  useEffect(() => {
+    const text = qText + ' ' + steps.map(s => s.title + ' ' + s.text).join(' ');
+    const count = text.trim().split(/\s+/).filter(w => w).length;
+    setWordCount(count);
+    setCharCount(text.length);
+  }, [qText, steps]);
 
   const insertSnippet = useCallback((tex: string) => {
     const el = activeRef.current;
@@ -124,6 +148,10 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
 
   const updateStep = (idx: number, key: string, val: string) => {
     setSteps(prev => prev.map((s, i) => i === idx ? { ...s, [key]: val } : s));
+  };
+
+  const handleTagsChange = (val: string) => {
+    setTags(val.split(',').map(t => t.trim()).filter(t => t));
   };
 
   const addStep    = () => setSteps(prev => [...prev, emptyStep()]);
@@ -159,10 +187,12 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
       const payload = {
         id: blog?.id,
         title: `[Giải chi tiết] ${examName} - ${questionNo}`,
-        summary: qText || 'Hướng dẫn giải bài tập vật lý chi tiết từng bước bằng LaTeX.',
+        summary: qText ? qText.substring(0, 150) + (qText.length > 150 ? '...' : '') : 'Hướng dẫn giải chi tiết bằng LaTeX.',
         content: JSON.stringify(solutionData),
-        category: 'Lời giải',
-        is_published: true, // auto publish cho tiện
+        category: category || 'Lời giải',
+        is_published: isPublished,
+        tags: tags,
+        grade: grade,
       };
 
       if (saveBlog) {
@@ -176,7 +206,7 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
            throw new Error("Lưu thất bại.");
         }
       } else {
-        // Fallback for standalone mode (if still used)
+        // Fallback for standalone mode
         const { error } = await supabase.from("solutions").insert(solutionData.data);
         if (error) throw error;
         showToast("Đã lưu vào solutions table (chế độ standalone)!", "success");
@@ -369,6 +399,127 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
               </button>
             </div>
           </div>
+
+          {/* Cài đặt xuất bản & Thống kê */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+            {/* Publish settings */}
+            <div className="p-6 rounded-2xl bg-white border border-[#E9E9E7] shadow-sm space-y-5">
+              <h3 className="font-semibold text-[#1A1A1A]">Cài đặt xuất bản</h3>
+
+              {/* Toggle publish */}
+              <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
+                  <div>
+                      <span className="block font-medium text-sm text-[#1A1A1A]">Trạng thái</span>
+                      <span className="text-[11px]" style={{ color: isPublished ? '#448361' : '#787774' }}>
+                          {isPublished ? '✓ Hiển thị cho học sinh' : '✎ Chỉ Admin thấy'}
+                      </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={isPublished}
+                          onChange={e => setIsPublished(e.target.checked)}
+                      />
+                      <div className="w-9 h-5 bg-[#CFCFCB] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+              </div>
+
+              {/* Grade Selection */}
+              <div>
+                  <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Khối lớp</label>
+                  <div className="grid grid-cols-2 gap-2">
+                      {[
+                          { lab: 'Tất cả khối', val: 0 },
+                          { lab: 'Lớp 12', val: 12 },
+                          { lab: 'Lớp 11', val: 11 },
+                          { lab: 'Lớp 10', val: 10 }
+                      ].map(g => (
+                          <button
+                              key={g.val}
+                              type="button"
+                              onClick={() => setGrade(g.val)}
+                              className="py-2.5 text-xs font-semibold rounded-lg border transition-all"
+                              style={{
+                                  background: grade === g.val ? '#6B7CDB' : '#FFFFFF',
+                                  color: grade === g.val ? '#FFFFFF' : '#787774',
+                                  borderColor: grade === g.val ? '#6B7CDB' : '#E9E9E7'
+                              }}
+                          >
+                              {g.lab}
+                          </button>
+                      ))}
+                  </div>
+              </div>
+
+              {/* Category */}
+              <div>
+                  <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Chuyên mục</label>
+                  <select
+                      className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm bg-white cursor-pointer"
+                      value={category}
+                      onChange={e => setCategory(e.target.value)}
+                  >
+                      <option value="">-- Chọn chuyên mục --</option>
+                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <input
+                      type="text"
+                      placeholder="Hoặc nhập tùy chỉnh..."
+                      className="w-full mt-2.5 p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm"
+                      value={category}
+                      onChange={e => setCategory(e.target.value)}
+                  />
+              </div>
+
+              {/* Tags */}
+              <div>
+                  <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Thẻ (Tags)</label>
+                  <input
+                      type="text"
+                      placeholder="VD: vatly12, dongdien, nangluong"
+                      className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm"
+                      value={tags.join(', ')}
+                      onChange={e => handleTagsChange(e.target.value)}
+                  />
+                  <p className="text-[11px] mt-1.5" style={{ color: '#AEACA8' }}>Ngăn cách bằng dấu phẩy</p>
+                  {tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2.5">
+                          {tags.map(tag => (
+                              <span key={tag} className="text-xs px-2.5 py-1 rounded-md flex items-center gap-1.5 font-medium" style={{ background: '#EEF0FB', color: '#6B7CDB' }}>
+                                  #{tag}
+                                  <button onClick={() => setTags(tags.filter(t => t !== tag))} className="hover:text-red-500 transition-colors">
+                                      <X className="w-3 h-3" />
+                                  </button>
+                              </span>
+                          ))}
+                      </div>
+                  )}
+              </div>
+            </div>
+
+            {/* Quick stats */}
+            <div>
+              <div className="p-6 rounded-2xl bg-white border border-[#E9E9E7] shadow-sm flex flex-col items-start justify-start sticky top-20">
+                 <h3 className="font-semibold text-[#1A1A1A] mb-5">Thống kê bài viết</h3>
+                 <div className="space-y-4 text-sm w-full">
+                     <div className="flex justify-between items-center pb-3 border-b border-[#F7F6F3]">
+                         <span style={{ color: '#787774' }}>Số từ</span>
+                         <span className="font-bold" style={{ color: '#1A1A1A' }}>{wordCount.toLocaleString()}</span>
+                     </div>
+                     <div className="flex justify-between items-center pb-3 border-b border-[#F7F6F3]">
+                         <span style={{ color: '#787774' }}>P.đọc ước tính</span>
+                         <span className="font-bold" style={{ color: '#1A1A1A' }}>{Math.max(1, Math.ceil(wordCount / 200))} phút</span>
+                     </div>
+                     <div className="flex justify-between items-center">
+                         <span style={{ color: '#787774' }}>Số ký tự</span>
+                         <span className="font-bold" style={{ color: '#1A1A1A' }}>{charCount.toLocaleString()}</span>
+                     </div>
+                 </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         {/* Preview Area */}
