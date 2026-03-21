@@ -46,7 +46,7 @@ export const createCustomNotification = async (message: string, grade: number): 
 export const clearAllNotifications = async (): Promise<boolean> => {
     try {
         // Dùng RPC SECURITY DEFINER để xóa toàn bộ thông báo
-        const { error } = await supabase.rpc('admin_clear_all_notifications');
+        const { error } = await supabase.rpc('admin_clear_all_notifications', {});
         if (error) throw error;
         return true;
     } catch (e) { console.error('Lỗi xóa toàn bộ thông báo:', e); return false; }
