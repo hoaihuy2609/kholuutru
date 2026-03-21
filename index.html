@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 
 <head>
@@ -227,13 +227,11 @@
     })();
   </script>
 
-  <!-- Cleanup old service workers (keep sw-push.js for Web Push) -->
+  <!-- Cleanup old service workers -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(regs) {
         regs.forEach(function(sw) {
-          // Keep the push notification service worker alive
-          if (sw.active && sw.active.scriptURL && sw.active.scriptURL.includes('sw-push')) return;
           sw.unregister();
         });
       });

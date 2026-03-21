@@ -11,7 +11,6 @@ interface NotificationPageProps {
     isAdmin?: boolean;
     onDeleteNotification?: (notifId: string) => Promise<boolean>;
     onCreateNotification?: (message: string, grade: number) => Promise<boolean>;
-    onClearAllNotifications?: () => Promise<boolean>;
 }
 
 const ACCENT = '#E03E3E';
@@ -42,7 +41,7 @@ const formatRelativeTime = (isoString: string): string => {
 
 const NotificationPage: React.FC<NotificationPageProps> = ({
     onGetNotifications, onGetFetchedIds, onMarkFetched,
-    onFetchLessons, onShowToast, isAdmin, onDeleteNotification, onCreateNotification, onClearAllNotifications,
+    onFetchLessons, onShowToast, isAdmin, onDeleteNotification, onCreateNotification,
 }) => {
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [fetchedIds, setFetchedIds] = useState<Set<string>>(new Set());
@@ -50,10 +49,6 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
     const [fetchingId, setFetchingId] = useState<string | null>(null);
     const [fetchProgress, setFetchProgress] = useState(0);
     const [adminGradeFilter, setAdminGradeFilter] = useState<number | null>(null);
-
-    // ── Clear all dialog state ──
-    const [showClearAllDialog, setShowClearAllDialog] = useState(false);
-    const [clearingAll, setClearingAll] = useState(false);
 
     // ── Compose custom notification state ──
     const [showCompose, setShowCompose] = useState(false);
@@ -120,26 +115,6 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
         }
     };
 
-    // ── Handle clear all notifications ──
-    const handleClearAll = async () => {
-        if (!isAdmin || !onClearAllNotifications) return;
-        setClearingAll(true);
-        try {
-            const ok = await onClearAllNotifications();
-            if (ok) {
-                setNotifications([]);
-                setShowClearAllDialog(false);
-                onShowToast('✅ Đã xóa toàn bộ thông báo!', 'success');
-            } else {
-                onShowToast('Lỗi khi xóa toàn bộ thông báo', 'error');
-            }
-        } catch (e: any) {
-            onShowToast(`Lỗi: ${e.message}`, 'error');
-        } finally {
-            setClearingAll(false);
-        }
-    };
-
     const handleDelete = async (notifId: string) => {
         if (!isAdmin || !onDeleteNotification) return;
         if (!window.confirm("Thầy có chắc muốn xóa thông báo này chứ?")) return;
@@ -154,24 +129,6 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
         } catch (e: any) {
             onShowToast(`Lỗi: ${e.message}`, "error");
         }
-    };
-
-    // ── Hàm gửi Web Push qua Edge Function ──
-    const sendWebPush = async (msg: string, gradeTarget: number | null) => {
-        try {
-            const EDGE_FN_URL = 'https://ndhcwrczwbehyznnxzou.supabase.co/functions/v1/send-push-notification';
-            const payload: Record<string, unknown> = {
-                title: 'PhysiVault 🔔',
-                body: msg,
-                url: '/notifications',
-            };
-            if (gradeTarget) payload.grade = gradeTarget;
-            await fetch(EDGE_FN_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-        } catch { /* silent — push thất bại không block UI */ }
     };
 
     // ── Handle compose & send custom notification ──
@@ -191,8 +148,6 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                 } else {
                     onShowToast('Một số khối gửi thất bại', 'warning');
                 }
-                // Gửi Web Push cho tất cả (không lọc grade)
-                sendWebPush(composeMessage.trim(), null);
             } else {
                 const ok = await onCreateNotification(composeMessage.trim(), composeGrade);
                 if (ok) {
@@ -201,8 +156,6 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                 } else {
                     onShowToast('Lỗi khi gửi thông báo', 'error');
                 }
-                // Gửi Web Push đúng khối
-                sendWebPush(composeMessage.trim(), composeGrade);
             }
             setComposeMessage('');
             setShowCompose(false);
@@ -351,30 +304,11 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                             );
                         })}
 
-                        {/* Xóa tất cả button (Admin only) */}
-                        {onClearAllNotifications && notifications.length > 0 && (
-                            <button
-                                onClick={() => setShowClearAllDialog(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
-                                style={{
-                                    background: '#FEF2F2',
-                                    color: '#E03E3E',
-                                    border: '1px solid #FECACA',
-                                }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FEE2E2'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FEF2F2'; }}
-                                title="Xóa toàn bộ thông báo"
-                            >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                Xóa tất cả
-                            </button>
-                        )}
-
                         {/* Compose button */}
                         {onCreateNotification && (
                             <button
                                 onClick={() => { setShowCompose(prev => !prev); setTimeout(() => textareaRef.current?.focus(), 100); }}
-                                className={`${!onClearAllNotifications || notifications.length === 0 ? 'ml-auto' : ''} flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95`}
+                                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
                                 style={{
                                     background: showCompose ? '#1A1A1A' : 'linear-gradient(135deg, #6B7CDB, #9065B0)',
                                     color: '#fff',
@@ -708,78 +642,6 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                             </div>
                         );
                     })}
-                </div>
-            )}
-            {/* ── Confirm Dialog: Xóa tất cả ── */}
-            {showClearAllDialog && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                    style={{ background: 'rgba(26,26,26,0.5)', backdropFilter: 'blur(4px)' }}
-                    onClick={e => { if (e.target === e.currentTarget) setShowClearAllDialog(false); }}
-                >
-                    <div
-                        className="w-full max-w-sm rounded-2xl overflow-hidden animate-fade-in"
-                        style={{ background: '#FFFFFF', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', border: '1px solid #E9E9E7' }}
-                    >
-                        {/* Dialog header */}
-                        <div className="px-5 pt-5 pb-4">
-                            <div className="flex items-center gap-3 mb-3">
-                                <div
-                                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                    style={{ background: '#FEF2F2' }}
-                                >
-                                    <Trash2 className="w-5 h-5" style={{ color: '#E03E3E' }} />
-                                </div>
-                                <div>
-                                    <h3 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Xóa tất cả thông báo</h3>
-                                    <p className="text-xs mt-0.5" style={{ color: '#787774' }}>Hành động này không thể hoàn tác</p>
-                                </div>
-                            </div>
-                            <p className="text-sm leading-relaxed" style={{ color: '#57564F' }}>
-                                Bạn có chắc chắn muốn xóa toàn bộ thông báo không? Hành động này không thể hoàn tác.
-                            </p>
-                        </div>
-
-                        {/* Dialog footer */}
-                        <div
-                            className="px-5 py-4 flex items-center justify-end gap-2"
-                            style={{ borderTop: '1px solid #F1F0EC', background: '#FAFAF9' }}
-                        >
-                            <button
-                                onClick={() => setShowClearAllDialog(false)}
-                                disabled={clearingAll}
-                                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                                style={{ background: '#F1F0EC', color: '#57564F', border: '1px solid #E9E9E7' }}
-                                onMouseEnter={e => { if (!clearingAll) (e.currentTarget as HTMLElement).style.background = '#E9E9E7'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#F1F0EC'; }}
-                            >
-                                Hủy
-                            </button>
-                            <button
-                                onClick={handleClearAll}
-                                disabled={clearingAll}
-                                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95"
-                                style={{
-                                    background: clearingAll ? '#FECACA' : '#E03E3E',
-                                    color: '#fff',
-                                    cursor: clearingAll ? 'not-allowed' : 'pointer',
-                                    boxShadow: clearingAll ? 'none' : '0 2px 8px rgba(224,62,62,0.3)',
-                                }}
-                            >
-                                {clearingAll ? (
-                                    <>
-                                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                        Đang xóa...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                        Xóa tất cả
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </div>
                 </div>
             )}
         </div>

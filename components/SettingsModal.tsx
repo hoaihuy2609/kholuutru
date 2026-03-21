@@ -1,9 +1,9 @@
 import { supabase } from '../src/lib/supabase';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone, CloudDownload, Loader2, RefreshCw, Bell, BellOff } from 'lucide-react';
+import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone, CloudDownload, Loader2, RefreshCw } from 'lucide-react';
 import { exportData, importData, getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
-import { getPushStatus, registerPushNotification, unregisterPushNotification } from '../src/services/pushNotificationService';
+
 import { Lesson, FileStorage, Exam } from '../types';
 
 interface SettingsModalProps {
@@ -50,8 +50,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     const [isFetchingLessons, setIsFetchingLessons] = useState(false);
     const [fetchProgress, setFetchProgress] = useState(0);
     const [fetchResult, setFetchResult] = useState<{ lessonCount: number; fileCount: number } | null>(null);
-    const [pushStatus, setPushStatus] = useState<string>('checking');
-    const [pushLoading, setPushLoading] = useState(false);
+
 
     useEffect(() => {
         if (isOpen) {
@@ -62,8 +61,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
             const pendingSdt = localStorage.getItem('pv_pending_sdt');
             if (pendingSdt) setStudentSdt(pendingSdt);
             else if (savedSdt) setStudentSdt(savedSdt);
-            // Check push status
-            getPushStatus().then(setPushStatus);
+
         }
     }, [isOpen]);
 
@@ -520,49 +518,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                 </button>
                                 <div className="mt-3 text-center text-xs" style={{ color: '#448361' }}>
                                     ✓ Đã nhận {lessons.length} bài | Tải ngay kho ngoại tuyến để tối ưu hệ thống
-                                </div>
-
-                                {/* Push notification toggle */}
-                                <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid #E9E9E7' }}>
-                                    <div className="flex items-center gap-2">
-                                        {pushStatus === 'subscribed'
-                                            ? <Bell className="w-4 h-4" style={{ color: '#448361' }} />
-                                            : <BellOff className="w-4 h-4" style={{ color: '#AEACA8' }} />}
-                                        <div>
-                                            <div className="text-xs font-semibold" style={{ color: '#1A1A1A' }}>Thông báo đẩy</div>
-                                            <div className="text-[10px]" style={{ color: '#AEACA8' }}>
-                                                {pushStatus === 'subscribed' && 'Đang bật — nhận thông báo kể cả khi đóng app'}
-                                                {pushStatus === 'unsubscribed' && 'Đang tắt'}
-                                                {pushStatus === 'denied' && '⚠️ Đã bị chặn — vào Settings trình duyệt để bật'}
-                                                {pushStatus === 'unsupported' && 'Trình duyệt không hỗ trợ'}
-                                                {pushStatus === 'checking' && 'Đang kiểm tra...'}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {(pushStatus === 'subscribed' || pushStatus === 'unsubscribed') && (
-                                        <button
-                                            disabled={pushLoading}
-                                            onClick={async () => {
-                                                setPushLoading(true);
-                                                if (pushStatus === 'subscribed') {
-                                                    await unregisterPushNotification();
-                                                    setPushStatus('unsubscribed');
-                                                } else {
-                                                    const ok = await registerPushNotification();
-                                                    setPushStatus(ok ? 'subscribed' : 'denied');
-                                                }
-                                                setPushLoading(false);
-                                            }}
-                                            className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                                            style={{
-                                                background: pushStatus === 'subscribed' ? '#FEF0F0' : '#EAF3EE',
-                                                color: pushStatus === 'subscribed' ? '#E03E3E' : '#448361',
-                                                border: `1px solid ${pushStatus === 'subscribed' ? '#FECACA' : '#44836133'}`,
-                                            }}
-                                        >
-                                            {pushLoading ? '...' : pushStatus === 'subscribed' ? 'Tắt' : 'Bật'}
-                                        </button>
-                                    )}
                                 </div>
                             </div>
                         </div>
