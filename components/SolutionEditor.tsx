@@ -213,17 +213,17 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Nunito:wght@300;400;500;600&display=swap');
 
         .se-root {
-          --bg:         #0f0f13;
-          --surface:    #18181f;
-          --surface2:   #1f1f28;
-          --border:     #2e2e3a;
-          --accent:     #7c6af7;
-          --accent2:    #f7926a;
-          --text:       #e8e6f0;
-          --muted:      #888099;
-          --preview-step-bg:     #1a1a22;
-          --preview-step-border: #2a2a36;
-          --preview-step-head:   #141419;
+          --bg:         #F7F6F3;
+          --surface:    #FFFFFF;
+          --surface2:   #F1F0EC;
+          --border:     #E9E9E7;
+          --accent:     #6B7CDB;
+          --accent2:    #9065B0;
+          --text:       #1A1A1A;
+          --muted:      #787774;
+          --preview-step-bg:     #FFFFFF;
+          --preview-step-border: #E9E9E7;
+          --preview-step-head:   #F7F6F3;
 
           font-family: 'Nunito', sans-serif;
           background: var(--bg);
@@ -320,22 +320,22 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
         .field { display: flex; flex-direction: column; gap: 5px; }
         .field label { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.04em; }
         .field input, .field textarea {
-          background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
+          background: var(--surface); border: 1px solid var(--border); border-radius: 7px;
           color: var(--text); font-family: 'Nunito', sans-serif; font-size: 13px; padding: 7px 10px; outline: none; resize: vertical;
         }
         .field input:focus, .field textarea:focus { border-color: var(--accent); }
-        .field .latex-field { font-family: 'DM Mono', monospace; font-size: 12px; background: #13131a; }
-        .field .latex-field:focus { border-color: var(--accent2); box-shadow: 0 0 0 2px #f7926a22; }
+        .field .latex-field { font-family: 'DM Mono', monospace; font-size: 12px; background: #EEF0FB; color: #3D3D8D; border-color: #D3DBF9; }
+        .field .latex-field:focus { border-color: var(--accent); box-shadow: 0 0 0 2px #d3dbf9; }
 
         .divider { height: 1px; background: var(--border); }
 
-        .step-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-        .step-card-head { display: flex; justify-content: space-between; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--border); }
+        .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .step-card-head { display: flex; justify-content: space-between; padding: 8px 12px; background: var(--surface2); border-bottom: 1px solid var(--border); }
         .step-idx { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 500; }
         .step-actions { display: flex; gap: 4px; }
         .step-btn { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-size: 11px; padding: 2px 7px; cursor: pointer; }
         .step-btn:hover { background: var(--surface2); color: var(--text); }
-        .step-btn.del:hover { background: #3a1e1e; border-color: #7a3030; color: #f07070; }
+        .step-btn.del:hover { background: #FEE2E2; border-color: #F87171; color: #DC2626; }
 
         .step-card-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
 
@@ -343,9 +343,9 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
           background: none; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted);
           font-size: 13px; padding: 8px; cursor: pointer; width: 100%; text-align: center;
         }
-        .add-step-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .add-step-btn:hover { border-color: var(--accent); color: var(--accent); background: #EEF0FB; }
 
-        .se-preview { overflow-y: auto; padding: 1.25rem 1.5rem 2rem; background: var(--bg); }
+        .se-preview { overflow-y: auto; padding: 1.25rem 1.5rem 2rem; background: var(--surface); border-left: 1px solid var(--border); }
         .preview-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
         .preview-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
