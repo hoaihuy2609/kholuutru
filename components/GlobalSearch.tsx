@@ -285,10 +285,10 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
           onClick={e => e.stopPropagation()}
         >
           {/* Header Area */}
-          <div className="bg-[#F8F9FD] p-7 border-b border-[#E9E9E7] relative">
+          <div className="bg-white px-6 py-5 border-b border-[#E9E9E7] relative">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm" style={{ background: '#6B7CDB' }}>
-                <Search className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#6B7CDB' }}>
+                <Search className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
                 <input
@@ -298,7 +298,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                   onChange={e => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Bạn muốn tìm gì hôm nay?..."
-                  className="w-full bg-transparent border-none text-xl font-bold focus:ring-0 placeholder-[#AEACA8]"
+                  className="w-full bg-transparent border-none text-[17px] font-semibold focus:ring-0 placeholder-[#AEACA8]"
                   style={{ color: '#1A1A1A' }}
                 />
               </div>
@@ -370,7 +370,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                     return (
                       <div
                         key={result.id}
-                        className={`flex items-center gap-4 px-6 py-4.5 cursor-pointer transition-all ${isActive ? 'bg-[#F8F9FD]' : 'hover:bg-[#FAFAF9]'}`}
+                        className={`flex items-center gap-3 px-5 py-3 cursor-pointer transition-all ${isActive ? 'bg-[#F8F9FD]' : 'hover:bg-[#FAFAF9]'}`}
                         style={{
                           borderLeft: isActive ? `4px solid ${cfg.color}` : '4px solid transparent',
                         }}
@@ -378,16 +378,16 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                         onMouseEnter={() => setSelectedIndex(index)}
                       >
                         <div
-                          className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all shadow-sm"
+                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all"
                           style={{ background: cfg.bg }}
                         >
-                          <Icon className="w-5 h-5 shadow-sm" style={{ color: cfg.color }} />
+                          <Icon className="w-4 h-4" style={{ color: cfg.color }} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-[15px] font-bold truncate leading-tight transition-colors" style={{ color: isActive ? '#6B7CDB' : '#1A1A1A' }}>
+                          <h4 className="text-[14px] font-semibold truncate leading-tight transition-colors" style={{ color: isActive ? '#6B7CDB' : '#1A1A1A' }}>
                             {result.title}
                           </h4>
-                          <p className="text-[13px] mt-1.5 truncate font-medium text-[#AEACA8]">
+                          <p className="text-[12px] mt-0.5 truncate font-medium text-[#AEACA8]">
                             {result.subtitle}
                           </p>
                         </div>
