@@ -123,6 +123,11 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     // PDF rendering states
     const [numPages, setNumPages] = useState<number>(0);
     const [pdfWidth, setPdfWidth] = useState<number>(0);
+    const [isMobileDevice] = useState(() => {
+        const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        return isTouch || isMobileUA;
+    });
     const pdfWrapperRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -276,11 +281,11 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                             {/* Desktop: iframe nhúng */}
                             <iframe
                                 src={`${pdfUrl}#toolbar=0`}
-                                className="w-full h-full border-0 hidden md:block"
+                                className={`w-full h-full border-0 ${isMobileDevice ? 'hidden' : 'block'}`}
                                 title="PDF Preview"
                             />
                             {/* Mobile/Tablet: dùng React-PDF để hiện mượt và sắc nét */}
-                            <div ref={pdfWrapperRef} className="absolute inset-0 overflow-y-auto overflow-x-hidden flex md:hidden flex-col items-center bg-[#1A1A1A] pb-10" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3B3B3B #1A1A1A' }}>
+                            <div ref={pdfWrapperRef} className={`absolute inset-0 overflow-y-auto overflow-x-hidden flex-col items-center bg-[#1A1A1A] pb-10 ${isMobileDevice ? 'flex' : 'hidden'}`} style={{ scrollbarWidth: 'thin', scrollbarColor: '#3B3B3B #1A1A1A' }}>
                             <Document 
                                 file={pdfUrl} 
                                 options={{
