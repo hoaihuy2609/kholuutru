@@ -580,6 +580,7 @@ export const useCloudStorage = () => {
         getNotifications: notificationService.getNotifications,
         deleteNotification: notificationService.deleteNotification,
         createCustomNotification: notificationService.createCustomNotification,
+        clearAllNotifications: notificationService.clearAllNotifications,
         markNotificationFetched: notificationService.markNotificationFetched,
         getFetchedNotificationIds: notificationService.getFetchedNotificationIds,
         submitQuestionVote: notificationService.submitQuestionVote,

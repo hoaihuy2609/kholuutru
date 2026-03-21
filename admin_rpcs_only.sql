@@ -139,5 +139,15 @@ END;
 $$;
 GRANT EXECUTE ON FUNCTION admin_create_custom_notification(text, int) TO anon;
 
+-- [9] Xóa toàn bộ thông báo
+DROP FUNCTION IF EXISTS admin_clear_all_notifications();
+CREATE OR REPLACE FUNCTION admin_clear_all_notifications()
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    DELETE FROM notifications;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_clear_all_notifications() TO anon;
+
 -- Force reload PostgREST schema cache
 NOTIFY pgrst, 'reload schema';
