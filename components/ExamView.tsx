@@ -238,10 +238,10 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
             </div>
 
             {/* ── Main Content ── */}
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
 
                 {/* PDF Viewer */}
-                <div className="flex-1 overflow-hidden relative">
+                <div className="flex-1 min-h-[40vh] md:min-h-0 overflow-hidden relative">
                     {pdfLoading ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3" style={{ background: '#1A1A1A' }}>
                             <RefreshCw className="w-8 h-8 animate-spin" style={{ color: ACCENT }} />
@@ -263,8 +263,8 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
 
                 {/* ── Answer Panel ── */}
                 <div
-                    className="w-[280px] flex flex-col overflow-hidden shrink-0"
-                    style={{ background: '#1E1E1E', borderLeft: '1px solid #333' }}
+                    className="w-full md:w-[280px] flex flex-col overflow-hidden shrink-0"
+                    style={{ background: '#1E1E1E', borderLeft: 'none', borderTop: '1px solid #333' }}
                 >
                     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3B3B3B #1E1E1E' }}>
 
