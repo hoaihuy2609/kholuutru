@@ -365,7 +365,7 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
                         />
                      </div>
 
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                     <div className="grid grid-cols-1 gap-5">
                        <div>
                           <label className="block text-xs font-bold mb-2 text-[#787774] uppercase tracking-wider">Công thức 1</label>
                           <textarea 
