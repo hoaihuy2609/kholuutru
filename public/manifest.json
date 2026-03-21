@@ -33,5 +33,14 @@
       "type": "image/svg+xml",
       "purpose": "maskable"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "PhysiVault — Màn hình chính"
+    }
   ]
 }

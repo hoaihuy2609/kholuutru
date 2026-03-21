@@ -93,10 +93,10 @@ export const syncBlogs = async (onProgress?: (pct: number) => void): Promise<{ s
         const newFileId: string = (await uploadRes.json()).result.document.file_id;
         if (onProgress) onProgress(80);
 
-        const { error: upsertErr } = await supabase.from('blog_index').upsert({
-            id: 1, telegram_file_id: newFileId, blog_count: localBlogs.length,
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'id' });
+        const { error: upsertErr } = await supabase.rpc('admin_upsert_blog_index', {
+            p_telegram_file_id: newFileId,
+            p_blog_count: localBlogs.length,
+        });
         if (upsertErr) throw upsertErr;
         if (onProgress) onProgress(95);
 

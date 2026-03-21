@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield } from 'lucide-react';
+import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield, Search } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 // ── Hover Prefetch: tải ngầm chunk khi user lướt chuột qua nút ──────────
@@ -39,6 +39,7 @@ interface SidebarProps {
   previewMode?: GradeLevel | null;
   onSetPreviewMode?: (mode: GradeLevel | null) => void;
   studentGrade?: number | null;
+  onOpenSearch?: () => void;
 }
 
 // ── Custom dropdown options ──────────────────────────────────────────
@@ -49,7 +50,7 @@ const PREVIEW_OPTIONS = [
   { value: String(GradeLevel.Grade10), label: 'Học sinh Lớp 10', color: '#448361', bg: '#EAF3EE', border: '#B7D9C4', dot: '#448361', icon: Activity },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, onOpenBlog, showBlog, className, isAdmin, previewMode, onSetPreviewMode, studentGrade }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, onOpenBlog, showBlog, className, isAdmin, previewMode, onSetPreviewMode, studentGrade, onOpenSearch }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -132,6 +133,21 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           <Home className="w-4 h-4 shrink-0" style={{ color: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog ? '#1A1A1A' : '#AEACA8' }} />
           Tổng quan
         </button>
+
+        {/* Search */}
+        {onOpenSearch && (
+          <button
+            onClick={onOpenSearch}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
+            style={{ color: '#57564F' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+          >
+            <Search className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
+            <span className="flex-1">Tìm kiếm</span>
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: '#F1F0EC', color: '#AEACA8', border: '1px solid #E9E9E7' }}>Ctrl+K</span>
+          </button>
+        )}
 
 
         {/* Thi Thử */}

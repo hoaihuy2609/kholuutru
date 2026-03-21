@@ -336,6 +336,38 @@ body {
     box-shadow: var(--shadow-md);
 }
 
+/* ── Table/list row hover (replaces JS onMouseEnter/Leave on row elements) ── */
+.pv-row-hover {
+    transition: background var(--transition-fast);
+}
+.pv-row-hover:hover {
+    background: var(--hover-bg) !important;
+}
+
+/* ── Toolbar / icon button hover (transparent → subtle fill) ── */
+.pv-btn-ghost-hover {
+    transition: background var(--transition-fast);
+}
+.pv-btn-ghost-hover:hover {
+    background: var(--gray-100) !important;
+}
+
+/* ── Refresh / secondary button hover (#F1F0EC → #E9E9E7) ── */
+.pv-btn-secondary-hover {
+    transition: background var(--transition-fast);
+}
+.pv-btn-secondary-hover:hover {
+    background: var(--gray-200) !important;
+}
+
+/* ── Primary (blue) button hover ── */
+.pv-btn-primary-hover {
+    transition: background var(--transition-fast);
+}
+.pv-btn-primary-hover:hover {
+    background: var(--primary-hover) !important;
+}
+
 /* ==================== Buttons ==================== */
 .btn {
     display: inline-flex;
@@ -517,6 +549,28 @@ body {
 .card-hover:hover {
     box-shadow: var(--shadow-md);
     border-color: var(--border-hover);
+}
+
+/* ── Exam row & button hover (replaces inline onMouseEnter/Leave) ── */
+.pv-row-hover {
+    transition: background var(--transition-fast);
+}
+.pv-row-hover:hover {
+    background: var(--hover-bg) !important;
+}
+
+.pv-btn-primary-hover {
+    transition: background var(--transition-fast);
+}
+.pv-btn-primary-hover:hover {
+    background: var(--primary-hover) !important;
+}
+
+.pv-btn-secondary-hover {
+    transition: background var(--transition-fast);
+}
+.pv-btn-secondary-hover:hover {
+    background: var(--active-bg) !important;
 }
 
 /* ==================== Accessibility ==================== */

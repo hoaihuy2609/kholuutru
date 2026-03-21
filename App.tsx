@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback, Suspense } from 'react';
+import React, { useEffect, useMemo, useCallback, Suspense, useState } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate, useLocation } from 'react-router-dom';
 import { GradeLevel, Lesson, Exam } from './types';
 import { CURRICULUM } from './constants';
@@ -31,6 +31,7 @@ const SimulationLab = React.lazy(() => import('./components/SimulationLab'));
 const BlogList = React.lazy(() => import('./components/BlogList'));
 const BlogDetail = React.lazy(() => import('./components/BlogDetail'));
 const AdminBlogEditor = React.lazy(() => import('./components/AdminBlogEditor'));
+const GlobalSearch = React.lazy(() => import('./components/GlobalSearch'));
 
 const LazyFallback = () => (
   <div className="flex items-center justify-center h-[40vh]">
@@ -282,6 +283,19 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const navigate = useNavigate();
   const { pathname: path } = useLocation(); // ✅ reactive với React Router
+  const [isSearchOpen, setSearchOpen] = useState(false);
+
+  // ── Ctrl+K / Cmd+K global shortcut for search ──
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(prev => !prev);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
   const {
     isSettingsOpen, setSettingsOpen, isMobileMenuOpen, setMobileMenuOpen,
     showAdminDashboard, setShowAdminDashboard, showGitHubSync, setShowGitHubSync,
@@ -361,6 +375,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     previewMode,
     onSetPreviewMode: handlePreviewMode,
     studentGrade: studentGradeValue,
+    onOpenSearch: () => setSearchOpen(true),
   };
 
   return (
@@ -467,6 +482,13 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
       {isOnHome && !showAdminDashboard && !isActivated && !isAdmin && (
         <ErrorBoundary><Suspense fallback={null}><Chatbot /></Suspense></ErrorBoundary>
       )}
+
+      {/* Global Search (Ctrl+K) */}
+      <ErrorBoundary>
+        <Suspense fallback={null}>
+          <GlobalSearch isOpen={isSearchOpen} onClose={() => setSearchOpen(false)} onLoadExams={cloud.loadExams} onGetBlogs={cloud.getBlogs} isAdmin={effectiveIsAdmin} />
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }

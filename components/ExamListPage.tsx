@@ -135,10 +135,8 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
                 <button
                     onClick={load}
                     disabled={loading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium pv-btn-secondary-hover"
                     style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
                     title="Tải lại danh sách"
                 >
                     <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} style={{ color: ACCENT }} />
@@ -226,15 +224,13 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
                             return (
                                 <div
                                     key={exam.id}
-                                    className="flex items-center gap-4 px-4 py-3.5 cursor-pointer transition-colors group"
+                                    className="flex items-center gap-4 px-4 py-3.5 cursor-pointer group pv-row-hover"
                                     style={{
                                         borderBottom: idx < filteredExams.length - 1 ? '1px solid #F1F0EC' : 'none',
                                         background: '#FFFFFF',
                                         borderLeft: isDone ? '3px solid #448361' : '3px solid transparent',
                                     }}
                                     onClick={() => onSelectExam(exam)}
-                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F7F6F3'}
-                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FFFFFF'}
                                 >
                                     {/* Index badge */}
                                     <div
@@ -283,14 +279,12 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
 
                                     {/* CTA */}
                                     <button
-                                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold shrink-0 transition-all active:scale-95"
+                                        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold shrink-0 active:scale-95 ${isDone ? 'pv-btn-secondary-hover' : 'pv-btn-primary-hover'}`}
                                         style={{
                                             background: isDone ? '#F1F0EC' : ACCENT,
                                             color: isDone ? '#57564F' : '#fff',
                                         }}
                                         onClick={e => { e.stopPropagation(); onSelectExam(exam); }}
-                                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDone ? '#E9E9E7' : '#5a6bc9'}
-                                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDone ? '#F1F0EC' : ACCENT}
                                     >
                                         <Play className="w-3.5 h-3.5" />
                                         {isDone ? 'Làm lại' : 'Làm bài'}
