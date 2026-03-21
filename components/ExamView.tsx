@@ -284,6 +284,8 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                         <Page 
                                             pageNumber={index + 1} 
                                             width={pdfWidth > 0 ? (pdfWidth > 800 ? 800 : pdfWidth - 16) : undefined}
+                                            devicePixelRatio={Math.max(window.devicePixelRatio || 2, 2)}
+                                            renderMode="canvas"
                                             renderTextLayer={false}
                                             renderAnnotationLayer={false}
                                         />
