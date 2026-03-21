@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Trash2, Upload, FileText, Clock, ChevronLeft, ChevronRight, Save, X, Check, RefreshCw, ClipboardList, Flag, User } from 'lucide-react';
 import { Exam, ExamAnswers, ExamTFAnswer } from '../types';
 import { useCloudStorage } from '../src/hooks/useCloudStorage';
@@ -297,9 +298,9 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
         }
     };
 
-    return (
+    return createPortal(
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
             style={{ background: 'rgba(26,26,26,0.5)', backdropFilter: 'blur(4px)' }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}
         >
@@ -586,7 +587,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -626,9 +628,9 @@ const ExamVotesModal: React.FC<ExamVotesModalProps> = ({ exam, onClose }) => {
         return a.num - b.num;
     });
 
-    return (
+    return createPortal(
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
             style={{ background: 'rgba(26,26,26,0.5)', backdropFilter: 'blur(4px)' }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}
         >
@@ -697,7 +699,8 @@ const ExamVotesModal: React.FC<ExamVotesModalProps> = ({ exam, onClose }) => {
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
