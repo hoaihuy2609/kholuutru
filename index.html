@@ -232,8 +232,8 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(regs) {
         regs.forEach(function(sw) {
-          // Keep the push notification service worker alive
-          if (sw.active && sw.active.scriptURL && sw.active.scriptURL.includes('sw-push')) return;
+          var scriptUrl = sw.active ? sw.active.scriptURL : (sw.waiting ? sw.waiting.scriptURL : (sw.installing ? sw.installing.scriptURL : ''));
+          if (scriptUrl && scriptUrl.includes('sw-push')) return;
           sw.unregister();
         });
       });
