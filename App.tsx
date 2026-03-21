@@ -14,7 +14,6 @@ import { useUIStore } from './src/stores/useUIStore';
 import { useDataStore } from './src/stores/useDataStore';
 import { useExamStore, useBlogStore } from './src/stores/useContentStore';
 import { useShallow } from 'zustand/react/shallow';
-import { registerPushNotification } from './src/services/pushNotificationService';
 
 const ChapterView = React.lazy(() => import('./components/ChapterView'));
 const LessonView = React.lazy(() => import('./components/LessonView'));
