@@ -131,6 +131,24 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
         }
     };
 
+    // ── Hàm gửi Web Push qua Edge Function ──
+    const sendWebPush = async (msg: string, gradeTarget: number | null) => {
+        try {
+            const EDGE_FN_URL = 'https://ndhcwrczwbehyznnxzou.supabase.co/functions/v1/send-push-notification';
+            const payload: Record<string, unknown> = {
+                title: 'PhysiVault 🔔',
+                body: msg,
+                url: '/notifications',
+            };
+            if (gradeTarget) payload.grade = gradeTarget;
+            await fetch(EDGE_FN_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        } catch { /* silent — push thất bại không block UI */ }
+    };
+
     // ── Handle compose & send custom notification ──
     const handleSendCustomNotification = async () => {
         if (!onCreateNotification || !composeMessage.trim()) return;
@@ -148,6 +166,8 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                 } else {
                     onShowToast('Một số khối gửi thất bại', 'warning');
                 }
+                // Gửi Web Push cho tất cả (không lọc grade)
+                sendWebPush(composeMessage.trim(), null);
             } else {
                 const ok = await onCreateNotification(composeMessage.trim(), composeGrade);
                 if (ok) {
@@ -156,6 +176,8 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                 } else {
                     onShowToast('Lỗi khi gửi thông báo', 'error');
                 }
+                // Gửi Web Push đúng khối
+                sendWebPush(composeMessage.trim(), composeGrade);
             }
             setComposeMessage('');
             setShowCompose(false);
