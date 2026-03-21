@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, X, FolderOpen, FileText, ClipboardList, BookOpen, ChevronRight, Command, History, ArrowRight, File } from 'lucide-react';
+import { Search, X, FolderOpen, FileText, ClipboardList, BookOpen, ChevronRight, Command, History, ArrowRight, File, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { CURRICULUM } from '../constants';
 import { Lesson } from '../types';
@@ -11,6 +11,7 @@ interface SearchResult {
   title: string;
   subtitle: string;
   category: 'chapter' | 'lesson' | 'exam' | 'blog' | 'file';
+  fileCategory?: string; // Optional document specific category
   path: string; // navigate path
   grade?: number;
   url?: string; // used to open files
@@ -173,6 +174,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
           title: f.name,
           subtitle: `${catStr}${parentName} · ${(f.size / 1024 / 1024).toFixed(1)} MB`,
           category: 'file' as const,
+          fileCategory: f.category,
           path: path,
           url: f.url,
         };
@@ -366,18 +368,42 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                   {filtered.map((result, index) => {
                     const cfg = CATEGORY_CONFIG[result.category] || CATEGORY_CONFIG.file;
                     
-                    // Lấy grade để phối màu
                     let itemColor = cfg.color;
                     let itemBg = cfg.bg;
-                    const match = result.path?.match(/\/grade\/(\d+)/);
-                    if (match && ['chapter', 'lesson', 'file'].includes(result.category)) {
-                      const grade = parseInt(match[1]);
-                      if (grade === 12) { itemColor = '#9065B0'; itemBg = '#F3ECF8'; }
-                      else if (grade === 11) { itemColor = '#6B7CDB'; itemBg = '#EEF0FB'; }
-                      else if (grade === 10) { itemColor = '#448361'; itemBg = '#EAF3EE'; }
+                    let Icon = cfg.icon;
+
+                    // Mặc định màu xanh dương
+                    itemColor = '#6B7CDB'; itemBg = '#EEF0FB';
+                    
+                    if (result.category === 'exam') {
+                      itemColor = '#787774'; itemBg = '#F1F0EC'; // Xám
+                      Icon = ClipboardList;
+                    } else if (result.category === 'blog') {
+                      itemColor = '#D9730D'; itemBg = '#FFF3E8'; // Cam
+                      Icon = BookOpen;
+                    } else if (result.category === 'chapter') {
+                      Icon = FolderOpen;
+                    } else if (result.category === 'lesson') {
+                      Icon = BookOpen;
                     }
 
-                    const Icon = cfg.icon;
+                    if (result.fileCategory) {
+                      const lowerCat = result.fileCategory.toLowerCase();
+                      if (lowerCat.includes('lý thuyết')) {
+                        itemColor = '#D9730D'; itemBg = '#FFF3E8';   // Cam
+                        Icon = BookOpen;
+                      } else if (lowerCat.includes('đúng/sai')) {
+                        itemColor = '#448361'; itemBg = '#EAF3EE';   // Xanh lá
+                        Icon = FileText;
+                      } else if (lowerCat.includes('nâng cao')) {
+                        itemColor = '#9065B0'; itemBg = '#F3ECF8';   // Tím
+                        Icon = Zap;
+                      } else {
+                        // Trắc nghiệm bình thường, bài tập cơ bản
+                        Icon = FileText;
+                      }
+                    }
+
                     const isActive = index === selectedIndex;
                     return (
                       <div
