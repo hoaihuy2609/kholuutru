@@ -80,10 +80,10 @@ const Chatbot: React.FC = () => {
                     addMessage('Số điện thoại này đã được nhận mã trên một thiết bị khác. Vui lòng liên hệ thầy Huy để đổi thiết bị nhé!', 'bot');
                 } else {
                     if (!data.machine_id) {
-                        const { error: updateError } = await supabase
-                            .from('students')
-                            .update({ machine_id: machineId })
-                            .eq('phone', phoneStr);
+                        const { error: updateError } = await supabase.rpc('admin_set_machine_id', {
+                            p_phone: phoneStr,
+                            p_machine_id: machineId,
+                        });
 
                         if (updateError) {
                             console.error('[Chatbot] machine_id update error:', updateError);
