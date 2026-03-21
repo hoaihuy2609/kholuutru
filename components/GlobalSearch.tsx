@@ -298,7 +298,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                   onChange={e => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Bạn muốn tìm gì hôm nay?..."
-                  className="w-full bg-transparent border-none text-[17px] font-semibold focus:ring-0 placeholder-[#AEACA8]"
+                  className="w-full bg-transparent border-transparent outline-none focus:outline-none focus:ring-0 focus:border-transparent text-[17px] font-semibold placeholder-[#AEACA8]"
                   style={{ color: '#1A1A1A' }}
                 />
               </div>
@@ -364,27 +364,39 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
               ) : (
                 <div className="divide-y divide-[#F1F0EC]" ref={listRef}>
                   {filtered.map((result, index) => {
-                    const cfg = CATEGORY_CONFIG[result.category];
+                    const cfg = CATEGORY_CONFIG[result.category] || CATEGORY_CONFIG.file;
+                    
+                    // Lấy grade để phối màu
+                    let itemColor = cfg.color;
+                    let itemBg = cfg.bg;
+                    const match = result.path?.match(/\/grade\/(\d+)/);
+                    if (match && ['chapter', 'lesson', 'file'].includes(result.category)) {
+                      const grade = parseInt(match[1]);
+                      if (grade === 12) { itemColor = '#9065B0'; itemBg = '#F3ECF8'; }
+                      else if (grade === 11) { itemColor = '#6B7CDB'; itemBg = '#EEF0FB'; }
+                      else if (grade === 10) { itemColor = '#448361'; itemBg = '#EAF3EE'; }
+                    }
+
                     const Icon = cfg.icon;
                     const isActive = index === selectedIndex;
                     return (
                       <div
                         key={result.id}
-                        className={`flex items-center gap-3 px-5 py-3 cursor-pointer transition-all ${isActive ? 'bg-[#F8F9FD]' : 'hover:bg-[#FAFAF9]'}`}
+                        className={`flex items-center gap-3 px-5 py-3 cursor-pointer transition-all ${isActive ? 'bg-[#FAFAF9]' : 'hover:bg-[#FAFAF9]'}`}
                         style={{
-                          borderLeft: isActive ? `4px solid ${cfg.color}` : '4px solid transparent',
+                          borderLeft: isActive ? `4px solid ${itemColor}` : '4px solid transparent',
                         }}
                         onClick={() => handleSelect(result)}
                         onMouseEnter={() => setSelectedIndex(index)}
                       >
                         <div
                           className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all"
-                          style={{ background: cfg.bg }}
+                          style={{ background: itemBg }}
                         >
-                          <Icon className="w-4 h-4" style={{ color: cfg.color }} />
+                          <Icon className="w-4 h-4" style={{ color: itemColor }} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-[14px] font-semibold truncate leading-tight transition-colors" style={{ color: isActive ? '#6B7CDB' : '#1A1A1A' }}>
+                          <h4 className="text-[14px] font-semibold truncate leading-tight transition-colors" style={{ color: isActive ? itemColor : '#1A1A1A' }}>
                             {result.title}
                           </h4>
                           <p className="text-[12px] mt-0.5 truncate font-medium text-[#AEACA8]">
@@ -394,10 +406,10 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                         <span 
                           className="text-[10px] font-bold px-3 py-1.5 rounded-lg shrink-0 uppercase tracking-widest border transition-all" 
                           style={{ 
-                            background: isActive ? cfg.bg : '#FFFFFF', 
-                            color: cfg.color,
-                            borderColor: `${cfg.color}20`,
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                            background: isActive ? itemBg : '#FFFFFF', 
+                            color: itemColor,
+                            borderColor: isActive ? 'transparent' : `${itemColor}30`,
+                            boxShadow: isActive ? 'none' : '0 1px 2px rgba(0,0,0,0.02)'
                           }}
                         >
                           {cfg.label}
