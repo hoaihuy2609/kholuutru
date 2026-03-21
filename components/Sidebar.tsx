@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield, Search } from 'lucide-react';
+import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield, Search, FileText } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 // ── Hover Prefetch: tải ngầm chunk khi user lướt chuột qua nút ──────────
@@ -40,6 +40,7 @@ interface SidebarProps {
   onSetPreviewMode?: (mode: GradeLevel | null) => void;
   studentGrade?: number | null;
   onOpenSearch?: () => void;
+  onOpenSolutionEditor?: () => void;
 }
 
 // ── Custom dropdown options ──────────────────────────────────────────
@@ -50,7 +51,7 @@ const PREVIEW_OPTIONS = [
   { value: String(GradeLevel.Grade10), label: 'Học sinh Lớp 10', color: '#448361', bg: '#EAF3EE', border: '#B7D9C4', dot: '#448361', icon: Activity },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, onOpenBlog, showBlog, className, isAdmin, previewMode, onSetPreviewMode, studentGrade, onOpenSearch }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, onOpenBlog, showBlog, className, isAdmin, previewMode, onSetPreviewMode, studentGrade, onOpenSearch, onOpenSolutionEditor }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -416,17 +417,31 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           </div>
 
           {!previewMode && (
-            <button
-              id="tour-settings-btn"
-              onClick={onOpenSettings}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
-              style={{ color: '#57564F' }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-            >
-              <Settings className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
-              Cài đặt &amp; Đồng bộ
-            </button>
+            <>
+              {onOpenSolutionEditor && (
+                <button
+                  onClick={onOpenSolutionEditor}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors mb-1"
+                  style={{ color: '#57564F' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                >
+                  <FileText className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
+                  Soạn Lời Giải (LaTeX)
+                </button>
+              )}
+              <button
+                id="tour-settings-btn"
+                onClick={onOpenSettings}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
+                style={{ color: '#57564F' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EBEBEA'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+              >
+                <Settings className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
+                Cài đặt &amp; Đồng bộ
+              </button>
+            </>
           )}
         </div>
       )}

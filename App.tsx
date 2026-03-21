@@ -32,6 +32,7 @@ const BlogList = React.lazy(() => import('./components/BlogList'));
 const BlogDetail = React.lazy(() => import('./components/BlogDetail'));
 const AdminBlogEditor = React.lazy(() => import('./components/AdminBlogEditor'));
 const GlobalSearch = React.lazy(() => import('./components/GlobalSearch'));
+const SolutionEditor = React.lazy(() => import('./components/SolutionEditor'));
 
 const LazyFallback = () => (
   <div className="flex items-center justify-center h-[40vh]">
@@ -377,6 +378,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     onSetPreviewMode: handlePreviewMode,
     studentGrade: studentGradeValue,
     onOpenSearch: (isActivated || isAdmin) ? () => setSearchOpen(true) : undefined,
+    onOpenSolutionEditor: effectiveIsAdmin ? () => navigate('/admin/editor') : undefined,
   };
 
   return (
@@ -439,6 +441,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
             <Route path="/notifications" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><NotificationPage onGetNotifications={cloud.getNotifications} onGetFetchedIds={cloud.getFetchedNotificationIds} onMarkFetched={cloud.markNotificationFetched} onFetchLessons={cloud.fetchLessonsFromCloud} onShowToast={useUIStore.getState().showToast} isAdmin={effectiveIsAdmin} onDeleteNotification={cloud.deleteNotification} onCreateNotification={cloud.createCustomNotification} /></Suspense></ErrorBoundary>} />
             <Route path="/lab" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><SimulationLab onBack={() => navigate('/')} /></Suspense></ErrorBoundary>} />
             <Route path="/blog/*" element={<BlogRoutes cloud={cloud} />} />
+            <Route path="/admin/editor" element={effectiveIsAdmin ? <ErrorBoundary><Suspense fallback={<LazyFallback />}><SolutionEditor /></Suspense></ErrorBoundary> : <Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
