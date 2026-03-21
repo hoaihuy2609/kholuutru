@@ -263,22 +263,23 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                 className={`w-full h-full border-0 ${isMobileDevice ? 'hidden' : 'block'}`}
                                 title="PDF Preview"
                             />
-                            {/* Mobile/Tablet: nút liên kết trực tiếp tới file PDF */}
-                            <div className={`absolute inset-0 flex-col items-center justify-center gap-4 bg-[#1A1A1A] pb-10 ${isMobileDevice ? 'flex' : 'hidden'}`}>
+                            {/* Mobile/Tablet: nút rút blob vào bộ tải xuống để mở trực tiếp */}
+                            <div className={`flex flex-col items-center justify-center h-full gap-4 bg-[#1A1A1A] ${isMobileDevice ? 'flex' : 'hidden md:hidden'}`}>
                                 <FileText className="w-12 h-12" style={{ color: ACCENT }} />
                                 <p className="text-sm font-semibold" style={{ color: '#E5E5E4' }}>{exam.title}</p>
                                 <p className="text-xs text-center px-6" style={{ color: '#AEACA8' }}>
-                                    Bấm nút bên dưới để mở đề thi bằng ứng dụng có sẵn.<br/>Sau đó quay lại đây để làm bài.
+                                    Bấm nút bên dưới để xem đề thi.<br/>Sau đó quay lại tab này để làm bài.
                                 </p>
                                 <a
-                                    href={`${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`}
+                                    href={pdfUrl}
+                                    download={`${exam.title || 'de-thi'}.pdf`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="px-6 py-3 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all hover:opacity-90 active:scale-95 shadow-lg mt-2 cursor-pointer"
+                                    className="px-6 py-3 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all active:scale-95"
                                     style={{ background: ACCENT }}
                                 >
                                     <FileText className="w-4 h-4" />
-                                    Mở Đề Thi
+                                    Xem đề thi
                                 </a>
                             </div>
                         </>
