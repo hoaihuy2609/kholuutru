@@ -376,7 +376,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     previewMode,
     onSetPreviewMode: handlePreviewMode,
     studentGrade: studentGradeValue,
-    onOpenSearch: () => setSearchOpen(true),
+    onOpenSearch: (isActivated || isAdmin) ? () => setSearchOpen(true) : undefined,
   };
 
   return (
