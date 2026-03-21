@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { GradeLevel } from '../types';
 import { CURRICULUM } from '../constants';
-import { FileText, Folder, Quote, Atom, Zap, Activity, Trophy, ChevronLeft, ChevronRight, Star, Bell, Send, Loader2 } from 'lucide-react';
+import { FileText, Folder, Quote, Atom, Zap, Activity, Trophy, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import CountdownTimer from './CountdownTimer';
 
 interface LeaderEntry {
@@ -337,114 +337,6 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
   );
 };
 
-// ─── AdminPushPanel ──────────────────────────────────────────────────────────
-
-const SUPABASE_PROJECT_REF = 'ndhcwrczwbehyznnxzou';
-const EDGE_FN_URL = `https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/send-push-notification`;
-
-const AdminPushPanel: React.FC = () => {
-  const [title, setTitle] = useState('PhysiVault 🔔');
-  const [body, setBody] = useState('');
-  const [grade, setGrade] = useState<string>('all');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ sent: number; failed: number; cleaned: number } | null>(null);
-  const [error, setError] = useState('');
-
-  const handleSend = async () => {
-    if (!body.trim()) return;
-    setLoading(true); setResult(null); setError('');
-    try {
-      const payload: Record<string, unknown> = { title: title.trim(), body: body.trim(), url: '/notifications' };
-      if (grade !== 'all') payload.grade = parseInt(grade);
-      const res = await fetch(EDGE_FN_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Lỗi không xác định');
-      setResult(data);
-      setBody('');
-    } catch (e: any) { setError(e.message); }
-    finally { setLoading(false); }
-  };
-
-  const inp: React.CSSProperties = {
-    width: '100%', background: '#FFFFFF', border: '1px solid #E9E9E7',
-    borderRadius: '8px', color: '#1A1A1A', fontSize: '13px',
-    outline: 'none', padding: '8px 12px',
-  };
-
-  return (
-    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7' }}>
-      <div className="flex items-center gap-3 px-4 py-3"
-        style={{ borderBottom: '1px solid #E9E9E7', borderLeft: '3px solid #6B7CDB', background: '#FAFAF9' }}>
-        <div className="p-2 rounded-lg" style={{ background: '#EEF0FB' }}>
-          <Bell className="w-4 h-4" style={{ color: '#6B7CDB' }} />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Gửi Thông Báo Đẩy</h3>
-          <p className="text-[10px]" style={{ color: '#AEACA8' }}>Gửi đến điện thoại học sinh kể cả khi đã đóng app</p>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-3">
-        {/* Grade selector */}
-        <div className="flex gap-2">
-          {[['all','Tất cả'],['10','Lớp 10'],['11','Lớp 11'],['12','Lớp 12']].map(([val, lbl]) => (
-            <button key={val} onClick={() => setGrade(val)}
-              className="flex-1 py-1.5 text-xs font-semibold rounded-lg border transition-all"
-              style={{ background: grade===val?'#6B7CDB':'#FFFFFF', color: grade===val?'#FFFFFF':'#787774', borderColor: grade===val?'#6B7CDB':'#E9E9E7' }}>
-              {lbl}
-            </button>
-          ))}
-        </div>
-
-        {/* Title */}
-        <div>
-          <label className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: '#AEACA8' }}>Tiêu đề</label>
-          <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={inp}
-            onFocus={e => (e.currentTarget.style.borderColor = '#6B7CDB')}
-            onBlur={e => (e.currentTarget.style.borderColor = '#E9E9E7')} />
-        </div>
-
-        {/* Body */}
-        <div>
-          <label className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: '#AEACA8' }}>Nội dung *</label>
-          <textarea rows={3} value={body} onChange={e => setBody(e.target.value)}
-            placeholder="Nhập nội dung thông báo..."
-            style={{ ...inp, resize: 'none' }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#6B7CDB')}
-            onBlur={e => (e.currentTarget.style.borderColor = '#E9E9E7')} />
-        </div>
-
-        <button onClick={handleSend} disabled={loading || !body.trim()}
-          className="w-full py-2.5 text-sm font-semibold text-white rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-          style={{ background: '#6B7CDB' }}
-          onMouseEnter={e => !loading && ((e.currentTarget as HTMLElement).style.background = '#5a6bc9')}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#6B7CDB'}>
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          {loading ? 'Đang gửi...' : 'Gửi ngay'}
-        </button>
-
-        {result && (
-          <div className="text-xs px-3 py-2 rounded-lg animate-fade-in"
-            style={{ background: '#EAF3EE', border: '1px solid #44836133', color: '#448361' }}>
-            ✅ Đã gửi <b>{result.sent}</b> thiết bị
-            {result.failed > 0 && <span style={{ color: '#D9730D' }}> · {result.failed} thất bại</span>}
-            {result.cleaned > 0 && <span style={{ color: '#AEACA8' }}> · đã dọn {result.cleaned} hết hạn</span>}
-          </div>
-        )}
-        {error && (
-          <div className="text-xs px-3 py-2 rounded-lg"
-            style={{ background: '#FEF0F0', border: '1px solid #FECACA', color: '#E03E3E' }}>
-            ❌ {error}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────
 
@@ -553,8 +445,7 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCou
       {/* ── Countdown Timer ── */}
       <CountdownTimer isAdmin={isAdmin} />
 
-      {/* ── Admin Push Notification Panel ── */}
-      {isAdmin && <AdminPushPanel />}
+
 
       {/* ── Grade Selection ── */}
       <div>
