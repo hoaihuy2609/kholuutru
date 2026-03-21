@@ -275,120 +275,129 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
       />
 
       {/* GlobalSearch Modal */}
-      <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none overflow-y-auto">
-        <div className="w-full bg-white relative flex flex-col pointer-events-auto transition-all duration-300 overflow-hidden"
-             style={{ 
-               maxWidth: '580px',
-               borderRadius: '12px', 
-               maxHeight: '80vh',
-               border: '1px solid #E9E9E7',
-               boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
-             }}>
-          
-          {/* Header Section */}
-          <header className="flex items-center px-6 py-4 shrink-0" style={{ borderBottom: '1px solid #E9E9E7' }}>
-            <div className="flex items-center gap-4 flex-1">
-              <Search className="w-6 h-6 shrink-0" style={{ color: '#6B7CDB' }} />
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Tìm kiến thức, khóa học, đề thi..."
-                className="w-full bg-transparent border-0 focus:ring-0 focus:border-transparent text-[17px] font-medium outline-none placeholder-[#AEACA8]"
-                style={{ color: '#1A1A1A', boxShadow: 'none', outline: 'none' }}
-              />
-            </div>
-            <div className="flex items-center gap-3 shrink-0 ml-4">
-              <div className="hidden sm:flex items-center px-2 py-1 bg-[#F8F9FD] rounded border border-[#E9E9E7]">
-                <span className="text-[10px] font-bold text-[#AEACA8] uppercase tracking-wider">ESC</span>
+      <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+        <div
+          className="w-full max-w-2xl max-h-[85vh] bg-white overflow-hidden flex flex-col relative animate-scale-in pointer-events-auto"
+          style={{ 
+            borderRadius: '28px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05)'
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header Area */}
+          <div className="bg-[#F8F9FD] p-7 border-b border-[#E9E9E7] relative">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm" style={{ background: '#6B7CDB' }}>
+                <Search className="w-6 h-6 text-white" />
               </div>
-              <button onClick={onClose} className="p-1.5 rounded-full transition-colors hover:bg-[#F8F9FD] text-[#AEACA8] hover:text-[#787774]">
+              <div className="flex-1">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Bạn muốn tìm gì hôm nay?..."
+                  className="w-full bg-transparent border-none text-xl font-bold focus:ring-0 placeholder-[#AEACA8]"
+                  style={{ color: '#1A1A1A' }}
+                />
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2.5 rounded-xl hover:bg-white hover:shadow-md transition-all text-[#AEACA8] hover:text-[#1A1A1A]"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
-          </header>
+          </div>
 
-          {/* Search Content Area */}
-          <div className="overflow-y-auto p-6" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            {query.trim() === '' ? (
-              searchHistory.length > 0 ? (
-                <section className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: '#AEACA8' }}>Lịch sử tìm kiếm</h3>
-                    <button onClick={clearHistory} className="text-[10px] font-bold uppercase tracking-wider transition-colors hover:text-[#1A1A1A]" style={{ color: '#AEACA8' }}>Xóa</button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-[#787774]">
-                    {searchHistory.map((term) => (
-                      <div
-                        key={term}
-                        className="flex items-center bg-[#F8F9FD] hover:bg-[#EEF0FB] rounded-full text-[13px] font-medium transition-all group border border-[#E9E9E7]/60"
-                      >
-                        <button
-                          onClick={() => setQuery(term)}
-                          className="flex items-center gap-2 pl-4 pr-1 py-1.5 text-[#787774] hover:text-[#6B7CDB] transition-colors"
+          {/* New Search Content Area */}
+          <div className="overflow-y-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div className="p-2">
+              {query.trim() === '' ? (
+                searchHistory.length > 0 ? (
+                  <section className="p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#AEACA8]">Lịch sử tìm kiếm</h3>
+                      <button onClick={clearHistory} className="text-[10px] font-bold uppercase tracking-wider text-[#AEACA8] hover:text-[#E03E3E] transition-colors">Xóa tất cả</button>
+                    </div>
+                    <div className="flex flex-wrap gap-2.5">
+                      {searchHistory.map((term) => (
+                        <div
+                          key={term}
+                          className="flex items-center bg-[#F1F0EC] hover:bg-[#E3E2DE] rounded-xl text-[13px] font-semibold transition-all group border border-transparent hover:border-[#E9E9E7]"
                         >
-                          <History className="w-4 h-4" style={{ opacity: 0.5 }} />
-                          {term}
-                        </button>
-                        <button
-                          onClick={() => removeFromHistory(term)}
-                          className="pr-3 pl-1 py-1.5 text-[#AEACA8] hover:text-[#E03E3E] transition-colors"
-                          title="Xóa từ khóa này"
-                        >
-                          <X className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </button>
-                      </div>
-                    ))}
+                          <button
+                            onClick={() => setQuery(term)}
+                            className="flex items-center gap-2 pl-4 pr-1 py-2 text-[#57564F] hover:text-[#6B7CDB]"
+                          >
+                            <History className="w-4 h-4 opacity-40" />
+                            {term}
+                          </button>
+                          <button
+                            onClick={() => removeFromHistory(term)}
+                            className="pr-3 pl-1 py-2 text-[#AEACA8] hover:text-[#E03E3E] transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ) : (
+                  <div className="py-24 text-center">
+                    <div className="w-16 h-16 bg-[#F8F9FD] rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Search className="w-8 h-8 text-[#AEACA8] opacity-30" />
+                    </div>
+                    <p className="text-lg font-bold text-[#1A1A1A]">Khám phá kiến thức Vật Lý</p>
+                    <p className="text-sm text-[#AEACA8] mt-1">Gõ gợi ý: "Sóng cơ", "Đề HK1"...</p>
                   </div>
-                </section>
-              ) : (
-                <div className="py-16 text-center">
-                  <Search className="w-10 h-10 mx-auto mb-4 opacity-20" />
-                  <p className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Bạn muốn tìm gì hôm nay?</p>
+                )
+              ) : filtered.length === 0 ? (
+                <div className="py-24 text-center">
+                  <div className="w-16 h-16 bg-[#FEF2F2] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-8 h-8 text-[#E03E3E] opacity-30" />
+                  </div>
+                  <p className="text-lg font-bold text-[#1A1A1A]">Không có kết quả</p>
+                  <p className="text-sm text-[#AEACA8] mt-1">Không tìm thấy nội dung nào khớp với "{query}"</p>
                 </div>
-              )
-            ) : filtered.length === 0 ? (
-               <div className="py-16 text-center">
-                  <Search className="w-10 h-10 mx-auto mb-4 opacity-20" />
-                  <p className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Không tìm thấy kết quả cho "{query}"</p>
-                  <p className="text-sm mt-1" style={{ color: '#787774' }}>Vui lòng kiểm tra lại lỗi chính tả hoặc dùng từ khóa khác.</p>
-               </div>
-            ) : (
-              <section ref={listRef} className="space-y-4">
-                <h3 className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: '#AEACA8' }}>Kết quả nổi bật</h3>
-                <div className="space-y-1">
-                  {filtered.map((result, idx) => {
+              ) : (
+                <div className="divide-y divide-[#F1F0EC]" ref={listRef}>
+                  {filtered.map((result, index) => {
                     const cfg = CATEGORY_CONFIG[result.category];
                     const Icon = cfg.icon;
-                    const isActive = idx === selectedIndex;
+                    const isActive = index === selectedIndex;
                     return (
                       <div
                         key={result.id}
+                        className={`flex items-center gap-4 px-6 py-4.5 cursor-pointer transition-all ${isActive ? 'bg-[#F8F9FD]' : 'hover:bg-[#FAFAF9]'}`}
+                        style={{
+                          borderLeft: isActive ? `4px solid ${cfg.color}` : '4px solid transparent',
+                        }}
                         onClick={() => handleSelect(result)}
-                        onMouseEnter={() => setSelectedIndex(idx)}
-                        className="group flex items-center gap-4 p-3.5 rounded-2xl cursor-pointer transition-all duration-200"
-                        style={{ background: isActive ? '#F8F9FD' : 'transparent' }}
+                        onMouseEnter={() => setSelectedIndex(index)}
                       >
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform" style={{ background: cfg.bg }}>
-                          <Icon className="w-6 h-6" style={{ color: cfg.color }} />
+                        <div
+                          className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all shadow-sm"
+                          style={{ background: cfg.bg }}
+                        >
+                          <Icon className="w-5 h-5 shadow-sm" style={{ color: cfg.color }} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-[15px] font-bold truncate transition-colors" style={{ color: isActive ? '#6B7CDB' : '#1A1A1A' }}>
+                          <h4 className="text-[15px] font-bold truncate leading-tight transition-colors" style={{ color: isActive ? '#6B7CDB' : '#1A1A1A' }}>
                             {result.title}
                           </h4>
-                          <p className="text-[13px] truncate mt-0.5" style={{ color: '#AEACA8' }}>
+                          <p className="text-[13px] mt-1.5 truncate font-medium text-[#AEACA8]">
                             {result.subtitle}
                           </p>
                         </div>
                         <span 
-                          className="text-[9px] font-bold px-2 py-1 rounded-md shrink-0 uppercase tracking-widest transition-all" 
+                          className="text-[10px] font-bold px-3 py-1.5 rounded-lg shrink-0 uppercase tracking-widest border transition-all" 
                           style={{ 
-                            background: isActive ? cfg.bg : '#F8F9FD', 
-                            color: isActive ? cfg.color : '#AEACA8',
-                            border: `1px solid ${isActive ? cfg.color + '20' : '#E9E9E7'}`,
-                            opacity: isActive ? 1 : 0.8
+                            background: isActive ? cfg.bg : '#FFFFFF', 
+                            color: cfg.color,
+                            borderColor: `${cfg.color}20`,
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
                           }}
                         >
                           {cfg.label}
@@ -397,31 +406,34 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                     );
                   })}
                 </div>
-              </section>
-            )}
-          </div>
-
-          {/* Footer Section */}
-          <footer className="px-6 py-4 flex items-center justify-between shrink-0" style={{ background: '#F8F9FD', borderTop: '1px solid #E9E9E7' }}>
-            <div className="flex items-center gap-2" style={{ color: '#787774' }}>
-              {filtered.length > 0 ? (
-                <span className="text-[13px] font-medium">Tìm thấy <span className="font-bold" style={{ color: '#1A1A1A' }}>{filtered.length}</span> kết quả phù hợp</span>
-              ) : (
-                // When 0 results, we can show standard prompt
-                <span className="text-[13px] font-medium">Tìm kiếm nâng cao</span>
               )}
             </div>
-            {filtered.length > 0 && (
-              <button 
-                onClick={() => handleSelect(filtered[selectedIndex])}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-all hover:brightness-110 active:scale-95"
-                style={{ background: '#6B7CDB', color: 'white' }}
-              >
-                Mở tài liệu
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
-          </footer>
+          </div>
+
+          {/* Footer Area */}
+          {query.trim() !== '' && filtered.length > 0 && (
+            <div className="px-7 py-4 bg-[#FAFAF9] border-t border-[#E9E9E7] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-5 text-[11px] font-bold text-[#AEACA8] uppercase tracking-wider">
+                <div className="flex items-center gap-1.5">
+                  <kbd className="px-1.5 py-0.5 rounded-md bg-white border border-[#E9E9E7] shadow-sm text-[#1A1A1A]">↑↓</kbd> Di chuyển
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <kbd className="px-1.5 py-0.5 rounded-md bg-white border border-[#E9E9E7] shadow-sm text-[#1A1A1A]">Enter</kbd> Chọn
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-[11px] font-bold text-[#AEACA8] uppercase tracking-wider">{filtered.length} kết quả</span>
+                <button 
+                  onClick={() => handleSelect(filtered[selectedIndex])}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all hover:brightness-110 active:scale-95 text-white"
+                  style={{ background: '#6B7CDB' }}
+                >
+                  Truy cập
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
