@@ -288,9 +288,9 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
         >
           {/* Header Area */}
           <div className="bg-white px-6 py-5 border-b border-[#E9E9E7] relative">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#6B7CDB' }}>
-                <Search className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0">
+                <Search className="w-5 h-5 text-[#8E8C85]" />
               </div>
               <div className="flex-1">
                 <input
@@ -300,13 +300,13 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                   onChange={e => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Bạn muốn tìm gì hôm nay?..."
-                  className="w-full bg-transparent border-transparent outline-none focus:outline-none focus:ring-0 focus:border-transparent text-[17px] font-semibold placeholder-[#AEACA8]"
+                  className="w-full bg-transparent border-transparent outline-none focus:outline-none focus:ring-0 focus:border-transparent text-[17px] font-semibold placeholder-[#8E8C85]"
                   style={{ color: '#1A1A1A' }}
                 />
               </div>
               <button
                 onClick={onClose}
-                className="p-2.5 rounded-xl hover:bg-white hover:shadow-md transition-all text-[#AEACA8] hover:text-[#1A1A1A]"
+                className="p-2 rounded-xl hover:bg-[#F3F2F0] transition-colors text-[#8E8C85] hover:text-[#1A1A1A]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -320,8 +320,8 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                 searchHistory.length > 0 ? (
                   <section className="p-6 space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#AEACA8]">Lịch sử tìm kiếm</h3>
-                      <button onClick={clearHistory} className="text-[10px] font-bold uppercase tracking-wider text-[#AEACA8] hover:text-[#E03E3E] transition-colors">Xóa tất cả</button>
+                      <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#797771]">Lịch sử tìm kiếm</h3>
+                      <button onClick={clearHistory} className="text-[10px] font-bold uppercase tracking-wider text-[#797771] hover:text-[#E03E3E] transition-colors">Xóa tất cả</button>
                     </div>
                     <div className="flex flex-wrap gap-2.5">
                       {searchHistory.map((term) => (
@@ -448,30 +448,6 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
             </div>
           </div>
 
-          {/* Footer Area */}
-          {query.trim() !== '' && filtered.length > 0 && (
-            <div className="px-7 py-4 bg-[#FAFAF9] border-t border-[#E9E9E7] flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-5 text-[11px] font-bold text-[#AEACA8] uppercase tracking-wider">
-                <div className="flex items-center gap-1.5">
-                  <kbd className="px-1.5 py-0.5 rounded-md bg-white border border-[#E9E9E7] shadow-sm text-[#1A1A1A]">↑↓</kbd> Di chuyển
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <kbd className="px-1.5 py-0.5 rounded-md bg-white border border-[#E9E9E7] shadow-sm text-[#1A1A1A]">Enter</kbd> Chọn
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-[11px] font-bold text-[#AEACA8] uppercase tracking-wider">{filtered.length} kết quả</span>
-                <button 
-                  onClick={() => handleSelect(filtered[selectedIndex])}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all hover:brightness-110 active:scale-95 text-white"
-                  style={{ background: '#6B7CDB' }}
-                >
-                  Truy cập
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </>
