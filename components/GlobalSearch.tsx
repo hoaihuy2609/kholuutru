@@ -419,7 +419,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                       itemColor = '#D9730D'; itemBg = '#FFF3E8';   // Cam
                       Icon = BookOpen;
                     } else if (lowerCat.includes('đúng/sai')) {
-                      itemColor = '#448361'; itemBg = '#EAF3EE';   // Xanh lá
+                      itemColor = '#6B7CDB'; itemBg = '#EEF0FB';   // Xanh nước biển
                       Icon = FileText;
                     } else if (lowerCat.includes('nâng cao')) {
                       itemColor = '#9065B0'; itemBg = '#F3ECF8';   // Tím
