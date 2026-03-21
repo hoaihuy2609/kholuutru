@@ -4,11 +4,6 @@ import { Exam, ExamTFAnswer, ExamSubmission } from '../types';
 import ExamCountdownTimer from './ExamCountdownTimer';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
 const PDF_CACHE_DB = 'pv_pdf_cache';
 const PDF_CACHE_STORE = 'pdfs';
@@ -120,28 +115,12 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     const [showConfirm, setShowConfirm] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     
-    // PDF rendering states
-    const [numPages, setNumPages] = useState<number>(0);
-    const [pdfWidth, setPdfWidth] = useState<number>(0);
+    // Thiết bị mobile/tablet (để ẩn iframe và hiện nút link thật)
     const [isMobileDevice] = useState(() => {
         const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         return isTouch || isMobileUA;
     });
-    const pdfWrapperRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!pdfWrapperRef.current) return;
-        const observer = new ResizeObserver((entries) => {
-            setPdfWidth(entries[0].contentRect.width);
-        });
-        observer.observe(pdfWrapperRef.current);
-        return () => observer.disconnect();
-    }, []);
-
-    const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-        setNumPages(numPages);
-    };
 
     const startTime = useRef(Date.now());
 
@@ -284,32 +263,24 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                 className={`w-full h-full border-0 ${isMobileDevice ? 'hidden' : 'block'}`}
                                 title="PDF Preview"
                             />
-                            {/* Mobile/Tablet: dùng React-PDF để hiện mượt và sắc nét */}
-                            <div ref={pdfWrapperRef} className={`absolute inset-0 overflow-y-auto overflow-x-hidden flex-col items-center bg-[#1A1A1A] pb-10 ${isMobileDevice ? 'flex' : 'hidden'}`} style={{ scrollbarWidth: 'thin', scrollbarColor: '#3B3B3B #1A1A1A' }}>
-                            <Document 
-                                file={pdfUrl} 
-                                options={{
-                                    cMapUrl: `//unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
-                                    cMapPacked: true,
-                                    standardFontDataUrl: `//unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`
-                                }}
-                                onLoadSuccess={onDocumentLoadSuccess} 
-                                loading={<div className="flex flex-col items-center justify-center p-12 gap-3"><RefreshCw className="w-8 h-8 animate-spin" style={{ color: ACCENT }} /><p className="text-sm" style={{ color: '#AEACA8' }}>Đang render trang PDF...</p></div>}
-                                error={<div className="flex flex-col items-center justify-center p-12 gap-2 text-[#AEACA8] text-sm"><AlertTriangle className="w-8 h-8 text-red-500 mb-2"/>Lỗi render PDF. Vui lòng tải lại trang.</div>}
-                            >
-                                {Array.from(new Array(numPages), (el, index) => (
-                                    <div key={`page_${index + 1}`} className="mb-4 lg:mb-6 shadow-[0_4px_16px_rgba(0,0,0,0.5)]">
-                                        <Page 
-                                            pageNumber={index + 1} 
-                                            width={pdfWidth > 0 ? (pdfWidth > 800 ? 800 : pdfWidth - 16) : undefined}
-                                            renderMode="svg"
-                                            renderTextLayer={false}
-                                            renderAnnotationLayer={false}
-                                        />
-                                    </div>
-                                ))}
-                            </Document>
-                        </div>
+                            {/* Mobile/Tablet: nút liên kết trực tiếp tới file PDF */}
+                            <div className={`absolute inset-0 flex-col items-center justify-center gap-4 bg-[#1A1A1A] pb-10 ${isMobileDevice ? 'flex' : 'hidden'}`}>
+                                <FileText className="w-12 h-12" style={{ color: ACCENT }} />
+                                <p className="text-sm font-semibold" style={{ color: '#E5E5E4' }}>{exam.title}</p>
+                                <p className="text-xs text-center px-6" style={{ color: '#AEACA8' }}>
+                                    Bấm nút bên dưới để mở đề thi bằng ứng dụng có sẵn.<br/>Sau đó quay lại đây để làm bài.
+                                </p>
+                                <a
+                                    href={`${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-6 py-3 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all hover:opacity-90 active:scale-95 shadow-lg mt-2 cursor-pointer"
+                                    style={{ background: ACCENT }}
+                                >
+                                    <FileText className="w-4 h-4" />
+                                    Mở Đề Thi
+                                </a>
+                            </div>
                         </>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full gap-2" style={{ background: '#1A1A1A' }}>
