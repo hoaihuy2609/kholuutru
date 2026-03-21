@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
-import { supabase } from "../src/lib/supabase"; // Use project's supabase client
-import { useUIStore } from "../src/stores/useUIStore"; // Use project's toast system
+import { supabase } from "../src/lib/supabase";
+import { useUIStore } from "../src/stores/useUIStore";
+import { ChevronLeft, Save, Trash2, ArrowUp, ArrowDown, Plus, Eye, BookOpen, Layers } from 'lucide-react';
 
 const SNIPPETS = [
   { label: "Phân số",      tex: "\\frac{a}{b}",                   display: "a/b" },
@@ -38,33 +39,19 @@ function KatexSpan({ tex, block = false }: { tex: string; block?: boolean }) {
 
 function StepPreview({ step, index }: { step: any; index: number }) {
   return (
-    <div style={{
-      background: "var(--preview-step-bg)",
-      border: "1px solid var(--preview-step-border)",
-      borderRadius: 8,
-      marginBottom: 10,
-      overflow: "hidden",
-    }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        padding: "7px 12px",
-        borderBottom: "1px solid var(--preview-step-border)",
-        background: "var(--preview-step-head)",
-      }}>
-        <span style={{
-          fontFamily: "monospace", fontSize: 11, fontWeight: 600,
-          background: "var(--accent)", color: "#fff",
-          width: 20, height: 20, borderRadius: "50%",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>{index + 1}</span>
-        <span style={{ fontSize: 13, fontWeight: 500 }}>
-          {step.title || <em style={{ color: "var(--muted)" }}>Chưa có tiêu đề</em>}
+    <div className="bg-white border border-[#E9E9E7] rounded-xl mb-4 overflow-hidden shadow-sm">
+      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[#E9E9E7] bg-[#FCFCFA]">
+        <span className="font-mono text-[11px] font-bold bg-[#6B7CDB] text-white w-5 h-5 rounded-full flex items-center justify-center shrink-0 tracking-tighter">
+          {index + 1}
+        </span>
+        <span className="text-[13px] font-semibold text-[#1A1A1A]">
+          {step.title || <em className="text-[#AEACA8] font-normal">Chưa có tiêu đề</em>}
         </span>
       </div>
-      <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-        {step.text && <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.65, margin: 0 }}>{step.text}</p>}
-        {step.formula && <KatexSpan tex={step.formula} block />}
-        {step.formula2 && <KatexSpan tex={step.formula2} block />}
+      <div className="p-4 flex flex-col gap-3">
+        {step.text && <p className="text-[13px] text-[#57564F] leading-relaxed m-0 whitespace-pre-wrap">{step.text}</p>}
+        {step.formula && <div className="text-[#1A1A1A]"><KatexSpan tex={step.formula} block /></div>}
+        {step.formula2 && <div className="text-[#1A1A1A]"><KatexSpan tex={step.formula2} block /></div>}
       </div>
     </div>
   );
@@ -208,269 +195,229 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
   };
 
   return (
-    <>
-      <style>{`
+    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20 font-sans">
+      <style>{`.katex { color: #1A1A1A !important; }`}</style>
 
-        .se-root {
-          --bg:         #F7F6F3;
-          --surface:    #FFFFFF;
-          --surface2:   #F1F0EC;
-          --border:     #E9E9E7;
-          --accent:     #6B7CDB;
-          --accent2:    #9065B0;
-          --text:       #1A1A1A;
-          --muted:      #787774;
-          --preview-step-bg:     #FFFFFF;
-          --preview-step-border: #E9E9E7;
-          --preview-step-head:   #F7F6F3;
-
-          font-family: 'Inter', sans-serif;
-          background: var(--bg);
-          color: var(--text);
-          height: calc(100vh - 60px);
-          max-height: 100vh;
-          margin: -1rem; /* Bù lại padding của content wrapper */
-          display: flex;
-          flex-direction: column;
-        }
-
-        .se-topbar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 0 1.5rem;
-          height: 52px;
-          min-height: 52px;
-          background: var(--surface);
-          border-bottom: 1px solid var(--border);
-          flex-shrink: 0;
-        }
-        .se-logo {
-          font-family: 'Inter', sans-serif;
-          font-weight: 700;
-          font-size: 1.2rem;
-          letter-spacing: 0.02em;
-          color: var(--accent);
-        }
-        .se-logo span { color: var(--accent2); }
-
-        .btn-save {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          background: var(--accent);
-          color: #fff;
-          border: none;
-          border-radius: 6px;
-          padding: 6px 16px;
-          font-family: 'Inter', sans-serif;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: opacity .15s;
-        }
-        .btn-save:hover { opacity: .85; }
-        .btn-save:disabled { opacity: .5; cursor: not-allowed; }
-
-        .se-body {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          flex: 1;
-          overflow: hidden;
-        }
-
-        @media (max-width: 768px) {
-          .se-body { grid-template-columns: 1fr; }
-          .se-preview { display: none !important; }
-        }
-
-        .se-editor {
-          overflow-y: auto;
-          border-right: 1px solid var(--border);
-          padding: 1.25rem 1.5rem 2rem;
-          display: flex;
-          flex-direction: column;
-          gap: 1.25rem;
-        }
-
-        .section-head {
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 10px;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-          color: var(--muted);
-          margin-bottom: .6rem;
-        }
-
-        .snippet-bar { display: none; }
-        .snippet-btn { display: none; }
-        .snippet-hint { display: none; }
-
-        .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .field { display: flex; flex-direction: column; gap: 5px; }
-        .field label { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; }
-        .field input, .field textarea {
-          background: var(--surface); border: 1px solid var(--border); border-radius: 7px;
-          color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; padding: 7px 10px; outline: none; resize: vertical;
-        }
-        .field input:focus, .field textarea:focus { border-color: var(--accent); }
-        .field .latex-field { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #EEF0FB; color: #3D3D8D; border-color: #D3DBF9; }
-        .field .latex-field:focus { border-color: var(--accent); box-shadow: 0 0 0 2px #d3dbf9; }
-
-        .divider { height: 1px; background: var(--border); }
-
-        .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-        .step-card-head { display: flex; justify-content: space-between; padding: 8px 12px; background: var(--surface2); border-bottom: 1px solid var(--border); }
-        .step-idx { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 500; }
-        .step-actions { display: flex; gap: 4px; }
-        .step-btn { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-size: 11px; padding: 2px 7px; cursor: pointer; }
-        .step-btn:hover { background: var(--surface2); color: var(--text); }
-        .step-btn.del:hover { background: #FEE2E2; border-color: #F87171; color: #DC2626; }
-
-        .step-card-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
-
-        .add-step-btn {
-          background: none; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted);
-          font-size: 13px; padding: 8px; cursor: pointer; width: 100%; text-align: center;
-        }
-        .add-step-btn:hover { border-color: var(--accent); color: var(--accent); background: #EEF0FB; }
-
-        .se-preview { overflow-y: auto; padding: 1.25rem 1.5rem 2rem; background: var(--surface); border-left: 1px solid var(--border); }
-        .preview-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
-        .preview-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-        .preview-exam { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
-        .preview-qnum { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; color: var(--accent2); margin-bottom: .75rem; }
-        .preview-qblock { background: var(--surface); border-left: 3px solid var(--accent2); border-radius: 0 6px 6px 0; padding: 10px 14px; margin-bottom: 1.25rem; }
-        .preview-qtext { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 6px; }
-        .steps-preview-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: .75rem; display: flex; align-items: center; gap: 8px; }
-        .steps-preview-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-        
-        .katex { color: var(--text) !important; }
-      `}</style>
-
-      <div className="se-root">
-        <div className="se-topbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {onBack && (
-              <button 
+      {/* Top Bar */}
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-2">
+          {onBack && (
+            <button
                 onClick={onBack}
-                style={{
-                  background: 'none', border: 'none', color: 'var(--muted)',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
-                  fontSize: '13px', padding: 0, fontFamily: 'Inter', fontWeight: 600
-                }}
-              >
-                ← Quay lại
-              </button>
-            )}
-            <div className="se-logo">PhysiVault <span>Giải bài</span></div>
-          </div>
-          
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-             {switchToMarkdown && (
-               <button
-                  onClick={switchToMarkdown}
-                  style={{
-                    background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--border)",
-                    padding: "6px 12px", borderRadius: "6px", fontSize: "12px", cursor: "pointer", fontFamily: 'Inter', fontWeight: 600
-                  }}
-               >
-                 Thường (Markdown)
-               </button>
-             )}
-            <button className="btn-save" onClick={handleSave} disabled={saving}>
-              {saving ? "Đang lưu..." : "💾 Bấm Lưu"}
+                className="flex items-center gap-1.5 text-sm font-medium hover:text-indigo-600 transition-colors"
+                style={{ color: '#787774' }}
+            >
+                <ChevronLeft className="w-4 h-4" /> Quay lại
             </button>
-          </div>
-        </div>
+          )}
 
-        <div className="se-body">
-          <div className="se-editor">
-            <div>
-              <div className="section-head">Thông tin bài tập</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div className="field-row">
-                  <div className="field">
-                    <label>Tên đề thi / Nguồn</label>
-                    <input placeholder="VD: THPT QG 2024" value={examName} onChange={e => setExamName(e.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label>Số bài / Số câu</label>
-                    <input placeholder="VD: Câu 38" value={questionNo} onChange={e => setQuestionNo(e.target.value)} />
-                  </div>
-                </div>
-                <div className="field">
-                  <label>Mô tả đề bài (Text)</label>
-                  <textarea rows={2} placeholder="Một vật dao động..." value={qText} onChange={e => setQText(e.target.value)} />
-                </div>
-                <div className="field">
-                  <label>Công thức đề bài (LaTeX)</label>
-                  <textarea rows={2} className="latex-field" placeholder="x = 4\cos(...)" value={qFormula} onChange={e => setQFormula(e.target.value)} onFocus={e => trackFocus("qFormula", e.target)} />
-                </div>
-              </div>
-            </div>
-
-            <div className="divider" />
-
-            <div>
-              <div className="section-head">Từng bước giải</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {steps.map((step, idx) => (
-                  <div className="step-card" key={idx}>
-                    <div className="step-card-head">
-                      <span className="step-idx">Bước {idx + 1}</span>
-                      <div className="step-actions">
-                        <button className="step-btn" onClick={() => moveStep(idx, -1)}>↑</button>
-                        <button className="step-btn" onClick={() => moveStep(idx, 1)}>↓</button>
-                        {steps.length > 1 && <button className="step-btn del" onClick={() => removeStep(idx)}>Xóa</button>}
-                      </div>
-                    </div>
-                    <div className="step-card-body">
-                      <div className="field">
-                        <label>Tiêu đề bước</label>
-                        <input placeholder="VD: Tìm chu kì" value={step.title} onChange={e => updateStep(idx, "title", e.target.value)} />
-                      </div>
-                      <div className="field">
-                        <label>Giải thích</label>
-                        <textarea rows={1} value={step.text} onChange={e => updateStep(idx, "text", e.target.value)} />
-                      </div>
-                      <div className="field">
-                        <label>Công thức 1</label>
-                        <textarea rows={1} className="latex-field" value={step.formula} onChange={e => updateStep(idx, "formula", e.target.value)} onFocus={e => trackFocus(`step-${idx}-formula`, e.target)} />
-                      </div>
-                      <div className="field">
-                        <label>Công thức 2 (Nếu cần)</label>
-                        <textarea rows={1} className="latex-field" value={step.formula2} onChange={e => updateStep(idx, "formula2", e.target.value)} onFocus={e => trackFocus(`step-${idx}-formula2`, e.target)} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <button className="add-step-btn" onClick={addStep}>+ Thêm bước tiếp theo</button>
-              </div>
-            </div>
+          <div className="flex items-center gap-3 bg-white p-1 rounded-xl border border-[#E9E9E7]">
+              {switchToMarkdown && (
+                  <button
+                      onClick={switchToMarkdown}
+                      className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-[#787774] hover:bg-gray-50"
+                  >
+                      Markdown
+                  </button>
+              )}
+              <button
+                  className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all bg-[#EEF0FB] text-[#6B7CDB]"
+              >
+                  Lời Giải (LaTeX)
+              </button>
           </div>
 
-          <div className="se-preview">
-            <div className="preview-label">Xem trước kết quả</div>
-            {examName && <div className="preview-exam">{examName}</div>}
-            <div className="preview-qnum">{questionNo || "Câu ?"}</div>
-            <div className="preview-qblock">
-              {qText && <p className="preview-qtext">{qText}</p>}
-              {qFormula && <KatexSpan tex={qFormula} block />}
-            </div>
-            {steps.some(s => s.title || s.formula) && (
-              <>
-                <div className="steps-preview-label">Lời giải</div>
-                {steps.map((step, idx) => <StepPreview key={idx} step={step} index={idx} />)}
-              </>
-            )}
-            {!examName && !qFormula && !steps[0].title && (
-              <p style={{ fontSize: 13, color: "var(--muted)", textAlign: "center", marginTop: "30%" }}>Bắt đầu soạn thảo để xem trước...</p>
-            )}
+          <div className="flex items-center gap-3 flex-wrap">
+              <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-6 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60 shadow-sm"
+              >
+                  <Save className="w-4 h-4" />
+                  {saving ? 'Đang lưu...' : (blog ? 'Cập nhật' : 'Đăng bài')}
+              </button>
           </div>
-        </div>
       </div>
-    </>
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        
+        {/* Editor Area */}
+        <div className="xl:col-span-7 flex flex-col gap-6">
+          
+          {/* Thông tin bài tập */}
+          <div className="p-6 rounded-2xl bg-white border border-[#E9E9E7] shadow-sm space-y-5">
+            <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2 text-lg">
+               <BookOpen className="w-5 h-5 text-indigo-500" /> Thông tin bài tập
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Tên đề thi / Nguồn</label>
+                <input 
+                  className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm transition-colors"
+                  placeholder="VD: THPT QG 2024" 
+                  value={examName} onChange={e => setExamName(e.target.value)} 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Số bài / Số câu</label>
+                <input 
+                  className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm transition-colors"
+                  placeholder="VD: Câu 38" 
+                  value={questionNo} onChange={e => setQuestionNo(e.target.value)} 
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Mô tả đề bài (Text)</label>
+              <textarea 
+                rows={2}
+                className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm resize-y text-gray-700 transition-colors"
+                placeholder="Một vật dao động..." 
+                value={qText} onChange={e => setQText(e.target.value)} 
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Công thức đề bài (LaTeX)</label>
+              <textarea 
+                rows={2}
+                className="w-full p-3 rounded-lg border border-[#D3DBF9] outline-none focus:border-indigo-500 text-sm font-mono resize-y bg-[#EEF0FB] text-[#3D3D8D] transition-colors"
+                placeholder="x = 4\cos(...)" 
+                value={qFormula} onChange={e => setQFormula(e.target.value)} 
+                onFocus={e => trackFocus("qFormula", e.target as any)} 
+              />
+            </div>
+          </div>
+
+          {/* Từng bước giải */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2 text-lg mb-2">
+               <Layers className="w-5 h-5 text-indigo-500" /> Từng bước giải
+            </h3>
+
+            <div className="space-y-4">
+              {steps.map((step, idx) => (
+                <div key={idx} className="bg-white border border-[#E9E9E7] rounded-2xl overflow-hidden shadow-sm transition-all focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-50">
+                  {/* Step Header */}
+                  <div className="flex items-center justify-between px-5 py-3.5 bg-[#FCFCFA] border-b border-[#E9E9E7]">
+                    <span className="font-semibold text-sm text-indigo-700 flex items-center gap-2">
+                       <span className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold shrink-0">{idx + 1}</span>
+                       Bước {idx + 1}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors" onClick={() => moveStep(idx, -1)} title="Lên"><ArrowUp className="w-4 h-4" /></button>
+                      <button className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors" onClick={() => moveStep(idx, 1)} title="Xuống"><ArrowDown className="w-4 h-4" /></button>
+                      {steps.length > 1 && (
+                         <button className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors ml-1" onClick={() => removeStep(idx)} title="Xóa"><Trash2 className="w-4 h-4" /></button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Step Body */}
+                  <div className="p-5 space-y-5">
+                     <div>
+                        <label className="block text-xs font-bold mb-2 text-[#787774] uppercase tracking-wider">Tiêu đề bước</label>
+                        <input 
+                          className="w-full p-2.5 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm font-medium transition-colors"
+                          placeholder="VD: Tìm chu kì" 
+                          value={step.title} onChange={e => updateStep(idx, "title", e.target.value)} 
+                        />
+                     </div>
+                     
+                     <div>
+                        <label className="block text-xs font-bold mb-2 text-[#787774] uppercase tracking-wider">Giải thích</label>
+                        <textarea 
+                          rows={2}
+                          className="w-full p-2.5 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm resize-y text-gray-700 transition-colors"
+                          placeholder="Mô tả cách làm..." 
+                          value={step.text} onChange={e => updateStep(idx, "text", e.target.value)} 
+                        />
+                     </div>
+
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                       <div>
+                          <label className="block text-xs font-bold mb-2 text-[#787774] uppercase tracking-wider">Công thức 1</label>
+                          <textarea 
+                            rows={2}
+                            className="w-full p-2.5 rounded-lg border border-[#D3DBF9] outline-none focus:border-indigo-500 text-sm font-mono resize-y bg-[#EEF0FB] text-[#3D3D8D] transition-colors"
+                            placeholder="LaTeX..." 
+                            value={step.formula} onChange={e => updateStep(idx, "formula", e.target.value)} 
+                            onFocus={e => trackFocus(`step-${idx}-formula`, e.target as any)} 
+                          />
+                       </div>
+                       <div>
+                          <label className="block text-xs font-bold mb-2 text-[#787774] uppercase tracking-wider">Công thức 2 (Tùy chọn)</label>
+                          <textarea 
+                            rows={2}
+                            className="w-full p-2.5 rounded-lg border border-[#D3DBF9] outline-none focus:border-indigo-500 text-sm font-mono resize-y bg-[#EEF0FB] text-[#3D3D8D] transition-colors"
+                            placeholder="LaTeX..." 
+                            value={step.formula2} onChange={e => updateStep(idx, "formula2", e.target.value)} 
+                            onFocus={e => trackFocus(`step-${idx}-formula2`, e.target as any)} 
+                          />
+                       </div>
+                     </div>
+                  </div>
+                </div>
+              ))}
+
+              <button 
+                className="w-full py-4 rounded-2xl border-2 border-dashed border-[#DCDCDA] text-[#787774] font-semibold text-sm hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-2 mt-4"
+                onClick={addStep}
+              >
+                <Plus className="w-5 h-5" /> Thêm bước tiếp theo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Preview Area */}
+        <div className="xl:col-span-5 h-[calc(100vh-140px)] sticky top-20">
+          <div className="h-full border border-[#E9E9E7] rounded-2xl bg-white shadow-sm flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#E9E9E7] flex justify-between items-center bg-[#FCFCFA] shrink-0">
+              <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2">
+                 <Eye className="w-4 h-4 text-indigo-500" /> Xem trước kết quả
+              </h3>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 bg-[#F7F6F3]">
+               <div className="space-y-8">
+                  {(examName || questionNo || qText || qFormula) ? (
+                    <div>
+                      {examName && <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-1.5">{examName}</div>}
+                      <div className="font-bold text-2xl text-indigo-900 mb-4">{questionNo || "Câu ?"}</div>
+                      
+                      <div className="bg-white border-l-[3px] border-indigo-400 rounded-r-xl p-5 shadow-sm mb-6">
+                        {qText && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">{qText}</p>}
+                        {qFormula && <div className="text-[#1A1A1A]"><KatexSpan tex={qFormula} block /></div>}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {steps.some(s => s.title || s.formula || s.text || s.formula2) && (
+                    <div>
+                      <div className="text-[10px] font-mono text-[#AEACA8] uppercase tracking-[0.15em] flex items-center gap-3 mb-5">
+                         Lời giải chi tiết
+                         <div className="h-[1px] flex-1 bg-[#E9E9E7]"></div>
+                      </div>
+                      {steps.map((step, idx) => (step.title || step.formula || step.text || step.formula2) ? (
+                         <StepPreview key={idx} step={step} index={idx} />
+                      ) : null)}
+                    </div>
+                  )}
+
+                  {!examName && !qFormula && !steps[0]?.title && !qText && (
+                    <div className="h-full flex flex-col items-center justify-center text-gray-400 mt-28 opacity-60">
+                       <Eye className="w-12 h-12 mb-4" />
+                       <p className="text-sm">Bắt đầu nhập liệu để xem trước kết quả...</p>
+                    </div>
+                  )}
+               </div>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
   );
 }
