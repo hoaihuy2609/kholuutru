@@ -389,7 +389,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
 
                     if (result.fileCategory) {
                       const lowerCat = result.fileCategory.toLowerCase();
-                      if (lowerCat.includes('lý thuyết')) {
+                      if (lowerCat.includes('lý thuyết trọng tâm')) {
                         itemColor = '#D9730D'; itemBg = '#FFF3E8';   // Cam
                         Icon = BookOpen;
                       } else if (lowerCat.includes('đúng/sai')) {
