@@ -330,12 +330,6 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   })));
   const effectiveIsAdmin = isAdmin && !previewMode;
 
-  // Auto-register push notification khi học sinh kích hoạt
-  useEffect(() => {
-    if (isActivated && !isAdmin) {
-      registerPushNotification().catch(() => {}); // silent — không block UI
-    }
-  }, [isActivated, isAdmin]);
 
   const fileCounts = useMemo(() => {
     const counts = { [GradeLevel.Grade10]: 0, [GradeLevel.Grade11]: 0, [GradeLevel.Grade12]: 0 };

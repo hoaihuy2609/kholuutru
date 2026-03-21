@@ -27,19 +27,33 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
     return null;
   }
 
-  const permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
-    console.warn('[Push] User từ chối notification permission');
+  if (!VAPID_PUBLIC_KEY) {
+    console.error('[Push] VITE_VAPID_PUBLIC_KEY chưa được cấu hình');
     return null;
   }
 
-  const registration = await navigator.serviceWorker.register('/sw-push.js', {
-    scope: '/',
-  });
-
-  await navigator.serviceWorker.ready;
-
+  // Bước 1: Đăng ký Service Worker TRƯỚC (bắt buộc phải có SW trước khi subscribe)
+  let registration: ServiceWorkerRegistration;
   try {
+    registration = await navigator.serviceWorker.register('/sw-push.js', { scope: '/' });
+    await navigator.serviceWorker.ready;
+  } catch (err) {
+    console.error('[Push] Đăng ký Service Worker thất bại:', err);
+    return null;
+  }
+
+  // Bước 2: Xin quyền notification (phải có user gesture khi gọi hàm này)
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    console.warn('[Push] User từ chối notification permission:', permission);
+    return null;
+  }
+
+  // Bước 3: Subscribe push
+  try {
+    const existing = await registration.pushManager.getSubscription();
+    if (existing) return existing; // Đã subscribe rồi, dùng lại
+
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
