@@ -7,6 +7,7 @@ import 'katex/dist/katex.min.css';
 import { BlogPost } from '../types';
 import { Calendar, ChevronLeft, Tag, Clock, Copy, Check, List } from 'lucide-react';
 import PhysicsSolution from './PhysicsSolution';
+import { submitBlogVote, getQuestionVotes } from '../src/services/notificationService';
 
 interface BlogDetailProps {
     blog: BlogPost;
@@ -74,10 +75,47 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
     const [activeHeading, setActiveHeading] = useState('');
     const [readProgress, setReadProgress] = useState(0);
     const [showScrollTop, setShowScrollTop] = useState(false);
+    
+    // Vote states
+    const [currentVotes, setCurrentVotes] = useState<number>(0);
+    const [hasVoted, setHasVoted] = useState(false);
+    const [isVoting, setIsVoting] = useState(false);
+
     const contentRef = useRef<HTMLDivElement>(null);
 
     const headings = useMemo(() => extractHeadings(blog.content), [blog.content]);
     const readTime = useMemo(() => estimateReadTime(blog.content), [blog.content]);
+
+    // Fetch initial vote count
+    useEffect(() => {
+        let mounted = true;
+        getQuestionVotes(blog.id).then(res => {
+            if (mounted) {
+                setCurrentVotes(res.length);
+                const phone = localStorage.getItem('physivault_student_phone');
+                if (phone && res.some((v: any) => v.student_phone === phone)) {
+                    setHasVoted(true);
+                }
+            }
+        });
+        return () => { mounted = false; };
+    }, [blog.id]);
+
+    const handleVote = async () => {
+        if (!localStorage.getItem('physivault_student_phone')) {
+            alert('Vui lòng tham gia bằng số điện thoại để báo cáo câu hỏi!');
+            return;
+        }
+        setIsVoting(true);
+        const res = await submitBlogVote(blog.id);
+        setIsVoting(false);
+        if (res.success) {
+            setCurrentVotes(prev => prev + 1);
+            setHasVoted(true);
+        } else {
+            alert(res.error || 'Lỗi gửi báo cáo');
+        }
+    };
 
     // Reading progress bar + scroll-to-top
     useEffect(() => {
@@ -148,7 +186,15 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
                 >
                     <ChevronLeft style={{ width: '16px', height: '16px' }} /> Quay lại
                 </button>
-                <PhysicsSolution data={parsedSolution.data} />
+                <div style={{ position: 'relative' }}>
+                    <PhysicsSolution 
+                        data={parsedSolution.data} 
+                        onVote={handleVote}
+                        hasVoted={hasVoted}
+                        isVoting={isVoting}
+                        currentVotes={currentVotes}
+                    />
+                </div>
             </div>
         );
     }

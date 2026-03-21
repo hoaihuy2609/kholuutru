@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Trash2, Upload, FileText, Clock, ChevronLeft, ChevronRight, Save, X, Check, RefreshCw, ClipboardList, Flag, User } from 'lucide-react';
+import { Plus, Trash2, Upload, FileText, Clock, ChevronLeft, ChevronRight, Save, X, Check, RefreshCw, ClipboardList, Flag, User, AlertCircle } from 'lucide-react';
 import { Exam, ExamAnswers, ExamTFAnswer } from '../types';
 import { useCloudStorage } from '../src/hooks/useCloudStorage';
+import { getAllExamTopVotes } from '../src/services/notificationService';
 
 const Loader2 = ({ className, style }: { className?: string, style?: React.CSSProperties }) => (
     <RefreshCw className={`${className} animate-spin`} style={style} />
@@ -50,11 +51,19 @@ const ExamManager: React.FC<ExamManagerProps> = ({
     const [loadingExams, setLoadingExams] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [viewingVotes, setViewingVotes] = useState<Exam | null>(null);
+    const [topVotes, setTopVotes] = useState<Record<string, { part: string; num: number; count: number }[]>>({});
 
     // Load exams on mount
     useEffect(() => {
         onLoadExams().then(data => { setExams(data); setLoadingExams(false); }).catch(() => setLoadingExams(false));
+        getAllExamTopVotes().then(data => setTopVotes(data));
     }, [onLoadExams]);
+
+    useEffect(() => {
+        if (!loadingExams) {
+            getAllExamTopVotes().then(data => setTopVotes(data));
+        }
+    }, [loadingExams]);
 
     const handleDeleteExam = async (examId: string, title: string) => {
         if (!window.confirm(`Xóa đề thi "${title}"?`)) return;
@@ -145,7 +154,25 @@ const ExamManager: React.FC<ExamManagerProps> = ({
                                         <FileText className="w-5 h-5" style={{ color: ACCENT }} />
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="font-semibold text-sm truncate" style={{ color: '#1A1A1A' }}>{exam.title}</p>
+                                        <div className="flex items-center gap-3">
+                                            <p className="font-semibold text-sm truncate" style={{ color: '#1A1A1A' }}>{exam.title}</p>
+                                            {topVotes[exam.id] && topVotes[exam.id].length > 0 && (
+                                                <button 
+                                                    onClick={() => setViewingVotes(exam)}
+                                                    className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold transition-all hover:-translate-y-0.5"
+                                                    style={{ background: '#FEF2F2', borderColor: '#FECACA', color: '#DC2626' }}
+                                                    title="Xem toàn bộ báo cáo của đề thi này"
+                                                >
+                                                    <span className="flex items-center gap-1">
+                                                        <AlertCircle className="w-3.5 h-3.5" />
+                                                        {topVotes[exam.id][0].count} vote
+                                                    </span>
+                                                    <span style={{ color: '#EF4444', fontStyle: 'italic', fontWeight: 500 }}>
+                                                        ({topVotes[exam.id][0].part} — Câu {topVotes[exam.id][0].num})
+                                                    </span>
+                                                </button>
+                                            )}
+                                        </div>
                                         <div className="flex items-center gap-3 mt-0.5">
                                             <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: ACCENT, background: '#EEF0FB', padding: '2px 6px', borderRadius: '4px' }}>
                                                 Lớp {exam.grade || 12}
@@ -163,16 +190,6 @@ const ExamManager: React.FC<ExamManagerProps> = ({
                                     <span className="text-xs px-2 py-1 rounded-md font-medium" style={{ background: '#F0FDF4', color: '#16A34A' }}>
                                         ✓ Có đáp án
                                     </span>
-                                    <button
-                                        onClick={() => setViewingVotes(exam)}
-                                        className="p-2 rounded-lg transition-colors"
-                                        style={{ color: '#D9730D', background: '#FFF7ED' }}
-                                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FFEDD5'; }}
-                                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FFF7ED'; }}
-                                        title="Xem báo cáo câu hỏi khó"
-                                    >
-                                        <Flag className="w-4 h-4" />
-                                    </button>
                                     <button
                                         onClick={() => handleDeleteExam(exam.id, exam.title)}
                                         className="p-2 rounded-lg transition-colors"

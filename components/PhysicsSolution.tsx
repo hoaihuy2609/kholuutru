@@ -25,18 +25,33 @@ function Latex({ children, block = false }: { children: string; block?: boolean 
 }
 
 // ─── Component: tag câu hỏi ──────────────────────────────────────────────────
-function QuestionTag({ votes, label }: { votes: number; label: string }) {
+function QuestionTag({ votes, label, onVote, hasVoted, isVoting }: { votes: number; label: string; onVote?: () => void; hasVoted?: boolean; isVoting?: boolean }) {
+  const isClickable = !!onVote;
+  const Wrapper = isClickable ? "button" : "div";
+  
   return (
-    <div className="question-tag">
-      <span className="fire">🔥</span>
-      <span className="tag-label">{label}</span>
+    <Wrapper 
+      className={`question-tag ${isClickable ? 'clickable' : ''} ${hasVoted ? 'voted' : ''} ${isVoting ? 'loading' : ''}`} 
+      onClick={isClickable && !hasVoted && !isVoting ? onVote : undefined}
+      disabled={hasVoted || isVoting}
+      style={{
+         cursor: isClickable && !hasVoted && !isVoting ? 'pointer' : 'default',
+         transition: 'all 0.2s',
+         opacity: isVoting ? 0.7 : 1,
+         background: hasVoted ? '#E8F5E9' : '#fff3e0',
+         borderColor: hasVoted ? '#4CAF50' : 'var(--accent2)',
+         color: hasVoted ? '#2E7D32' : 'var(--accent2)',
+      }}
+    >
+      <span className="fire" style={{ filter: hasVoted ? 'grayscale(100%) brightness(1.2) sepia(100%) hue-rotate(80deg) saturate(300%)' : 'none' }}>🔥</span>
+      <span className="tag-label">{hasVoted ? 'Đã gửi báo cáo' : isVoting ? 'Đang gửi...' : label}</span>
       <span className="tag-votes">{votes} vote</span>
-    </div>
+    </Wrapper>
   );
 }
 
 // ─── Component chính ─────────────────────────────────────────────────────────
-export default function PhysicsSolution({ data }: { data: any }) {
+export default function PhysicsSolution({ data, onVote, hasVoted, isVoting, currentVotes }: { data: any; onVote?: () => void; hasVoted?: boolean; isVoting?: boolean; currentVotes?: number }) {
   if (!data) return null;
 
   return (
@@ -297,7 +312,7 @@ export default function PhysicsSolution({ data }: { data: any }) {
             <div className="exam-name">{data.exam_name || data.examName}</div>
             <div className="question-label">
               <span className="q-number">{data.question_no || data.questionNumber}</span>
-              <QuestionTag votes={data.votes || 0} label="Tham khảo" />
+              <QuestionTag votes={currentVotes ?? (data.votes || 0)} label="Tham khảo/Báo cáo" onVote={onVote} hasVoted={hasVoted} isVoting={isVoting} />
             </div>
           </div>
 
