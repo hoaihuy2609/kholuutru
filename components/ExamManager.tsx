@@ -156,22 +156,6 @@ const ExamManager: React.FC<ExamManagerProps> = ({
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-3">
                                             <p className="font-semibold text-sm truncate" style={{ color: '#1A1A1A' }}>{exam.title}</p>
-                                            {topVotes[exam.id] && topVotes[exam.id].length > 0 && (
-                                                <button 
-                                                    onClick={() => setViewingVotes(exam)}
-                                                    className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold transition-all hover:-translate-y-0.5"
-                                                    style={{ background: '#FEF2F2', borderColor: '#FECACA', color: '#DC2626' }}
-                                                    title="Xem toàn bộ báo cáo của đề thi này"
-                                                >
-                                                    <span className="flex items-center gap-1">
-                                                        <AlertCircle className="w-3.5 h-3.5" />
-                                                        {topVotes[exam.id][0].count} vote
-                                                    </span>
-                                                    <span style={{ color: '#EF4444', fontStyle: 'italic', fontWeight: 500 }}>
-                                                        ({topVotes[exam.id][0].part} — Câu {topVotes[exam.id][0].num})
-                                                    </span>
-                                                </button>
-                                            )}
                                         </div>
                                         <div className="flex items-center gap-3 mt-0.5">
                                             <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: ACCENT, background: '#EEF0FB', padding: '2px 6px', borderRadius: '4px' }}>
@@ -187,7 +171,23 @@ const ExamManager: React.FC<ExamManagerProps> = ({
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
-                                    <span className="text-xs px-2 py-1 rounded-md font-medium" style={{ background: '#F0FDF4', color: '#16A34A' }}>
+                                    {topVotes[exam.id] && topVotes[exam.id].length > 0 && (
+                                        <button 
+                                            onClick={() => setViewingVotes(exam)}
+                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:-translate-y-0.5"
+                                            style={{ background: '#FEF2F2', borderColor: '#FECACA', color: '#DC2626' }}
+                                            title="Xem toàn bộ báo cáo của đề thi này"
+                                        >
+                                            <span className="flex items-center gap-1">
+                                                <AlertCircle className="w-4 h-4" />
+                                                {topVotes[exam.id][0].count} vote
+                                            </span>
+                                            <span style={{ color: '#EF4444', fontStyle: 'italic', fontWeight: 500 }}>
+                                                ({topVotes[exam.id][0].part} — Câu {topVotes[exam.id][0].num})
+                                            </span>
+                                        </button>
+                                    )}
+                                    <span className="text-xs px-2 py-1.5 rounded-lg font-semibold" style={{ background: '#F0FDF4', color: '#16A34A', border: '1.5px solid #86EFAC' }}>
                                         ✓ Có đáp án
                                     </span>
                                     <button
