@@ -225,7 +225,7 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20 font-sans">
+    <div className="max-w-[1600px] w-full mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20 font-sans">
       <style>{`.katex { color: #1A1A1A !important; }`}</style>
 
       {/* Top Bar */}
@@ -268,10 +268,10 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
           </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         
         {/* Editor Area */}
-        <div className="xl:col-span-7 flex flex-col gap-6">
+        <div className="xl:col-span-5 flex flex-col gap-6">
           
           {/* Thông tin bài tập */}
           <div className="p-6 rounded-2xl bg-white border border-[#E9E9E7] shadow-sm space-y-5">
@@ -400,130 +400,10 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
             </div>
           </div>
 
-          {/* Cài đặt xuất bản & Thống kê */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-            {/* Publish settings */}
-            <div className="p-6 rounded-2xl bg-white border border-[#E9E9E7] shadow-sm space-y-5">
-              <h3 className="font-semibold text-[#1A1A1A]">Cài đặt xuất bản</h3>
-
-              {/* Toggle publish */}
-              <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
-                  <div>
-                      <span className="block font-medium text-sm text-[#1A1A1A]">Trạng thái</span>
-                      <span className="text-[11px]" style={{ color: isPublished ? '#448361' : '#787774' }}>
-                          {isPublished ? '✓ Hiển thị cho học sinh' : '✎ Chỉ Admin thấy'}
-                      </span>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          checked={isPublished}
-                          onChange={e => setIsPublished(e.target.checked)}
-                      />
-                      <div className="w-9 h-5 bg-[#CFCFCB] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-                  </label>
-              </div>
-
-              {/* Grade Selection */}
-              <div>
-                  <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Khối lớp</label>
-                  <div className="grid grid-cols-2 gap-2">
-                      {[
-                          { lab: 'Tất cả khối', val: 0 },
-                          { lab: 'Lớp 12', val: 12 },
-                          { lab: 'Lớp 11', val: 11 },
-                          { lab: 'Lớp 10', val: 10 }
-                      ].map(g => (
-                          <button
-                              key={g.val}
-                              type="button"
-                              onClick={() => setGrade(g.val)}
-                              className="py-2.5 text-xs font-semibold rounded-lg border transition-all"
-                              style={{
-                                  background: grade === g.val ? '#6B7CDB' : '#FFFFFF',
-                                  color: grade === g.val ? '#FFFFFF' : '#787774',
-                                  borderColor: grade === g.val ? '#6B7CDB' : '#E9E9E7'
-                              }}
-                          >
-                              {g.lab}
-                          </button>
-                      ))}
-                  </div>
-              </div>
-
-              {/* Category */}
-              <div>
-                  <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Chuyên mục</label>
-                  <select
-                      className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm bg-white cursor-pointer"
-                      value={category}
-                      onChange={e => setCategory(e.target.value)}
-                  >
-                      <option value="">-- Chọn chuyên mục --</option>
-                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <input
-                      type="text"
-                      placeholder="Hoặc nhập tùy chỉnh..."
-                      className="w-full mt-2.5 p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm"
-                      value={category}
-                      onChange={e => setCategory(e.target.value)}
-                  />
-              </div>
-
-              {/* Tags */}
-              <div>
-                  <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Thẻ (Tags)</label>
-                  <input
-                      type="text"
-                      placeholder="VD: vatly12, dongdien, nangluong"
-                      className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm"
-                      value={tags.join(', ')}
-                      onChange={e => handleTagsChange(e.target.value)}
-                  />
-                  <p className="text-[11px] mt-1.5" style={{ color: '#AEACA8' }}>Ngăn cách bằng dấu phẩy</p>
-                  {tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2.5">
-                          {tags.map(tag => (
-                              <span key={tag} className="text-xs px-2.5 py-1 rounded-md flex items-center gap-1.5 font-medium" style={{ background: '#EEF0FB', color: '#6B7CDB' }}>
-                                  #{tag}
-                                  <button onClick={() => setTags(tags.filter(t => t !== tag))} className="hover:text-red-500 transition-colors">
-                                      <X className="w-3 h-3" />
-                                  </button>
-                              </span>
-                          ))}
-                      </div>
-                  )}
-              </div>
-            </div>
-
-            {/* Quick stats */}
-            <div>
-              <div className="p-6 rounded-2xl bg-white border border-[#E9E9E7] shadow-sm flex flex-col items-start justify-start sticky top-20">
-                 <h3 className="font-semibold text-[#1A1A1A] mb-5">Thống kê bài viết</h3>
-                 <div className="space-y-4 text-sm w-full">
-                     <div className="flex justify-between items-center pb-3 border-b border-[#F7F6F3]">
-                         <span style={{ color: '#787774' }}>Số từ</span>
-                         <span className="font-bold" style={{ color: '#1A1A1A' }}>{wordCount.toLocaleString()}</span>
-                     </div>
-                     <div className="flex justify-between items-center pb-3 border-b border-[#F7F6F3]">
-                         <span style={{ color: '#787774' }}>P.đọc ước tính</span>
-                         <span className="font-bold" style={{ color: '#1A1A1A' }}>{Math.max(1, Math.ceil(wordCount / 200))} phút</span>
-                     </div>
-                     <div className="flex justify-between items-center">
-                         <span style={{ color: '#787774' }}>Số ký tự</span>
-                         <span className="font-bold" style={{ color: '#1A1A1A' }}>{charCount.toLocaleString()}</span>
-                     </div>
-                 </div>
-              </div>
-            </div>
-          </div>
-
         </div>
 
         {/* Preview Area */}
-        <div className="xl:col-span-5 h-[calc(100vh-140px)] sticky top-20">
+        <div className="xl:col-span-4 h-[calc(100vh-140px)] sticky top-20">
           <div className="h-full border border-[#E9E9E7] rounded-2xl bg-white shadow-sm flex flex-col overflow-hidden">
             <div className="px-6 py-4 border-b border-[#E9E9E7] flex justify-between items-center bg-[#FCFCFA] shrink-0">
               <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2">
@@ -567,7 +447,127 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
             </div>
           </div>
         </div>
-        
+
+        {/* Settings Area */}
+        <div className="xl:col-span-3 flex flex-col gap-6 h-[calc(100vh-140px)] overflow-y-auto sticky top-20 pb-10" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <style>{`.xl\\:col-span-3::-webkit-scrollbar { display: none; }`}</style>
+          
+          {/* Publish settings */}
+          <div className="p-6 rounded-2xl bg-white border border-[#E9E9E7] shadow-sm space-y-5">
+            <h3 className="font-semibold text-[#1A1A1A]">Cài đặt xuất bản</h3>
+
+            {/* Toggle publish */}
+            <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
+                <div>
+                    <span className="block font-medium text-sm text-[#1A1A1A]">Trạng thái</span>
+                    <span className="text-[11px]" style={{ color: isPublished ? '#448361' : '#787774' }}>
+                        {isPublished ? '✓ Hiển thị cho học sinh' : '✎ Chỉ Admin thấy'}
+                    </span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={isPublished}
+                        onChange={e => setIsPublished(e.target.checked)}
+                    />
+                    <div className="w-9 h-5 bg-[#CFCFCB] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+            </div>
+
+            {/* Grade Selection */}
+            <div>
+                <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Khối lớp</label>
+                <div className="grid grid-cols-2 gap-2">
+                    {[
+                        { lab: 'Tất cả khối', val: 0 },
+                        { lab: 'Lớp 12', val: 12 },
+                        { lab: 'Lớp 11', val: 11 },
+                        { lab: 'Lớp 10', val: 10 }
+                    ].map(g => (
+                        <button
+                            key={g.val}
+                            type="button"
+                            onClick={() => setGrade(g.val)}
+                            className="py-2.5 text-xs font-semibold rounded-lg border transition-all"
+                            style={{
+                                background: grade === g.val ? '#6B7CDB' : '#FFFFFF',
+                                color: grade === g.val ? '#FFFFFF' : '#787774',
+                                borderColor: grade === g.val ? '#6B7CDB' : '#E9E9E7'
+                            }}
+                        >
+                            {g.lab}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Category */}
+            <div>
+                <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Chuyên mục</label>
+                <select
+                    className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm bg-white cursor-pointer"
+                    value={category}
+                    onChange={e => setCategory(e.target.value)}
+                >
+                    <option value="">-- Chọn chuyên mục --</option>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <input
+                    type="text"
+                    placeholder="Hoặc nhập tùy chỉnh..."
+                    className="w-full mt-2.5 p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm"
+                    value={category}
+                    onChange={e => setCategory(e.target.value)}
+                />
+            </div>
+
+            {/* Tags */}
+            <div>
+                <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Thẻ (Tags)</label>
+                <input
+                    type="text"
+                    placeholder="VD: vatly12, dongdien, nangluong"
+                    className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm"
+                    value={tags.join(', ')}
+                    onChange={e => handleTagsChange(e.target.value)}
+                />
+                <p className="text-[11px] mt-1.5" style={{ color: '#AEACA8' }}>Ngăn cách bằng dấu phẩy</p>
+                {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2.5">
+                        {tags.map(tag => (
+                            <span key={tag} className="text-xs px-2.5 py-1 rounded-md flex items-center gap-1.5 font-medium" style={{ background: '#EEF0FB', color: '#6B7CDB' }}>
+                                #{tag}
+                                <button onClick={() => setTags(tags.filter(t => t !== tag))} className="hover:text-red-500 transition-colors">
+                                    <X className="w-3 h-3" />
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+          </div>
+
+          {/* Quick stats */}
+          <div className="p-6 rounded-2xl bg-white border border-[#E9E9E7] shadow-sm flex flex-col items-start justify-start">
+             <h3 className="font-semibold text-[#1A1A1A] mb-5">Thống kê bài viết</h3>
+             <div className="space-y-4 text-sm w-full">
+                 <div className="flex justify-between items-center pb-3 border-b border-[#F7F6F3]">
+                     <span style={{ color: '#787774' }}>Số từ</span>
+                     <span className="font-bold" style={{ color: '#1A1A1A' }}>{wordCount.toLocaleString()}</span>
+                 </div>
+                 <div className="flex justify-between items-center pb-3 border-b border-[#F7F6F3]">
+                     <span style={{ color: '#787774' }}>P.đọc ước tính</span>
+                     <span className="font-bold" style={{ color: '#1A1A1A' }}>{Math.max(1, Math.ceil(wordCount / 200))} phút</span>
+                 </div>
+                 <div className="flex justify-between items-center">
+                     <span style={{ color: '#787774' }}>Số ký tự</span>
+                     <span className="font-bold" style={{ color: '#1A1A1A' }}>{charCount.toLocaleString()}</span>
+                 </div>
+             </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );
