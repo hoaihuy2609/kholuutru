@@ -51,6 +51,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
   const navigate = useNavigate();
   const lessons = useDataStore(state => state.lessons);
   const storedFiles = useDataStore(state => state.storedFiles);
+  const studentGradeValue = useDataStore(state => state.studentGradeValue);
 
   // Load exams & blogs once when opened
   useEffect(() => {
@@ -71,7 +72,11 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
 
   // Build static chapter results
   const chapterResults: SearchResult[] = useMemo(() => {
-    return CURRICULUM.flatMap(grade =>
+    const allowedCurriculum = isAdmin || !studentGradeValue
+      ? CURRICULUM
+      : CURRICULUM.filter(grade => grade.level === studentGradeValue);
+
+    return allowedCurriculum.flatMap(grade =>
       grade.chapters.map(ch => ({
         id: `ch-${ch.id}`,
         title: ch.name,
@@ -81,15 +86,19 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
         grade: grade.level,
       }))
     );
-  }, []);
+  }, [isAdmin, studentGradeValue]);
 
   // Build lesson results
   const lessonResults: SearchResult[] = useMemo(() => {
+    const allowedCurriculum = isAdmin || !studentGradeValue
+      ? CURRICULUM
+      : CURRICULUM.filter(grade => grade.level === studentGradeValue);
+
     return lessons.map((l: Lesson) => {
       // Find which grade/chapter this lesson belongs to
       let gradeLvl = 0;
       let chapterName = '';
-      for (const g of CURRICULUM) {
+      for (const g of allowedCurriculum) {
         for (const ch of g.chapters) {
           if (ch.id === l.chapterId) {
             gradeLvl = g.level;
@@ -99,20 +108,27 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
         }
         if (gradeLvl) break;
       }
+      
+      if (!gradeLvl) return null; // Filter out lessons from unallowed grades
+
       return {
         id: `ls-${l.id}`,
         title: l.name,
-        subtitle: `${chapterName || 'Chương không xác định'} · Lớp ${gradeLvl || '?'}`,
+        subtitle: `${chapterName} · Lớp ${gradeLvl}`,
         category: 'lesson' as const,
-        path: gradeLvl ? `/grade/${gradeLvl}/chapter/${l.chapterId}/lesson/${l.id}` : '/',
+        path: `/grade/${gradeLvl}/chapter/${l.chapterId}/lesson/${l.id}`,
         grade: gradeLvl,
       };
-    });
-  }, [lessons]);
+    }).filter(Boolean) as SearchResult[];
+  }, [lessons, isAdmin, studentGradeValue]);
 
   // Build exam results
   const examResults: SearchResult[] = useMemo(() => {
-    return exams.map(e => ({
+    const validExams = isAdmin || !studentGradeValue
+      ? exams
+      : exams.filter(e => e.grade === studentGradeValue || !e.grade);
+
+    return validExams.map(e => ({
       id: `ex-${e.id}`,
       title: e.title,
       subtitle: `Lớp ${e.grade || '?'} · ${e.duration || 0} phút`,
@@ -120,7 +136,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
       path: '/exams',
       grade: e.grade,
     }));
-  }, [exams]);
+  }, [exams, isAdmin, studentGradeValue]);
 
   // Build blog results
   const blogResults: SearchResult[] = useMemo(() => {
@@ -136,36 +152,44 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
   // Build file results
   const fileResults: SearchResult[] = useMemo(() => {
     if (!storedFiles) return [];
+    
+    const allowedCurriculum = isAdmin || !studentGradeValue
+      ? CURRICULUM
+      : CURRICULUM.filter(grade => grade.level === studentGradeValue);
+
     return Object.entries(storedFiles).flatMap(([parentId, files]) => {
       let path = '/';
       let parentName = 'Tài liệu đính kèm';
       
       const lesson = lessons.find((l: Lesson) => l.id === parentId);
+      let isAllowed = false;
+      
       if (lesson) {
         parentName = `Bài: ${lesson.name}`;
         let gradeLvl = 0;
-        for (const g of CURRICULUM) {
+        for (const g of allowedCurriculum) {
           for (const ch of g.chapters) {
-            if (ch.id === lesson.chapterId) { gradeLvl = g.level; break; }
+            if (ch.id === lesson.chapterId) { gradeLvl = g.level; isAllowed = true; break; }
           }
           if (gradeLvl) break;
         }
         if (gradeLvl) path = `/grade/${gradeLvl}/chapter/${lesson.chapterId}/lesson/${lesson.id}`;
       } else {
         // Maybe it's attached to a chapter?
-        let isChapter = false;
-        for (const g of CURRICULUM) {
+        for (const g of allowedCurriculum) {
           for (const ch of g.chapters) {
             if (ch.id === parentId) {
               parentName = `Chương: ${ch.name}`;
               path = `/grade/${g.level}/chapter/${ch.id}`;
-              isChapter = true;
+              isAllowed = true;
               break;
             }
           }
-          if (isChapter) break;
+          if (isAllowed) break;
         }
       }
+
+      if (!isAllowed && !isAdmin) return []; // Skip files from unallowed grades
 
       return files.map((f: any) => {
         const catStr = f.category ? `${f.category} · ` : '';
@@ -180,7 +204,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
         };
       });
     });
-  }, [storedFiles, lessons]);
+  }, [storedFiles, lessons, isAdmin, studentGradeValue]);
 
   // Filter
   const filtered = useMemo(() => {
