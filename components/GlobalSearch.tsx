@@ -26,10 +26,10 @@ interface GlobalSearchProps {
 
 const CATEGORY_CONFIG = {
   chapter: { icon: FolderOpen, label: 'Chương', color: '#6B7CDB', bg: '#EEF0FB' },
-  lesson: { icon: FileText, label: 'Bài học', color: '#448361', bg: '#EAF3EE' },
-  file: { icon: File, label: 'Tài liệu', color: '#0284c7', bg: '#e0f2fe' },
-  exam: { icon: ClipboardList, label: 'Đề thi', color: '#9065B0', bg: '#F3ECF8' },
-  blog: { icon: BookOpen, label: 'Blog', color: '#D9730D', bg: '#FFF7ED' },
+  lesson: { icon: FileText, label: 'Bài học', color: '#6B7CDB', bg: '#EEF0FB' },
+  file: { icon: File, label: 'Tài liệu', color: '#787774', bg: '#F1F0EC' },
+  exam: { icon: ClipboardList, label: 'Đề thi', color: '#D9730D', bg: '#FFF3E8' },
+  blog: { icon: BookOpen, label: 'Blog', color: '#D9730D', bg: '#FFF3E8' },
 };
 
 const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExams, onGetBlogs, isAdmin }) => {
@@ -382,7 +382,15 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                             {result.subtitle}
                           </p>
                         </div>
-                        <span className="text-[9px] font-bold px-2 py-1.5 rounded shrink-0 uppercase tracking-widest transition-colors" style={{ background: isActive ? cfg.bg : '#F8F9FD', color: isActive ? cfg.color : '#AEACA8' }}>
+                        <span 
+                          className="text-[9px] font-bold px-2 py-1 rounded-md shrink-0 uppercase tracking-widest transition-all" 
+                          style={{ 
+                            background: isActive ? cfg.bg : '#F8F9FD', 
+                            color: isActive ? cfg.color : '#AEACA8',
+                            border: `1px solid ${isActive ? cfg.color + '20' : '#E9E9E7'}`,
+                            opacity: isActive ? 1 : 0.8
+                          }}
+                        >
                           {cfg.label}
                         </span>
                       </div>
