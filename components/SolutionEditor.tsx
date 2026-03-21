@@ -71,7 +71,7 @@ interface SolutionEditorProps {
   switchToMarkdown?: () => void;
 }
 
-export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onBack, switchToMarkdown }: SolutionEditorProps) {
+export default function SolutionEditor({ blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown }: SolutionEditorProps) {
   const [examName,   setExamName]   = useState("");
   const [questionNo, setQuestionNo] = useState("");
   const [qText,      setQText]      = useState("");
@@ -257,6 +257,22 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
+              {blog && deleteBlog && (
+                  <button
+                      onClick={async () => {
+                          if (window.confirm("Bạn có chắc muốn xóa bài viết này (và trên Github)?")) {
+                              setSaving(true);
+                              const ok = await deleteBlog(blog.id);
+                              setSaving(false);
+                              if (ok && onBack) onBack();
+                          }
+                      }}
+                      disabled={saving}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-red-50 text-red-600 transition-colors disabled:opacity-50"
+                  >
+                      <Trash2 className="w-4 h-4" /> Xóa bài
+                  </button>
+              )}
               <button
                   onClick={handleSave}
                   disabled={saving}
