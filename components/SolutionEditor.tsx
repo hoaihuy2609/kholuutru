@@ -210,7 +210,6 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Nunito:wght@300;400;500;600&display=swap');
 
         .se-root {
           --bg:         #F7F6F3;
@@ -225,7 +224,7 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
           --preview-step-border: #E9E9E7;
           --preview-step-head:   #F7F6F3;
 
-          font-family: 'Nunito', sans-serif;
+          font-family: 'Inter', sans-serif;
           background: var(--bg);
           color: var(--text);
           height: calc(100vh - 60px);
@@ -247,7 +246,8 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
           flex-shrink: 0;
         }
         .se-logo {
-          font-family: 'Instrument Serif', serif;
+          font-family: 'Inter', sans-serif;
+          font-weight: 700;
           font-size: 1.2rem;
           letter-spacing: 0.02em;
           color: var(--accent);
@@ -263,7 +263,7 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
           border: none;
           border-radius: 6px;
           padding: 6px 16px;
-          font-family: 'Nunito', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 13px;
           font-weight: 600;
           cursor: pointer;
@@ -294,7 +294,7 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
         }
 
         .section-head {
-          font-family: 'DM Mono', monospace;
+          font-family: 'JetBrains Mono', monospace;
           font-size: 10px;
           letter-spacing: 0.14em;
           text-transform: uppercase;
@@ -302,36 +302,26 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
           margin-bottom: .6rem;
         }
 
-        .snippet-bar { display: flex; flex-wrap: wrap; gap: 5px; }
-        .snippet-btn {
-          background: var(--surface2);
-          border: 1px solid var(--border);
-          border-radius: 5px;
-          color: var(--text);
-          font-size: 11px;
-          padding: 3px 8px;
-          cursor: pointer;
-          font-family: 'DM Mono', monospace;
-        }
-        .snippet-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
-        .snippet-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+        .snippet-bar { display: none; }
+        .snippet-btn { display: none; }
+        .snippet-hint { display: none; }
 
         .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .field { display: flex; flex-direction: column; gap: 5px; }
-        .field label { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.04em; }
+        .field label { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; }
         .field input, .field textarea {
           background: var(--surface); border: 1px solid var(--border); border-radius: 7px;
-          color: var(--text); font-family: 'Nunito', sans-serif; font-size: 13px; padding: 7px 10px; outline: none; resize: vertical;
+          color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; padding: 7px 10px; outline: none; resize: vertical;
         }
         .field input:focus, .field textarea:focus { border-color: var(--accent); }
-        .field .latex-field { font-family: 'DM Mono', monospace; font-size: 12px; background: #EEF0FB; color: #3D3D8D; border-color: #D3DBF9; }
+        .field .latex-field { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #EEF0FB; color: #3D3D8D; border-color: #D3DBF9; }
         .field .latex-field:focus { border-color: var(--accent); box-shadow: 0 0 0 2px #d3dbf9; }
 
         .divider { height: 1px; background: var(--border); }
 
         .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
         .step-card-head { display: flex; justify-content: space-between; padding: 8px 12px; background: var(--surface2); border-bottom: 1px solid var(--border); }
-        .step-idx { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 500; }
+        .step-idx { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 500; }
         .step-actions { display: flex; gap: 4px; }
         .step-btn { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-size: 11px; padding: 2px 7px; cursor: pointer; }
         .step-btn:hover { background: var(--surface2); color: var(--text); }
@@ -346,14 +336,14 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
         .add-step-btn:hover { border-color: var(--accent); color: var(--accent); background: #EEF0FB; }
 
         .se-preview { overflow-y: auto; padding: 1.25rem 1.5rem 2rem; background: var(--surface); border-left: 1px solid var(--border); }
-        .preview-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+        .preview-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
         .preview-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-        .preview-exam { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
-        .preview-qnum { font-family: 'Instrument Serif', serif; font-size: 1.5rem; color: var(--accent2); margin-bottom: .75rem; }
+        .preview-exam { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+        .preview-qnum { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; color: var(--accent2); margin-bottom: .75rem; }
         .preview-qblock { background: var(--surface); border-left: 3px solid var(--accent2); border-radius: 0 6px 6px 0; padding: 10px 14px; margin-bottom: 1.25rem; }
         .preview-qtext { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 6px; }
-        .steps-preview-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: .75rem; display: flex; align-items: center; gap: 8px; }
+        .steps-preview-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: .75rem; display: flex; align-items: center; gap: 8px; }
         .steps-preview-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
         
         .katex { color: var(--text) !important; }
@@ -368,7 +358,7 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
                 style={{
                   background: 'none', border: 'none', color: 'var(--muted)',
                   cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
-                  fontSize: '13px', padding: 0, fontFamily: 'Nunito', fontWeight: 600
+                  fontSize: '13px', padding: 0, fontFamily: 'Inter', fontWeight: 600
                 }}
               >
                 ← Quay lại
@@ -383,7 +373,7 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
                   onClick={switchToMarkdown}
                   style={{
                     background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--border)",
-                    padding: "6px 12px", borderRadius: "6px", fontSize: "12px", cursor: "pointer", fontFamily: 'Nunito', fontWeight: 600
+                    padding: "6px 12px", borderRadius: "6px", fontSize: "12px", cursor: "pointer", fontFamily: 'Inter', fontWeight: 600
                   }}
                >
                  Thường (Markdown)
@@ -397,19 +387,6 @@ export default function SolutionEditor({ blog, saveBlog, syncBlogs, onSaved, onB
 
         <div className="se-body">
           <div className="se-editor">
-            <div>
-              <div className="section-head">Công thức nhanh</div>
-              <div className="snippet-bar">
-                {SNIPPETS.map(s => (
-                  <button key={s.label} className="snippet-btn" title={s.tex} onClick={() => insertSnippet(s.tex)}>
-                    {s.display}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="divider" />
-
             <div>
               <div className="section-head">Thông tin bài tập</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
