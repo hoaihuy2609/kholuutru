@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ClipboardList, Clock, Play, RefreshCw, FileText, Lock, CheckCircle } from 'lucide-react';
 import { Exam } from '../types';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
+import { useLocation } from 'react-router-dom';
 
 const PDF_CACHE_DB = 'pv_pdf_cache';
 const PDF_CACHE_STORE = 'pdfs';
@@ -104,6 +105,8 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
         finally { setLoading(false); }
     };
 
+    const location = useLocation();
+
     useEffect(() => {
         load();
         return () => {
@@ -111,6 +114,18 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
             prefetchTimeoutsRef.current.forEach(id => clearTimeout(id));
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        const state = location.state as { selectedExamId?: string };
+        if (state?.selectedExamId && exams.length > 0) {
+            const ex = exams.find(e => e.id === state.selectedExamId);
+            if (ex) {
+                // Tự động chuyển tab sang khối phù hợp nếu cần
+                if (ex.grade) setActiveTab(ex.grade);
+                onSelectExam(ex);
+            }
+        }
+    }, [location.state, exams, onSelectExam]);
 
     const scoringInfo = [
         { label: 'Trắc nghiệm', sub: '18 câu × 0.25đ', max: '4.5 đ', color: '#6B7CDB', bg: '#EEF0FB' },
