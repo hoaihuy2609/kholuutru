@@ -283,6 +283,11 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                             <div ref={pdfWrapperRef} className="absolute inset-0 overflow-y-auto overflow-x-hidden flex md:hidden flex-col items-center bg-[#1A1A1A] pb-10" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3B3B3B #1A1A1A' }}>
                             <Document 
                                 file={pdfUrl} 
+                                options={{
+                                    cMapUrl: `//unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+                                    cMapPacked: true,
+                                    standardFontDataUrl: `//unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`
+                                }}
                                 onLoadSuccess={onDocumentLoadSuccess} 
                                 loading={<div className="flex flex-col items-center justify-center p-12 gap-3"><RefreshCw className="w-8 h-8 animate-spin" style={{ color: ACCENT }} /><p className="text-sm" style={{ color: '#AEACA8' }}>Đang render trang PDF...</p></div>}
                                 error={<div className="flex flex-col items-center justify-center p-12 gap-2 text-[#AEACA8] text-sm"><AlertTriangle className="w-8 h-8 text-red-500 mb-2"/>Lỗi render PDF. Vui lòng tải lại trang.</div>}
@@ -292,8 +297,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                         <Page 
                                             pageNumber={index + 1} 
                                             width={pdfWidth > 0 ? (pdfWidth > 800 ? 800 : pdfWidth - 16) : undefined}
-                                            devicePixelRatio={Math.max(window.devicePixelRatio || 2, 2)}
-                                            renderMode="canvas"
+                                            renderMode="svg"
                                             renderTextLayer={false}
                                             renderAnnotationLayer={false}
                                         />
