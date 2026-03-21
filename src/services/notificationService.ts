@@ -71,25 +71,17 @@ export const submitQuestionVote = async (examId: string, partName: string, quest
             throw insertError;
         }
 
-        // For blogs, we don't enforce a 3-vote limit per "exam_id" across different blogs,
-        // because each blog has its own exam_id (the blog's ID). So it naturally bypasses the 3 limit!
-        if (partName !== 'blog') {
-            const { count, error: countError } = await supabase.from('question_votes')
-                .select('id', { count: 'exact', head: true }).eq('exam_id', examId).eq('student_phone', normalizedPhone);
-            if (!countError && count !== null && count > 3) {
-                await supabase.from('question_votes').delete()
-                    .eq('exam_id', examId).eq('student_phone', normalizedPhone)
-                    .eq('part_name', partName).eq('question_number', questionNumber);
-                return { success: false, error: 'Bạn đã hết 3 lượt vote cho đề này.' };
-            }
+        const { count, error: countError } = await supabase.from('question_votes')
+            .select('id', { count: 'exact', head: true }).eq('exam_id', examId).eq('student_phone', normalizedPhone);
+        if (!countError && count !== null && count > 3) {
+            await supabase.from('question_votes').delete()
+                .eq('exam_id', examId).eq('student_phone', normalizedPhone)
+                .eq('part_name', partName).eq('question_number', questionNumber);
+            return { success: false, error: 'Bạn đã hết 3 lượt vote cho đề này.' };
         }
 
         return { success: true };
     } catch (e: any) { console.error('Lỗi khi submit vote:', e); return { success: false, error: e.message || 'Lỗi hệ thống' }; }
-};
-
-export const submitBlogVote = async (blogId: string) => {
-    return submitQuestionVote(blogId, 'blog', 0);
 };
 
 export const getQuestionVotes = async (examId: string) => {
@@ -99,22 +91,6 @@ export const getQuestionVotes = async (examId: string) => {
         if (error) throw error;
         return data || [];
     } catch (e) { console.error('Lỗi lấy dữ liệu vote:', e); return []; }
-};
-
-export const getAllBlogVotes = async () => {
-    try {
-        const { data, error } = await supabase.from('question_votes')
-            .select('exam_id').eq('part_name', 'blog');
-        if (error) throw error;
-        
-        // Group and count votes by blog_id (exam_id)
-        const voteCountMap = new Map<string, number>();
-        (data || []).forEach(row => {
-            const id = row.exam_id;
-            voteCountMap.set(id, (voteCountMap.get(id) || 0) + 1);
-        });
-        return voteCountMap;
-    } catch (e) { console.error('Lỗi lấy dữ liệu vote blogs:', e); return new Map<string, number>(); }
 };
 
 export const getAllExamTopVotes = async (): Promise<Record<string, { part: string; num: number; count: number }[]>> => {
