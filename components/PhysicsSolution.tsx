@@ -24,19 +24,31 @@ function Latex({ children, block = false }: { children: string; block?: boolean 
   );
 }
 
+const renderMath = (text: string) => {
+  return text.split(/(\$[^$]+\$|\\\([\s\S]*?\\\))/g).map((part, i) => {
+    if (part.startsWith('$') && part.endsWith('$') && part.length > 1) {
+      return <Latex key={i} block={false}>{part.slice(1, -1)}</Latex>;
+    }
+    if (part.startsWith('\\(') && part.endsWith('\\)') && part.length > 3) {
+      return <Latex key={i} block={false}>{part.slice(2, -2)}</Latex>;
+    }
+    return <span key={i}>{part}</span>;
+  });
+};
+
 function TextWithMath({ text }: { text: string }) {
   if (!text) return null;
-  const parts = text.split(/(\$[^$]+\$|\\\([\s\S]*?\\\))/g);
+  const blocks = text.split(/(\[center\][\s\S]*?\[\/center\]|\[justify\][\s\S]*?\[\/justify\])/g);
   return (
     <>
-      {parts.map((part, i) => {
-        if (part.startsWith('$') && part.endsWith('$') && part.length > 1) {
-          return <Latex key={i} block={false}>{part.slice(1, -1)}</Latex>;
+      {blocks.map((block, i) => {
+        if (block.startsWith('[center]') && block.endsWith('[/center]')) {
+          return <div key={i} style={{ textAlign: 'center' }}>{renderMath(block.slice(8, -9))}</div>;
         }
-        if (part.startsWith('\\(') && part.endsWith('\\)') && part.length > 3) {
-          return <Latex key={i} block={false}>{part.slice(2, -2)}</Latex>;
+        if (block.startsWith('[justify]') && block.endsWith('[/justify]')) {
+          return <div key={i} style={{ textAlign: 'justify' }}>{renderMath(block.slice(9, -10))}</div>;
         }
-        return <span key={i}>{part}</span>;
+        return renderMath(block);
       })}
     </>
   );

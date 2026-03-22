@@ -20,19 +20,31 @@ function KatexSpan({ tex, block = false }: { tex: string; block?: boolean }) {
     : <span ref={ref as React.RefObject<HTMLSpanElement>} />;
 }
 
+const renderMath = (text: string) => {
+  return text.split(/(\$[^$]+\$|\\\([\s\S]*?\\\))/g).map((part, i) => {
+    if (part.startsWith('$') && part.endsWith('$') && part.length > 1) {
+      return <KatexSpan key={i} tex={part.slice(1, -1)} block={false} />;
+    }
+    if (part.startsWith('\\(') && part.endsWith('\\)') && part.length > 3) {
+      return <KatexSpan key={i} tex={part.slice(2, -2)} block={false} />;
+    }
+    return <span key={i}>{part}</span>;
+  });
+};
+
 function TextWithMath({ text }: { text: string }) {
   if (!text) return null;
-  const parts = text.split(/(\$[^$]+\$|\\\([\s\S]*?\\\))/g);
+  const blocks = text.split(/(\[center\][\s\S]*?\[\/center\]|\[justify\][\s\S]*?\[\/justify\])/g);
   return (
     <>
-      {parts.map((part, i) => {
-        if (part.startsWith('$') && part.endsWith('$') && part.length > 1) {
-          return <KatexSpan key={i} tex={part.slice(1, -1)} block={false} />;
+      {blocks.map((block, i) => {
+        if (block.startsWith('[center]') && block.endsWith('[/center]')) {
+          return <div key={i} style={{ textAlign: 'center' }}>{renderMath(block.slice(8, -9))}</div>;
         }
-        if (part.startsWith('\\(') && part.endsWith('\\)') && part.length > 3) {
-          return <KatexSpan key={i} tex={part.slice(2, -2)} block={false} />;
+        if (block.startsWith('[justify]') && block.endsWith('[/justify]')) {
+          return <div key={i} style={{ textAlign: 'justify' }}>{renderMath(block.slice(9, -10))}</div>;
         }
-        return <span key={i}>{part}</span>;
+        return renderMath(block);
       })}
     </>
   );
@@ -52,10 +64,43 @@ function AutoResizeTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElem
     resize();
   }, [props.value]);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'e' || e.key === 'E')) {
+      e.preventDefault();
+      wrapText('[center]', '[/center]');
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'j' || e.key === 'J')) {
+      e.preventDefault();
+      wrapText('[justify]', '[/justify]');
+    }
+    if (props.onKeyDown) props.onKeyDown(e);
+  };
+
+  const wrapText = (openTag: string, closeTag: string) => {
+    if (!ref.current) return;
+    const el = ref.current;
+    const start = el.selectionStart || 0;
+    const end = el.selectionEnd || 0;
+    const val = el.value;
+    const selected = val.substring(start, end);
+    const newVal = val.substring(0, start) + openTag + selected + closeTag + val.substring(end);
+    
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+    nativeInputValueSetter?.call(el, newVal);
+    const event = new Event('input', { bubbles: true });
+    el.dispatchEvent(event);
+
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
+    }, 0);
+  };
+
   return (
     <textarea
       ref={ref}
       {...props}
+      onKeyDown={handleKeyDown}
       style={{ overflow: "hidden", resize: "none", ...props.style }}
     />
   );
