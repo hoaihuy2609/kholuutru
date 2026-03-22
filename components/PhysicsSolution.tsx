@@ -24,6 +24,24 @@ function Latex({ children, block = false }: { children: string; block?: boolean 
   );
 }
 
+function TextWithMath({ text }: { text: string }) {
+  if (!text) return null;
+  const parts = text.split(/(\$[^$]+\$|\\\([\s\S]*?\\\))/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith('$') && part.endsWith('$') && part.length > 1) {
+          return <Latex key={i} block={false}>{part.slice(1, -1)}</Latex>;
+        }
+        if (part.startsWith('\\(') && part.endsWith('\\)') && part.length > 3) {
+          return <Latex key={i} block={false}>{part.slice(2, -2)}</Latex>;
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 // ─── Component: tag câu hỏi ──────────────────────────────────────────────────
 function QuestionTag({ votes, label }: { votes: number; label: string }) {
   if (!votes) return null;
@@ -136,6 +154,7 @@ export default function PhysicsSolution({ data }: { data: any }) {
           line-height: 1.75;
           color: var(--ink-soft);
           margin-bottom: 0.75rem;
+          white-space: pre-wrap;
         }
 
         .section-title-ps {
@@ -203,6 +222,7 @@ export default function PhysicsSolution({ data }: { data: any }) {
           font-size: 0.88rem;
           color: var(--ink-soft);
           line-height: 1.7;
+          white-space: pre-wrap;
         }
 
         .latex-block {
@@ -258,7 +278,7 @@ export default function PhysicsSolution({ data }: { data: any }) {
                 </div>
 
                 <div className="question-block">
-                  {q.question_text && <p>{q.question_text}</p>}
+                  {q.question_text && <p><TextWithMath text={q.question_text} /></p>}
                   {q.question_latex && <Latex block>{q.question_latex}</Latex>}
                 </div>
 
@@ -273,7 +293,7 @@ export default function PhysicsSolution({ data }: { data: any }) {
                             <span className="step-title">{step.title}</span>
                           </div>
                           <div className="step-body">
-                            {step.text && <p className="step-text">{step.text}</p>}
+                            {step.text && <p className="step-text"><TextWithMath text={step.text} /></p>}
                             {step.formula && <Latex block>{step.formula}</Latex>}
                             {step.formula2 && <Latex block>{step.formula2}</Latex>}
                           </div>
