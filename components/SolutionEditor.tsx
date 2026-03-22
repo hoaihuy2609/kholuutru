@@ -20,6 +20,24 @@ function KatexSpan({ tex, block = false }: { tex: string; block?: boolean }) {
     : <span ref={ref as React.RefObject<HTMLSpanElement>} />;
 }
 
+function TextWithMath({ text }: { text: string }) {
+  if (!text) return null;
+  const parts = text.split(/(\$[^$]+\$|\\\([\s\S]*?\\\))/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith('$') && part.endsWith('$') && part.length > 1) {
+          return <KatexSpan key={i} tex={part.slice(1, -1)} block={false} />;
+        }
+        if (part.startsWith('\\(') && part.endsWith('\\)') && part.length > 3) {
+          return <KatexSpan key={i} tex={part.slice(2, -2)} block={false} />;
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 function StepPreview({ step, index }: { step: any; index: number }) {
   return (
     <div className="bg-white border border-[#E9E9E7] rounded-xl mb-4 overflow-hidden shadow-sm">
@@ -32,7 +50,7 @@ function StepPreview({ step, index }: { step: any; index: number }) {
         </span>
       </div>
       <div className="p-4 flex flex-col gap-3">
-        {step.text && <p className="text-[13px] text-[#57564F] leading-relaxed m-0 whitespace-pre-wrap">{step.text}</p>}
+        {step.text && <p className="text-[13px] text-[#57564F] leading-relaxed m-0 whitespace-pre-wrap"><TextWithMath text={step.text} /></p>}
         {step.formula && <div className="text-[#1A1A1A]"><KatexSpan tex={step.formula} block /></div>}
         {step.formula2 && <div className="text-[#1A1A1A]"><KatexSpan tex={step.formula2} block /></div>}
       </div>
@@ -548,7 +566,7 @@ export default function SolutionEditor({ blog, saveBlog, deleteBlog, syncBlogs, 
                               <div className="font-bold text-2xl text-indigo-900 mb-4">{q.questionNo || `Câu ${qIdx + 1}`}</div>
                               
                               <div className="bg-white border-l-[3px] border-indigo-400 rounded-r-xl p-5 shadow-sm mb-6">
-                                {q.qText && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">{q.qText}</p>}
+                                {q.qText && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap"><TextWithMath text={q.qText} /></p>}
                                 {q.qFormula && <div className="text-[#1A1A1A]"><KatexSpan tex={q.qFormula} block /></div>}
                               </div>
                             </div>
