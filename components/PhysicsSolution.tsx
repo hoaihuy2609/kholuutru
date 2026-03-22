@@ -26,6 +26,7 @@ function Latex({ children, block = false }: { children: string; block?: boolean 
 
 // ─── Component: tag câu hỏi ──────────────────────────────────────────────────
 function QuestionTag({ votes, label }: { votes: number; label: string }) {
+  if (!votes) return null;
   return (
     <div className="question-tag">
       <span className="fire">🔥</span>
@@ -38,6 +39,9 @@ function QuestionTag({ votes, label }: { votes: number; label: string }) {
 // ─── Component chính ─────────────────────────────────────────────────────────
 export default function PhysicsSolution({ data }: { data: any }) {
   if (!data) return null;
+
+  // Lấy danh sách câu hỏi. Nếu là format mới có `questions`
+  const questionsList = (data.questions && data.questions.length > 0) ? data.questions : [data];
 
   return (
     <>
@@ -134,13 +138,6 @@ export default function PhysicsSolution({ data }: { data: any }) {
           margin-bottom: 0.75rem;
         }
 
-        .question-block .question-sub {
-          font-size: 0.9rem;
-          margin-top: 0.75rem;
-          font-style: italic;
-          color: var(--ink);
-        }
-
         .section-title-ps {
           font-family: 'JetBrains Mono', monospace;
           font-size: 0.68rem;
@@ -208,28 +205,6 @@ export default function PhysicsSolution({ data }: { data: any }) {
           line-height: 1.7;
         }
 
-        .step-items { 
-          display: flex; 
-          flex-direction: column; 
-          gap: 0.4rem;
-          padding-left: 0.5rem;
-        }
-
-        .step-item {
-          display: flex;
-          align-items: baseline;
-          gap: 0.6rem;
-          font-size: 0.85rem;
-        }
-
-        .item-label {
-          color: var(--ink-soft);
-          min-width: 100px;
-          font-size: 0.82rem;
-        }
-
-        .item-label::after { content: ':'; }
-
         .latex-block {
           text-align: center;
           padding: 0.5rem 0;
@@ -237,41 +212,6 @@ export default function PhysicsSolution({ data }: { data: any }) {
         }
 
         .latex-inline { display: inline; }
-
-        .result-box {
-          background: var(--result-bg);
-          border: 2px solid var(--accent2);
-          border-radius: 8px;
-          padding: 1.25rem 1.5rem;
-          margin-top: 2rem;
-        }
-
-        .result-label {
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 0.68rem;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: var(--accent2);
-          font-weight: 600;
-          display: block;
-          margin-bottom: 0.75rem;
-        }
-
-        .result-items { display: flex; flex-direction: column; gap: 0.5rem; }
-
-        .result-item {
-          display: flex;
-          align-items: baseline;
-          gap: 0.75rem;
-          font-size: 0.9rem;
-          flex-wrap: wrap;
-        }
-
-        .result-item-label {
-          color: var(--ink-soft);
-          font-size: 0.85rem;
-          min-width: 180px;
-        }
 
         .ps-footer {
           margin-top: 2.5rem;
@@ -283,11 +223,24 @@ export default function PhysicsSolution({ data }: { data: any }) {
           letter-spacing: 0.08em;
           text-align: right;
         }
+        
+        .multi-question-divider {
+          width: 100%;
+          height: 4px;
+          background: repeating-linear-gradient(
+            45deg,
+            var(--line),
+            var(--line) 10px,
+            transparent 10px,
+            transparent 20px
+          );
+          margin: 4rem 0;
+          opacity: 0.5;
+        }
 
         @media (max-width: 560px) {
           .ps-wrap { padding: 1.5rem 0.75rem 3rem; }
           .q-number { font-size: 1.5rem; }
-          .result-item-label { min-width: unset; width: 100%; }
         }
       `}</style>
 
@@ -295,37 +248,44 @@ export default function PhysicsSolution({ data }: { data: any }) {
         <div className="ps-inner">
           <div className="ps-header">
             <div className="exam-name">{data.exam_name || data.examName}</div>
-            <div className="question-label">
-              <span className="q-number">{data.question_no || data.questionNumber}</span>
-              <QuestionTag votes={data.votes || 0} label="Tham khảo/Báo cáo" />
-            </div>
           </div>
+          
+          {questionsList.map((q: any, qIdx: number) => (
+             <div key={qIdx}>
+                <div className="question-label" style={{ marginBottom: '1.25rem' }}>
+                  <span className="q-number">{q.question_no || q.questionNumber || `Câu ${qIdx + 1}`}</span>
+                  {(data.votes || q.votes) ? <QuestionTag votes={data.votes || q.votes} label="Tham khảo/Báo cáo" /> : null}
+                </div>
 
-          <div className="question-block">
-            {data.question_text && <p>{data.question_text}</p>}
-            {data.question_latex && <Latex block>{data.question_latex}</Latex>}
-          </div>
+                <div className="question-block">
+                  {q.question_text && <p>{q.question_text}</p>}
+                  {q.question_latex && <Latex block>{q.question_latex}</Latex>}
+                </div>
 
-          {data.steps && data.steps.length > 0 && (
-            <>
-              <div className="section-title-ps">Lời giải chi tiết</div>
-              <div className="steps-ps">
-                {data.steps.map((step: any, i: number) => (
-                  <div className="step" key={i}>
-                    <div className="step-header">
-                      <span className="step-number">{i + 1}</span>
-                      <span className="step-title">{step.title}</span>
+                {q.steps && q.steps.length > 0 && (
+                  <>
+                    <div className="section-title-ps">Lời giải chi tiết</div>
+                    <div className="steps-ps">
+                      {q.steps.map((step: any, i: number) => (
+                        <div className="step" key={i}>
+                          <div className="step-header">
+                            <span className="step-number">{i + 1}</span>
+                            <span className="step-title">{step.title}</span>
+                          </div>
+                          <div className="step-body">
+                            {step.text && <p className="step-text">{step.text}</p>}
+                            {step.formula && <Latex block>{step.formula}</Latex>}
+                            {step.formula2 && <Latex block>{step.formula2}</Latex>}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="step-body">
-                      {step.text && <p className="step-text">{step.text}</p>}
-                      {step.formula && <Latex block>{step.formula}</Latex>}
-                      {step.formula2 && <Latex block>{step.formula2}</Latex>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+                  </>
+                )}
+                
+                {qIdx < questionsList.length - 1 && <div className="multi-question-divider" />}
+             </div>
+          ))}
 
           <div className="ps-footer">Biên soạn bởi PhysiVault • {data.exam_name || data.examName}</div>
         </div>
