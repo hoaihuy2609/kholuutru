@@ -388,7 +388,7 @@ export default function SolutionEditor({ blog, saveBlog, deleteBlog, syncBlogs, 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         
         {/* Editor Area */}
-        <div className="xl:col-span-7 flex flex-col gap-6">
+        <div className="xl:col-span-6 flex flex-col gap-6">
           
           {/* Thông tin bài tập / Đề thi */}
           <div className="p-6 rounded-2xl bg-white border border-[#E9E9E7] shadow-sm space-y-5">
@@ -548,7 +548,7 @@ export default function SolutionEditor({ blog, saveBlog, deleteBlog, syncBlogs, 
         </div>
 
         {/* Preview Area */}
-        <div className="xl:col-span-5 h-[calc(100vh-200px)] sticky top-20">
+        <div className="xl:col-span-6 h-[calc(100vh-200px)] sticky top-20">
           <div className="h-full border border-[#E9E9E7] rounded-2xl bg-white shadow-sm flex flex-col overflow-hidden">
             <div className="px-6 py-4 border-b border-[#E9E9E7] flex justify-between items-center bg-[#FCFCFA] shrink-0">
               <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2">
