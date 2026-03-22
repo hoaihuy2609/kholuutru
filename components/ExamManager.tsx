@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Trash2, Upload, FileText, Clock, ChevronLeft, ChevronRight, Save, X, Check, RefreshCw, ClipboardList, Flag, User, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Upload, FileText, Clock, ChevronLeft, ChevronRight, Save, X, Check, RefreshCw, ClipboardList, Flag, User, AlertCircle, Edit } from 'lucide-react';
 import { Exam, ExamAnswers, ExamTFAnswer } from '../types';
 import { useCloudStorage } from '../src/hooks/useCloudStorage';
 import { getAllExamTopVotes } from '../src/services/notificationService';
@@ -50,6 +50,7 @@ const ExamManager: React.FC<ExamManagerProps> = ({
     const [exams, setExams] = useState<Exam[]>([]);
     const [loadingExams, setLoadingExams] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [editingExam, setEditingExam] = useState<Exam | null>(null);
     const [viewingVotes, setViewingVotes] = useState<Exam | null>(null);
     const [topVotes, setTopVotes] = useState<Record<string, { part: string; num: number; count: number }[]>>({});
 
@@ -82,6 +83,12 @@ const ExamManager: React.FC<ExamManagerProps> = ({
         });
         setShowCreateModal(false);
         onShowToast('Đã lưu đề thi thành công!', 'success');
+    };
+
+    const handleEdited = (exam: Exam) => {
+        setExams(prev => prev.map(e => e.id === exam.id ? exam : e));
+        setEditingExam(null);
+        onShowToast('Đã cập nhật đề thi thành công!', 'success');
     };
 
     return (
@@ -187,6 +194,14 @@ const ExamManager: React.FC<ExamManagerProps> = ({
                                             </span>
                                         </button>
                                     )}
+                                    <button
+                                        onClick={() => setEditingExam(exam)}
+                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:-translate-y-0.5"
+                                        style={{ background: '#F1F5F9', borderColor: '#E2E8F0', color: '#475569' }}
+                                        title="Sửa đáp án hoặc thông tin đề thi"
+                                    >
+                                        <Edit className="w-4 h-4" /> Sửa
+                                    </button>
                                     <span className="text-xs px-2 py-1.5 rounded-lg font-semibold" style={{ background: '#F0FDF4', color: '#16A34A', border: '1.5px solid #86EFAC' }}>
                                         ✓ Có đáp án
                                     </span>
@@ -207,12 +222,13 @@ const ExamManager: React.FC<ExamManagerProps> = ({
                 );
             })()}
 
-            {/* Create Modal */}
-            {showCreateModal && (
+            {/* Create/Edit Modal */}
+            {(showCreateModal || editingExam) && (
                 <CreateExamModal
-                    initialGrade={activeTab}
-                    onClose={() => setShowCreateModal(false)}
-                    onSaved={handleSaved}
+                    initialGrade={editingExam ? (editingExam.grade || activeTab) : activeTab}
+                    examToEdit={editingExam || undefined}
+                    onClose={() => { setShowCreateModal(false); setEditingExam(null); }}
+                    onSaved={editingExam ? handleEdited : handleSaved}
                     onShowToast={onShowToast}
                     onUploadExamPdf={onUploadExamPdf}
                     onSaveExam={onSaveExam}
@@ -240,21 +256,22 @@ interface CreateExamModalProps {
     onUploadExamPdf: (file: File, onProgress: (pct: number) => void) => Promise<{ fileId: string; fileName: string }>;
     onSaveExam: (exams: Exam[]) => Promise<void>;
     allExams: Exam[];
+    examToEdit?: Exam;
 }
 
 const CreateExamModal: React.FC<CreateExamModalProps> = ({
-    initialGrade, onClose, onSaved, onShowToast, onUploadExamPdf, onSaveExam, allExams
+    initialGrade, onClose, onSaved, onShowToast, onUploadExamPdf, onSaveExam, allExams, examToEdit
 }) => {
     const [step, setStep] = useState(1); // 1=Info+PDF, 2=Phần I, 3=Phần II, 4=Phần III
-    const [title, setTitle] = useState('');
-    const [duration, setDuration] = useState('50');
-    const [grade, setGrade] = useState(initialGrade);
+    const [title, setTitle] = useState(examToEdit?.title || '');
+    const [duration, setDuration] = useState(examToEdit?.duration.toString() || '50');
+    const [grade, setGrade] = useState(examToEdit?.grade || initialGrade);
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [pdfProgress, setPdfProgress] = useState(0);
     const [pdfUploading, setPdfUploading] = useState(false);
-    const [pdfFileId, setPdfFileId] = useState('');
-    const [pdfFileName, setPdfFileName] = useState('');
-    const [answers, setAnswers] = useState<ExamAnswers>(emptyAnswers());
+    const [pdfFileId, setPdfFileId] = useState(examToEdit?.pdfTelegramFileId || '');
+    const [pdfFileName, setPdfFileName] = useState(examToEdit?.pdfFileName || '');
+    const [answers, setAnswers] = useState<ExamAnswers>(examToEdit ? JSON.parse(JSON.stringify(examToEdit.answers)) : emptyAnswers());
     const [saving, setSaving] = useState(false);
     const pdfInputRef = useRef<HTMLInputElement>(null);
 
@@ -297,16 +314,19 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
         setSaving(true);
         try {
             const exam: Exam = {
-                id: crypto.randomUUID(),
+                id: examToEdit ? examToEdit.id : crypto.randomUUID(),
                 title: title.trim(),
                 pdfTelegramFileId: pdfFileId,
                 pdfFileName,
                 duration: parseInt(duration),
                 grade,
-                createdAt: Date.now(),
+                createdAt: examToEdit ? examToEdit.createdAt : Date.now(),
                 answers,
             };
-            await onSaveExam([...allExams, exam]);
+            const updatedAllExams = examToEdit 
+                ? allExams.map(e => e.id === exam.id ? exam : e)
+                : [...allExams, exam];
+            await onSaveExam(updatedAllExams);
             onSaved(exam);
         } catch (err: any) {
             onShowToast(err.message || 'Lỗi lưu đề thi', 'error');
@@ -327,7 +347,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
             >
                 {/* Modal Header */}
                 <div className="px-6 py-4 flex items-center justify-between shrink-0" style={{ borderBottom: '1px solid #E9E9E7' }}>
-                    <h3 className="font-semibold" style={{ color: '#1A1A1A' }}>Tạo Đề Thi Mới</h3>
+                    <h3 className="font-semibold" style={{ color: '#1A1A1A' }}>{examToEdit ? 'Cập Nhật Đề Thi' : 'Tạo Đề Thi Mới'}</h3>
                     <button onClick={onClose} className="p-1.5 rounded-lg transition-colors" style={{ color: '#AEACA8' }}
                         onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
