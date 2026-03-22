@@ -38,6 +38,29 @@ function TextWithMath({ text }: { text: string }) {
   );
 }
 
+function AutoResizeTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  
+  const resize = () => {
+    if (ref.current) {
+      ref.current.style.height = "auto";
+      ref.current.style.height = ref.current.scrollHeight + "px";
+    }
+  };
+
+  useEffect(() => {
+    resize();
+  }, [props.value]);
+
+  return (
+    <textarea
+      ref={ref}
+      {...props}
+      style={{ overflow: "hidden", resize: "none", ...props.style }}
+    />
+  );
+}
+
 function StepPreview({ step, index }: { step: any; index: number }) {
   return (
     <div className="bg-white border border-[#E9E9E7] rounded-xl mb-4 overflow-hidden shadow-sm">
@@ -445,9 +468,9 @@ export default function SolutionEditor({ blog, saveBlog, deleteBlog, syncBlogs, 
 
                    <div>
                      <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Mô tả đề bài (Text)</label>
-                     <textarea 
+                     <AutoResizeTextarea 
                        rows={2}
-                       className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm resize-y text-gray-700 transition-colors"
+                       className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm text-gray-700 transition-colors"
                        placeholder="Một vật dao động..." 
                        value={activeQuestion.qText} onChange={e => updateQuestionField("qText", e.target.value)} 
                      />
@@ -455,9 +478,9 @@ export default function SolutionEditor({ blog, saveBlog, deleteBlog, syncBlogs, 
 
                    <div>
                      <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Công thức đề bài (LaTeX)</label>
-                     <textarea 
+                     <AutoResizeTextarea 
                        rows={2}
-                       className="w-full p-3 rounded-lg border border-[#D3DBF9] outline-none focus:border-indigo-500 text-sm font-mono resize-y bg-[#EEF0FB] text-[#3D3D8D] transition-colors"
+                       className="w-full p-3 rounded-lg border border-[#D3DBF9] outline-none focus:border-indigo-500 text-sm font-mono bg-[#EEF0FB] text-[#3D3D8D] transition-colors"
                        placeholder="x = 4\cos(...)" 
                        value={activeQuestion.qFormula} onChange={e => updateQuestionField("qFormula", e.target.value)} 
                        onFocus={e => trackFocus("qFormula", e.target as any)} 
@@ -502,9 +525,9 @@ export default function SolutionEditor({ blog, saveBlog, deleteBlog, syncBlogs, 
                      
                      <div>
                         <label className="block text-xs font-bold mb-2 text-[#787774] uppercase tracking-wider">Giải thích</label>
-                        <textarea 
+                        <AutoResizeTextarea 
                           rows={2}
-                          className="w-full p-2.5 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm resize-y text-gray-700 transition-colors"
+                          className="w-full p-2.5 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm text-gray-700 transition-colors"
                           placeholder="Mô tả cách làm..." 
                           value={step.text} onChange={e => updateStep(idx, "text", e.target.value)} 
                         />
@@ -513,9 +536,9 @@ export default function SolutionEditor({ blog, saveBlog, deleteBlog, syncBlogs, 
                      <div className="grid grid-cols-1 gap-5">
                        <div>
                           <label className="block text-xs font-bold mb-2 text-[#787774] uppercase tracking-wider">Công thức 1</label>
-                          <textarea 
+                          <AutoResizeTextarea 
                             rows={2}
-                            className="w-full p-2.5 rounded-lg border border-[#D3DBF9] outline-none focus:border-indigo-500 text-sm font-mono resize-y bg-[#EEF0FB] text-[#3D3D8D] transition-colors"
+                            className="w-full p-2.5 rounded-lg border border-[#D3DBF9] outline-none focus:border-indigo-500 text-sm font-mono bg-[#EEF0FB] text-[#3D3D8D] transition-colors"
                             placeholder="LaTeX..." 
                             value={step.formula} onChange={e => updateStep(idx, "formula", e.target.value)} 
                             onFocus={e => trackFocus(`step-${idx}-formula`, e.target as any)} 
@@ -523,9 +546,9 @@ export default function SolutionEditor({ blog, saveBlog, deleteBlog, syncBlogs, 
                        </div>
                        <div>
                           <label className="block text-xs font-bold mb-2 text-[#787774] uppercase tracking-wider">Công thức 2 (Tùy chọn)</label>
-                          <textarea 
+                          <AutoResizeTextarea 
                             rows={2}
-                            className="w-full p-2.5 rounded-lg border border-[#D3DBF9] outline-none focus:border-indigo-500 text-sm font-mono resize-y bg-[#EEF0FB] text-[#3D3D8D] transition-colors"
+                            className="w-full p-2.5 rounded-lg border border-[#D3DBF9] outline-none focus:border-indigo-500 text-sm font-mono bg-[#EEF0FB] text-[#3D3D8D] transition-colors"
                             placeholder="LaTeX..." 
                             value={step.formula2} onChange={e => updateStep(idx, "formula2", e.target.value)} 
                             onFocus={e => trackFocus(`step-${idx}-formula2`, e.target as any)} 
