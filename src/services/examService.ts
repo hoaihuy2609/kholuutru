@@ -125,9 +125,10 @@ export const saveExam = async (exams: Exam[]): Promise<void> => {
     const indexBlob = new Blob([indexEncrypted], { type: 'application/octet-stream' });
     const masterFileId = await uploadBlobToTelegram(indexBlob, 'exam_index.bin');
 
-    const { error: sbError } = await supabase
-        .from('vault_index')
-        .upsert({ grade: 0, telegram_file_id: masterFileId, updated_at: Date.now() }, { onConflict: 'grade' });
+    const { error: sbError } = await supabase.rpc('admin_upsert_vault_index', {
+        p_grade: 0,
+        p_telegram_file_id: masterFileId,
+    });
     if (sbError) throw new Error('Không thể ghi địa chỉ exam lên Supabase: ' + sbError.message);
 
     localStorage.setItem('pv_last_fetched_exam_index', masterFileId);
