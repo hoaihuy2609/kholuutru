@@ -6,7 +6,7 @@ import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import { BlogPost } from '../types';
 import { Calendar, ChevronLeft, Tag, Clock, Copy, Check, List } from 'lucide-react';
-import PhysicsSolution from './PhysicsSolution';
+import SolutionRenderer from './SolutionRenderer';
 
 interface BlogDetailProps {
     blog: BlogPost;
@@ -149,7 +149,7 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
                     <ChevronLeft style={{ width: '16px', height: '16px' }} /> Quay lại
                 </button>
                 <div style={{ position: 'relative' }}>
-                    <PhysicsSolution data={parsedSolution.data} />
+                    <SolutionRenderer content={blog.content} />
                 </div>
             </div>
         );
