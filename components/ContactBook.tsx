@@ -126,7 +126,7 @@ const HistoryRow = React.memo(({ record, isLast, isAdmin }: { record: ExamResult
             )}
 
             {/* Detailed Result Breakdown */}
-            <div className="flex items-center gap-2 justify-center md:justify-start">
+            <div className="flex items-center gap-2 justify-center">
                 {!hasParts ? (
                     <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-md" style={{ background: '#F1F0EC', color: '#57564F' }}>
                         <CheckCircle className="w-3.5 h-3.5" style={{ color: '#448361' }} />
