@@ -3,40 +3,9 @@ import { Clock, ChevronLeft, Send, AlertTriangle, CheckCircle, RefreshCw, FileTe
 import { Exam, ExamTFAnswer, ExamSubmission } from '../types';
 import ExamCountdownTimer from './ExamCountdownTimer';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
+import { getCachedPdf, savePdfToCache } from '../src/lib/pdfCache';
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
-const PDF_CACHE_DB = 'pv_pdf_cache';
-const PDF_CACHE_STORE = 'pdfs';
-
-// ── IndexedDB PDF Cache helpers ────────────────────────────────────
-const openPdfCacheDB = (): Promise<IDBDatabase> =>
-    new Promise((resolve, reject) => {
-        const req = indexedDB.open(PDF_CACHE_DB, 1);
-        req.onupgradeneeded = () => req.result.createObjectStore(PDF_CACHE_STORE);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-    });
-
-const getCachedPdf = async (examId: string): Promise<Blob | null> => {
-    try {
-        const db = await openPdfCacheDB();
-        return new Promise((resolve) => {
-            const tx = db.transaction(PDF_CACHE_STORE, 'readonly');
-            const req = tx.objectStore(PDF_CACHE_STORE).get(examId);
-            req.onsuccess = () => resolve(req.result || null);
-            req.onerror = () => resolve(null);
-        });
-    } catch { return null; }
-};
-
-const savePdfToCache = async (examId: string, blob: Blob): Promise<void> => {
-    try {
-        const db = await openPdfCacheDB();
-        const tx = db.transaction(PDF_CACHE_STORE, 'readwrite');
-        tx.objectStore(PDF_CACHE_STORE).put(blob, examId);
-    } catch { /* silent */ }
-};
-
 // ── Helpers ────────────────────────────────────────────────────────
 const normalizeSA = (s: string) =>
     s.trim().replace(',', '.').toLowerCase();

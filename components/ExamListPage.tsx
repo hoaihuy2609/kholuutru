@@ -2,50 +2,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ClipboardList, Clock, Play, RefreshCw, FileText, Lock, CheckCircle } from 'lucide-react';
 import { Exam } from '../types';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
+import { isPdfCached, savePdfToCache } from '../src/lib/pdfCache';
 import { useLocation } from 'react-router-dom';
 
-const PDF_CACHE_DB = 'pv_pdf_cache';
-const PDF_CACHE_STORE = 'pdfs';
-
-// ── Inline cache helpers (same IndexedDB as ExamView) ────────────
-const _openPdfDB = (): Promise<IDBDatabase> =>
-    new Promise((resolve, reject) => {
-        const req = indexedDB.open(PDF_CACHE_DB, 1);
-        req.onupgradeneeded = () => req.result.createObjectStore(PDF_CACHE_STORE);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-    });
-
-const _isPdfCached = async (examId: string): Promise<boolean> => {
-    try {
-        const db = await _openPdfDB();
-        return new Promise(resolve => {
-            const req = db.transaction(PDF_CACHE_STORE, 'readonly').objectStore(PDF_CACHE_STORE).getKey(examId);
-            req.onsuccess = () => resolve(!!req.result);
-            req.onerror = () => resolve(false);
-        });
-    } catch { return false; }
-};
-
-const _savePdfBlob = async (examId: string, blob: Blob) => {
-    try {
-        const db = await _openPdfDB();
-        db.transaction(PDF_CACHE_STORE, 'readwrite').objectStore(PDF_CACHE_STORE).put(blob, examId);
-    } catch { /* silent */ }
-};
 
 const prefetchExamPdf = async (exam: Exam) => {
     try {
-        if (await _isPdfCached(exam.id)) return; // already cached
+        if (await isPdfCached(exam.id)) return;
         const res = await fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`);
         if (res.ok) {
-            const buffer = await res.arrayBuffer();
-            const blob = new Blob([buffer], { type: 'application/pdf' });
-            await _savePdfBlob(exam.id, blob);
+            const blob = new Blob([await res.arrayBuffer()], { type: 'application/pdf' });
+            await savePdfToCache(exam.id, blob);
             console.log(`[Prefetch] ✅ ${exam.title}`);
         }
     } catch { /* silent */ }
 };
+
 
 interface ExamListPageProps {
     onSelectExam: (exam: Exam) => void;

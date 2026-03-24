@@ -57,9 +57,9 @@ const ExamManager: React.FC<ExamManagerProps> = ({
     // Load exams on mount
     useEffect(() => {
         onLoadExams().then(data => { setExams(data); setLoadingExams(false); }).catch(() => setLoadingExams(false));
-        getAllExamTopVotes().then(data => setTopVotes(data));
     }, [onLoadExams]);
 
+    // Tải votes sau khi exams đã load xong (1 lần duy nhất)
     useEffect(() => {
         if (!loadingExams) {
             getAllExamTopVotes().then(data => setTopVotes(data));
