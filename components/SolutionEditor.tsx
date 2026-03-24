@@ -264,14 +264,7 @@ function StatementEditor({
             placeholder={`VD: Tốc độ electron trước khi vào vùng điện trường bằng 3,08×10⁷ m/s`}
             value={st.claim} onChange={e => onUpdate(si, { ...st, claim: e.target.value })} />
         </div>
-        <div>
-          <label className="block text-[10px] font-bold mb-1.5 text-[#787774] uppercase tracking-wider">Công thức mệnh đề (LaTeX) — nếu có</label>
-          <AutoResizeTextarea rows={2}
-            className="w-full p-2.5 rounded-lg border border-[#D3DBF9] outline-none focus:border-indigo-500 text-sm font-mono bg-[#EEF0FB] text-[#3D3D8D] transition-colors"
-            placeholder="VD: v_0 = 3{,}08 \times 10^7 \text{ m/s}"
-            value={st.claim_latex} onChange={e => onUpdate(si, { ...st, claim_latex: e.target.value })}
-            onFocus={e => onFocus(`stmt-${si}-latex`, e.target)} />
-        </div>
+
 
         {/* Bước chứng minh */}
         <div className="pt-2 border-t border-[#E9E9E7]">
@@ -682,14 +675,7 @@ export default function SolutionEditor({
                       : "Một vật dao động điều hòa..."}
                     value={activeQuestion.qText} onChange={e => updateQ('qText', e.target.value)} />
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Công thức đề bài (LaTeX)</label>
-                  <AutoResizeTextarea rows={2}
-                    className="w-full p-3 rounded-lg border border-[#D3DBF9] outline-none focus:border-indigo-500 text-sm font-mono bg-[#EEF0FB] text-[#3D3D8D] transition-colors"
-                    placeholder="x = 4\cos(...)"
-                    value={activeQuestion.qFormula} onChange={e => updateQ('qFormula', e.target.value)}
-                    onFocus={e => trackFocus("qFormula", e.target)} />
-                </div>
+
               </div>
             </div>
           </div>
