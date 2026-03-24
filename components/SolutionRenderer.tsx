@@ -9,24 +9,7 @@
 import React, { useEffect, useRef } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
-
-// ─────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────
-interface Step {
-  title: string;
-  text: string;
-  formula: string;
-  formula2: string;
-}
-
-interface Statement {
-  label: 'a' | 'b' | 'c' | 'd';
-  claim: string;
-  claim_latex: string;
-  verdict: true | false | null;
-  steps: Step[];
-}
+import { SolutionStep as Step, SolutionStatement as Statement } from '../types';
 
 interface Question {
   question_no: string;
@@ -192,9 +175,9 @@ function TuLuanRenderer({ question }: { question: Question }) {
 // ĐÚNG/SAI RENDERER
 // ─────────────────────────────────────────────────────────────
 function DungSaiRenderer({ question }: { question: Question }) {
-  const hasStatements = question.statements?.some(s => s.claim || s.claim_latex);
-  const trueCount  = question.statements?.filter(s => s.verdict === true).length  ?? 0;
-  const falseCount = question.statements?.filter(s => s.verdict === false).length ?? 0;
+  const hasStatements = question.statements.some(s => s.claim || s.claim_latex);
+  const trueCount  = question.statements.filter(s => s.verdict === true).length;
+  const falseCount = question.statements.filter(s => s.verdict === false).length;
 
   return (
     <div className="space-y-6">

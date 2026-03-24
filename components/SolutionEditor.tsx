@@ -6,6 +6,7 @@ import katex from "katex";
 import "katex/dist/katex.min.css";
 import { supabase } from "../src/lib/supabase";
 import { useUIStore } from "../src/stores/useUIStore";
+import { SolutionStep as Step, SolutionStatement as Statement } from '../types';
 import {
   ChevronLeft, Save, Trash2, ArrowUp, ArrowDown,
   Plus, Eye, BookOpen, Layers, X, ToggleLeft, ToggleRight
@@ -15,21 +16,6 @@ import {
 // TYPES
 // ─────────────────────────────────────────────────────────────
 type QuestionType = 'tu_luan' | 'dung_sai';
-
-interface Step {
-  title: string;
-  text: string;
-  formula: string;
-  formula2: string;
-}
-
-interface Statement {
-  label: 'a' | 'b' | 'c' | 'd';
-  claim: string;
-  claim_latex: string;
-  verdict: true | false | null;
-  steps: Step[];
-}
 
 interface Question {
   questionNo: string;

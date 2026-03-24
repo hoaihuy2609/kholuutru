@@ -35,6 +35,23 @@ export interface GradeData {
 
 export type FileStorage = Record<string, StoredFile[]>; // Key is "lessonId" or "chapterId"
 
+// ── Physics Solution Types (shared by SolutionEditor & SolutionRenderer) ──────
+
+export interface SolutionStep {
+  title: string;
+  text: string;
+  formula: string;
+  formula2: string;
+}
+
+export interface SolutionStatement {
+  label: 'a' | 'b' | 'c' | 'd';
+  claim: string;
+  claim_latex: string;
+  verdict: true | false | null;
+  steps: SolutionStep[];
+}
+
 // ── Exam (Thi Thử) Types ──────────────────────────────────────────
 
 export interface ExamTFAnswer {
