@@ -301,7 +301,7 @@ function StepPreview({ step, index }: { step: Step; index: number }) {
     <div className="bg-white border border-[#E9E9E7] rounded-xl mb-3 overflow-hidden shadow-sm">
       <div className="flex items-center gap-2 px-4 py-2 border-b border-[#E9E9E7] bg-[#FCFCFA]">
         <span className="font-mono text-[11px] font-bold bg-[#6B7CDB] text-white w-5 h-5 rounded-full flex items-center justify-center shrink-0">{index + 1}</span>
-        <span className="text-[12px] font-semibold text-[#1A1A1A]">{step.title || <em className="text-[#AEACA8] font-normal">Chưa có tiêu đề</em>}</span>
+        <span className="text-[12px] font-semibold text-[#1A1A1A]">{step.title ? <TextWithMath text={step.title} /> : <em className="text-[#AEACA8] font-normal">Chưa có tiêu đề</em>}</span>
       </div>
       <div className="p-3 flex flex-col gap-2">
         {step.text    && <p className="text-[13px] text-[#57564F] leading-relaxed m-0 whitespace-pre-wrap"><TextWithMath text={step.text} /></p>}
@@ -330,7 +330,7 @@ function StatementPreview({ st }: { st: Statement }) {
         {verdictEl}
       </div>
       <div className="p-4 space-y-2">
-        {st.claim      && <p className="text-[13px] text-[#1A1A1A] leading-relaxed m-0">{st.claim}</p>}
+        {st.claim      && <p className="text-[13px] text-[#1A1A1A] leading-relaxed m-0"><TextWithMath text={st.claim} /></p>}
         {st.claim_latex && <KatexSpan tex={st.claim_latex} block />}
         {st.steps.some(s => s.title || s.formula || s.text) && (
           <div className="mt-3 pt-3 border-t border-dashed border-[#E9E9E7]">
