@@ -149,7 +149,7 @@ function StepRenderer({ step, index }: { step: Step; index: number }) {
           {index + 1}
         </span>
         {step.title && (
-          <span className="text-[13px] font-semibold text-[#1A1A1A]">{step.title}</span>
+          <span className="text-[13px] font-semibold text-[#1A1A1A]"><TextWithMath text={step.title} /></span>
         )}
       </div>
       <div className="p-4 flex flex-col gap-3">
@@ -263,7 +263,9 @@ function StatementRenderer({ st }: { st: Statement }) {
       {/* Nội dung mệnh đề */}
       <div className="px-5 pt-4 pb-3">
         {st.claim && (
-          <p className="text-[14px] text-[#1A1A1A] leading-relaxed mb-3">{st.claim}</p>
+          <p className="text-[14px] text-[#1A1A1A] leading-relaxed mb-3 whitespace-pre-wrap">
+            <TextWithMath text={st.claim} />
+          </p>
         )}
         {st.claim_latex && <KatexBlock tex={st.claim_latex} />}
       </div>

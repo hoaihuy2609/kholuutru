@@ -330,7 +330,7 @@ function StatementPreview({ st }: { st: Statement }) {
         {verdictEl}
       </div>
       <div className="p-4 space-y-2">
-        {st.claim      && <p className="text-[13px] text-[#1A1A1A] leading-relaxed m-0"><TextWithMath text={st.claim} /></p>}
+        {st.claim      && <p className="text-[13px] text-[#1A1A1A] leading-relaxed m-0 whitespace-pre-wrap"><TextWithMath text={st.claim} /></p>}
         {st.claim_latex && <KatexSpan tex={st.claim_latex} block />}
         {st.steps.some(s => s.title || s.formula || s.text) && (
           <div className="mt-3 pt-3 border-t border-dashed border-[#E9E9E7]">

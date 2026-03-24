@@ -302,7 +302,7 @@ export default function PhysicsSolution({ data }: { data: any }) {
                         <div className="step" key={i}>
                           <div className="step-header">
                             <span className="step-number">{i + 1}</span>
-                            <span className="step-title">{step.title}</span>
+                            <span className="step-title"><TextWithMath text={step.title} /></span>
                           </div>
                           <div className="step-body">
                             {step.text && <p className="step-text"><TextWithMath text={step.text} /></p>}
