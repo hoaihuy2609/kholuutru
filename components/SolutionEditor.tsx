@@ -689,13 +689,12 @@ export default function SolutionEditor({
                 <Layers className="w-5 h-5 text-indigo-500" /> Từng bước giải — {activeQuestion.questionNo || `Câu ${activeQIdx + 1}`}
               </h3>
               {activeQuestion.steps.map((step, idx) => (
-                <StepEditor key={idx} step={step} idx={idx} total={activeQuestion.steps.length}
+                <StepEditor key={idx} step={step} idx={idx} total={activeQuestion.steps.length} compact
                   onChange={updStep} onRemove={removeStep} onMove={moveStep} onFocus={trackFocus} />
               ))}
               <button onClick={addStep}
-                className="w-full py-4 rounded-2xl border-2 border-dashed border-[#DCDCDA] text-[#787774] font-semibold text-sm hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-2">
-                <Plus className="w-5 h-5" /> Thêm bước tiếp theo
-              </button>
+                className="w-full py-2.5 rounded-xl border-2 border-dashed border-[#DCDCDA] text-[#787774] font-semibold text-xs hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-1.5"
+              ><Plus className="w-3.5 h-3.5" /> Thêm bước tiếp theo</button>
             </div>
           )}
 
