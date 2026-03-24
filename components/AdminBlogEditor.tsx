@@ -251,13 +251,13 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                 <div className="flex items-center gap-3 bg-white p-1 rounded-xl border border-[#E9E9E7]">
                     <button
                         onClick={() => setEditorMode('markdown')}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${editorMode === 'markdown' ? 'bg-[#EEF0FB] text-[#6B7CDB]' : 'text-[#787774] hover:bg-gray-50'}`}
+                        className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all bg-[#EEF0FB] text-[#6B7CDB]"
                     >
                         Markdown
                     </button>
                     <button
                         onClick={() => setEditorMode('solution')}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${editorMode === 'solution' ? 'bg-[#EEF0FB] text-[#6B7CDB]' : 'text-[#787774] hover:bg-gray-50'}`}
+                        className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-[#787774] hover:bg-gray-50"
                     >
                         Lời Giải (LaTeX)
                     </button>
