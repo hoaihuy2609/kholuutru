@@ -271,15 +271,17 @@ function StatementEditor({
           <div className="text-[10px] font-bold text-[#787774] uppercase tracking-wider mb-3">
             Chứng minh / lý giải
           </div>
-          {st.steps.map((step, i) => (
-            <StepEditor key={i} step={step} idx={i} total={st.steps.length} compact
-              onChange={updStep} onRemove={removeStep} onMove={moveStep}
-              onFocus={(fid, el) => onFocus(`stmt-${si}-${fid}`, el)} />
-          ))}
-          <button
-            onClick={addStep}
-            className="w-full py-2.5 rounded-xl border-2 border-dashed border-[#DCDCDA] text-[#787774] text-xs font-semibold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-1.5"
-          ><Plus className="w-3.5 h-3.5" /> Thêm bước chứng minh</button>
+          <div className="space-y-3">
+            {st.steps.map((step, i) => (
+              <StepEditor key={i} step={step} idx={i} total={st.steps.length} compact
+                onChange={updStep} onRemove={removeStep} onMove={moveStep}
+                onFocus={(fid, el) => onFocus(`stmt-${si}-${fid}`, el)} />
+            ))}
+            <button
+              onClick={addStep}
+              className="w-full py-2.5 rounded-xl border-2 border-dashed border-[#DCDCDA] text-[#787774] text-xs font-semibold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-1.5"
+            ><Plus className="w-3.5 h-3.5" /> Thêm bước chứng minh</button>
+          </div>
         </div>
       </div>
     </div>
