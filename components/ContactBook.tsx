@@ -323,12 +323,12 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                             </div>
                         </div>
                     ) : (
-                        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
+                        <div className="rounded-xl" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
                             {/* Table header */}
                             <div
                                 className="hidden md:grid items-center px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider"
                                 style={{
-                                    gridTemplateColumns: isAdmin ? '1fr 150px 110px 80px' : '1fr 110px 80px',
+                                    gridTemplateColumns: isAdmin ? '1fr 140px 240px 80px' : '1fr 240px 80px',
                                     background: ACCENT_LIGHT,
                                     color: '#787774',
                                     borderBottom: '1px solid #E9E9E7',
