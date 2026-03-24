@@ -41,7 +41,7 @@ const Pill = ({ label, score, total, breakdown }: { label: string, score?: numbe
     const border = isFull ? 'rgba(68,131,97,0.1)' : (isLow ? 'rgba(224,62,62,0.1)' : 'rgba(217,115,13,0.1)');
 
     return (
-        <div className="relative group cursor-help">
+        <div className="relative group">
             <span 
                 className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded border leading-none transition-all hover:ring-2 hover:ring-offset-1 hover:ring-black/5"
                 style={{ background: bg, color: color, borderColor: border }}
