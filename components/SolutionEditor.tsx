@@ -684,7 +684,7 @@ export default function SolutionEditor({
 
           {/* ── TỰ LUẬN: bước giải ── */}
           {activeQuestion.type === 'tu_luan' && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2 text-lg">
                 <Layers className="w-5 h-5 text-indigo-500" /> Từng bước giải — {activeQuestion.questionNo || `Câu ${activeQIdx + 1}`}
               </h3>
