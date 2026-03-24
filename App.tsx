@@ -229,7 +229,13 @@ function ExamRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   if (activeExam) {
     return (
       <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-        <ExamView exam={activeExam} isPreviewMode={!!previewMode} onShowToast={useUIStore.getState().showToast} onBack={() => { clearExam(); navigate('/exams'); }} onSubmit={async (sub) => { setExamSubmission(sub); const { calcScore } = await import('./components/ExamView'); const score = calcScore(sub, activeExam.answers); const totalQ = (activeExam.answers.mc?.length ?? 0) + (activeExam.answers.tf?.length ?? 0) * 4 + (activeExam.answers.sa?.length ?? 0); cloud.saveExamResult(activeExam, score.total, totalQ, score.correctCount); }} />
+        <ExamView exam={activeExam} isPreviewMode={!!previewMode} onShowToast={useUIStore.getState().showToast} onBack={() => { clearExam(); navigate('/exams'); }} onSubmit={async (sub) => { 
+          setExamSubmission(sub); 
+          const { calcScore } = await import('./components/ExamView'); 
+          const score = calcScore(sub, activeExam.answers); 
+          const totalQ = (activeExam.answers.mc?.length ?? 0) + (activeExam.answers.tf?.length ?? 0) + (activeExam.answers.sa?.length ?? 0); 
+          cloud.saveExamResult(activeExam, score.total, totalQ, score.correctCount, { mc: score.mc, tf: score.tf, sa: score.sa }, score.tfBreakdown); 
+        }} />
       </Suspense></ErrorBoundary>
     );
   }

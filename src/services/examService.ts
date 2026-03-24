@@ -225,7 +225,14 @@ export const deleteExam = async (examId: string, allExams: Exam[]): Promise<void
     await saveExam(allExams.filter(e => e.id !== examId));
 };
 
-export const saveExamResult = async (exam: Exam, score: number, totalQuestions: number, correctAnswers: number): Promise<void> => {
+export const saveExamResult = async (
+    exam: Exam, 
+    score: number, 
+    totalQuestions: number, 
+    correctAnswers: number,
+    partScores?: { mc: number; tf: number; sa: number },
+    tfBreakdown?: number[]
+): Promise<void> => {
     const normalizedPhone = getActivatedPhone();
     if (!normalizedPhone) return;
 
@@ -239,10 +246,17 @@ export const saveExamResult = async (exam: Exam, score: number, totalQuestions: 
 
     try {
         const { error } = await supabase.from('exam_results').insert({
-            student_phone: normalizedPhone, student_name: studentName,
-            exam_id: exam.id, exam_title: exam.title, score,
-            total_questions: totalQuestions, correct_answers: correctAnswers,
-            submitted_at: new Date().toISOString(), grade
+            student_phone: normalizedPhone, 
+            student_name: studentName,
+            exam_id: exam.id, 
+            exam_title: exam.title, 
+            score,
+            total_questions: totalQuestions, 
+            correct_answers: correctAnswers,
+            submitted_at: new Date().toISOString(), 
+            grade,
+            part_scores: partScores,
+            tf_breakdown: tfBreakdown
         });
         if (error) console.error('Lỗi Insert Supabase:', error);
     } catch (e) { console.error('Lỗi khi lưu kết quả bài thi:', e); }

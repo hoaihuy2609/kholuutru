@@ -98,6 +98,8 @@ export interface ExamResultRecord {
   correct_answers: number;
   submitted_at: string;
   grade: number;
+  part_scores?: { mc: number; tf: number; sa: number };
+  tf_breakdown?: number[];
 }
 
 export interface StudyPlanItem {

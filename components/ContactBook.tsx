@@ -30,14 +30,63 @@ const getScoreBg = (score: number) => {
     return '#FEF2F2';
 };
 
+const Pill = ({ label, score, total, breakdown }: { label: string, score?: number, total: number, breakdown?: number[] }) => {
+    if (score === undefined) return null;
+    const pct = (score / total) * 100;
+    const isFull = pct >= 99.9;
+    const isLow = pct < 50;
+
+    const bg = isFull ? '#EAF3EE' : (isLow ? '#FEF2F2' : '#FFF3E8');
+    const color = isFull ? '#448361' : (isLow ? '#E03E3E' : '#D9730D');
+    const border = isFull ? 'rgba(68,131,97,0.1)' : (isLow ? 'rgba(224,62,62,0.1)' : 'rgba(217,115,13,0.1)');
+
+    return (
+        <div className="relative group cursor-help">
+            <span 
+                className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded border leading-none transition-all hover:scale-105"
+                style={{ background: bg, color: color, borderColor: border }}
+            >
+                <span className="opacity-60">{label}:</span>
+                <span className="tabular-nums">{score}/{total}</span>
+            </span>
+            
+            {/* Contextual Tooltip for Part II */}
+            {label === 'II' && breakdown && breakdown.length > 0 && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 pointer-events-none">
+                    <div className="bg-[#1A1A1A] text-white text-[11px] px-3 py-2 rounded-lg shadow-xl border border-white/10 min-w-[140px]">
+                        <div className="font-bold border-bottom border-white/10 pb-1 mb-1.5" style={{ color: '#AEACA8' }}>PHẦN II (ĐÚNG/SAI)</div>
+                        <div className="space-y-1">
+                            {breakdown.map((count, i) => (
+                                <div key={i} className="flex justify-between items-center tabular-nums">
+                                    <span className="opacity-70">Câu {i + 1}:</span>
+                                    <span className="font-medium">{count}/4 ý đúng</span>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-1.5 pt-1.5 flex justify-between border-t border-white/10 font-bold" style={{ color: '#6B7CDB' }}>
+                            <span>Tổng:</span>
+                            <span>{score} / {total}đ</span>
+                        </div>
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#1A1A1A] rotate-45 border-r border-b border-white/10" />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const HistoryRow = React.memo(({ record, isLast, isAdmin }: { record: ExamResultRecord, isLast: boolean, isAdmin: boolean }) => {
     const scoreColor = getScoreColor(record.score);
     const scoreBg = getScoreBg(record.score);
+    
+    // Fallback UI for old records missing part breakdown
+    const hasParts = record.part_scores && record.part_scores.mc !== undefined;
+
     return (
         <div
-            className="md:grid items-center px-4 py-3 transition-colors flex flex-col md:flex-row gap-2 md:gap-0"
+            className="md:grid items-center px-4 py-3.5 transition-colors flex flex-col md:flex-row gap-2 md:gap-0"
             style={{
-                gridTemplateColumns: isAdmin ? '1fr 150px 110px 80px' : '1fr 110px 80px',
+                gridTemplateColumns: isAdmin ? '1fr 140px 240px 80px' : '1fr 240px 80px', // Widened result column
                 background: '#FFFFFF',
                 borderBottom: isLast ? 'none' : '1px solid #F1F0EC',
             }}
@@ -45,11 +94,11 @@ const HistoryRow = React.memo(({ record, isLast, isAdmin }: { record: ExamResult
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FFFFFF'}
         >
             {/* Exam title + date */}
-            <div className="min-w-0">
-                <div className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }}>
+            <div className="min-w-0 pr-4">
+                <div className="text-sm font-semibold truncate" style={{ color: '#1A1A1A' }}>
                     {record.exam_title}
                 </div>
-                <div className="flex items-center gap-1 mt-0.5 text-xs" style={{ color: '#AEACA8' }}>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px]" style={{ color: '#AEACA8' }}>
                     <Calendar className="w-3 h-3" />
                     {formatDate(record.submitted_at)}
                 </div>
@@ -57,24 +106,32 @@ const HistoryRow = React.memo(({ record, isLast, isAdmin }: { record: ExamResult
 
             {/* Student (admin only) */}
             {isAdmin && (
-                <div className="text-xs" style={{ color: '#787774' }}>
-                    <div className="font-medium truncate">{record.student_name}</div>
-                    <div style={{ color: '#AEACA8' }}>{record.student_phone}</div>
+                <div className="text-[11px]" style={{ color: '#787774' }}>
+                    <div className="font-medium truncate max-w-[120px]">{record.student_name}</div>
+                    <div className="opacity-70 font-mono tracking-tight">{record.student_phone}</div>
                 </div>
             )}
 
-            {/* Correct answers */}
-            <div className="text-center">
-                <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: '#F1F0EC', color: '#57564F' }}>
-                    <CheckCircle className="w-3 h-3" style={{ color: '#448361' }} />
-                    {record.correct_answers}/{record.total_questions}
-                </span>
+            {/* Detailed Result Breakdown */}
+            <div className="flex items-center gap-1.5 justify-center md:justify-start">
+                {!hasParts ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-md" style={{ background: '#F1F0EC', color: '#57564F' }}>
+                        <CheckCircle className="w-3.5 h-3.5" style={{ color: '#448361' }} />
+                        {record.correct_answers}/{record.total_questions}
+                    </span>
+                ) : (
+                    <>
+                        <Pill label="I" score={record.part_scores!.mc} total={4.5} />
+                        <Pill label="II" score={record.part_scores!.tf} total={4.0} breakdown={record.tf_breakdown} />
+                        <Pill label="III" score={record.part_scores!.sa} total={1.5} />
+                    </>
+                )}
             </div>
 
             {/* Score */}
             <div className="text-right">
                 <span
-                    className="inline-block text-sm font-bold tabular-nums px-2 py-0.5 rounded-md"
+                    className="inline-block text-[15px] font-black tabular-nums px-2.5 py-1 rounded-lg shadow-sm ring-1 ring-inset ring-black/5"
                     style={{ color: scoreColor, background: scoreBg }}
                 >
                     {record.score.toFixed(2)}

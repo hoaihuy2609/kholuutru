@@ -28,10 +28,12 @@ export const calcScore = (submission: ExamSubmission, answers: Exam['answers']) 
 
     // Phần II: đúng/sai
     let tfScore = 0;
+    const tfBreakdown: number[] = [];
     const tfKeys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
     submission.tf.forEach((stuTF, qi) => {
         const corTF = answers.tf[qi];
         const correctItemsCount = tfKeys.filter(k => stuTF[k] && corTF[k] && stuTF[k] === corTF[k]).length;
+        tfBreakdown.push(correctItemsCount);
         if (correctItemsCount === 1) tfScore += 0.1;
         else if (correctItemsCount === 2) tfScore += 0.25;
         else if (correctItemsCount === 3) tfScore += 0.5;
@@ -57,6 +59,7 @@ export const calcScore = (submission: ExamSubmission, answers: Exam['answers']) 
         sa: Math.round(saScore * 100) / 100,
         total: Math.round((mcScore + tfScore + saScore) * 100) / 100,
         correctCount: correctCount,
+        tfBreakdown,
     };
 };
 
