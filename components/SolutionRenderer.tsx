@@ -277,7 +277,7 @@ function StatementRenderer({ st }: { st: Statement }) {
             <div className="text-[10px] font-mono font-bold text-[#AEACA8] uppercase tracking-[0.15em] mb-3">
               Chứng minh
             </div>
-            {st.steps.map((s, i) => <StepRenderer key={i} step={s} index={i} />)}
+            {st.steps.map((s, i) => (s.title || s.text || s.formula || s.formula2) ? <StepRenderer key={i} step={s} index={i} /> : null)}
           </div>
         </div>
       )}

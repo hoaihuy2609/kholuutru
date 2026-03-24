@@ -15,8 +15,13 @@ interface BlogDetailProps {
     onReadRelated?: (blog: BlogPost) => void;
 }
 
-const estimateReadTime = (content: string): number =>
-    Math.max(1, Math.ceil(content.trim().split(/\s+/).length / 200));
+const estimateReadTime = (content: string): number => {
+    try {
+        const p = JSON.parse(content);
+        if (p.type === 'physics_solution') return 0; // JSON blob — không tính thời gian đọc
+    } catch (_) {}
+    return Math.max(1, Math.ceil(content.trim().split(/\s+/).length / 200));
+};
 
 // Trích xuất heading từ markdown để tạo mục lục
 interface Heading { id: string; text: string; level: number }
@@ -123,13 +128,13 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
     const makeId = (text: string) =>
         String(text).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-    let parsedSolution = null;
-    try {
-        const parsed = JSON.parse(blog.content);
-        if (parsed.type === 'physics_solution') {
-            parsedSolution = parsed;
-        }
-    } catch (e) { }
+    const parsedSolution = useMemo(() => {
+        try {
+            const parsed = JSON.parse(blog.content);
+            if (parsed.type === 'physics_solution') return parsed;
+        } catch (e) { }
+        return null;
+    }, [blog.content]);
 
     if (parsedSolution) {
         return (
@@ -201,10 +206,12 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
                         <Calendar style={{ width: '13px', height: '13px' }} />
                         {new Date(blog.created_at).toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' })}
                     </span>
+                    {readTime > 0 && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: '#AEACA8' }}>
                         <Clock style={{ width: '13px', height: '13px' }} />
                         {readTime} phút đọc
                     </span>
+                    )}
                     {headings.length > 2 && (
                         <button
                             onClick={() => setShowToc(!showToc)}
