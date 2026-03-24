@@ -52,7 +52,10 @@ const Pill = ({ label, score, total, breakdown }: { label: string, score?: numbe
             
             {/* Contextual Tooltip for Part II (Premium Light Theme) */}
             {label === 'II' && breakdown && breakdown.length > 0 && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 hidden group-hover:block z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 hidden group-hover:block z-50 animate-in fade-in zoom-in-95 duration-200">
+                    {/* Invisible Bridge to prevent closing on gap hover */}
+                    <div className="absolute -top-3 left-0 right-0 h-3" />
+                    
                     <div className="bg-white text-[#1A1A1A] text-[11px] rounded-2xl shadow-[0_12px_48px_rgba(0,0,0,0.15)] border border-[#E9E9E7] overflow-hidden min-w-[170px]">
                         {/* Header matching user's reference image style */}
                         <div className="bg-[#F7F6F3] pl-3 pr-4 py-2.5 flex items-center justify-between border-l-4 border-[#6B7CDB]">
