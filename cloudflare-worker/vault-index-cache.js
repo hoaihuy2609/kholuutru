@@ -4,6 +4,7 @@
 //   GET  /vault-index?grade=0        → Danh sách Đề thi
 //   GET  /vault-index?grade=10|11|12 → Index Bài giảng
 //   GET  /blog-index                 → Index Tin tức / Blog
+//   GET  /notifications?grade=0|10|11|12 → Thông báo theo khối
 //   POST /purge                      → Xóa cache thủ công (Admin)
 // =========================================================
 
@@ -140,13 +141,36 @@ export default {
     }
 
     // ============================================================
-    // Route 3: POST /purge
+    // Route 3: GET /notifications?grade=0|10|11|12
+    //   grade=0       → Thông báo cho mục Đề thi
+    //   grade=10|11|12 → Thông báo theo khối lớp
+    //   TTL: 30s — thông báo cần fresh hơn blog (cần reactivity cao)
+    //   limit=20 — chỉ lấy 20 thông báo mới nhất, tránh data phình to
+    // ============================================================
+    if (url.pathname === "/notifications" && request.method === "GET") {
+      const grade = url.searchParams.get("grade") || "0";
+      if (!["0", "10", "11", "12"].includes(grade)) {
+        return new Response(JSON.stringify({ error: "Invalid grade" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+      return handleCache(
+        `notifications-grade-${grade}`,
+        `notifications?select=*&grade=eq.${grade}&order=created_at.desc&limit=20`,
+        30,
+        origin
+      );
+    }
+
+    // ============================================================
     //   Xóa cache thủ công sau khi Admin đăng nội dung mới
     //   Body (JSON):
-    //     { "target": "vault-index", "grade": 0 }  → xóa đề thi
-    //     { "target": "vault-index", "grade": 10 } → xóa bài giảng lớp 10
-    //     { "target": "blog-index" }               → xóa blog
-    //     { "target": "all" }                      → xóa toàn bộ
+    //     { "target": "vault-index", "grade": 0 }       → xóa đề thi
+    //     { "target": "vault-index", "grade": 10 }      → xóa bài giảng lớp 10
+    //     { "target": "blog-index" }                    → xóa blog
+    //     { "target": "notifications", "grade": 12 }    → xóa thông báo khối 12
+    //     { "target": "all" }                           → xóa toàn bộ
     // ============================================================
     if (url.pathname === "/purge" && request.method === "POST") {
       const auth = request.headers.get("x-purge-secret");
@@ -173,6 +197,11 @@ export default {
         keysToDelete = grade !== undefined
           ? [`vault-index-grade-${grade}`]
           : ["vault-index-grade-0", "vault-index-grade-10", "vault-index-grade-11", "vault-index-grade-12"];
+      } else if (target === "notifications") {
+        const grade = body.grade;
+        keysToDelete = grade !== undefined
+          ? [`notifications-grade-${grade}`]
+          : ["notifications-grade-0", "notifications-grade-10", "notifications-grade-11", "notifications-grade-12"];
       } else {
         // "all" → xóa toàn bộ
         keysToDelete = [
@@ -181,6 +210,10 @@ export default {
           "vault-index-grade-10",
           "vault-index-grade-11",
           "vault-index-grade-12",
+          "notifications-grade-0",
+          "notifications-grade-10",
+          "notifications-grade-11",
+          "notifications-grade-12",
         ];
       }
 

@@ -2,21 +2,67 @@ import { supabase } from '../lib/supabase';
 import { NotificationItem } from '../../types';
 import { getActivatedPhone } from '../utils/phone';
 
+// ── Cloudflare Worker URL (dùng chung Worker API Gateway) ──
+const VAULT_WORKER_URL = import.meta.env.VITE_VAULT_WORKER_URL || '';
+const PURGE_SECRET = import.meta.env.VITE_VAULT_PURGE_SECRET || 'physivault-purge-2025';
+
+// In-memory inflight lock theo từng grade
+const _notifInflight = new Map<number, Promise<NotificationItem[]>>();
+
+async function getNotificationsFromWorker(grade: number): Promise<NotificationItem[] | null> {
+    if (!VAULT_WORKER_URL) return null;
+    try {
+        const res = await fetch(`${VAULT_WORKER_URL}/notifications?grade=${grade}`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        return Array.isArray(data) ? data as NotificationItem[] : null;
+    } catch { return null; }
+}
+
+async function purgeNotificationsCache(grade: number): Promise<void> {
+    if (!VAULT_WORKER_URL) return;
+    try {
+        await fetch(`${VAULT_WORKER_URL}/purge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-purge-secret': PURGE_SECRET },
+            body: JSON.stringify({ target: 'notifications', grade }),
+        });
+    } catch { /* purge lỗi không ảnh hưởng luồng chính */ }
+}
+
 // ── Notifications ──
 
-// ✅ PERF: Cache thông báo 10 phút — giảm tải SELECT notifications
+// ✅ PERF: Client cache 10 phút + Cloudflare Worker edge cache 30s
 const _notifCache: Record<number, { data: NotificationItem[]; ts: number }> = {};
 export const getNotifications = async (grade: number): Promise<NotificationItem[]> => {
+    // 1️⃣ Client-side cache 10 phút
     const cached = _notifCache[grade];
     if (cached && Date.now() - cached.ts < 10 * 60 * 1000) return cached.data;
-    try {
-        const { data, error } = await supabase.from('notifications').select('*')
-            .eq('grade', grade).order('created_at', { ascending: false });
-        if (error) throw error;
-        const result = (data || []) as NotificationItem[];
-        _notifCache[grade] = { data: result, ts: Date.now() };
-        return result;
-    } catch (e) { console.error('Lỗi tải thông báo:', e); return []; }
+
+    // 2️⃣ Inflight lock — tránh nhiều tab cùng bắn vào Worker
+    if (_notifInflight.has(grade)) return _notifInflight.get(grade)!;
+
+    const p = (async (): Promise<NotificationItem[]> => {
+        // 3️⃣ Ưu tiên: Cloudflare Worker Cache (30s TTL)
+        const workerData = await getNotificationsFromWorker(grade);
+        if (workerData) {
+            _notifCache[grade] = { data: workerData, ts: Date.now() };
+            return workerData;
+        }
+        // 4️⃣ Fallback: hỏi Supabase trực tiếp
+        try {
+            const { data, error } = await supabase.from('notifications').select('*')
+                .eq('grade', grade).order('created_at', { ascending: false }).limit(20);
+            if (error) throw error;
+            const result = (data || []) as NotificationItem[];
+            _notifCache[grade] = { data: result, ts: Date.now() };
+            return result;
+        } catch (e) { console.error('Lỗi tải thông báo:', e); return []; }
+    })();
+
+    _notifInflight.set(grade, p);
+    p.finally(() => _notifInflight.delete(grade));
+    return p;
 };
 
 // ✅ PERF: Cache danh sách đã fetch 10 phút
@@ -36,20 +82,26 @@ export const markNotificationFetched = async (notificationId: string): Promise<b
     } catch (e) { console.error('Lỗi đánh dấu fetch:', e); return false; }
 };
 
-export const deleteNotification = async (notificationId: string): Promise<boolean> => {
+export const deleteNotification = async (notificationId: string, grade?: number): Promise<boolean> => {
     try {
-        // ✅ Admin Ops Fix: dùng RPC SECURITY DEFINER
         const { error } = await supabase.rpc('admin_delete_notification', { p_id: notificationId });
         if (error) throw error;
+        // Purge cache sau khi xóa
+        if (grade !== undefined) {
+            _notifCache[grade] = { data: [], ts: 0 };
+            purgeNotificationsCache(grade).catch(() => {});
+        }
         return true;
     } catch (e) { console.error('Lỗi xóa thông báo:', e); return false; }
 };
 
 export const createCustomNotification = async (message: string, grade: number): Promise<boolean> => {
     try {
-        // ✅ Admin Ops Fix: dùng RPC SECURITY DEFINER
         const { error } = await supabase.rpc('admin_create_custom_notification', { p_message: message, p_grade: grade });
         if (error) throw error;
+        // Purge cache để học sinh thấy thông báo mới ngay lập tức
+        _notifCache[grade] = { data: [], ts: 0 };
+        purgeNotificationsCache(grade).catch(() => {});
         return true;
     } catch (e) { console.error('Lỗi tạo thông báo:', e); return false; }
 };
