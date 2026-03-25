@@ -241,7 +241,7 @@ export const saveExamResult = async (
     const normalizedPhone = getActivatedPhone();
     if (!normalizedPhone) return;
 
-    // ✅ PERF: Đọc từ localStorage thay vì SELECT Supabase — giảm 50% queries khi nộp bài
+    // ✅ PERF: Đọc từ localStorage — không tốn thêm query Supabase khi nộp bài
     const studentName = localStorage.getItem('pv_student_name') || 'Học sinh';
     const grade = parseInt(localStorage.getItem('physivault_grade') || '0', 10) || exam.grade;
 
@@ -259,14 +259,24 @@ export const saveExamResult = async (
         tf_breakdown: tfBreakdown
     };
 
-    // ✅ PERF: Retry 3 lần + save localStorage nếu thất bại → KHÔNG BAO GIỜ MẤT ĐIỂM
-    for (let attempt = 0; attempt < 3; attempt++) {
+    // ✅ PERF: Exponential backoff retry (5 lần) — chịu tải tốt hơn khi server bận
+    const MAX_RETRIES = 5;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
             const { error } = await supabase.from('exam_results').insert(payload);
-            if (!error) { _flushPendingResults(); return; }
+            if (!error) {
+                _flushPendingResults();
+                return;
+            }
             console.error(`[SaveResult] Lần ${attempt + 1} lỗi:`, error);
-        } catch (e) { console.error(`[SaveResult] Lần ${attempt + 1} mạng lỗi:`, e); }
-        if (attempt < 2) await new Promise(r => setTimeout(r, (attempt + 1) * 2000));
+        } catch (e) {
+            console.error(`[SaveResult] Lần ${attempt + 1} mạng lỗi:`, e);
+        }
+        if (attempt < MAX_RETRIES - 1) {
+            // Exponential backoff: 1s, 2s, 4s, 8s — có jitter để tránh thundering herd
+            const delay = Math.min(1000 * Math.pow(2, attempt), 8000) + Math.random() * 500;
+            await new Promise(r => setTimeout(r, delay));
+        }
     }
     // Tất cả retry đều thất bại — lưu vào localStorage để gửi lại sau
     const queue: any[] = JSON.parse(localStorage.getItem('pv_pending_results') || '[]');
@@ -299,7 +309,13 @@ export const getExamHistory = async (phoneFilter?: string) => {
     }
     try {
         let query = supabase.from('exam_results').select('*').order('submitted_at', { ascending: false });
-        if (normalizedPhone) query = query.eq('student_phone', normalizedPhone);
+        if (normalizedPhone) {
+            // Học sinh: chỉ lấy bài của mình, giới hạn 200 bài gần nhất
+            query = query.eq('student_phone', normalizedPhone).limit(200);
+        } else {
+            // Admin StatsPanel: giới hạn 3000 bài gần nhất thay vì full scan
+            query = query.limit(3000);
+        }
         const { data, error } = await query;
         if (error) throw error;
         const result = data || [];
@@ -308,34 +324,31 @@ export const getExamHistory = async (phoneFilter?: string) => {
     } catch (e) { console.error('Lỗi khi lấy lịch sử làm bài:', e); return []; }
 };
 
-// ✅ PERF: Cache bảng xếp hạng 5 phút — query nặng nhất hệ thống
+// ✅ PERF: Cache bảng xếp hạng 5 phút
+// Đọc từ leaderboard_cache (pre-calculated) thay vì full scan exam_results
 let _leaderboardCache: { data: any; ts: number } | null = null;
 export const getLeaderboard = async (minExams: number = 1) => {
     if (_leaderboardCache && Date.now() - _leaderboardCache.ts < 5 * 60 * 1000) return _leaderboardCache.data;
     try {
-        const { data, error } = await supabase.from('exam_results')
-            .select('student_phone, student_name, score, grade, submitted_at')
-            .order('submitted_at', { ascending: false })
-            .limit(2000); // ✅ PERF: Giới hạn 2000 bài gần nhất — đủ tính Top 5 mỗi lớp, tránh full table scan
+        const { data, error } = await supabase
+            .from('leaderboard_cache')
+            .select('grade, student_phone, student_name, avg_score, exam_count, best_score, recent_scores')
+            .gte('exam_count', minExams)
+            .order('avg_score', { ascending: false });
+
         if (error) throw error;
         if (!data || data.length === 0) return [[], [], []];
 
-        const map: Record<string, { name: string; phone: string; grade: number; scores: number[] }> = {};
-        for (const r of data) {
-            const key = `${r.grade}__${r.student_phone}`;
-            if (!map[key]) map[key] = { name: r.student_name || 'Ẩn danh', phone: r.student_phone, grade: r.grade, scores: [] };
-            map[key].scores.push(r.score);
-        }
-
         const byGrade: Record<number, any[]> = { 10: [], 11: [], 12: [] };
-        for (const entry of Object.values(map)) {
-            if (entry.scores.length < minExams) continue;
-            const avg = entry.scores.reduce((a, b) => a + b, 0) / entry.scores.length;
-            if (byGrade[entry.grade]) {
-                byGrade[entry.grade].push({
-                    name: entry.name, phone: entry.phone, avgScore: avg,
-                    examCount: entry.scores.length, recentScores: entry.scores.slice(-6),
-                    bestScore: Math.max(...entry.scores)
+        for (const row of data) {
+            if (byGrade[row.grade]) {
+                byGrade[row.grade].push({
+                    name: row.student_name || 'Ẩn danh',
+                    phone: row.student_phone,
+                    avgScore: parseFloat(row.avg_score),
+                    examCount: row.exam_count,
+                    bestScore: parseFloat(row.best_score),
+                    recentScores: Array.isArray(row.recent_scores) ? row.recent_scores.slice(-6) : [],
                 });
             }
         }
