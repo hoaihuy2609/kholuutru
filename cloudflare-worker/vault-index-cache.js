@@ -7,14 +7,17 @@
 //   GET  /notifications?grade=0|10|11|12 → Thông báo theo khối
 //   GET  /schedule?grade=0|10|11|12  → Thời khóa biểu theo khối
 //   POST /purge                      → Xóa cache thủ công (Admin)
+//   POST /proxy/:method              → Proxy cho Telegram Bot API
+//   GET  /getFile/:fileId            → Proxy tải file Telegram
 // =========================================================
 
 const SUPABASE_URL = "https://ndhcwrczwbehyznnxzou.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kaGN3cmN6d2JlaHl6bm54em91Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzk0OTEsImV4cCI6MjA4NzY1NTQ5MX0.-LAbz_xMZdPlHlvyaYrotonX_sKoTLwNMEpHss5fun4";
-const PURGE_SECRET = "physivault-purge-2025"; // ĐỔI thành chuỗi bí mật của bạn
+const PURGE_SECRET = "physivault-purge-2025"; 
 
 const ALLOWED_ORIGINS = [
   "https://physivault.vercel.app",
+  "https://kholuutru.vercel.app", // Domain mới trong screenshot
   "http://localhost:5173",
   "http://localhost:3000",
 ];
@@ -25,20 +28,16 @@ function corsHeaders(origin) {
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, x-purge-secret",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, x-purge-secret", // Thêm Authorization
+    "Access-Control-Expose-Headers": "x-cache, x-cache-key",
   };
 }
 
 // ─── Helper: Gọi Supabase rồi cache kết quả ────────────────
-// cacheKey  → chuỗi duy nhất để định danh cache entry
-// supaPath  → đường dẫn REST Supabase (sau base URL)
-// ttl       → thời gian giữ cache (giây)
-// origin    → Origin của request để gắn CORS
 async function handleCache(cacheKey, supaPath, ttl, origin) {
   const cache = caches.default;
   const cacheReq = new Request(`https://physivault-proxy.hoaihuy2609.workers.dev/__cache__/${cacheKey}`);
 
-  // Cache HIT → trả ngay
   const hit = await cache.match(cacheReq);
   if (hit) {
     const body = await hit.text();
@@ -52,7 +51,6 @@ async function handleCache(cacheKey, supaPath, ttl, origin) {
     });
   }
 
-  // Cache MISS → truy vấn Supabase
   let supaData;
   try {
     const supaRes = await fetch(`${SUPABASE_URL}/rest/v1/${supaPath}`, {
@@ -73,7 +71,6 @@ async function handleCache(cacheKey, supaPath, ttl, origin) {
 
   const body = JSON.stringify(supaData);
 
-  // Lưu vào Cloudflare Cache
   await cache.put(
     cacheReq,
     new Response(body, {
@@ -100,17 +97,11 @@ export default {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin") || "";
 
-    // CORS Preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
 
-    // ============================================================
-    // Route 1: GET /vault-index?grade=0|10|11|12
-    //   grade=0       → Đề thi (vault_index)
-    //   grade=10|11|12 → Bài giảng (vault_index)
-    // TTL: 60s (đề thi cập nhật thường xuyên hơn blog)
-    // ============================================================
+    // Route 1: GET /vault-index
     if (url.pathname === "/vault-index" && request.method === "GET") {
       const grade = url.searchParams.get("grade") || "0";
       if (!["0", "10", "11", "12"].includes(grade)) {
@@ -127,11 +118,7 @@ export default {
       );
     }
 
-    // ============================================================
     // Route 2: GET /blog-index
-    //   Không cần grade (blog chung cho toàn trường)
-    //   TTL: 300s (5 phút) — blog ít thay đổi hơn
-    // ============================================================
     if (url.pathname === "/blog-index" && request.method === "GET") {
       return handleCache(
         "blog-index",
@@ -141,13 +128,7 @@ export default {
       );
     }
 
-    // ============================================================
-    // Route 3: GET /notifications?grade=0|10|11|12
-    //   grade=0       → Thông báo cho mục Đề thi
-    //   grade=10|11|12 → Thông báo theo khối lớp
-    //   TTL: 30s — thông báo cần fresh hơn blog (cần reactivity cao)
-    //   limit=20 — chỉ lấy 20 thông báo mới nhất, tránh data phình to
-    // ============================================================
+    // Route 3: GET /notifications
     if (url.pathname === "/notifications" && request.method === "GET") {
       const grade = url.searchParams.get("grade") || "0";
       if (!["0", "10", "11", "12"].includes(grade)) {
@@ -164,12 +145,7 @@ export default {
       );
     }
 
-    // ============================================================
-    // Route 4: GET /schedule?grade=0|10|11|12
-    //   Lấy TOÀN BỘ lịch sắp tới theo khối (không lọc ngày)
-    //   → Học sinh có thể lướt xem lịch cả tuần / cả tháng
-    //   TTL: 300s (5 phút) — lịch ít thay đổi, query nặng (ORDER BY 2 cột)
-    // ============================================================
+    // Route 4: GET /schedule
     if (url.pathname === "/schedule" && request.method === "GET") {
       const grade = url.searchParams.get("grade") || "0";
       if (!["0", "10", "11", "12"].includes(grade)) {
@@ -186,20 +162,69 @@ export default {
       );
     }
 
+    // Route 5: PROXY TELEGRAM (Proxy cho bot)
+    if (url.pathname.startsWith("/proxy/")) {
+      const method = url.pathname.replace("/proxy/", "");
+      const tgUrl = `https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/${method}${url.search}`;
+      
+      const newRequest = new Request(tgUrl, {
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+      });
 
-    //   Body (JSON):
-    //     { "target": "vault-index", "grade": 0 }       → xóa đề thi
-    //     { "target": "vault-index", "grade": 10 }      → xóa bài giảng lớp 10
-    //     { "target": "blog-index" }                    → xóa blog
-    //     { "target": "notifications", "grade": 12 }    → xóa thông báo khối 12
-    //     { "target": "all" }                           → xóa toàn bộ
-    // ============================================================
+      try {
+        const response = await fetch(newRequest);
+        const newResponse = new Response(response.body, response);
+        // Gắn lại CORS cho domain frontend
+        Object.entries(corsHeaders(origin)).forEach(([k, v]) => newResponse.headers.set(k, v));
+        return newResponse;
+      } catch (err) {
+        return new Response(JSON.stringify({ error: "Telegram Proxy error", detail: err.message }), {
+          status: 502,
+          headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+    }
+
+    // Route 6: TẢI FILE TELEGRAM (Proxy tải file)
+    if (url.pathname.startsWith("/getFile/") && request.method === "GET") {
+      const fileId = url.pathname.split("/").pop();
+      try {
+        // Bước 1: Lấy file path từ Telegram
+        const getFileRes = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/getFile?file_id=${fileId}`);
+        const getFileData = await getFileRes.json();
+        
+        if (!getFileData.ok) {
+          return new Response(JSON.stringify({ error: "Telegram GetFile failed", detail: getFileData }), {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+          });
+        }
+        
+        const filePath = getFileData.result.file_path;
+        // Bước 2: Tải file thật từ server Telegram
+        const fileRes = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_TOKEN}/${filePath}`);
+        
+        const response = new Response(fileRes.body, fileRes);
+        Object.entries(corsHeaders(origin)).forEach(([k, v]) => response.headers.set(k, v));
+        response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
+        return response;
+      } catch (err) {
+        return new Response(JSON.stringify({ error: "File download error", detail: err.message }), {
+          status: 502,
+          headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+    }
+
+    // Route: PURGE
     if (url.pathname === "/purge" && request.method === "POST") {
       const auth = request.headers.get("x-purge-secret");
       if (auth !== PURGE_SECRET) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
         });
       }
 
@@ -210,7 +235,6 @@ export default {
       const cache = caches.default;
       const BASE = "https://physivault-proxy.hoaihuy2609.workers.dev/__cache__";
 
-      // Xây danh sách cache key cần xóa
       let keysToDelete = [];
       if (target === "blog-index") {
         keysToDelete = ["blog-index"];
@@ -230,21 +254,11 @@ export default {
           ? [`schedule-grade-${grade}`]
           : ["schedule-grade-0", "schedule-grade-10", "schedule-grade-11", "schedule-grade-12"];
       } else {
-        // "all" → xóa toàn bộ
         keysToDelete = [
           "blog-index",
-          "vault-index-grade-0",
-          "vault-index-grade-10",
-          "vault-index-grade-11",
-          "vault-index-grade-12",
-          "notifications-grade-0",
-          "notifications-grade-10",
-          "notifications-grade-11",
-          "notifications-grade-12",
-          "schedule-grade-0",
-          "schedule-grade-10",
-          "schedule-grade-11",
-          "schedule-grade-12",
+          "vault-index-grade-0", "vault-index-grade-10", "vault-index-grade-11", "vault-index-grade-12",
+          "notifications-grade-0", "notifications-grade-10", "notifications-grade-11", "notifications-grade-12",
+          "schedule-grade-0", "schedule-grade-10", "schedule-grade-11", "schedule-grade-12",
         ];
       }
 
@@ -263,7 +277,8 @@ export default {
 
     return new Response(JSON.stringify({ error: "Not found" }), {
       status: 404,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
     });
   },
 };
+
