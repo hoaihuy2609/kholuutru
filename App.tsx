@@ -12,6 +12,7 @@ import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Home, Bell, FlaskC
 import KickedScreen from './components/auth/KickedScreen';
 import { useUIStore } from './src/stores/useUIStore';
 import { useDataStore } from './src/stores/useDataStore';
+import { useExamStore, useBlogStore } from './src/stores/useContentStore';
 import { useShallow } from 'zustand/react/shallow';
 import { syncPendingOnStartup } from './src/services/examService';
 
