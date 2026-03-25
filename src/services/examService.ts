@@ -321,33 +321,44 @@ export const saveExamResult = async (
     ]));
 
     // Lá chắn 2: ghi Supabase ngầm — KHÔNG block UI, hàm trả về ngay
-    _syncToSupabase(payload);
+    _syncWithRetry(payload);
 };
 
-// Ghi Supabase ngầm với Exponential Backoff — fire-and-forget
+// FIX 1: Ghi qua RPC (SECURITY DEFINER) — bỏ qua RLS overhead, ~300 req/s
 const _syncToSupabase = async (payload: any): Promise<void> => {
-    const MAX_RETRIES = 5;
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-        try {
-            const { error } = await supabase.from('exam_results').insert(payload);
-            if (!error) {
-                // ✅ Thành công → đánh dấu synced + vớt nốt hàng chờ cũ
-                _markSynced(payload.exam_id);
-                _flushPendingResults();
+    const { error } = await supabase.rpc('submit_exam_result', {
+        p_student_phone:   payload.student_phone,
+        p_exam_id:         payload.exam_id,
+        p_exam_title:      payload.exam_title,
+        p_grade:           payload.grade,
+        p_score:           payload.score,
+        p_student_name:    payload.student_name,
+        p_correct_answers: payload.correct_answers,
+        p_total_questions: payload.total_questions,
+        p_part_scores:     payload.part_scores ?? null,
+        p_tf_breakdown:    payload.tf_breakdown ?? null,
+        p_submitted_at:    payload.submitted_at,
+    });
+    if (error) throw new Error(error.message);
+};
+
+// FIX 3: Wide Jitter Retry — 2000 máy rải đều 5–45s, không bao giờ gom "bầy đàn"
+const _syncWithRetry = (payload: any, attempt = 0): void => {
+    _syncToSupabase(payload)
+        .then(() => {
+            _markSynced(payload.exam_id);
+            _flushPendingResults();
+        })
+        .catch(() => {
+            if (attempt >= 4) {
+                // Hết 5 lần → giữ _synced: false, syncPendingOnStartup vớt sau
+                console.warn(`[SaveResult] Sync thất bại sau 5 lần, sẽ thử lại lần sau`);
                 return;
             }
-            console.error(`[SaveResult] Lần ${attempt + 1} lỗi:`, error);
-        } catch (e) {
-            console.error(`[SaveResult] Lần ${attempt + 1} mạng lỗi:`, e);
-        }
-        if (attempt < MAX_RETRIES - 1) {
-            const delay = Math.min(1000 * Math.pow(2, attempt), 8000) + Math.random() * 500;
-            await new Promise(r => setTimeout(r, delay));
-        }
-    }
-    // Tất cả retry thất bại → giữ nguyên localStorage (synced: false)
-    // syncPendingOnStartup() sẽ vớt lại khi học sinh mở app lần sau
-    console.warn('[SaveResult] Sync thất bại, sẽ thử lại lần sau');
+            // Jitter rộng 5s–45s: 2000 máy rải đều, không bao giờ gom lại 1 tích tắc
+            const jitter = Math.random() * 40_000 + 5_000;
+            setTimeout(() => _syncWithRetry(payload, attempt + 1), jitter);
+        });
 };
 
 // Đánh dấu bài đã lên DB thành công
@@ -365,22 +376,22 @@ export const syncPendingOnStartup = async (): Promise<void> => {
     if (unsyncedQueue.length === 0) return;
     for (const p of unsyncedQueue) {
         try {
-            const { error } = await supabase.from('exam_results').insert(p);
-            if (!error) _markSynced(p.exam_id);
-            await new Promise(r => setTimeout(r, 200)); // Không bắn cùng lúc
+            await _syncToSupabase(p);
+            _markSynced(p.exam_id);
+            await new Promise(r => setTimeout(r, 300)); // Không bắn cùng lúc
         } catch { break; } // Mạng vẫn lỗi → dừng, thử lần sau
     }
 };
 
-// Background flush: gửi lại các kết quả bị lỗi trước đó (API cũ, giữ tương thích)
-const _flushPendingResults = async () => {
+// Background flush: vớt hàng đợi sau khi 1 bài thành công
+const _flushPendingResults = async (): Promise<void> => {
     const queue: any[] = JSON.parse(localStorage.getItem('pv_pending_results') || '[]');
     const unsyncedQueue = queue.filter(p => !p._synced);
     if (unsyncedQueue.length === 0) return;
     for (const p of unsyncedQueue) {
         try {
-            const { error } = await supabase.from('exam_results').insert(p);
-            if (!error) _markSynced(p.exam_id);
+            await _syncToSupabase(p);
+            _markSynced(p.exam_id);
         } catch { /* không break, cố gắng hết queue */ }
     }
 };
