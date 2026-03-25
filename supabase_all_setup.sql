@@ -1,8 +1,21 @@
--- =====================================================
--- PhysiVault: Row Level Security (RLS) Policies
--- ⚠️  CHÚ Ý: Chạy file này trong Supabase SQL Editor
---      Dashboard → SQL Editor → New Query
--- =====================================================
+-- ═══════════════════════════════════════════════════════════════════════════
+-- PHYSIVAULT — SUPABASE COMPLETE SETUP SCRIPT
+-- Gom toàn bộ SQL cấu hình vào 1 file duy nhất để tham khảo sau này
+-- Chạy trong Supabase Dashboard → SQL Editor → New Query → Run
+--
+-- Thứ tự chạy khuyến nghị:
+--   1. RLS Policies & Core RPCs    (Bước 0 → 16)
+--   2. Exam Result RPC & Index     (submit_exam_result)
+--   3. Exam Breakdown Columns      (part_scores, tf_breakdown)
+--   4. Admin RPCs Only             (admin_upsert_student v2...)
+--   5. Leaderboard Cache Setup     (leaderboard_cache + refresh_leaderboard)
+--   6. Reload Schema               (NOTIFY pgrst)
+-- ═══════════════════════════════════════════════════════════════════════════
+
+
+-- ╔═══════════════════════════════════════════════════════════════════════╗
+-- ║  PHẦN 1: RLS POLICIES & CORE RPCs  (từ supabase_rls_policies.sql)   ║
+-- ╚═══════════════════════════════════════════════════════════════════════╝
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- BƯỚC 0: Dọn sạch policies cũ (chạy nếu đã init rồi)
@@ -176,11 +189,6 @@ LANGUAGE plpgsql
 SECURITY DEFINER   -- chạy với quyền owner (vượt RLS), không phải anon
 AS $$
 BEGIN
-    -- Chỉ update nếu:
-    --   1. SĐT tồn tại trong DB
-    --   2. Tài khoản đang kích hoạt (is_active = true)
-    --   3. machine_id chưa được set (lần đầu kích hoạt)
-    --      HOẶC machine_id đã trùng (cùng thiết bị đăng nhập lại)
     UPDATE students
     SET
         machine_id      = p_machine_id,
@@ -197,7 +205,7 @@ GRANT EXECUTE ON FUNCTION activate_device(text, text, text) TO anon;
 
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
--- BƯỚC 14 ⭐ BUG 3 FIX — RPC đểAdmin upsert vault_index
+-- BƯỚC 14 ⭐ BUG 3 FIX — RPC để Admin upsert vault_index
 -- ⚠️ Tech Debt Fix: Bỏ tham số p_updated_at kiểu bigint
 -- vì nếu schema dùng timestamptz sẽ crash. Thay bằng now() nội bộ.
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -390,7 +398,194 @@ END;
 $$;
 GRANT EXECUTE ON FUNCTION admin_create_custom_notification(text, int) TO anon;
 
--- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+-- [9] Xóa toàn bộ thông báo
+DROP FUNCTION IF EXISTS admin_clear_all_notifications();
+CREATE OR REPLACE FUNCTION admin_clear_all_notifications()
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    DELETE FROM notifications;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_clear_all_notifications() TO anon;
+
+
+-- ╔═══════════════════════════════════════════════════════════════════════╗
+-- ║  PHẦN 2: EXAM SUBMISSION RPC & INDEX  (exam_result_rpc_and_index)   ║
+-- ╚═══════════════════════════════════════════════════════════════════════╝
+
+-- ───────────────────────────────────────────────────────────
+-- BƯỚC 0: Dọn dữ liệu trùng lặp từ Load Test
+-- (Giữ lại bài nộp SỚM NHẤT cho mỗi cặp student_phone + exam_id)
+-- ───────────────────────────────────────────────────────────
+DELETE FROM exam_results
+WHERE id IN (
+  SELECT id FROM (
+    SELECT id,
+           ROW_NUMBER() OVER (
+             PARTITION BY student_phone, exam_id
+             ORDER BY submitted_at ASC  -- Giữ bài nộp đầu tiên
+           ) AS rn
+    FROM exam_results
+  ) ranked
+  WHERE rn > 1  -- Xóa tất cả bản sao thừa
+);
+
+-- ───────────────────────────────────────────────────────────
+-- FIX 2: Index & Unique Constraint
+-- ───────────────────────────────────────────────────────────
+
+-- Index cho FK column — ngăn Row Lock khi 2000 INSERT đồng thời
+CREATE INDEX IF NOT EXISTS idx_exam_results_student_phone
+  ON exam_results (student_phone);
+
+-- Unique index cho (student_phone, exam_id) —
+-- điều kiện BẮT BUỘC để ON CONFLICT bên dưới hoạt động
+CREATE UNIQUE INDEX IF NOT EXISTS idx_exam_results_phone_exam_id
+  ON exam_results (student_phone, exam_id);
+
+
+-- ───────────────────────────────────────────────────────────
+-- FIX 1: RPC Stored Procedure — bỏ qua RLS, ghi thẳng bằng quyền root
+-- ───────────────────────────────────────────────────────────
+
+CREATE OR REPLACE FUNCTION submit_exam_result(
+  p_student_phone   TEXT,
+  p_exam_id         TEXT,
+  p_exam_title      TEXT,
+  p_grade           INT,
+  p_score           NUMERIC,
+  p_student_name    TEXT,
+  p_correct_answers INT,
+  p_total_questions INT,
+  p_part_scores     JSONB    DEFAULT NULL,
+  p_tf_breakdown    JSONB    DEFAULT NULL,
+  p_submitted_at    TIMESTAMPTZ DEFAULT now()
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER  -- Chạy với quyền root, bỏ qua RLS overhead
+AS $$
+BEGIN
+  INSERT INTO exam_results (
+    student_phone, exam_id, exam_title, grade,
+    score, student_name,
+    correct_answers, total_questions,
+    part_scores, tf_breakdown, submitted_at
+  )
+  VALUES (
+    p_student_phone, p_exam_id, p_exam_title, p_grade,
+    p_score, p_student_name,
+    p_correct_answers, p_total_questions,
+    p_part_scores, p_tf_breakdown, p_submitted_at
+  )
+  -- Chặn double-submit tại tầng DB — kể cả nếu client gửi 2 lần
+  ON CONFLICT (student_phone, exam_id) DO NOTHING;
+END;
+$$;
+
+-- ───────────────────────────────────────────────────────────
+-- BƯỚC 4: Cấp quyền (Crucial!)
+-- ───────────────────────────────────────────────────────────
+
+-- Cho phép cả User vãng lai (anon) và đã đăng nhập được phép gọi hàm này
+GRANT EXECUTE ON FUNCTION submit_exam_result TO anon, authenticated;
+
+
+-- ╔═══════════════════════════════════════════════════════════════════════╗
+-- ║  PHẦN 3: EXAM BREAKDOWN COLUMNS  (add_exam_breakdown_columns)        ║
+-- ╚═══════════════════════════════════════════════════════════════════════╝
+
+-- CHẠY SQL NÀY TRONG SUPABASE SQL EDITOR ĐỂ HỖ TRỢ HIỂN THỊ CHI TIẾT KẾT QUẢ
+ALTER TABLE exam_results
+ADD COLUMN IF NOT EXISTS part_scores jsonb,
+ADD COLUMN IF NOT EXISTS tf_breakdown jsonb;
+
+
+-- ╔═══════════════════════════════════════════════════════════════════════╗
+-- ║  PHẦN 4: LEADERBOARD CACHE SETUP  (leaderboard_cache_setup)         ║
+-- ╚═══════════════════════════════════════════════════════════════════════╝
+
+-- 1. Tạo bảng cache leaderboard (chỉ lưu điểm tổng hợp mỗi học sinh)
+CREATE TABLE IF NOT EXISTS leaderboard_cache (
+  grade          INT,
+  student_phone  TEXT,
+  student_name   TEXT,
+  avg_score      NUMERIC,
+  exam_count     INT,
+  best_score     NUMERIC,
+  recent_scores  JSONB,
+  updated_at     TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (grade, student_phone)
+);
+
+-- Enable RLS + cho phép anon đọc (chỉ đọc, không ghi)
+ALTER TABLE leaderboard_cache ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public read leaderboard_cache" ON leaderboard_cache;
+CREATE POLICY "Public read leaderboard_cache"
+  ON leaderboard_cache FOR SELECT USING (true);
+
+-- 2. Index tăng tốc query cơ sở (exam_results)
+CREATE INDEX IF NOT EXISTS idx_exam_results_phone_submitted
+  ON exam_results(student_phone, submitted_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_exam_results_grade_submitted
+  ON exam_results(grade, submitted_at DESC);
+
+-- 3. Function refresh cache — dùng UPSERT để không bị trắng bảng trong lúc refresh
+--    SECURITY DEFINER nhưng KHÔNG GRANT cho anon — chỉ gọi qua service_role (cron)
+CREATE OR REPLACE FUNCTION refresh_leaderboard()
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  INSERT INTO leaderboard_cache (grade, student_phone, student_name, avg_score, exam_count, best_score, recent_scores, updated_at)
+  SELECT
+    r.grade,
+    r.student_phone,
+    MAX(r.student_name)                                               AS student_name,
+    ROUND(AVG(r.score)::numeric, 4)                                   AS avg_score,
+    COUNT(*)                                                          AS exam_count,
+    MAX(r.score)                                                      AS best_score,
+    (
+      SELECT jsonb_agg(s ORDER BY s)
+      FROM (
+        SELECT score AS s FROM exam_results e2
+        WHERE e2.student_phone = r.student_phone AND e2.grade = r.grade
+        ORDER BY submitted_at DESC LIMIT 6
+      ) sub
+    )                                                                 AS recent_scores,
+    now()                                                             AS updated_at
+  FROM exam_results r
+  GROUP BY r.grade, r.student_phone
+  ON CONFLICT (grade, student_phone) DO UPDATE SET
+    student_name  = EXCLUDED.student_name,
+    avg_score     = EXCLUDED.avg_score,
+    exam_count    = EXCLUDED.exam_count,
+    best_score    = EXCLUDED.best_score,
+    recent_scores = EXCLUDED.recent_scores,
+    updated_at    = now();
+END;
+$$;
+
+-- KHÔNG GRANT cho anon — chỉ service_role mới chạy được
+-- REVOKE nếu đã grant trước đó
+REVOKE EXECUTE ON FUNCTION refresh_leaderboard() FROM anon;
+REVOKE EXECUTE ON FUNCTION refresh_leaderboard() FROM authenticated;
+
+-- 4. Chạy lần đầu để điền dữ liệu vào bảng cache ngay
+SELECT refresh_leaderboard();
+
+-- 5. (Tuỳ chọn) Nếu Supabase project của bạn có pg_cron, thêm cron chạy mỗi 5 phút:
+-- SELECT cron.schedule('refresh-leaderboard', '*/5 * * * *', 'SELECT refresh_leaderboard()');
+
+
+-- ╔═══════════════════════════════════════════════════════════════════════╗
+-- ║  PHẦN 5: RELOAD SCHEMA  (reload_schema)                             ║
+-- ╚═══════════════════════════════════════════════════════════════════════╝
+
+-- Reload PostgREST schema cache để nhận các hàm RPC mới
+NOTIFY pgrst, 'reload schema';
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- XONG! Verify bằng cách kiểm tra trong Dashboard:
 --   Authentication → Policies → mỗi bảng phải có RLS enabled
 --   Database → Functions → phải thấy các hàm RPC:
@@ -398,5 +593,6 @@ GRANT EXECUTE ON FUNCTION admin_create_custom_notification(text, int) TO anon;
 --     admin_upsert_student, admin_add_student, admin_update_student_class,
 --     admin_delete_student, admin_kick_student, admin_unkick_student,
 --     admin_add_class, admin_update_class, admin_delete_class,
---     admin_delete_notification, admin_create_custom_notification
--- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+--     admin_delete_notification, admin_create_custom_notification,
+--     admin_clear_all_notifications, submit_exam_result, refresh_leaderboard
+-- ═══════════════════════════════════════════════════════════════════════════
