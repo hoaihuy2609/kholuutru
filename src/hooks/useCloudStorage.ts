@@ -11,9 +11,36 @@ import { normalizePhone } from '../utils/phone';
 
 // Service modules (extracted)
 import * as examService from '../services/examService';
+import { purgeVaultIndexCache } from '../services/examService';
 import * as plannerService from '../services/plannerService';
 import * as notificationService from '../services/notificationService';
 import * as blogService from '../services/blogService';
+
+// In-memory inflight lock cho fetchLessonsFromCloud (giống examService)
+const _lessonInflight = new Map<number, Promise<string | null>>();
+async function getVaultIndexFileIdForGrade(grade: number, supabaseClient: typeof supabase): Promise<string | null> {
+    if (_lessonInflight.has(grade)) return _lessonInflight.get(grade)!;
+    const VAULT_WORKER_URL = import.meta.env.VITE_VAULT_WORKER_URL || '';
+    const p = (async (): Promise<string | null> => {
+        if (VAULT_WORKER_URL) {
+            try {
+                const res = await fetch(`${VAULT_WORKER_URL}/vault-index?grade=${grade}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const fid = Array.isArray(data) ? data[0]?.telegram_file_id : data?.telegram_file_id;
+                    if (fid) return fid as string;
+                }
+            } catch { /* fallback */ }
+        }
+        try {
+            const { data } = await supabaseClient.from('vault_index').select('telegram_file_id').eq('grade', grade).maybeSingle();
+            return data?.telegram_file_id || null;
+        } catch { return null; }
+    })();
+    _lessonInflight.set(grade, p);
+    p.finally(() => _lessonInflight.delete(grade));
+    return p;
+}
 
 // Re-export utilities for external consumers
 export { getMachineId, generateActivationKey, checkActivationStatus } from '../lib/crypto';
@@ -214,11 +241,12 @@ export const useCloudStorage = () => {
             if (cachedIndexFileId) speculativeIndexPromise = fetchViaCloudflareProxy(cachedIndexFileId);
 
             const t1 = performance.now();
-            let indexFileId = cachedIndexFileId;
+            let indexFileId: string | null = cachedIndexFileId;
             try {
-                const { data } = await supabase.from('vault_index').select('telegram_file_id').eq('grade', grade).maybeSingle();
-                if (data?.telegram_file_id) indexFileId = data.telegram_file_id;
-            } catch (e) { console.error("Lỗi lấy index từ Supabase", e); }
+                // Ưu tiên Cloudflare Worker cache → Supabase fallback
+                const workerResult = await getVaultIndexFileIdForGrade(grade, supabase);
+                if (workerResult) indexFileId = workerResult;
+            } catch (e) { console.error("Lỗi lấy index từ Worker/Supabase", e); }
             console.log(`[Fetch] Giai đoạn 1 (Supabase): ${(performance.now() - t1).toFixed(0)}ms`);
             if (!indexFileId) throw new Error(`Hệ thống chưa có dữ liệu cho Lớp ${grade}. Thầy vui lòng Sync trước nhé!`);
 
@@ -516,6 +544,10 @@ export const useCloudStorage = () => {
             // updated_at tự được fill bởi DEFAULT now() phía Postgres
         });
         if (sbError) throw new Error("Supabase từ chối lưu: " + sbError.message);
+
+        // Purge Cloudflare Worker cache ngay sau khi đăng nội dung mới
+        // Học sinh sẽ thấy dữ liệu mới ngay lập tức, không đợi TTL hết hạn
+        purgeVaultIndexCache(grade).catch(() => {});
 
         localStorage.setItem(`pv_sync_file_id_${grade}`, finalFileId);
         const newChunkMap: Record<string, string> = {};

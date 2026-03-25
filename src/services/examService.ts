@@ -8,6 +8,62 @@ import { normalizePhone, getActivatedPhone } from '../utils/phone';
 const EXAM_CHUNK_SIZE = 50;
 const EXAM_CONCURRENCY = 8;
 
+// ── Cloudflare Worker URL (vault-index cache layer) ──
+// VITE_VAULT_WORKER_URL = URL Worker bạn deploy ở Cloudflare
+// Ví dụ: https://vault-index-cache.yourname.workers.dev
+const VAULT_WORKER_URL = import.meta.env.VITE_VAULT_WORKER_URL || '';
+
+// In-memory inflight lock — khi 2000 user cùng load, chỉ 1 request đi thật
+const _inflightByGrade = new Map<number, Promise<string | null>>();
+
+/**
+ * Lấy telegram_file_id từ vault_index.
+ * Ưu tiên: Cloudflare Worker (cache 60s) → Supabase trực tiếp (fallback)
+ */
+async function getVaultIndexFileId(grade: number): Promise<string | null> {
+    // Nếu đang có request cùng grade, dùng chung kết quả
+    if (_inflightByGrade.has(grade)) return _inflightByGrade.get(grade)!;
+
+    const p = (async (): Promise<string | null> => {
+        // Thử Cloudflare Worker trước
+        if (VAULT_WORKER_URL) {
+            try {
+                const res = await fetch(`${VAULT_WORKER_URL}/vault-index?grade=${grade}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const fileId = Array.isArray(data) ? data[0]?.telegram_file_id : data?.telegram_file_id;
+                    if (fileId) return fileId as string;
+                }
+            } catch { /* Worker không khả dụng, fallback Supabase */ }
+        }
+        // Fallback: hỏi Supabase trực tiếp
+        try {
+            const { data } = await supabase.from('vault_index').select('telegram_file_id').eq('grade', grade).maybeSingle();
+            return data?.telegram_file_id || null;
+        } catch { return null; }
+    })();
+
+    _inflightByGrade.set(grade, p);
+    p.finally(() => _inflightByGrade.delete(grade));
+    return p;
+}
+
+/**
+ * Purge cache Cloudflare Worker sau khi đăng đề mới.
+ * Gọi sau khi admin_upsert_vault_index thành công.
+ */
+export async function purgeVaultIndexCache(grade: number): Promise<void> {
+    if (!VAULT_WORKER_URL) return;
+    const PURGE_SECRET = import.meta.env.VITE_VAULT_PURGE_SECRET || 'physivault-purge-2025';
+    try {
+        await fetch(`${VAULT_WORKER_URL}/purge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-purge-secret': PURGE_SECRET },
+            body: JSON.stringify({ grade }),
+        });
+    } catch { /* Purge lỗi không ảnh hưởng luồng chính */ }
+}
+
 // ── Private helper: upload a Blob to Telegram, return file_id ──
 const uploadBlobToTelegram = async (blob: Blob, fileName: string): Promise<string> => {
     const MAX_RETRIES = 5;
@@ -147,12 +203,9 @@ export const loadExams = async (): Promise<Exam[]> => {
 
     const localExamsMap = new Map<string, Exam>(cachedExams.map(e => [e.id, e]));
 
-    // Resolve master index file_id (Supabase first, localStorage fallback)
-    let fileId: string | null = null;
-    try {
-        const { data } = await supabase.from('vault_index').select('telegram_file_id').eq('grade', 0).maybeSingle();
-        fileId = data?.telegram_file_id || null;
-    } catch { /* offline */ }
+    // Resolve master index file_id
+    // Ưu tiên: Cloudflare Worker Cache → Supabase trực tiếp → localStorage
+    let fileId: string | null = await getVaultIndexFileId(0);
 
     const lastFetchedId = localStorage.getItem('pv_last_fetched_exam_index');
     if (!fileId) fileId = lastFetchedId;
