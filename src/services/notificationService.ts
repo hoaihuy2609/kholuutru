@@ -139,34 +139,54 @@ export const getFetchedNotificationIds = async (): Promise<Set<string>> => {
 
 // ── Voting ──
 
-export const submitQuestionVote = async (examId: string, partName: string, questionNumber: number) => {
+// FIX (Debounce + Edge Lock): 2 lớp phòng thủ chống spam Vote
+// Lớp 1: Debounce 800ms tại Client — click 10 lần liên tục chỉ gửi 1 request
+// Lớp 2: Worker /vote với Edge Lock — Cloudflare chặn, Supabase không bị chạm
+const _voteTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+export const submitQuestionVote = (examId: string, partName: string, questionNumber: number): Promise<{ success: boolean; error?: string }> => {
     const normalizedPhone = getActivatedPhone();
-    if (!normalizedPhone) return { success: false, error: 'Chưa kích hoạt' };
+    if (!normalizedPhone) return Promise.resolve({ success: false, error: 'Chưa kích hoạt' });
 
-    try {
-        // Insert first — rely on DB unique constraint to prevent duplicates (race-safe)
-        const { error: insertError } = await supabase.from('question_votes').insert({
-            exam_id: examId, student_phone: normalizedPhone, part_name: partName, question_number: questionNumber
-        });
-        if (insertError) {
-            if (insertError.code === '23505') return { success: false, error: 'Bạn đã vote cho câu này rồi.' };
-            throw insertError;
-        }
+    const voteKey = `${examId}::${partName}::${questionNumber}`;
 
-        const { count, error: countError } = await supabase.from('question_votes')
-            .select('id', { count: 'exact', head: true }).eq('exam_id', examId).eq('student_phone', normalizedPhone);
-        if (!countError && count !== null && count > 3) {
-            await supabase.from('question_votes').delete()
-                .eq('exam_id', examId).eq('student_phone', normalizedPhone)
-                .eq('part_name', partName).eq('question_number', questionNumber);
-            return { success: false, error: 'Bạn đã hết 3 lượt vote cho đề này.' };
-        }
+    // Hủy timer cũ nếu học sinh click liên tục
+    if (_voteTimers.has(voteKey)) {
+        clearTimeout(_voteTimers.get(voteKey)!);
+    }
 
-        // ✅ Invalidate caches sau khi vote thành công
-        delete _questionVotesCache[examId];
-        _allTopVotesCache = null;
-        return { success: true };
-    } catch (e: any) { console.error('Lỗi khi submit vote:', e); return { success: false, error: e.message || 'Lỗi hệ thống' }; }
+    return new Promise((resolve) => {
+        const timer = setTimeout(async () => {
+            _voteTimers.delete(voteKey);
+            try {
+                // Gửi qua Worker /vote thay vì Supabase trực tiếp
+                // Worker sẽ kiểm tra Edge Lock và chặn duplicate hoàn toàn
+                const res = await fetch(`${VAULT_WORKER_URL}/vote`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        exam_id: examId,
+                        part_name: partName,
+                        question_number: questionNumber,
+                        student_phone: normalizedPhone,
+                    }),
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    return resolve({ success: false, error: (err as any).error || 'Lỗi hệ thống' });
+                }
+                // Invalidate cache vote sau khi vote thành công
+                delete _questionVotesCache[examId];
+                _allTopVotesCache = null;
+                resolve({ success: true });
+            } catch (e: any) {
+                console.error('Lỗi khi submit vote:', e);
+                resolve({ success: false, error: e.message || 'Lỗi hệ thống' });
+            }
+        }, 800); // 800ms debounce
+
+        _voteTimers.set(voteKey, timer);
+    });
 };
 
 // ✅ PERF: Cache vote theo examId 60s — invalidate khi có vote mới

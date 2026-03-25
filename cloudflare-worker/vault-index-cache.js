@@ -181,7 +181,70 @@ export default {
       );
     }
 
-    // Route 6: PROXY TELEGRAM (Proxy cho bot)
+    // Route 6: POST /vote — Ghi nhận vote câu hỏi khó (2 lớp phòng thủ)
+    // Lớp 1: Edge Lock (Cache API) — chặn spam ngay tại Cloudflare, không chạm DB
+    // Lớp 2: DB đã có ON CONFLICT DO NOTHING — phòng thủ tầng cuối
+    if (url.pathname === "/vote" && request.method === "POST") {
+      let body = {};
+      try { body = await request.json(); } catch { }
+
+      const { exam_id, part_name, question_number, student_phone } = body;
+      if (!exam_id || !part_name || !question_number || !student_phone) {
+        return new Response(JSON.stringify({ error: "Thiếu dữ liệu" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+
+      // Edge Lock: 1 SĐT chỉ được vote 1 câu/đề 1 lần duy nhất (khóa 1 giờ)
+      const lockKey = new Request(
+        `https://physivault-proxy.hoaihuy2609.workers.dev/__votelock__/${student_phone}-${exam_id}-${part_name}-${question_number}`
+      );
+      const alreadyLocked = await caches.default.match(lockKey);
+      if (alreadyLocked) {
+        // Trả về thành công ngay — học sinh không biết bị chặn, không bực bội
+        return new Response(JSON.stringify({ success: true, note: "Vote đã được ghi nhận" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+
+      // Ghi khóa vào Edge Cache (1 giờ)
+      await caches.default.put(lockKey, new Response("locked", {
+        headers: { "Cache-Control": "public, max-age=3600" },
+      }));
+
+      // Ghi vào DB qua REST (DB đã có ON CONFLICT DO NOTHING để bảo vệ tầng cuối)
+      try {
+        const supaRes = await fetch(`${SUPABASE_URL}/rest/v1/question_votes`, {
+          method: "POST",
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({ exam_id, part_name, question_number, student_phone }),
+        });
+        if (!supaRes.ok && supaRes.status !== 409) {
+          throw new Error(`Supabase ${supaRes.status}`);
+        }
+      } catch (err) {
+        // Xóa lock nếu ghi DB thất bại để học sinh có thể thử lại
+        await caches.default.delete(lockKey);
+        return new Response(JSON.stringify({ error: "Lỗi ghi vote", detail: err.message }), {
+          status: 502,
+          headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+      });
+    }
+
+
     if (url.pathname.startsWith("/proxy/")) {
       const method = url.pathname.replace("/proxy/", "");
       const tgUrl = `https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/${method}${url.search}`;
