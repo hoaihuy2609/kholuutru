@@ -4,7 +4,24 @@
 -- ============================================================
 
 -- ───────────────────────────────────────────────────────────
--- FIX 2: Index & Unique Constraint (phải làm TRƯỚC stored procedure)
+-- BƯỚC 0: Dọn dữ liệu trùng lặp từ Load Test
+-- (Giữ lại bài nộp SỚM NHẤT cho mỗi cặp student_phone + exam_id)
+-- ───────────────────────────────────────────────────────────
+DELETE FROM exam_results
+WHERE id IN (
+  SELECT id FROM (
+    SELECT id,
+           ROW_NUMBER() OVER (
+             PARTITION BY student_phone, exam_id
+             ORDER BY submitted_at ASC  -- Giữ bài nộp đầu tiên
+           ) AS rn
+    FROM exam_results
+  ) ranked
+  WHERE rn > 1  -- Xóa tất cả bản sao thừa
+);
+
+-- ───────────────────────────────────────────────────────────
+-- FIX 2: Index & Unique Constraint
 -- ───────────────────────────────────────────────────────────
 
 -- Index cho FK column — ngăn Row Lock khi 2000 INSERT đồng thời
@@ -55,3 +72,11 @@ BEGIN
   ON CONFLICT (student_phone, exam_id) DO NOTHING;
 END;
 $$;
+
+-- ───────────────────────────────────────────────────────────
+-- BƯỚC 4: Cấp quyền (Crucial!)
+-- ───────────────────────────────────────────────────────────
+
+-- Cho phép cả User vãng lai (anon) và đã đăng nhập được phép gọi hàm này
+GRANT EXECUTE ON FUNCTION submit_exam_result TO anon, authenticated;
+
