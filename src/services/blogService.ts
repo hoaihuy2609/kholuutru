@@ -6,6 +6,49 @@ import { BlogPost } from '../../types';
 
 const BLOG_LOCAL_KEY = 'physivault_blogs_local';
 
+// ── Cloudflare Worker URL (dùng chung Worker với vault-index) ──
+const VAULT_WORKER_URL = import.meta.env.VITE_VAULT_WORKER_URL || '';
+const PURGE_SECRET = import.meta.env.VITE_VAULT_PURGE_SECRET || 'physivault-purge-2025';
+
+// In-memory inflight lock — tránh nhiều tab cùng bắn vào Worker
+let _blogInflight: Promise<string | null> | null = null;
+
+async function getBlogIndexFileId(): Promise<string | null> {
+    if (_blogInflight) return _blogInflight;
+    _blogInflight = (async (): Promise<string | null> => {
+        // Ưu tiên: Cloudflare Worker (cache 300s)
+        if (VAULT_WORKER_URL) {
+            try {
+                const res = await fetch(`${VAULT_WORKER_URL}/blog-index`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const fid = Array.isArray(data) ? data[0]?.telegram_file_id : data?.telegram_file_id;
+                    if (fid) return fid as string;
+                }
+            } catch { /* fallback Supabase */ }
+        }
+        // Fallback: hỏi Supabase trực tiếp
+        try {
+            const { data } = await supabase.from('blog_index')
+                .select('telegram_file_id').order('updated_at', { ascending: false }).limit(1).maybeSingle();
+            return data?.telegram_file_id || null;
+        } catch { return null; }
+    })();
+    _blogInflight.finally(() => { _blogInflight = null; });
+    return _blogInflight;
+}
+
+async function purgeBlogCache(): Promise<void> {
+    if (!VAULT_WORKER_URL) return;
+    try {
+        await fetch(`${VAULT_WORKER_URL}/purge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-purge-secret': PURGE_SECRET },
+            body: JSON.stringify({ target: 'blog-index' }),
+        });
+    } catch { /* purge lỗi không ảnh hưởng luồng chính */ }
+}
+
 export const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> => {
     try {
         if (isAdmin) {
@@ -22,15 +65,14 @@ export const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> => {
             }
         }
 
-        const { data: indexRow } = await supabase.from('blog_index')
-            .select('telegram_file_id').order('updated_at', { ascending: false }).limit(1).maybeSingle();
-
-        if (!indexRow?.telegram_file_id) {
+        // Ưu tiên: Cloudflare Worker Cache (300s TTL) → Supabase fallback
+        const fileId = await getBlogIndexFileId();
+        if (!fileId) {
             const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
             return isAdmin ? local : local.filter(b => b.is_published);
         }
 
-        const arrayBuf = await fetchViaCloudflareProxy(indexRow.telegram_file_id);
+        const arrayBuf = await fetchViaCloudflareProxy(fileId);
         const str = new TextDecoder().decode(arrayBuf);
         const firstChar = str.charCodeAt(0);
         const blogs: BlogPost[] = (firstChar === 91 || firstChar === 123) ? JSON.parse(str) : JSON.parse(xorDeobfuscate(str));
@@ -110,6 +152,9 @@ export const syncBlogs = async (onProgress?: (pct: number) => void): Promise<{ s
         if (upsertErr) throw upsertErr;
         if (onProgress) onProgress(95);
 
+        // Purge Cloudflare Worker cache ngay sau khi đăng bài mới
+        purgeBlogCache().catch(() => {});
+
         try { fetchViaCloudflareProxy(newFileId).catch(() => { }); } catch { }
 
         if (onProgress) onProgress(100);
@@ -122,16 +167,13 @@ export const syncBlogs = async (onProgress?: (pct: number) => void): Promise<{ s
 
 export const fetchBlogsForEditing = async (): Promise<{ blogs: BlogPost[]; loaded: boolean }> => {
     try {
-        const { data: indexRow } = await supabase.from('blog_index')
-            .select('telegram_file_id, blog_count, updated_at')
-            .order('updated_at', { ascending: false }).limit(1).maybeSingle();
-
-        if (!indexRow?.telegram_file_id) {
+        // Ưu tiên: Cloudflare Worker Cache (300s TTL) → Supabase fallback
+        const fileId = await getBlogIndexFileId();
+        if (!fileId) {
             const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
             return { blogs: local, loaded: false };
         }
-
-        const arrayBuf = await fetchViaCloudflareProxy(indexRow.telegram_file_id);
+        const arrayBuf = await fetchViaCloudflareProxy(fileId);
         const str = new TextDecoder().decode(arrayBuf);
         const firstChar = str.charCodeAt(0);
         const blogs: BlogPost[] = (firstChar === 91 || firstChar === 123) ? JSON.parse(str) : JSON.parse(xorDeobfuscate(str));
