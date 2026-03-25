@@ -69,17 +69,31 @@ export const getNotifications = async (grade: number): Promise<NotificationItem[
 // ⚠️ Khai báo trước markNotificationFetched — tránh Temporal Dead Zone
 let _fetchedIdsCache: { data: Set<string>; ts: number; phone: string } | null = null;
 
+// FIX (Row-Lock Contention): Khoá in-memory theo từng notificationId
+// Nếu học sinh spam click, chỉ request đầu tiên được phép gọi DB.
+// Các request sau bị bỏ qua ngay tại client → Không tạo Row Lock trong Supabase.
+const _markingInProgress = new Set<string>();
+
 export const markNotificationFetched = async (notificationId: string): Promise<boolean> => {
     const normalizedPhone = getActivatedPhone();
     if (!normalizedPhone) return false;
+
+    const lockKey = `${normalizedPhone}::${notificationId}`;
+
+    // Nếu đang có request gọi DB cho cặp (phone, notifId) này → bỏ qua luôn
+    if (_markingInProgress.has(lockKey)) return false;
+
+    _markingInProgress.add(lockKey);
     try {
         const { error } = await supabase.from('notification_fetches').insert({
             notification_id: notificationId, student_phone: normalizedPhone,
         });
-        if (error) throw error;
+        // Lỗi 23505 = đã tồn tại (đã đọc rồi) → Không phải lỗi thật, ignore
+        if (error && error.code !== '23505') throw error;
         _fetchedIdsCache = null; // Invalidate cache
         return true;
     } catch (e) { console.error('Lỗi đánh dấu fetch:', e); return false; }
+    finally { _markingInProgress.delete(lockKey); }
 };
 
 export const deleteNotification = async (notificationId: string, grade?: number): Promise<boolean> => {

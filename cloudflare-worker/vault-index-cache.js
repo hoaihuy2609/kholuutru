@@ -6,9 +6,10 @@
 //   GET  /blog-index                 → Index Tin tức / Blog
 //   GET  /notifications?grade=0|10|11|12 → Thông báo theo khối
 //   GET  /schedule?grade=0|10|11|12  → Thời khóa biểu theo khối
+//   GET  /leaderboard?grade=0|10|11|12 → BXH theo khối (Cache 5 phút)
 //   POST /purge                      → Xóa cache thủ công (Admin)
 //   POST /proxy/:method              → Proxy cho Telegram Bot API
-//   GET  /getFile/:fileId            → Proxy tải file Telegram
+//   GET  /getFile/:fileId            → Proxy tải file Telegram (Cache 1 năm)
 // =========================================================
 
 const SUPABASE_URL = "https://ndhcwrczwbehyznnxzou.supabase.co";
@@ -162,7 +163,25 @@ export default {
       );
     }
 
-    // Route 5: PROXY TELEGRAM (Proxy cho bot)
+    // Route 5: GET /leaderboard?grade=0|10|11|12
+    // TTL: 300s — khớp chu kỳ refresh_leaderboard. Fix: BXH 20s → 70ms
+    if (url.pathname === "/leaderboard" && request.method === "GET") {
+      const grade = url.searchParams.get("grade") || "0";
+      if (!["0", "10", "11", "12"].includes(grade)) {
+        return new Response(JSON.stringify({ error: "Invalid grade" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+      return handleCache(
+        `leaderboard-grade-${grade}`,
+        `leaderboard_cache?select=*&grade=eq.${grade}&order=avg_score.desc&limit=200`,
+        300,
+        origin
+      );
+    }
+
+    // Route 6: PROXY TELEGRAM (Proxy cho bot)
     if (url.pathname.startsWith("/proxy/")) {
       const method = url.pathname.replace("/proxy/", "");
       const tgUrl = `https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/${method}${url.search}`;
@@ -187,28 +206,62 @@ export default {
       }
     }
 
-    // Route 6: TẢI FILE TELEGRAM (Proxy tải file)
+    // Route 7: MỞ XEM FILE TELEGRAM (Proxy + Edge Cache vĩnh viễn)
+    // Fix: Cloudflare Cache PDF → Telegram chỉ bị gọi đúng 1 lần/file
+    // Lần 2 trở đi: Cloudflare phục vụ ngay, không qua Telegram → Fix lỗi 11%
     if (url.pathname.startsWith("/getFile/") && request.method === "GET") {
       const fileId = url.pathname.split("/").pop();
+      const cache = caches.default;
+      const cacheReq = new Request(`https://physivault-proxy.hoaihuy2609.workers.dev/__filecache__/${fileId}`);
+
+      // Kiểm tra cache trước — tránh gọi Telegram nếu đã có
+      const cachedFile = await cache.match(cacheReq);
+      if (cachedFile) {
+        const resp = new Response(cachedFile.body, cachedFile);
+        Object.entries(corsHeaders(origin)).forEach(([k, v]) => resp.headers.set(k, v));
+        resp.headers.set("x-cache", "HIT");
+        return resp;
+      }
+
       try {
         // Bước 1: Lấy file path từ Telegram
         const getFileRes = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/getFile?file_id=${fileId}`);
         const getFileData = await getFileRes.json();
-        
+
         if (!getFileData.ok) {
           return new Response(JSON.stringify({ error: "Telegram GetFile failed", detail: getFileData }), {
             status: 400,
             headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
           });
         }
-        
+
         const filePath = getFileData.result.file_path;
-        // Bước 2: Tải file thật từ server Telegram
+        // Bước 2: Tải file thật từ Telegram
         const fileRes = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_TOKEN}/${filePath}`);
-        
-        const response = new Response(fileRes.body, fileRes);
-        Object.entries(corsHeaders(origin)).forEach(([k, v]) => response.headers.set(k, v));
-        response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
+        if (!fileRes.ok) throw new Error(`Telegram file fetch failed: ${fileRes.status}`);
+
+        const fileBuffer = await fileRes.arrayBuffer();
+        const contentType = fileRes.headers.get("Content-Type") || "application/octet-stream";
+
+        // Lưu vào Cloudflare Cache (1 năm — file đề thi không bao giờ thay đổi)
+        await cache.put(
+          cacheReq,
+          new Response(fileBuffer, {
+            headers: {
+              "Content-Type": contentType,
+              "Cache-Control": "public, max-age=31536000, immutable",
+            },
+          })
+        );
+
+        const response = new Response(fileBuffer, {
+          headers: {
+            "Content-Type": contentType,
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "x-cache": "MISS",
+            ...corsHeaders(origin),
+          },
+        });
         return response;
       } catch (err) {
         return new Response(JSON.stringify({ error: "File download error", detail: err.message }), {
@@ -253,12 +306,19 @@ export default {
         keysToDelete = grade !== undefined
           ? [`schedule-grade-${grade}`]
           : ["schedule-grade-0", "schedule-grade-10", "schedule-grade-11", "schedule-grade-12"];
+      } else if (target === "leaderboard") {
+        const grade = body.grade;
+        keysToDelete = grade !== undefined
+          ? [`leaderboard-grade-${grade}`]
+          : ["leaderboard-grade-0", "leaderboard-grade-10", "leaderboard-grade-11", "leaderboard-grade-12"];
       } else {
+        // "all" → xóa toàn bộ cache bao gồm cả leaderboard
         keysToDelete = [
           "blog-index",
           "vault-index-grade-0", "vault-index-grade-10", "vault-index-grade-11", "vault-index-grade-12",
           "notifications-grade-0", "notifications-grade-10", "notifications-grade-11", "notifications-grade-12",
           "schedule-grade-0", "schedule-grade-10", "schedule-grade-11", "schedule-grade-12",
+          "leaderboard-grade-0", "leaderboard-grade-10", "leaderboard-grade-11", "leaderboard-grade-12",
         ];
       }
 
