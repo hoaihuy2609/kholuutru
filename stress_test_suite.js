@@ -55,6 +55,20 @@ const SCENARIOS = {
             { duration: '15s', target: 1000 },
             { duration: '5s', target: 0 },
         ],
+    },
+    // CHIẾN DỊCH 5.000 EM (CỰC HẠN NHƯNG AN TOÀN)
+    safe_5000: {
+        stages: [
+            { duration: '30s', target: 1000 },
+            { duration: '1m', target: 3000 },
+            { duration: '30s', target: 5000 }, // ÉP LÊN 5000
+            { duration: '1m', target: 5000 }, // GIỮ NGUYÊN 1 PHÚT
+            { duration: '30s', target: 0 },
+        ],
+        // PHANH TAY TỰ ĐỘNG: Nếu lỗi > 5%, dừng k6 ngay lập tức để bảo vệ server
+        thresholds: {
+            http_req_failed: [{ threshold: 'rate<0.05', abortOnFail: true, delayAbortEval: '10s' }],
+        }
     }
 };
 
@@ -73,7 +87,7 @@ export default function () {
     const randomSuffix = Math.floor(Math.random() * 9000000 + 1000000);
     const mockPhone = `09${randomSuffix}`;
 
-    if (type === 'realistic') {
+    if (type === 'realistic' || type === 'safe_5000') {
         // --- KỊCH BẢN HỌC SINH THẬT ---
         http.get(`${WORKER_BASE}/vault-index?grade=12`);
         sleep(3);
