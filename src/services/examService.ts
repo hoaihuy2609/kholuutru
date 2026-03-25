@@ -284,9 +284,9 @@ export const deleteExam = async (examId: string, allExams: Exam[]): Promise<void
 };
 
 export const saveExamResult = async (
-    exam: Exam, 
-    score: number, 
-    totalQuestions: number, 
+    exam: Exam,
+    score: number,
+    totalQuestions: number,
     correctAnswers: number,
     partScores?: { mc: number; tf: number; sa: number },
     tfBreakdown?: number[]
@@ -294,30 +294,45 @@ export const saveExamResult = async (
     const normalizedPhone = getActivatedPhone();
     if (!normalizedPhone) return;
 
-    // ✅ PERF: Đọc từ localStorage — không tốn thêm query Supabase khi nộp bài
     const studentName = localStorage.getItem('pv_student_name') || 'Học sinh';
     const grade = parseInt(localStorage.getItem('physivault_grade') || '0', 10) || exam.grade;
 
     const payload = {
-        student_phone: normalizedPhone, 
+        student_phone: normalizedPhone,
         student_name: studentName,
-        exam_id: exam.id, 
-        exam_title: exam.title, 
+        exam_id: exam.id,
+        exam_title: exam.title,
         score,
-        total_questions: totalQuestions, 
+        total_questions: totalQuestions,
         correct_answers: correctAnswers,
-        submitted_at: new Date().toISOString(), 
+        submitted_at: new Date().toISOString(),
         grade,
         part_scores: partScores,
-        tf_breakdown: tfBreakdown
+        tf_breakdown: tfBreakdown,
     };
 
-    // ✅ PERF: Exponential backoff retry (5 lần) — chịu tải tốt hơn khi server bận
+    // ✅ OPTIMISTIC SUBMIT — Lá chắn 1: lưu localStorage TRƯỚC khi đụng mạng
+    // Dedup theo exam_id — tránh ghi trùng nếu học sinh bấm Nộp 2 lần
+    const existingQueue: any[] = JSON.parse(localStorage.getItem('pv_pending_results') || '[]');
+    const dedupedQueue = existingQueue.filter(p => p.exam_id !== exam.id);
+    localStorage.setItem('pv_pending_results', JSON.stringify([
+        ...dedupedQueue,
+        { ...payload, _synced: false },
+    ]));
+
+    // Lá chắn 2: ghi Supabase ngầm — KHÔNG block UI, hàm trả về ngay
+    _syncToSupabase(payload);
+};
+
+// Ghi Supabase ngầm với Exponential Backoff — fire-and-forget
+const _syncToSupabase = async (payload: any): Promise<void> => {
     const MAX_RETRIES = 5;
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
             const { error } = await supabase.from('exam_results').insert(payload);
             if (!error) {
+                // ✅ Thành công → đánh dấu synced + vớt nốt hàng chờ cũ
+                _markSynced(payload.exam_id);
                 _flushPendingResults();
                 return;
             }
@@ -326,30 +341,48 @@ export const saveExamResult = async (
             console.error(`[SaveResult] Lần ${attempt + 1} mạng lỗi:`, e);
         }
         if (attempt < MAX_RETRIES - 1) {
-            // Exponential backoff: 1s, 2s, 4s, 8s — có jitter để tránh thundering herd
             const delay = Math.min(1000 * Math.pow(2, attempt), 8000) + Math.random() * 500;
             await new Promise(r => setTimeout(r, delay));
         }
     }
-    // Tất cả retry đều thất bại — lưu vào localStorage để gửi lại sau
-    const queue: any[] = JSON.parse(localStorage.getItem('pv_pending_results') || '[]');
-    queue.push(payload);
-    localStorage.setItem('pv_pending_results', JSON.stringify(queue));
-    console.warn('[SaveResult] Đã lưu tạm vào localStorage để gửi lại sau');
+    // Tất cả retry thất bại → giữ nguyên localStorage (synced: false)
+    // syncPendingOnStartup() sẽ vớt lại khi học sinh mở app lần sau
+    console.warn('[SaveResult] Sync thất bại, sẽ thử lại lần sau');
 };
 
-// Background flush: gửi lại các kết quả bị lỗi trước đó
-const _flushPendingResults = async () => {
+// Đánh dấu bài đã lên DB thành công
+const _markSynced = (examId: string): void => {
     const queue: any[] = JSON.parse(localStorage.getItem('pv_pending_results') || '[]');
-    if (queue.length === 0) return;
-    const remaining: any[] = [];
-    for (const p of queue) {
+    localStorage.setItem('pv_pending_results', JSON.stringify(
+        queue.map(p => p.exam_id === examId ? { ...p, _synced: true } : p)
+    ));
+};
+
+// Gọi khi app khởi động — vớt lại các bài chưa sync (mất mạng lúc nộp)
+export const syncPendingOnStartup = async (): Promise<void> => {
+    const queue: any[] = JSON.parse(localStorage.getItem('pv_pending_results') || '[]');
+    const unsyncedQueue = queue.filter(p => !p._synced);
+    if (unsyncedQueue.length === 0) return;
+    for (const p of unsyncedQueue) {
         try {
             const { error } = await supabase.from('exam_results').insert(p);
-            if (error) remaining.push(p);
-        } catch { remaining.push(p); }
+            if (!error) _markSynced(p.exam_id);
+            await new Promise(r => setTimeout(r, 200)); // Không bắn cùng lúc
+        } catch { break; } // Mạng vẫn lỗi → dừng, thử lần sau
     }
-    localStorage.setItem('pv_pending_results', JSON.stringify(remaining));
+};
+
+// Background flush: gửi lại các kết quả bị lỗi trước đó (API cũ, giữ tương thích)
+const _flushPendingResults = async () => {
+    const queue: any[] = JSON.parse(localStorage.getItem('pv_pending_results') || '[]');
+    const unsyncedQueue = queue.filter(p => !p._synced);
+    if (unsyncedQueue.length === 0) return;
+    for (const p of unsyncedQueue) {
+        try {
+            const { error } = await supabase.from('exam_results').insert(p);
+            if (!error) _markSynced(p.exam_id);
+        } catch { /* không break, cố gắng hết queue */ }
+    }
 };
 
 // ✅ PERF: Cache lịch sử thi 60s cho học sinh — admin vẫn realtime
@@ -363,17 +396,34 @@ export const getExamHistory = async (phoneFilter?: string) => {
     try {
         let query = supabase.from('exam_results').select('*').order('submitted_at', { ascending: false });
         if (normalizedPhone) {
-            // Học sinh: chỉ lấy bài của mình, giới hạn 200 bài gần nhất
             query = query.eq('student_phone', normalizedPhone).limit(200);
         } else {
-            // Admin StatsPanel: giới hạn 3000 bài gần nhất thay vì full scan
             query = query.limit(3000);
         }
         const { data, error } = await query;
         if (error) throw error;
-        const result = data || [];
-        if (normalizedPhone) _examHistoryCache = { data: result, ts: Date.now(), key: cacheKey };
-        return result;
+        const dbData = data || [];
+
+        // ✅ OPTIMISTIC MERGE: Gộp bài chưa sync từ localStorage lên đầu
+        // Chỉ áp dụng khi lấy lịch sử của 1 học sinh cụ thể (không áp dụng cho Admin)
+        if (normalizedPhone) {
+            const queue: any[] = JSON.parse(localStorage.getItem('pv_pending_results') || '[]');
+            const dbIds = new Set(dbData.map((d: any) => d.exam_id));
+            // Chỉ lấy bài chưa sync VÀ chưa có trong DB (dedup tránh hiện trùng)
+            const pendingOnly = queue.filter(p =>
+                p.student_phone === normalizedPhone && !p._synced && !dbIds.has(p.exam_id)
+            );
+            const merged = [
+                ...pendingOnly.map(p => ({ ...p, _isPending: true })),
+                ...dbData,
+            ];
+            _examHistoryCache = { data: merged, ts: Date.now(), key: cacheKey };
+            return merged;
+        }
+
+        if (!normalizedPhone) return dbData; // Admin: dữ liệu thực, không merge pending
+        _examHistoryCache = { data: dbData, ts: Date.now(), key: cacheKey };
+        return dbData;
     } catch (e) { console.error('Lỗi khi lấy lịch sử làm bài:', e); return []; }
 };
 
