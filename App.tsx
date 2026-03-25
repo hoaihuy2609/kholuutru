@@ -12,8 +12,8 @@ import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Home, Bell, FlaskC
 import KickedScreen from './components/auth/KickedScreen';
 import { useUIStore } from './src/stores/useUIStore';
 import { useDataStore } from './src/stores/useDataStore';
-import { useExamStore, useBlogStore } from './src/stores/useContentStore';
 import { useShallow } from 'zustand/react/shallow';
+import { syncPendingOnStartup } from './src/services/examService';
 
 const ChapterView = React.lazy(() => import('./components/ChapterView'));
 const LessonView = React.lazy(() => import('./components/LessonView'));
@@ -62,6 +62,9 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     if (cloud.isActivated) {
       const g = parseInt(localStorage.getItem('physivault_grade') || '0', 10);
       setStudentGradeValue(g === 10 || g === 11 || g === 12 ? g : null);
+      
+      // ✅ Vớt bài thi chưa sync khi vừa vào App
+      syncPendingOnStartup();
     }
   }, [cloud.isActivated, setIsActivated, setStudentGradeValue]);
 
