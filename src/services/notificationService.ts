@@ -4,14 +4,24 @@ import { getActivatedPhone } from '../utils/phone';
 
 // ── Notifications ──
 
+// ✅ PERF: Cache thông báo 10 phút — giảm tải SELECT notifications
+const _notifCache: Record<number, { data: NotificationItem[]; ts: number }> = {};
 export const getNotifications = async (grade: number): Promise<NotificationItem[]> => {
+    const cached = _notifCache[grade];
+    if (cached && Date.now() - cached.ts < 10 * 60 * 1000) return cached.data;
     try {
         const { data, error } = await supabase.from('notifications').select('*')
             .eq('grade', grade).order('created_at', { ascending: false });
         if (error) throw error;
-        return (data || []) as NotificationItem[];
+        const result = (data || []) as NotificationItem[];
+        _notifCache[grade] = { data: result, ts: Date.now() };
+        return result;
     } catch (e) { console.error('Lỗi tải thông báo:', e); return []; }
 };
+
+// ✅ PERF: Cache danh sách đã fetch 10 phút
+// ⚠️ Khai báo trước markNotificationFetched — tránh Temporal Dead Zone
+let _fetchedIdsCache: { data: Set<string>; ts: number; phone: string } | null = null;
 
 export const markNotificationFetched = async (notificationId: string): Promise<boolean> => {
     const normalizedPhone = getActivatedPhone();
@@ -21,6 +31,7 @@ export const markNotificationFetched = async (notificationId: string): Promise<b
             notification_id: notificationId, student_phone: normalizedPhone,
         });
         if (error) throw error;
+        _fetchedIdsCache = null; // Invalidate cache
         return true;
     } catch (e) { console.error('Lỗi đánh dấu fetch:', e); return false; }
 };
@@ -43,15 +54,20 @@ export const createCustomNotification = async (message: string, grade: number): 
     } catch (e) { console.error('Lỗi tạo thông báo:', e); return false; }
 };
 
-
+// getFetchedNotificationIds — dùng _fetchedIdsCache khai báo bên trên
 export const getFetchedNotificationIds = async (): Promise<Set<string>> => {
     const normalizedPhone = getActivatedPhone();
     if (!normalizedPhone) return new Set();
+    if (_fetchedIdsCache && _fetchedIdsCache.phone === normalizedPhone && Date.now() - _fetchedIdsCache.ts < 10 * 60 * 1000) {
+        return _fetchedIdsCache.data;
+    }
     try {
         const { data, error } = await supabase.from('notification_fetches')
             .select('notification_id').eq('student_phone', normalizedPhone);
         if (error) throw error;
-        return new Set((data || []).map((r: any) => r.notification_id));
+        const result = new Set((data || []).map((r: any) => r.notification_id));
+        _fetchedIdsCache = { data: result, ts: Date.now(), phone: normalizedPhone };
+        return result;
     } catch (e) { console.error('Lỗi tải danh sách đã fetch:', e); return new Set(); }
 };
 
@@ -80,20 +96,32 @@ export const submitQuestionVote = async (examId: string, partName: string, quest
             return { success: false, error: 'Bạn đã hết 3 lượt vote cho đề này.' };
         }
 
+        // ✅ Invalidate caches sau khi vote thành công
+        delete _questionVotesCache[examId];
+        _allTopVotesCache = null;
         return { success: true };
     } catch (e: any) { console.error('Lỗi khi submit vote:', e); return { success: false, error: e.message || 'Lỗi hệ thống' }; }
 };
 
+// ✅ PERF: Cache vote theo examId 60s — invalidate khi có vote mới
+const _questionVotesCache: Record<string, { data: any[]; ts: number }> = {};
 export const getQuestionVotes = async (examId: string) => {
+    const cached = _questionVotesCache[examId];
+    if (cached && Date.now() - cached.ts < 60_000) return cached.data;
     try {
         const { data, error } = await supabase.from('question_votes')
             .select('part_name, question_number, student_phone').eq('exam_id', examId);
         if (error) throw error;
-        return data || [];
+        const result = data || [];
+        _questionVotesCache[examId] = { data: result, ts: Date.now() };
+        return result;
     } catch (e) { console.error('Lỗi lấy dữ liệu vote:', e); return []; }
 };
 
+// ✅ PERF: Cache getAllExamTopVotes 5 phút — full table scan nặng, chỉ admin gọi
+let _allTopVotesCache: { data: Record<string, any[]>; ts: number } | null = null;
 export const getAllExamTopVotes = async (): Promise<Record<string, { part: string; num: number; count: number }[]>> => {
+    if (_allTopVotesCache && Date.now() - _allTopVotesCache.ts < 5 * 60 * 1000) return _allTopVotesCache.data;
     try {
         const { data, error } = await supabase.from('question_votes')
             .select('exam_id, part_name, question_number');
@@ -114,11 +142,10 @@ export const getAllExamTopVotes = async (): Promise<Record<string, { part: strin
                 const parts = key.split('|');
                 return { part: parts[0], num: parseInt(parts[1]), count: counts[key] };
             });
-            // sort by count descending
             arr.sort((a, b) => b.count - a.count);
             result[examId] = arr;
         }
-
+        _allTopVotesCache = { data: result, ts: Date.now() };
         return result;
     } catch (e) {
         console.error('Lỗi lấy top votes các đề:', e);

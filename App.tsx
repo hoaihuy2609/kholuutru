@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback, Suspense, useState } from 'react';
+import React, { useEffect, useMemo, useCallback, Suspense, useState, useRef } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate, useLocation } from 'react-router-dom';
 import { GradeLevel, Lesson, Exam } from './types';
 import { CURRICULUM } from './constants';
@@ -65,23 +65,32 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     }
   }, [cloud.isActivated, setIsActivated, setStudentGradeValue]);
 
+  // ✅ PERF: verifyAccess cooldown 10 phút — giảm 50% Supabase queries
+  const lastVerifyRef = useRef(0);
   useEffect(() => {
+    const VERIFY_COOLDOWN = 10 * 60 * 1000;
     const check = async () => {
-      if (cloud.isActivated && !document.hidden) {
-        const status = await verifyAccess();
-        if (status === 'kicked') setKicked(true);
-      }
+      if (!cloud.isActivated || document.hidden) return;
+      if (Date.now() - lastVerifyRef.current < VERIFY_COOLDOWN) return;
+      lastVerifyRef.current = Date.now();
+      const status = await verifyAccess();
+      if (status === 'kicked') setKicked(true);
     };
     check();
-    const iv = setInterval(check, 5 * 60 * 1000);
+    const iv = setInterval(check, VERIFY_COOLDOWN);
     document.addEventListener('visibilitychange', check);
     return () => { clearInterval(iv); document.removeEventListener('visibilitychange', check); };
   }, [cloud.isActivated, verifyAccess, setKicked]);
 
+  // ✅ PERF: notification polling cooldown 15 phút — giảm 87% notification queries
+  const lastUnreadRef = useRef(0);
   useEffect(() => {
     if (!cloud.isActivated) return;
+    const UNREAD_COOLDOWN = 15 * 60 * 1000;
     const loadUnread = async () => {
       if (document.hidden) return;
+      if (Date.now() - lastUnreadRef.current < UNREAD_COOLDOWN) return;
+      lastUnreadRef.current = Date.now();
       try {
         if (isAdmin) {
           const [n10, n11, n12, fetched] = await Promise.all([getNotifications(10), getNotifications(11), getNotifications(12), getFetchedNotificationIds()]);
@@ -107,7 +116,7 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
       } catch { /* silent */ }
     };
     loadUnread();
-    const iv = setInterval(loadUnread, 2 * 60 * 1000);
+    const iv = setInterval(loadUnread, UNREAD_COOLDOWN);
     document.addEventListener('visibilitychange', loadUnread);
     return () => { clearInterval(iv); document.removeEventListener('visibilitychange', loadUnread); };
   }, [cloud.isActivated, isAdmin, getNotifications, getFetchedNotificationIds, setNotificationUnreadCount]);

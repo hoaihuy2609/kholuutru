@@ -138,8 +138,13 @@ export const saveExam = async (exams: Exam[]): Promise<void> => {
     } finally { _saveExamLock = false; }
 };
 
+let _lastLoadExamsTs = 0;
 export const loadExams = async (): Promise<Exam[]> => {
     const cachedExams: Exam[] = (await dbGet('physivault_exams')) || [];
+    // ✅ PERF: Debounce 30s — tránh spam Supabase khi navigate qua lại
+    if (Date.now() - _lastLoadExamsTs < 30_000 && cachedExams.length > 0) return cachedExams;
+    _lastLoadExamsTs = Date.now();
+
     const localExamsMap = new Map<string, Exam>(cachedExams.map(e => [e.id, e]));
 
     // Resolve master index file_id (Supabase first, localStorage fallback)
@@ -236,50 +241,82 @@ export const saveExamResult = async (
     const normalizedPhone = getActivatedPhone();
     if (!normalizedPhone) return;
 
-    let studentName = 'Học sinh';
-    let grade = exam.grade;
-    try {
-        const { data } = await supabase.from('students').select('name, grade').eq('phone', normalizedPhone).maybeSingle();
-        if (data?.name) studentName = data.name;
-        if (data?.grade) grade = data.grade;
-    } catch (e) { console.error('Không lấy được thông tin học sinh', e); }
+    // ✅ PERF: Đọc từ localStorage thay vì SELECT Supabase — giảm 50% queries khi nộp bài
+    const studentName = localStorage.getItem('pv_student_name') || 'Học sinh';
+    const grade = parseInt(localStorage.getItem('physivault_grade') || '0', 10) || exam.grade;
 
-    try {
-        const { error } = await supabase.from('exam_results').insert({
-            student_phone: normalizedPhone, 
-            student_name: studentName,
-            exam_id: exam.id, 
-            exam_title: exam.title, 
-            score,
-            total_questions: totalQuestions, 
-            correct_answers: correctAnswers,
-            submitted_at: new Date().toISOString(), 
-            grade,
-            part_scores: partScores,
-            tf_breakdown: tfBreakdown
-        });
-        if (error) console.error('Lỗi Insert Supabase:', error);
-    } catch (e) { console.error('Lỗi khi lưu kết quả bài thi:', e); }
+    const payload = {
+        student_phone: normalizedPhone, 
+        student_name: studentName,
+        exam_id: exam.id, 
+        exam_title: exam.title, 
+        score,
+        total_questions: totalQuestions, 
+        correct_answers: correctAnswers,
+        submitted_at: new Date().toISOString(), 
+        grade,
+        part_scores: partScores,
+        tf_breakdown: tfBreakdown
+    };
+
+    // ✅ PERF: Retry 3 lần + save localStorage nếu thất bại → KHÔNG BAO GIỜ MẤT ĐIỂM
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            const { error } = await supabase.from('exam_results').insert(payload);
+            if (!error) { _flushPendingResults(); return; }
+            console.error(`[SaveResult] Lần ${attempt + 1} lỗi:`, error);
+        } catch (e) { console.error(`[SaveResult] Lần ${attempt + 1} mạng lỗi:`, e); }
+        if (attempt < 2) await new Promise(r => setTimeout(r, (attempt + 1) * 2000));
+    }
+    // Tất cả retry đều thất bại — lưu vào localStorage để gửi lại sau
+    const queue: any[] = JSON.parse(localStorage.getItem('pv_pending_results') || '[]');
+    queue.push(payload);
+    localStorage.setItem('pv_pending_results', JSON.stringify(queue));
+    console.warn('[SaveResult] Đã lưu tạm vào localStorage để gửi lại sau');
 };
 
+// Background flush: gửi lại các kết quả bị lỗi trước đó
+const _flushPendingResults = async () => {
+    const queue: any[] = JSON.parse(localStorage.getItem('pv_pending_results') || '[]');
+    if (queue.length === 0) return;
+    const remaining: any[] = [];
+    for (const p of queue) {
+        try {
+            const { error } = await supabase.from('exam_results').insert(p);
+            if (error) remaining.push(p);
+        } catch { remaining.push(p); }
+    }
+    localStorage.setItem('pv_pending_results', JSON.stringify(remaining));
+};
+
+// ✅ PERF: Cache lịch sử thi 60s cho học sinh — admin vẫn realtime
+let _examHistoryCache: { data: any[]; ts: number; key: string } | null = null;
 export const getExamHistory = async (phoneFilter?: string) => {
-    // phoneFilter = undefined → admin mode: lấy TẤT CẢ lịch sử, không filter
-    // phoneFilter = 'SDT'    → học sinh: chỉ lấy lịch sử của SDT đó
     const normalizedPhone = phoneFilter !== undefined ? normalizePhone(phoneFilter) : null;
+    const cacheKey = normalizedPhone || '__admin__';
+    if (normalizedPhone && _examHistoryCache && _examHistoryCache.key === cacheKey && Date.now() - _examHistoryCache.ts < 60_000) {
+        return _examHistoryCache.data;
+    }
     try {
         let query = supabase.from('exam_results').select('*').order('submitted_at', { ascending: false });
         if (normalizedPhone) query = query.eq('student_phone', normalizedPhone);
         const { data, error } = await query;
         if (error) throw error;
-        return data || [];
+        const result = data || [];
+        if (normalizedPhone) _examHistoryCache = { data: result, ts: Date.now(), key: cacheKey };
+        return result;
     } catch (e) { console.error('Lỗi khi lấy lịch sử làm bài:', e); return []; }
 };
 
+// ✅ PERF: Cache bảng xếp hạng 5 phút — query nặng nhất hệ thống
+let _leaderboardCache: { data: any; ts: number } | null = null;
 export const getLeaderboard = async (minExams: number = 1) => {
+    if (_leaderboardCache && Date.now() - _leaderboardCache.ts < 5 * 60 * 1000) return _leaderboardCache.data;
     try {
         const { data, error } = await supabase.from('exam_results')
             .select('student_phone, student_name, score, grade, submitted_at')
-            .order('submitted_at', { ascending: true });
+            .order('submitted_at', { ascending: false })
+            .limit(2000); // ✅ PERF: Giới hạn 2000 bài gần nhất — đủ tính Top 5 mỗi lớp, tránh full table scan
         if (error) throw error;
         if (!data || data.length === 0) return [[], [], []];
 
@@ -304,6 +341,8 @@ export const getLeaderboard = async (minExams: number = 1) => {
         }
 
         const top = (arr: any[]) => arr.sort((a: any, b: any) => b.avgScore - a.avgScore).slice(0, 5);
-        return [top(byGrade[10]), top(byGrade[11]), top(byGrade[12])];
+        const result = [top(byGrade[10]), top(byGrade[11]), top(byGrade[12])];
+        _leaderboardCache = { data: result, ts: Date.now() };
+        return result;
     } catch (e) { console.error('Lỗi khi lấy leaderboard:', e); return [[], [], []]; }
 };

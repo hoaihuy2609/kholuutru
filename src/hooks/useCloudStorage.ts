@@ -137,7 +137,7 @@ export const useCloudStorage = () => {
 
         let dbGrade = grade;
         try {
-            const { data, error } = await supabase.from('students').select('is_active, grade').eq('phone', phoneStr).maybeSingle();
+            const { data, error } = await supabase.from('students').select('is_active, grade, name').eq('phone', phoneStr).maybeSingle();
             if (error) {
                 console.error('[activateSystem] Supabase error:', error);
                 // Network error — key đã khớp, cho phép kích hoạt offline
@@ -147,6 +147,7 @@ export const useCloudStorage = () => {
             } else {
                 if (data.is_active === false) return false;
                 if (data.grade) dbGrade = data.grade;
+                if (data.name) localStorage.setItem('pv_student_name', data.name);
                 // ✅ BUG 1 FIX: Dùng RPC SECURITY DEFINER thay vì UPDATE trực tiếp
                 // anon key không còn cần quyền UPDATE trên bảng students nữa
                 await supabase.rpc('activate_device', {

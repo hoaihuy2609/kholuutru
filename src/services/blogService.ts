@@ -13,6 +13,15 @@ export const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> => {
             if (local.length > 0) return local;
         }
 
+        // ✅ PERF: Cache 15 phút — học sinh không spam Supabase mỗi lần vào trang Blog
+        if (!isAdmin) {
+            const lastBlogFetch = parseInt(localStorage.getItem('pv_blog_last_fetch') || '0', 10);
+            if (Date.now() - lastBlogFetch < 15 * 60 * 1000) {
+                const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
+                if (local.length > 0) return local.filter(b => b.is_published);
+            }
+        }
+
         const { data: indexRow } = await supabase.from('blog_index')
             .select('telegram_file_id').order('updated_at', { ascending: false }).limit(1).maybeSingle();
 
@@ -27,6 +36,7 @@ export const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> => {
         const blogs: BlogPost[] = (firstChar === 91 || firstChar === 123) ? JSON.parse(str) : JSON.parse(xorDeobfuscate(str));
 
         await dbSet(BLOG_LOCAL_KEY, blogs);
+        localStorage.setItem('pv_blog_last_fetch', String(Date.now()));
         return isAdmin ? blogs : blogs.filter(b => b.is_published);
     } catch (e) {
         console.warn('[Blog] Fetch thất bại, dùng cache local:', e);

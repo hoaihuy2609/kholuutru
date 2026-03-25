@@ -69,7 +69,8 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
             // Cleanup timeouts cũ trước khi tạo mới
             prefetchTimeoutsRef.current.forEach(id => clearTimeout(id));
             prefetchTimeoutsRef.current = [];
-            gradedExams.forEach((exam, i) => {
+            // ✅ PERF: Chỉ prefetch 3 đề gần nhất — tiết kiệm Cloudflare Worker quota
+            gradedExams.slice(0, 3).forEach((exam, i) => {
                 const id = window.setTimeout(() => prefetchExamPdf(exam), i * 2000); // stagger 2s each
                 prefetchTimeoutsRef.current.push(id);
             });
