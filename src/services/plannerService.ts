@@ -2,6 +2,24 @@ import { supabase } from '../lib/supabase';
 import { StudyPlanItem, ScheduleItem } from '../../types';
 import { getActivatedPhone } from '../utils/phone';
 
+// ── Cloudflare Worker URL (dùng chung Worker API Gateway) ──
+const VAULT_WORKER_URL = import.meta.env.VITE_VAULT_WORKER_URL || '';
+const PURGE_SECRET = import.meta.env.VITE_VAULT_PURGE_SECRET || 'physivault-purge-2025';
+
+// Inflight lock theo grade — tránh nhiều tab cùng bắn
+const _scheduleInflight = new Map<number, Promise<ScheduleItem[]>>();
+
+async function purgeScheduleCache(grade: number): Promise<void> {
+    if (!VAULT_WORKER_URL) return;
+    try {
+        await fetch(`${VAULT_WORKER_URL}/purge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-purge-secret': PURGE_SECRET },
+            body: JSON.stringify({ target: 'schedule', grade }),
+        });
+    } catch { /* purge lỗi không ảnh hưởng luồng chính */ }
+}
+
 // ── Study Plans ──
 
 // ✅ PERF: Cache kế hoạch 5 phút — invalidate khi CRUD
@@ -60,31 +78,59 @@ export const deleteStudyPlan = async (id: string) => {
 // ── Schedules ──
 
 export const getSchedules = async (grade: number): Promise<ScheduleItem[]> => {
-    // ✅ PERF: Cache 10 phút — thời khóa biểu ít thay đổi
+    // 1️⃣ Client-side localStorage cache 10 phút
     const cacheKey = `pv_schedules_${grade}`;
     const cacheTs = parseInt(localStorage.getItem(`${cacheKey}_ts`) || '0', 10);
     if (Date.now() - cacheTs < 10 * 60 * 1000) {
         const local = localStorage.getItem(cacheKey);
         if (local) return JSON.parse(local);
     }
-    try {
-        const { data, error } = await supabase.from('schedules').select('*')
-            .eq('grade', grade).order('date', { ascending: true }).order('start_time', { ascending: true });
-        if (error) throw error;
-        localStorage.setItem(cacheKey, JSON.stringify(data));
-        localStorage.setItem(`${cacheKey}_ts`, String(Date.now()));
-        return data as ScheduleItem[];
-    } catch (e) {
-        console.error('Lỗi tải thời khóa biểu từ Supabase, fall back local:', e);
-        const local = localStorage.getItem(cacheKey);
-        return local ? JSON.parse(local) : [];
-    }
+
+    // 2️⃣ Inflight lock — tránh nhiều tab bắn cùng lúc
+    if (_scheduleInflight.has(grade)) return _scheduleInflight.get(grade)!;
+
+    const p = (async (): Promise<ScheduleItem[]> => {
+        // 3️⃣ Ưu tiên: Cloudflare Worker Cache (300s TTL)
+        if (VAULT_WORKER_URL) {
+            try {
+                const res = await fetch(`${VAULT_WORKER_URL}/schedule?grade=${grade}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) {
+                        localStorage.setItem(cacheKey, JSON.stringify(data));
+                        localStorage.setItem(`${cacheKey}_ts`, String(Date.now()));
+                        return data as ScheduleItem[];
+                    }
+                }
+            } catch { /* fallback Supabase */ }
+        }
+        // 4️⃣ Fallback: hỏi Supabase trực tiếp
+        try {
+            const { data, error } = await supabase.from('schedules').select('*')
+                .eq('grade', grade).order('date', { ascending: true }).order('start_time', { ascending: true });
+            if (error) throw error;
+            localStorage.setItem(cacheKey, JSON.stringify(data));
+            localStorage.setItem(`${cacheKey}_ts`, String(Date.now()));
+            return data as ScheduleItem[];
+        } catch (e) {
+            console.error('Lỗi tải thời khóa biểu từ Supabase, fall back local:', e);
+            const local = localStorage.getItem(cacheKey);
+            return local ? JSON.parse(local) : [];
+        }
+    })();
+
+    _scheduleInflight.set(grade, p);
+    p.finally(() => _scheduleInflight.delete(grade));
+    return p;
 };
 
 export const saveSchedule = async (schedule: Omit<ScheduleItem, 'id' | 'created_at'>) => {
     try {
         const { data, error } = await supabase.from('schedules').insert([schedule]).select().single();
         if (error) throw error;
+        // Purge Edge cache + localStorage cache
+        localStorage.removeItem(`pv_schedules_${schedule.grade}_ts`);
+        purgeScheduleCache(schedule.grade).catch(() => {});
         return data as ScheduleItem;
     } catch (e) {
         console.error('Lỗi tạo lịch học:', e);
@@ -99,6 +145,9 @@ export const updateSchedule = async (id: string, updates: Partial<ScheduleItem>,
     try {
         const { error } = await supabase.from('schedules').update(updates).eq('id', id);
         if (error) throw error;
+        // Purge Edge cache + localStorage cache
+        localStorage.removeItem(`pv_schedules_${grade}_ts`);
+        purgeScheduleCache(grade).catch(() => {});
         return true;
     } catch (e) {
         console.error('Lỗi cập nhật lịch học:', e);
@@ -113,6 +162,9 @@ export const deleteSchedule = async (id: string, grade: number) => {
     try {
         const { error } = await supabase.from('schedules').delete().eq('id', id);
         if (error) throw error;
+        // Purge Edge cache + localStorage cache
+        localStorage.removeItem(`pv_schedules_${grade}_ts`);
+        purgeScheduleCache(grade).catch(() => {});
         return true;
     } catch (e) {
         console.error('Lỗi xóa lịch học:', e);

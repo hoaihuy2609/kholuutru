@@ -5,6 +5,7 @@
 //   GET  /vault-index?grade=10|11|12 → Index Bài giảng
 //   GET  /blog-index                 → Index Tin tức / Blog
 //   GET  /notifications?grade=0|10|11|12 → Thông báo theo khối
+//   GET  /schedule?grade=0|10|11|12  → Thời khóa biểu theo khối
 //   POST /purge                      → Xóa cache thủ công (Admin)
 // =========================================================
 
@@ -164,7 +165,28 @@ export default {
     }
 
     // ============================================================
-    //   Xóa cache thủ công sau khi Admin đăng nội dung mới
+    // Route 4: GET /schedule?grade=0|10|11|12
+    //   Lấy TOÀN BỘ lịch sắp tới theo khối (không lọc ngày)
+    //   → Học sinh có thể lướt xem lịch cả tuần / cả tháng
+    //   TTL: 300s (5 phút) — lịch ít thay đổi, query nặng (ORDER BY 2 cột)
+    // ============================================================
+    if (url.pathname === "/schedule" && request.method === "GET") {
+      const grade = url.searchParams.get("grade") || "0";
+      if (!["0", "10", "11", "12"].includes(grade)) {
+        return new Response(JSON.stringify({ error: "Invalid grade" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+      return handleCache(
+        `schedule-grade-${grade}`,
+        `schedules?select=*&grade=eq.${grade}&order=date.asc&order=start_time.asc`,
+        300,
+        origin
+      );
+    }
+
+
     //   Body (JSON):
     //     { "target": "vault-index", "grade": 0 }       → xóa đề thi
     //     { "target": "vault-index", "grade": 10 }      → xóa bài giảng lớp 10
@@ -202,6 +224,11 @@ export default {
         keysToDelete = grade !== undefined
           ? [`notifications-grade-${grade}`]
           : ["notifications-grade-0", "notifications-grade-10", "notifications-grade-11", "notifications-grade-12"];
+      } else if (target === "schedule") {
+        const grade = body.grade;
+        keysToDelete = grade !== undefined
+          ? [`schedule-grade-${grade}`]
+          : ["schedule-grade-0", "schedule-grade-10", "schedule-grade-11", "schedule-grade-12"];
       } else {
         // "all" → xóa toàn bộ
         keysToDelete = [
@@ -214,6 +241,10 @@ export default {
           "notifications-grade-10",
           "notifications-grade-11",
           "notifications-grade-12",
+          "schedule-grade-0",
+          "schedule-grade-10",
+          "schedule-grade-11",
+          "schedule-grade-12",
         ];
       }
 
