@@ -120,6 +120,24 @@ export const createCustomNotification = async (message: string, grade: number): 
     } catch (e) { console.error('Lỗi tạo thông báo:', e); return false; }
 };
 
+export const replaceSyncNotification = async (grade: number, title: string, message: string): Promise<boolean> => {
+    try {
+        const { error } = await supabase.rpc('admin_replace_sync_notification', { 
+            p_grade: grade, 
+            p_title: title, 
+            p_message: message 
+        });
+        if (error) throw error;
+        // Purge cache để học sinh thấy thông báo mới ngay lập tức
+        _notifCache[grade] = { data: [], ts: 0 };
+        purgeNotificationsCache(grade).catch(() => {});
+        return true;
+    } catch (e) { 
+        console.error('Lỗi thay thế thông báo sync:', e); 
+        return false; 
+    }
+};
+
 // getFetchedNotificationIds — dùng _fetchedIdsCache khai báo bên trên
 export const getFetchedNotificationIds = async (): Promise<Set<string>> => {
     const normalizedPhone = getActivatedPhone();

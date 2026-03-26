@@ -573,17 +573,15 @@ export const useCloudStorage = () => {
             } catch { }
         })();
 
-        // Auto-create notification
+        // Auto-create notification (Replace old sync notification)
         try {
             const gradeLabel = grade === 12 ? 'Lớp 12' : grade === 11 ? 'Lớp 11' : 'Lớp 10';
-            // ✅ BUG 4 FIX: Dùng RPC SECURITY DEFINER để admin insert notification
-            // anon key bị REVOKE INSERT trên notifications nên KHÔNG thể gọi trực tiếp
-            await supabase.rpc('admin_insert_notification', {
-                p_message: `Thầy vừa cập nhật tài liệu mới cho ${gradeLabel}! Hãy bấm nút bên dưới để tải về ngay nhé.`,
-                p_grade: grade,
-                p_fetch_enabled: true,
-            });
-        } catch (notifErr) { console.error('[Notification] Không tạo được thông báo:', notifErr); }
+            await notificationService.replaceSyncNotification(
+                grade,
+                'Nội dung đã được cập nhật!',
+                `Thầy vừa đẩy tài liệu mới cho ${gradeLabel}. Các em bấm vào đây để "Lấy bài về" ngay nhé! 🚀`
+            );
+        } catch (notifErr) { console.error('[Notification] Không thay thế được thông báo:', notifErr); }
 
         return finalFileId;
         } finally { _syncLock.current[grade] = false; }
@@ -613,6 +611,7 @@ export const useCloudStorage = () => {
         getNotifications: notificationService.getNotifications,
         deleteNotification: notificationService.deleteNotification,
         createCustomNotification: notificationService.createCustomNotification,
+        replaceSyncNotification: notificationService.replaceSyncNotification,
         markNotificationFetched: notificationService.markNotificationFetched,
         getFetchedNotificationIds: notificationService.getFetchedNotificationIds,
         submitQuestionVote: notificationService.submitQuestionVote,

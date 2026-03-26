@@ -530,7 +530,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                                             {!isFetched && notif.fetch_enabled && (
                                                 <span
-                                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider"
+                                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider animate-pulse"
                                                     style={{ background: ACCENT_LIGHT, color: ACCENT }}
                                                 >
                                                     Mới
@@ -558,20 +558,28 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                             })()}
                                         </div>
 
-                                        <p className="text-sm leading-relaxed" style={{ color: isFetched ? '#787774' : '#1A1A1A' }}>
+                                        {notif.title && (
+                                            <h4 className="text-sm font-bold mb-1" style={{ color: isFetched ? '#57564F' : '#1A1A1A' }}>
+                                                {notif.title}
+                                            </h4>
+                                        )}
+
+                                        <p className="text-sm leading-relaxed" style={{ color: isFetched ? '#787774' : '#57564F' }}>
                                             {notif.message}
                                         </p>
 
-                                        {/* Badge for custom (non-sync) notifications */}
-                                        {!notif.fetch_enabled && (
-                                            <span
-                                                className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded mt-1"
-                                                style={{ background: '#EEF0FB', color: '#6B7CDB' }}
-                                            >
-                                                <Megaphone className="w-2.5 h-2.5" />
-                                                Thông báo chung
-                                            </span>
-                                        )}
+                                        {/* Badge for notification type */}
+                                        <span
+                                            className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded mt-1.5"
+                                            style={{ 
+                                                background: notif.type === 'sync' ? '#FFFDF5' : '#EEF0FB', 
+                                                color: notif.type === 'sync' ? '#D97706' : '#6B7CDB',
+                                                border: `1px solid ${notif.type === 'sync' ? '#FDE68A' : '#D1D5DB'}50`
+                                            }}
+                                        >
+                                            {notif.type === 'sync' ? <CloudDownload className="w-2.5 h-2.5" /> : <Megaphone className="w-2.5 h-2.5" />}
+                                            {notif.type === 'sync' ? 'Hệ thống cập nhật' : 'Thông báo từ Thầy'}
+                                        </span>
 
                                         <div className="flex items-center gap-1 mt-1.5" style={{ color: '#AEACA8' }}>
                                             <Clock className="w-3 h-3" />

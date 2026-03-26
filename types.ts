@@ -126,7 +126,9 @@ export interface ScheduleItem {
 
 export interface NotificationItem {
   id: string;
-  message: string;
+  title?: string;          // Tiêu đề thông báo (tùy chọn)
+  message: string;         // Nội dung thông báo
+  type: 'manual' | 'sync'; // Loại thông báo
   grade: number;           // 10, 11, 12
   fetch_enabled: boolean;
   created_at: string;
