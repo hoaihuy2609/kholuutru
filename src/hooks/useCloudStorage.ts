@@ -579,7 +579,7 @@ export const useCloudStorage = () => {
             await notificationService.replaceSyncNotification(
                 grade,
                 'Nội dung đã được cập nhật!',
-                `Thầy vừa đẩy tài liệu mới cho ${gradeLabel}. Các em bấm vào đây để "Lấy bài về" ngay nhé! 🚀`
+                `Thầy vừa đẩy tài liệu mới cho ${gradeLabel}. Các em bấm vào đây để "Lấy bài về" ngay nhé!`
             );
         } catch (notifErr) { console.error('[Notification] Không thay thế được thông báo:', notifErr); }
 

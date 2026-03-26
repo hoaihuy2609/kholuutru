@@ -568,18 +568,6 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                             {notif.message}
                                         </p>
 
-                                        {/* Badge for notification type */}
-                                        <span
-                                            className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded mt-1.5"
-                                            style={{ 
-                                                background: notif.type === 'sync' ? '#FFFDF5' : '#EEF0FB', 
-                                                color: notif.type === 'sync' ? '#D97706' : '#6B7CDB',
-                                                border: `1px solid ${notif.type === 'sync' ? '#FDE68A' : '#D1D5DB'}50`
-                                            }}
-                                        >
-                                            {notif.type === 'sync' ? <CloudDownload className="w-2.5 h-2.5" /> : <Megaphone className="w-2.5 h-2.5" />}
-                                            {notif.type === 'sync' ? 'Hệ thống cập nhật' : 'Thông báo từ Thầy'}
-                                        </span>
 
                                         <div className="flex items-center gap-1 mt-1.5" style={{ color: '#AEACA8' }}>
                                             <Clock className="w-3 h-3" />
