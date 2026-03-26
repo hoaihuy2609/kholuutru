@@ -567,6 +567,21 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                         <p className="text-sm leading-relaxed" style={{ color: isFetched ? '#787774' : '#57564F' }}>
                                             {notif.message}
                                         </p>
+ 
+                                        {/* Badge for manual messages only */}
+                                        {notif.type === 'manual' && (
+                                            <span
+                                                className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded mt-1.5"
+                                                style={{ 
+                                                    background: '#EEF0FB', 
+                                                    color: '#6B7CDB',
+                                                    border: `1px solid #D1D5DB50`
+                                                }}
+                                            >
+                                                <Megaphone className="w-2.5 h-2.5" />
+                                                Thông báo từ Thầy
+                                            </span>
+                                        )}
 
 
                                         <div className="flex items-center gap-1 mt-1.5" style={{ color: '#AEACA8' }}>
