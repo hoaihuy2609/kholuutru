@@ -123,7 +123,7 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
                 <button
                     onClick={load}
                     disabled={loading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium pv-btn-secondary-hover"
+                    className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium pv-btn-secondary-hover"
                     style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
                     title="Tải lại danh sách"
                 >

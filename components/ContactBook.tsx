@@ -258,7 +258,7 @@ const ContactBook: React.FC<ContactBookProps> = ({ isAdmin, onLoadHistory }) => 
                 <button
                     onClick={load}
                     disabled={loading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                    className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
                     style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}

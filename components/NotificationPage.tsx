@@ -213,7 +213,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                                 </span>
                             )}
                         </div>
-                        <p className="text-sm mt-0.5" style={{ color: '#787774' }}>
+                        <p className="hidden md:block text-sm mt-0.5" style={{ color: '#787774' }}>
                             {isAdmin
                                 ? <>Quản lý thông báo — <strong style={{ color: '#1A1A1A' }}>Soạn thông báo</strong> tùy ý hoặc xóa thông báo cũ.</>
                                 : <>Thầy thông báo tài liệu mới & tin nhắn — bấm <strong style={{ color: '#1A1A1A' }}>Lấy bài về</strong> để cập nhật.</>
@@ -256,7 +256,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                     <button
                         onClick={load}
                         disabled={loading}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                        className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
                         style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
                         onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
