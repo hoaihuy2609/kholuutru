@@ -1,7 +1,7 @@
 import { supabase } from '../src/lib/supabase';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone, CloudDownload, Loader2, RefreshCw } from 'lucide-react';
+import { Download, Upload, X, ShieldAlert, Lock, Unlock, KeyRound, Monitor, UserCheck, ShieldCheck, History, Trash2, LayoutDashboard, Phone, CloudDownload, Loader2, RefreshCw, Atom } from 'lucide-react';
 import { exportData, importData, getMachineId, generateActivationKey } from '../src/hooks/useCloudStorage';
 
 import { Lesson, FileStorage, Exam } from '../types';
@@ -48,6 +48,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     const [generatedKey, setGeneratedKey] = useState('');
     const [activationHistory, setActivationHistory] = useState<{ id: string; name: string; key: string; date: number }[]>([]);
     const [isFetchingLessons, setIsFetchingLessons] = useState(false);
+    const [logoClicks, setLogoClicks] = useState(0);
+    const [forceShowAdmin, setForceShowAdmin] = useState(false);
     const [fetchProgress, setFetchProgress] = useState(0);
     const [fetchResult, setFetchResult] = useState<{ lessonCount: number; fileCount: number } | null>(null);
 
@@ -234,9 +236,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                     className="flex items-center justify-between px-5 py-3.5"
                     style={{ borderBottom: '1px solid #E9E9E7' }}
                 >
-                    <h3 className="font-semibold text-base" style={{ color: '#1A1A1A' }}>
-                        Cài đặt &amp; Bảo mật Hệ thống
-                    </h3>
+                    <div className="flex items-center gap-2.5">
+                        <div
+                            onClick={() => {
+                                setLogoClicks(c => {
+                                    if (c + 1 >= 5) {
+                                        setForceShowAdmin(true);
+                                        onShowToast('🔓 Chế độ Admin bí mật đã được mở!', 'success');
+                                        return 0;
+                                    }
+                                    return c + 1;
+                                });
+                            }}
+                            className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-transform"
+                            style={{ background: '#6B7CDB' }}
+                            title="PhysiVault Logo"
+                        >
+                            <Atom className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <h3 className="font-semibold text-base" style={{ color: '#1A1A1A' }}>
+                            Cài đặt &amp; Bảo mật Hệ thống
+                        </h3>
+                    </div>
                     <button
                         onClick={onClose}
                         className="p-1.5 rounded-md transition-colors"
@@ -254,7 +275,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                     {/* ── Access / Admin section ── */}
                     <div
                         id="tour-admin-section"
-                        className="rounded-xl overflow-hidden"
+                        className={`${(isActivated || forceShowAdmin || isAdmin) ? 'block' : 'hidden sm:block'} rounded-xl overflow-hidden`}
                         style={{ border: '1px solid #E9E9E7' }}
                     >
                         {/* Row */}
