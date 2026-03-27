@@ -356,7 +356,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                             Hệ thống đã được kích hoạt. Bạn có thể nạp bài giảng mới.
                                         </span>
                                     ) : (
-                                        'Bạn đang ở chế độ Học sinh: Các tính năng nạp dữ liệu sẽ bị hạn chế cho đến khi bạn nhập mã kích hoạt.'
+                                        <span className="hidden sm:inline">Bạn đang ở chế độ Học sinh: Các tính năng nạp dữ liệu sẽ bị hạn chế cho đến khi bạn nhập mã kích hoạt.</span>
                                     )}
                                 </p>
                             )}
@@ -430,7 +430,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                     <button
                                         onClick={handleActivate}
                                         disabled={isFetchingLessons}
-                                        className="px-5 text-sm font-semibold text-white rounded-lg transition-colors disabled:opacity-70 flex items-center justify-center gap-2 relative overflow-hidden shrink-0"
+                                        className="px-5 py-[10.5px] sm:py-2 text-sm font-semibold text-white rounded-lg transition-colors disabled:opacity-70 flex items-center justify-center gap-2 relative overflow-hidden shrink-0"
                                         style={{ background: '#D9730D', minWidth: '110px' }}
                                         onMouseEnter={e => !isFetchingLessons && ((e.currentTarget as HTMLElement).style.background = '#c4650b')}
                                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#D9730D'}
