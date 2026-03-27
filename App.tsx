@@ -8,7 +8,7 @@ import Toast from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
 import { getActivatedPhone } from './src/utils/phone';
-import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Home, Bell, FlaskConical, Settings } from 'lucide-react';
+import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Home, Bell, FlaskConical, Settings, Menu, X } from 'lucide-react';
 import KickedScreen from './components/auth/KickedScreen';
 import { useUIStore } from './src/stores/useUIStore';
 import { useDataStore } from './src/stores/useDataStore';
@@ -443,11 +443,43 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 
       {/* Main Content */}
       <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 relative ${hideSidebar ? '' : 'md:ml-64'}`}>
-        <header className="p-3.5 flex items-center justify-center md:hidden sticky top-0 z-30" style={{ background: '#F1F0EC', borderBottom: '1px solid #E9E9E7' }}>
+        {/* Mobile Header: Hamburger | Logo | Bell */}
+        <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4" style={{ background: '#F1F0EC', borderBottom: '1px solid #E9E9E7', height: '52px' }}>
+          {/* Hamburger */}
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
+            style={{ color: '#57564F' }}
+            aria-label="Mở menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          {/* Logo giữa */}
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: '#6B7CDB' }}><Atom className="w-3.5 h-3.5 text-white" /></div>
+            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: '#6B7CDB' }}>
+              <Atom className="w-3.5 h-3.5 text-white" />
+            </div>
             <span className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>PhysiVault</span>
           </div>
+
+          {/* Bell với badge thông báo */}
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
+            style={{ color: isOnNotification ? '#E03E3E' : '#57564F' }}
+            aria-label="Thông báo"
+          >
+            <Bell className="w-5 h-5" />
+            {notificationUnreadCount > 0 && (
+              <span
+                className="absolute top-1 right-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] font-black"
+                style={{ background: '#E03E3E', color: '#fff', lineHeight: 1 }}
+              >
+                {notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}
+              </span>
+            )}
+          </button>
         </header>
 
         <main className={`flex-1 p-4 md:p-8 lg:p-10 pb-10 mx-auto w-full ${hideSidebar ? 'max-w-[1920px] px-4 md:px-8 lg:px-12' : 'max-w-7xl'}`}>
