@@ -3,6 +3,8 @@ import { ArrowLeft, FileText, Trash2, UploadCloud, Download, Eye, ArrowUpDown, X
 import { Lesson, StoredFile } from '../types';
 import SearchBar from './SearchBar';
 import { useLocation } from 'react-router-dom';
+import StudyTimer from './StudyTimer';
+
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -483,6 +485,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
+              <StudyTimer fileId={previewFile.id} />
               {isAdmin && (
                 <a
                   href={previewFile.url}

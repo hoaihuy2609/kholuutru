@@ -4,6 +4,8 @@ import SearchBar from './SearchBar';
 import { useDebounce } from 'use-debounce';
 import { Chapter, Lesson, StoredFile } from '../types';
 import { useLocation } from 'react-router-dom';
+import StudyTimer from './StudyTimer';
+
 
 // ── Progress Types ──────────────────────────────────────────
 type ProgressStatus = 'none' | 'done';
@@ -822,6 +824,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
+              <StudyTimer fileId={previewFile.id} />
               {isAdmin && (
                 <a href={previewFile.url} download={previewFile.name} onClick={e => e.stopPropagation()}
                   className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
