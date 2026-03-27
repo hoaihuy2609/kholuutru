@@ -380,7 +380,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                 </div>
                                 <div>
                                     <h4 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Kích hoạt tài khoản</h4>
-                                    <p className="text-xs mt-0.5" style={{ color: '#787774' }}>
+                                    <p className="hidden sm:block text-xs mt-0.5" style={{ color: '#787774' }}>
                                         Dán mã kích hoạt nhận từ <span style={{ color: '#D9730D', fontWeight: 600 }}>Bot PhysiVault</span> để bắt đầu học.
                                     </p>
                                 </div>
@@ -461,8 +461,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                     </div>
                                 )}
 
-                                {/* Machine ID */}
-                                <div className="flex items-center justify-between text-[10px]" style={{ color: '#AEACA8' }}>
+                                {/* Machine ID - hidden on mobile */}
+                                <div className="hidden sm:flex items-center justify-between text-[10px]" style={{ color: '#AEACA8' }}>
                                     <div className="flex items-center gap-1.5 font-mono">
                                         <Monitor className="w-3 h-3" />
                                         ID: {myMachineId}
