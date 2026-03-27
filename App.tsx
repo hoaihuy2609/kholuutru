@@ -450,7 +450,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
           </div>
         </header>
 
-        <main className={`flex-1 p-4 md:p-8 lg:p-10 pb-24 md:pb-10 mx-auto w-full ${hideSidebar ? 'max-w-[1920px] px-4 md:px-8 lg:px-12' : 'max-w-7xl'}`}>
+        <main className={`flex-1 p-4 md:p-8 lg:p-10 pb-10 mx-auto w-full ${hideSidebar ? 'max-w-[1920px] px-4 md:px-8 lg:px-12' : 'max-w-7xl'}`}>
           <Routes>
             <Route path="/" element={
               loading
@@ -473,40 +473,11 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
       </div>
 
       {/* Toasts */}
-      <div className="fixed bottom-20 md:bottom-0 right-0 p-4 space-y-2 z-50">
+      <div className="fixed bottom-0 right-0 p-4 space-y-2 z-50">
         {toasts.map(t => <Toast key={t.id} message={t.message} type={t.type} onClose={() => removeToast(t.id)} />)}
       </div>
 
-      {/* Mobile Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden flex items-stretch" style={{ background: '#FFFFFF', borderTop: '1px solid #E9E9E7', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        <button onClick={() => navigate('/')} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors" style={{ color: isOnHome ? '#6B7CDB' : '#AEACA8' }}>
-          <Home className="w-5 h-5" /><span className="text-[10px] font-medium">Tổng quan</span>
-        </button>
-        {(isActivated || isAdmin) && (
-          <button onClick={() => setMobileMenuOpen(true)} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors" style={{ color: isOnGrade ? '#6B7CDB' : '#AEACA8' }}>
-            <FolderOpen className="w-5 h-5" /><span className="text-[10px] font-medium">{currentGradeFromUrl ? `Lớp ${currentGradeFromUrl}` : 'Khối lớp'}</span>
-          </button>
-        )}
-        {(isActivated || isAdmin) && (
-          <button onClick={() => navigate('/exams')} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors" style={{ color: isOnExams ? '#6B7CDB' : '#AEACA8' }}>
-            <FileText className="w-5 h-5" /><span className="text-[10px] font-medium">Thi thử</span>
-          </button>
-        )}
-        {(isActivated || isAdmin) && (
-          <button onClick={() => navigate('/notifications')} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors relative" style={{ color: isOnNotification ? '#E03E3E' : '#AEACA8' }}>
-            <div className="relative"><Bell className="w-5 h-5" />{notificationUnreadCount > 0 && <span className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] font-black" style={{ background: '#E03E3E', color: '#fff', lineHeight: 1 }}>{notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}</span>}</div>
-            <span className="text-[10px] font-medium">Thông báo</span>
-          </button>
-        )}
-        {(isActivated || isAdmin) && (
-          <button onClick={() => navigate('/lab')} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors" style={{ color: isOnSimLab ? '#2878BD' : '#AEACA8' }}>
-            <FlaskConical className="w-5 h-5" /><span className="text-[10px] font-medium">Phòng TN</span>
-          </button>
-        )}
-        <button onClick={() => setSettingsOpen(true)} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors" style={{ color: '#AEACA8' }}>
-          <Settings className="w-5 h-5" /><span className="text-[10px] font-medium">Cài đặt</span>
-        </button>
-      </nav>
+
 
       {isOnHome && !showAdminDashboard && !isActivated && !isAdmin && (
         <ErrorBoundary><Suspense fallback={null}><Chatbot /></Suspense></ErrorBoundary>
