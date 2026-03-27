@@ -802,9 +802,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                         </div>
                     )}
 
-                    {/* ── Note box ── */}
+                    {/* ── Note box - hidden on mobile ── */}
                     <div
-                        className="flex gap-3 items-start px-4 py-3 rounded-lg"
+                        className="hidden sm:flex gap-3 items-start px-4 py-3 rounded-lg"
                         style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}
                     >
                         <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" style={{ color: '#AEACA8' }} />
