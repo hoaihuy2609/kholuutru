@@ -86,6 +86,8 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     const [pdfLoading, setPdfLoading] = useState(true);
     const [showConfirm, setShowConfirm] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    // Sau khi học sinh bấm "Xem đề thi" trên mobile → ẩn khu vực PDF, full-screen form
+    const [hasViewedPdf, setHasViewedPdf] = useState(false);
     
     // Thiết bị mobile/tablet (để ẩn iframe và hiện nút link thật)
     const [isMobileDevice] = useState(() => {
@@ -220,10 +222,11 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
             {/* ── Main Content ── */}
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
 
-                {/* PDF Viewer */}
-                <div className="flex-1 min-h-[40vh] md:min-h-0 overflow-hidden relative">
+                {/* PDF Viewer — Desktop: always visible | Mobile: ẩn sau khi học sinh đã bấm "Xem đề" */}
+                {(!isMobileDevice || !hasViewedPdf) && (
+                <div className={`overflow-hidden relative ${isMobileDevice ? 'shrink-0' : 'flex-1 min-h-0'}`}>
                     {pdfLoading ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3" style={{ background: '#1A1A1A' }}>
+                        <div className="flex flex-col items-center justify-center gap-3 py-10" style={{ background: '#1A1A1A' }}>
                             <RefreshCw className="w-8 h-8 animate-spin" style={{ color: ACCENT }} />
                             <p className="text-sm" style={{ color: '#AEACA8' }}>Đang tải đề thi...</p>
                         </div>
@@ -237,19 +240,18 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                     title="PDF Preview"
                                 />
                             )}
-                            {/* Mobile/Tablet: nút mở trực tiếp */}
+                            {/* Mobile/Tablet: nút mở tab mới — bấm xong sẽ collapse khu vực này */}
                             {isMobileDevice && (
-                                <div className="flex flex-col items-center justify-center h-full gap-4 bg-[#1A1A1A]">
-                                    <FileText className="w-12 h-12" style={{ color: ACCENT }} />
-                                    <p className="text-sm font-semibold" style={{ color: '#E5E5E4' }}>{exam.title}</p>
+                                <div className="flex flex-col items-center justify-center gap-4 py-8 bg-[#1A1A1A]">
+                                    <FileText className="w-10 h-10" style={{ color: ACCENT }} />
                                     <p className="text-xs text-center px-6" style={{ color: '#AEACA8' }}>
-                                        Bấm nút bên dưới để xem đề thi.<br/>Sau đó quay lại tab này để làm bài.
+                                        Bấm để mở đề thi, sau đó quay lại tab này điền đáp án.
                                     </p>
                                     <a
                                         href={pdfUrl}
-                                        download={`${exam.title || 'de-thi'}.pdf`}
                                         target="_blank"
                                         rel="noopener noreferrer"
+                                        onClick={() => setHasViewedPdf(true)}
                                         className="px-6 py-3 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all active:scale-95"
                                         style={{ background: ACCENT }}
                                     >
@@ -259,20 +261,36 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                 </div>
                             )}
                         </>
-
                     ) : (
-                        <div className="flex flex-col items-center justify-center h-full gap-2" style={{ background: '#1A1A1A' }}>
+                        <div className="flex flex-col items-center justify-center gap-2 py-10" style={{ background: '#1A1A1A' }}>
                             <AlertTriangle className="w-8 h-8" style={{ color: '#D9730D' }} />
                             <p className="text-sm" style={{ color: '#AEACA8' }}>Không tải được đề thi.</p>
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* ── Answer Panel ── */}
                 <div
-                    className="w-full md:w-[280px] flex flex-col overflow-hidden shrink-0"
-                    style={{ background: '#1E1E1E', borderLeft: 'none', borderTop: '1px solid #333' }}
+                    className={`flex flex-col overflow-hidden shrink-0 ${isMobileDevice && hasViewedPdf ? 'flex-1' : 'w-full md:w-[280px]'}`}
+                    style={{ background: '#1E1E1E', borderLeft: 'none', borderTop: isMobileDevice && hasViewedPdf ? 'none' : '1px solid #333' }}
                 >
+                    {/* Nút mở lại đề (fallback) — chỉ hiện trên mobile sau khi đã bấm Xem đề */}
+                    {isMobileDevice && hasViewedPdf && pdfUrl && (
+                        <div className="flex items-center justify-between px-4 py-2 shrink-0" style={{ borderBottom: '1px solid #2D2D2D', background: '#242424' }}>
+                            <span className="text-xs" style={{ color: '#787774' }}>Điền đáp án bên dưới</span>
+                            <a
+                                href={pdfUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg transition-all active:scale-95"
+                                style={{ color: ACCENT, background: '#2A2A2A', border: `1px solid ${ACCENT}33` }}
+                            >
+                                <FileText className="w-3 h-3" />
+                                Mở lại đề
+                            </a>
+                        </div>
+                    )}
                     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3B3B3B #1E1E1E' }}>
 
                         {/* Phần I */}
