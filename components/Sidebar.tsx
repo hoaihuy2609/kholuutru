@@ -343,7 +343,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
 
       {/* Admin Panel & Settings */}
       {isAdmin && (
-        <div className="hidden md:block p-3" style={{ borderTop: '1px solid #E9E9E7' }}>
+        <div className="p-3" style={{ borderTop: '1px solid #E9E9E7' }}>
           <div className="text-[10px] font-semibold uppercase tracking-widest text-[#AEACA8] mb-2 px-1">
             Quản trị viên
           </div>
@@ -436,7 +436,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
 
       {/* Settings for normal user */}
       {!isAdmin && (
-        <div className="hidden md:block p-2" style={{ borderTop: '1px solid #E9E9E7' }}>
+        <div className="p-2" style={{ borderTop: '1px solid #E9E9E7' }}>
           <button
             id="tour-settings-btn"
             onClick={onOpenSettings}
@@ -446,7 +446,15 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
           >
             <Settings className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
-            Cài đặt &amp; Đồng bộ
+            <span className="flex-1 text-left">Cài đặt &amp; Đồng bộ</span>
+            {localStorage.getItem('pv_pending_sdt') && (
+              <span
+                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse shrink-0"
+                style={{ background: '#FFF3E8', color: '#D9730D' }}
+              >
+                CẦN NHẬP MÃ
+              </span>
+            )}
           </button>
         </div>
       )}
