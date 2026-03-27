@@ -48,8 +48,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     const [generatedKey, setGeneratedKey] = useState('');
     const [activationHistory, setActivationHistory] = useState<{ id: string; name: string; key: string; date: number }[]>([]);
     const [isFetchingLessons, setIsFetchingLessons] = useState(false);
-    const [logoClicks, setLogoClicks] = useState(0);
-    const [forceShowAdmin, setForceShowAdmin] = useState(false);
     const [fetchProgress, setFetchProgress] = useState(0);
     const [fetchResult, setFetchResult] = useState<{ lessonCount: number; fileCount: number } | null>(null);
 
@@ -238,17 +236,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                 >
                     <div className="flex items-center gap-2.5">
                         <div
-                            onClick={() => {
-                                setLogoClicks(c => {
-                                    if (c + 1 >= 5) {
-                                        setForceShowAdmin(true);
-                                        onShowToast('🔓 Chế độ Admin bí mật đã được mở!', 'success');
-                                        return 0;
-                                    }
-                                    return c + 1;
-                                });
-                            }}
-                            className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-transform"
+                            className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
                             style={{ background: '#6B7CDB' }}
                             title="PhysiVault Logo"
                         >
@@ -275,7 +263,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                     {/* ── Access / Admin section ── */}
                     <div
                         id="tour-admin-section"
-                        className={`${(isActivated || forceShowAdmin || isAdmin) ? 'block' : 'hidden sm:block'} rounded-xl overflow-hidden`}
+                        className={`${(isActivated || isAdmin) ? 'block' : 'hidden sm:block'} rounded-xl overflow-hidden`}
                         style={{ border: '1px solid #E9E9E7' }}
                     >
                         {/* Row */}
