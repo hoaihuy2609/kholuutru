@@ -45,6 +45,12 @@ const ACCENT_COLORS = [
     { bg: '#E8F4FD', border: '#2B88D8', text: '#1A6DB8' },
 ];
 
+const GRADE_COLORS: Record<number, { main: string; light: string; lighter: string; border: string; text: string; shadow: string }> = {
+    10: { main: '#6B7CDB', light: '#EEF0FB', lighter: '#E4E8F8', border: '#B8C0EE', text: '#4B5CC4', shadow: 'rgba(107,124,219,0.18)' },
+    11: { main: '#9065B0', light: '#F3ECF8', lighter: '#EBE0F4', border: '#D0ADE8', text: '#7B4FA0', shadow: 'rgba(144,101,176,0.18)' },
+    12: { main: '#448361', light: '#EAF3EE', lighter: '#D8EDE2', border: '#C5E4D1', text: '#2E6B47', shadow: 'rgba(68,131,97,0.18)' },
+};
+
 export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
     isAdmin,
     studentGrade,
@@ -242,7 +248,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
             {/* Schedule Grid */}
             {loading ? (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
-                    <div className="animate-spin" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid #EAF3EE', borderTopColor: '#448361' }} />
+                    <div className="animate-spin" style={{ width: '32px', height: '32px', borderRadius: '50%', border: `3px solid ${GRADE_COLORS[selectedGrade]?.light || '#EAF3EE'}`, borderTopColor: GRADE_COLORS[selectedGrade]?.main || '#448361' }} />
                 </div>
             ) : (
                 <div style={{
@@ -265,13 +271,13 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
                                 style={{
                                     borderRadius: '14px',
                                     overflow: 'hidden',
-                                    border: isToday ? '1.5px solid #448361' : '1px solid #E9E9E7',
+                                    border: isToday ? `1.5px solid ${GRADE_COLORS[selectedGrade]?.main || '#448361'}` : '1px solid #E9E9E7',
                                     background: '#fff',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     transition: 'all 0.2s ease',
                                     opacity: isPast ? 0.6 : 1,
-                                    boxShadow: isToday ? '0 4px 16px rgba(68,131,97,0.12)' : '0 1px 3px rgba(0,0,0,0.04)',
+                                    boxShadow: isToday ? `0 4px 16px ${GRADE_COLORS[selectedGrade]?.shadow || 'rgba(68,131,97,0.12)'}` : '0 1px 3px rgba(0,0,0,0.04)',
                                     position: 'relative',
                                 }}
                                 onMouseEnter={e => {
@@ -293,17 +299,18 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
                                 <div style={{
                                     padding: '10px 14px',
                                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    background: isToday ? 'linear-gradient(135deg, #EAF3EE, #F0F7F3)' : '#FAFAF9',
-                                    borderBottom: `1px solid ${isToday ? '#C5E4D1' : '#F0F0EE'}`,
+                                    background: isToday ? `linear-gradient(135deg, ${GRADE_COLORS[selectedGrade]?.light || '#EAF3EE'}, ${GRADE_COLORS[selectedGrade]?.lighter || '#F0F7F3'})` : '#FAFAF9',
+                                    borderBottom: `1px solid ${isToday ? (GRADE_COLORS[selectedGrade]?.border || '#C5E4D1') : '#F0F0EE'}`,
+
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <div style={{
                                             width: '32px', height: '32px', borderRadius: '9px',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: '14px', fontWeight: 800,
-                                            background: isToday ? '#448361' : '#F0F0EE',
+                                            background: isToday ? (GRADE_COLORS[selectedGrade]?.main || '#448361') : '#F0F0EE',
                                             color: isToday ? '#fff' : '#787774',
-                                            boxShadow: isToday ? '0 2px 6px rgba(68,131,97,0.3)' : 'none',
+                                            boxShadow: isToday ? `0 2px 6px ${GRADE_COLORS[selectedGrade]?.shadow || 'rgba(68,131,97,0.3)'}` : 'none',
                                             transition: 'all 0.2s',
                                         }}>
                                             {dateNum}
@@ -311,14 +318,14 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
                                         <div>
                                             <div style={{
                                                 fontSize: '13px', fontWeight: 700,
-                                                color: isToday ? '#2E6B47' : '#1A1A1A',
+                                                color: isToday ? (GRADE_COLORS[selectedGrade]?.text || '#2E6B47') : '#1A1A1A',
                                                 lineHeight: 1
                                             }}>
                                                 {day.name}
                                             </div>
                                             {isToday && (
                                                 <div style={{
-                                                    fontSize: '10px', fontWeight: 700, color: '#448361',
+                                                    fontSize: '10px', fontWeight: 700, color: GRADE_COLORS[selectedGrade]?.main || '#448361',
                                                     letterSpacing: '0.05em', marginTop: '2px'
                                                 }}>
                                                     HÔM NAY
@@ -332,18 +339,18 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
                                             style={{
                                                 width: '28px', height: '28px', borderRadius: '8px', border: 'none',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                background: isToday ? '#C5E4D1' : '#F0F0EE',
-                                                color: isToday ? '#2E6B47' : '#AEACA8',
+                                                background: isToday ? (GRADE_COLORS[selectedGrade]?.border || '#C5E4D1') : '#F0F0EE',
+                                                color: isToday ? (GRADE_COLORS[selectedGrade]?.text || '#2E6B47') : '#AEACA8',
                                                 cursor: 'pointer', transition: 'all 0.15s'
                                             }}
                                             onMouseEnter={e => {
-                                                e.currentTarget.style.background = isToday ? '#448361' : '#E9E9E7';
+                                                e.currentTarget.style.background = isToday ? (GRADE_COLORS[selectedGrade]?.main || '#448361') : '#E9E9E7';
                                                 e.currentTarget.style.color = isToday ? '#fff' : '#1A1A1A';
                                                 e.currentTarget.style.transform = 'scale(1.05)';
                                             }}
                                             onMouseLeave={e => {
-                                                e.currentTarget.style.background = isToday ? '#C5E4D1' : '#F0F0EE';
-                                                e.currentTarget.style.color = isToday ? '#2E6B47' : '#AEACA8';
+                                                e.currentTarget.style.background = isToday ? (GRADE_COLORS[selectedGrade]?.border || '#C5E4D1') : '#F0F0EE';
+                                                e.currentTarget.style.color = isToday ? (GRADE_COLORS[selectedGrade]?.text || '#2E6B47') : '#AEACA8';
                                                 e.currentTarget.style.transform = 'scale(1)';
                                             }}
                                             title="Thêm lịch"
