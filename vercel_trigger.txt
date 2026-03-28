@@ -1,0 +1,1 @@
+Vercel Trigger: Triggering a deployment after git reset.
