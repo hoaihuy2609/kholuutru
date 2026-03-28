@@ -447,14 +447,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           >
             <Settings className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
             <span className="flex-1 text-left">Cài đặt &amp; Đồng bộ</span>
-            {localStorage.getItem('pv_pending_sdt') && (
-              <span
-                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse shrink-0"
-                style={{ background: '#FFF3E8', color: '#D9730D' }}
-              >
-                CẦN NHẬP MÃ
-              </span>
-            )}
           </button>
         </div>
       )}
