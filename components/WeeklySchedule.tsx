@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScheduleItem } from '../types';
-import { Calendar, Clock, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, Save, X, BellRing } from 'lucide-react';
-import { requestNotificationPermission, scheduleReminders, clearAllReminders, getNotificationPermission } from '../src/utils/scheduleReminder';
+import { Calendar, Clock, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
 
 interface WeeklyScheduleProps {
     isAdmin: boolean;
@@ -59,8 +58,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
     const [loading, setLoading] = useState(true);
     const [editingItem, setEditingItem] = useState<Partial<ScheduleItem> | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [reminderCount, setReminderCount] = useState(0);
-    const [notifPermission, setNotifPermission] = useState<string>(getNotificationPermission());
+
 
     useEffect(() => {
         if (!isAdmin && studentGrade) setSelectedGrade(studentGrade);
@@ -68,10 +66,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
 
     useEffect(() => { fetchSchedules(); }, [selectedGrade]);
 
-    // Cleanup reminders on unmount
-    useEffect(() => {
-        return () => clearAllReminders();
-    }, []);
+
 
     const fetchSchedules = async () => {
         setLoading(true);
@@ -79,15 +74,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
         setSchedules(data || []);
         setLoading(false);
 
-        // Schedule reminders for today
-        if (data && data.length > 0) {
-            const hasPermission = await requestNotificationPermission();
-            setNotifPermission(getNotificationPermission());
-            if (hasPermission) {
-                const count = scheduleReminders(data);
-                setReminderCount(count);
-            }
-        }
+
     };
 
     const handleNextWeek = () => {
@@ -180,30 +167,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
                         </div>
                     </div>
 
-                    {/* Reminder indicator */}
-                    {reminderCount > 0 && (
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            background: '#EAF3EE', padding: '5px 12px', borderRadius: '8px',
-                            border: '1px solid #B7D9C4',
-                        }}>
-                            <BellRing style={{ width: '13px', height: '13px', color: '#448361' }} />
-                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#448361' }}>
-                                🔔 {reminderCount} nhắc nhở hôm nay
-                            </span>
-                        </div>
-                    )}
-                    {notifPermission === 'denied' && (
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            background: '#FEF2F2', padding: '5px 12px', borderRadius: '8px',
-                            border: '1px solid #FECACA',
-                        }}>
-                            <span style={{ fontSize: '11px', fontWeight: 500, color: '#E03E3E' }}>
-                                ⚠️ Bật thông báo trình duyệt để nhận nhắc nhở lịch học
-                            </span>
-                        </div>
-                    )}
+
 
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: '2px',
