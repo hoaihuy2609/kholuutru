@@ -13,6 +13,7 @@ interface StudyPlannerProps {
     onUpdatePlan: (id: string, updates: Partial<StudyPlanItem>) => Promise<boolean>;
     onDeletePlan: (id: string) => Promise<boolean>;
     onLoadSchedules: (grade: number) => Promise<ScheduleItem[]>;
+    onLoadAllSchedules: () => Promise<ScheduleItem[]>;
     onSaveSchedule: (schedule: Omit<ScheduleItem, 'id' | 'created_at'>) => Promise<ScheduleItem | null>;
     onUpdateSchedule: (id: string, updates: Partial<ScheduleItem>, grade: number) => Promise<boolean>;
     onDeleteSchedule: (id: string, grade: number) => Promise<boolean>;
@@ -32,7 +33,7 @@ const ACCENT_BORDER = '#A7D7BC';
 const StudyPlanner: React.FC<StudyPlannerProps> = ({
     isAdmin, studentGrade,
     onLoadPlans, onSavePlan, onUpdatePlan, onDeletePlan,
-    onLoadSchedules, onSaveSchedule, onUpdateSchedule, onDeleteSchedule
+    onLoadSchedules, onLoadAllSchedules, onSaveSchedule, onUpdateSchedule, onDeleteSchedule
 }) => {
     const [activeTab, setActiveTab] = useState<'tasks' | 'schedule'>('schedule');
     const [plans, setPlans] = useState<StudyPlanItem[]>([]);
@@ -164,6 +165,7 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({
                     isAdmin={isAdmin}
                     studentGrade={studentGrade}
                     onLoadSchedules={onLoadSchedules}
+                    onLoadAllSchedules={onLoadAllSchedules}
                     onSaveSchedule={onSaveSchedule}
                     onUpdateSchedule={onUpdateSchedule}
                     onDeleteSchedule={onDeleteSchedule}

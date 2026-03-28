@@ -605,6 +605,7 @@ export const useCloudStorage = () => {
         updateStudyPlan: plannerService.updateStudyPlan,
         deleteStudyPlan: plannerService.deleteStudyPlan,
         getSchedules: plannerService.getSchedules,
+        getAllSchedules: plannerService.getAllSchedules,
         saveSchedule: plannerService.saveSchedule,
         updateSchedule: plannerService.updateSchedule,
         deleteSchedule: plannerService.deleteSchedule,

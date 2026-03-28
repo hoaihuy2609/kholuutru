@@ -7,6 +7,7 @@ interface WeeklyScheduleProps {
     isAdmin: boolean;
     studentGrade: number | null;
     onLoadSchedules: (grade: number) => Promise<ScheduleItem[]>;
+    onLoadAllSchedules: () => Promise<ScheduleItem[]>;
     onSaveSchedule: (schedule: Omit<ScheduleItem, 'id' | 'created_at'>) => Promise<ScheduleItem | null>;
     onUpdateSchedule: (id: string, updates: Partial<ScheduleItem>, grade: number) => Promise<boolean>;
     onDeleteSchedule: (id: string, grade: number) => Promise<boolean>;
@@ -55,11 +56,14 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
     isAdmin,
     studentGrade,
     onLoadSchedules,
+    onLoadAllSchedules,
     onSaveSchedule,
     onUpdateSchedule,
     onDeleteSchedule
 }) => {
+    // selectedGrade === 0 means "All grades" (admin only)
     const [selectedGrade, setSelectedGrade] = useState<number>(isAdmin ? 12 : (studentGrade || 12));
+    const isAllGrades = selectedGrade === 0;
     const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getMonDay(new Date()));
     const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -77,11 +81,11 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
 
     const fetchSchedules = async () => {
         setLoading(true);
-        const data = await onLoadSchedules(selectedGrade);
+        const data = isAllGrades
+            ? await onLoadAllSchedules()
+            : await onLoadSchedules(selectedGrade);
         setSchedules(data || []);
         setLoading(false);
-
-
     };
 
     const handleNextWeek = () => {
@@ -217,6 +221,20 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
                         display: 'flex', gap: '3px', background: '#F7F6F3', padding: '3px',
                         borderRadius: '10px', border: '1px solid #E9E9E7'
                     }}>
+                        {/* Tổng hợp button — Admin only */}
+                        <button
+                            onClick={() => setSelectedGrade(0)}
+                            style={{
+                                padding: '5px 14px', borderRadius: '7px', border: 'none',
+                                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                background: selectedGrade === 0 ? '#1A1A1A' : 'transparent',
+                                color: selectedGrade === 0 ? '#fff' : '#787774',
+                                boxShadow: selectedGrade === 0 ? '0 2px 6px rgba(26,26,26,0.25)' : 'none'
+                            }}
+                        >
+                            Tổng hợp
+                        </button>
                         {GRADES.map(grade => {
                             const colors = {
                                 10: { bg: '#6B7CDB', shadow: 'rgba(107,124,219,0.3)' },
@@ -385,7 +403,10 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
                                         </div>
                                     ) : (
                                         dayItems.map((item, itemIdx) => {
-                                            const accent = ACCENT_COLORS[itemIdx % ACCENT_COLORS.length];
+                                            // In all-grades mode: color by item.grade; else cycle ACCENT_COLORS
+                                            const accent = isAllGrades && item.grade && GRADE_COLORS[item.grade]
+                                                ? { bg: GRADE_COLORS[item.grade].light, border: GRADE_COLORS[item.grade].main, text: GRADE_COLORS[item.grade].text }
+                                                : ACCENT_COLORS[itemIdx % ACCENT_COLORS.length];
                                             return (
                                                 <div
                                                     key={item.id}
@@ -414,6 +435,19 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
                                                         }}>
                                                             <Clock style={{ width: '11px', height: '11px' }} />
                                                             {item.start_time} – {item.end_time}
+                                                            {/* Grade badge — only in all-grades mode */}
+                                                            {isAllGrades && item.grade && (
+                                                                <span style={{
+                                                                    fontSize: '9px', fontWeight: 800,
+                                                                    padding: '1px 5px', borderRadius: '4px',
+                                                                    background: accent.border,
+                                                                    color: '#fff',
+                                                                    letterSpacing: '0.03em',
+                                                                    marginLeft: '2px',
+                                                                }}>
+                                                                    Lớp {item.grade}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         {isAdmin && (
                                                             <div className="sched-actions" style={{

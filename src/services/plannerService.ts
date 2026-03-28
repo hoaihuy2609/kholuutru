@@ -124,6 +124,18 @@ export const getSchedules = async (grade: number): Promise<ScheduleItem[]> => {
     return p;
 };
 
+export const getAllSchedules = async (): Promise<ScheduleItem[]> => {
+    const [g10, g11, g12] = await Promise.all([
+        getSchedules(10),
+        getSchedules(11),
+        getSchedules(12),
+    ]);
+    return [...g10, ...g11, ...g12].sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.start_time.localeCompare(b.start_time);
+    });
+};
+
 export const saveSchedule = async (schedule: Omit<ScheduleItem, 'id' | 'created_at'>) => {
     try {
         const { data, error } = await supabase.from('schedules').insert([schedule]).select().single();
