@@ -403,9 +403,10 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
                                         </div>
                                     ) : (
                                         dayItems.map((item, itemIdx) => {
-                                            // In all-grades mode: color by item.grade; else cycle ACCENT_COLORS
-                                            const accent = isAllGrades && item.grade && GRADE_COLORS[item.grade]
-                                                ? { bg: GRADE_COLORS[item.grade].light, border: GRADE_COLORS[item.grade].main, text: GRADE_COLORS[item.grade].text }
+                                            // Determine grade to color by: if all-grades, use item.grade; else use selectedGrade.
+                                            const displayGrade = isAllGrades ? item.grade : selectedGrade;
+                                            const accent = (displayGrade && GRADE_COLORS[displayGrade])
+                                                ? { bg: GRADE_COLORS[displayGrade].light, border: GRADE_COLORS[displayGrade].main, text: GRADE_COLORS[displayGrade].text }
                                                 : ACCENT_COLORS[itemIdx % ACCENT_COLORS.length];
                                             return (
                                                 <div
