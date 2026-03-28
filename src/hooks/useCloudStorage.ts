@@ -128,10 +128,9 @@ export const useCloudStorage = () => {
         const filePromises = files.map(file => new Promise<StoredFile>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                // Dùng ArrayBuffer + createObjectURL thay vì base64 (tiết kiệm ~33% bộ nhớ)
-                const arrayBuffer = e.target?.result as ArrayBuffer;
-                const blob = new Blob([arrayBuffer], { type: file.type });
-                const url = URL.createObjectURL(blob);
+                // Chuyển về Base64 (Data URL) để đảm bảo file tồn tại vĩnh viễn trong IndexedDB, 
+                // tránh lỗi "Not allowed to load local resource" của trình duyệt khi dùng Blob URL.
+                const url = e.target?.result as string;
                 resolve({
                     id: crypto.randomUUID(),
                     name: file.name, type: file.type, size: file.size,
@@ -139,7 +138,7 @@ export const useCloudStorage = () => {
                 });
             };
             reader.onerror = reject;
-            reader.readAsArrayBuffer(file);
+            reader.readAsDataURL(file);
         }));
         const newStoredFiles = await Promise.all(filePromises);
         setStoredFiles(prev => ({ ...prev, [targetId]: [...(prev[targetId] || []), ...newStoredFiles] }));
