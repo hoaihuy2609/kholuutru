@@ -37,6 +37,7 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
     const [localStudentGrade] = useState(() => parseInt(localStorage.getItem('physivault_grade') || '12', 10));
     const studentGrade = previewMode || localStudentGrade;
     const [activeTab, setActiveTab] = useState<number>(studentGrade);
+    const [activeCategory, setActiveCategory] = useState<'school' | 'chapter'>('school');
     // Track prefetch timeouts để cleanup khi unmount
     const prefetchTimeoutsRef = useRef<number[]>([]);
 
@@ -153,21 +154,36 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
             </div>
 
             {/* ── Tabs ── */}
-            <div className="flex items-center gap-2 border-b" style={{ borderColor: '#E9E9E7' }}>
-                {(isAdmin && !previewMode ? [12, 11, 10] : [studentGrade]).map(grade => (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b" style={{ borderColor: '#E9E9E7' }}>
+                <div className="flex items-center gap-2">
+                    {(isAdmin && !previewMode ? [12, 11, 10] : [studentGrade]).map(grade => (
+                        <button
+                            key={grade}
+                            onClick={() => setActiveTab(grade)}
+                            className="px-5 py-2.5 text-sm font-semibold transition-colors border-b-2"
+                            style={{
+                                color: activeTab === grade ? ACCENT : '#787774',
+                                borderColor: activeTab === grade ? ACCENT : 'transparent',
+                                marginBottom: '-1px'
+                            }}
+                        >
+                            Lớp {grade}
+                        </button>
+                    ))}
+                </div>
+                {/* Category Switch */}
+                <div className="flex bg-[#F1F0EC] p-1 rounded-xl shrink-0 self-start sm:self-center mb-2 sm:mb-0 mr-2">
                     <button
-                        key={grade}
-                        onClick={() => setActiveTab(grade)}
-                        className="px-5 py-2.5 text-sm font-semibold transition-colors border-b-2"
-                        style={{
-                            color: activeTab === grade ? ACCENT : '#787774',
-                            borderColor: activeTab === grade ? ACCENT : 'transparent',
-                            marginBottom: '-1px'
-                        }}
-                    >
-                        Lớp {grade}
-                    </button>
-                ))}
+                        onClick={() => setActiveCategory('school')}
+                        className="px-4 py-1.5 text-xs font-bold rounded-lg transition-all"
+                        style={{ background: activeCategory === 'school' ? '#fff' : 'transparent', color: activeCategory === 'school' ? '#1A1A1A' : '#787774', boxShadow: activeCategory === 'school' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none' }}
+                    >Đề Trường / Sở</button>
+                    <button
+                        onClick={() => setActiveCategory('chapter')}
+                        className="px-4 py-1.5 text-xs font-bold rounded-lg transition-all"
+                        style={{ background: activeCategory === 'chapter' ? '#fff' : 'transparent', color: activeCategory === 'chapter' ? '#1A1A1A' : '#787774', boxShadow: activeCategory === 'chapter' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none' }}
+                    >Ôn theo Chương</button>
+                </div>
             </div>
 
             {/* ── Exam List ── */}
@@ -190,7 +206,11 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
                 </div>
             ) : (() => {
                 // grade = 0/undefined = đề chung, hiện cho tất cả khối
-                const filteredExams = exams.filter(e => !e.grade || e.grade === activeTab);
+                const filteredExams = exams.filter(e => {
+                    const matchGrade = !e.grade || e.grade === activeTab;
+                    const matchCategory = activeCategory === 'school' ? (!e.category || e.category === 'school') : (e.category === 'chapter');
+                    return matchGrade && matchCategory;
+                });
                 if (filteredExams.length === 0) {
                     return (
                         <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>

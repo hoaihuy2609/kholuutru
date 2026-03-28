@@ -168,6 +168,15 @@ const ExamManager: React.FC<ExamManagerProps> = ({
                                             <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: ACCENT, background: '#EEF0FB', padding: '2px 6px', borderRadius: '4px' }}>
                                                 Lớp {exam.grade || 12}
                                             </span>
+                                            {exam.category === 'chapter' ? (
+                                                <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#1A1A1A', background: '#E9E9E7', padding: '2px 6px', borderRadius: '4px' }}>
+                                                    Ôn theo Chương
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#D9730D', background: '#FFF7ED', padding: '2px 6px', borderRadius: '4px' }}>
+                                                    Đề Trường / Sở
+                                                </span>
+                                            )}
                                             <span className="flex items-center gap-1 text-xs" style={{ color: '#AEACA8' }}>
                                                 <Clock className="w-3 h-3" />{exam.duration}'
                                             </span>
@@ -266,6 +275,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
     const [title, setTitle] = useState(examToEdit?.title || '');
     const [duration, setDuration] = useState(examToEdit?.duration.toString() || '50');
     const [grade, setGrade] = useState(examToEdit?.grade || initialGrade);
+    const [category, setCategory] = useState<'school' | 'chapter'>(examToEdit?.category || 'school');
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [pdfProgress, setPdfProgress] = useState(0);
     const [pdfUploading, setPdfUploading] = useState(false);
@@ -322,6 +332,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                 grade,
                 createdAt: examToEdit ? examToEdit.createdAt : Date.now(),
                 answers,
+                category,
             };
             const updatedAllExams = examToEdit 
                 ? allExams.map(e => e.id === exam.id ? exam : e)
@@ -386,6 +397,23 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                                     onFocus={e => (e.target as HTMLElement).style.borderColor = ACCENT}
                                     onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
                                 />
+                            </div>
+
+                            {/* Phân loại đề */}
+                            <div>
+                                <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>Phân loại *</label>
+                                <div className="flex p-1 rounded-xl" style={{ background: '#E9E9E7' }}>
+                                    <button
+                                        onClick={() => setCategory('school')}
+                                        className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all"
+                                        style={{ background: category === 'school' ? '#fff' : 'transparent', color: category === 'school' ? '#1A1A1A' : '#787774', boxShadow: category === 'school' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none' }}
+                                    >Đề Trường / Sở</button>
+                                    <button
+                                        onClick={() => setCategory('chapter')}
+                                        className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all"
+                                        style={{ background: category === 'chapter' ? '#fff' : 'transparent', color: category === 'chapter' ? '#1A1A1A' : '#787774', boxShadow: category === 'chapter' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none' }}
+                                    >Ôn theo Chương</button>
+                                </div>
                             </div>
 
                             {/* Thời gian + Lớp */}

@@ -76,6 +76,7 @@ export interface Exam {
   grade: number;              // 10, 11, 12
   createdAt: number;
   answers: ExamAnswers;
+  category?: 'school' | 'chapter';
 }
 
 export interface ExamSubmission {
