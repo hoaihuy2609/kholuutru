@@ -485,7 +485,9 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <StudyTimer fileId={previewFile.id} />
+              <div className="hidden md:block">
+                <StudyTimer fileId={previewFile.id} />
+              </div>
               {isAdmin && (
                 <a
                   href={previewFile.url}

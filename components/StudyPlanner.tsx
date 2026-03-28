@@ -137,7 +137,7 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({
 
                 {/* Compact Timer Widget */}
                 {activeTab === 'tasks' && (
-                    <div className="shrink-0 flex items-center">
+                    <div className="shrink-0 hidden md:flex items-center">
                         <FocusTimer />
                     </div>
                 )}

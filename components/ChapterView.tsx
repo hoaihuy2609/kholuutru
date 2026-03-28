@@ -824,7 +824,9 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <StudyTimer fileId={previewFile.id} />
+              <div className="hidden md:block">
+                <StudyTimer fileId={previewFile.id} />
+              </div>
               {isAdmin && (
                 <a href={previewFile.url} download={previewFile.name} onClick={e => e.stopPropagation()}
                   className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
