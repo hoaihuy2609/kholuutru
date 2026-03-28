@@ -211,22 +211,30 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
                         display: 'flex', gap: '3px', background: '#F7F6F3', padding: '3px',
                         borderRadius: '10px', border: '1px solid #E9E9E7'
                     }}>
-                        {GRADES.map(grade => (
-                            <button
-                                key={grade}
-                                onClick={() => setSelectedGrade(grade)}
-                                style={{
-                                    padding: '5px 14px', borderRadius: '7px', border: 'none',
-                                    fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    background: selectedGrade === grade ? '#448361' : 'transparent',
-                                    color: selectedGrade === grade ? '#fff' : '#787774',
-                                    boxShadow: selectedGrade === grade ? '0 2px 6px rgba(68,131,97,0.3)' : 'none'
-                                }}
-                            >
-                                Lớp {grade}
-                            </button>
-                        ))}
+                        {GRADES.map(grade => {
+                            const colors = {
+                                10: { bg: '#6B7CDB', shadow: 'rgba(107,124,219,0.3)' },
+                                11: { bg: '#9065B0', shadow: 'rgba(144,101,176,0.3)' },
+                                12: { bg: '#448361', shadow: 'rgba(68,131,97,0.3)' }
+                            }[grade as 10 | 11 | 12];
+                            
+                            return (
+                                <button
+                                    key={grade}
+                                    onClick={() => setSelectedGrade(grade)}
+                                    style={{
+                                        padding: '5px 14px', borderRadius: '7px', border: 'none',
+                                        fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        background: selectedGrade === grade ? colors.bg : 'transparent',
+                                        color: selectedGrade === grade ? '#fff' : '#787774',
+                                        boxShadow: selectedGrade === grade ? `0 2px 6px ${colors.shadow}` : 'none'
+                                    }}
+                                >
+                                    Lớp {grade}
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
             </div>
