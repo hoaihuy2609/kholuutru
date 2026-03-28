@@ -154,7 +154,7 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
 
             {/* ── Tabs ── */}
             <div className="flex items-center gap-2 border-b" style={{ borderColor: '#E9E9E7' }}>
-                {[12, 11, 10].map(grade => (
+                {(isAdmin && !previewMode ? [12, 11, 10] : [studentGrade]).map(grade => (
                     <button
                         key={grade}
                         onClick={() => setActiveTab(grade)}
