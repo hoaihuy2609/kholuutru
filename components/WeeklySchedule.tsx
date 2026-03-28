@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ScheduleItem } from '../types';
 import { Calendar, Clock, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
 
@@ -455,11 +456,11 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
                 </div>
             )}
 
-            {/* Modal Form */}
-            {isFormOpen && isAdmin && (
+            {/* Modal Form — rendered via Portal to cover full screen including sidebar */}
+            {isFormOpen && isAdmin && createPortal(
                 <div style={{
                     position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-                    backdropFilter: 'blur(4px)', zIndex: 50,
+                    backdropFilter: 'blur(4px)', zIndex: 9999,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     padding: '16px'
                 }}>
@@ -608,7 +609,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
                         </form>
                     </div>
                 </div>
-            )}
+            , document.body)}
 
             <style>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
