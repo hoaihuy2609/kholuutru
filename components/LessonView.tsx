@@ -532,7 +532,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
 
             {/* PDF Viewer */}
             {(!isMobileDevice || !hasViewedPdf) && (
-              <div className={`overflow-hidden relative ${isMobileDevice ? 'shrink-0' : 'flex-1 min-h-0'}`}>
+              <div className="flex-1 overflow-hidden relative">
                 {isMobileDevice ? (
                   <div className="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center h-full" style={{ background: '#1A1A1A' }}>
                     <div

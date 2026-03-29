@@ -872,7 +872,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
 
             {/* Viewer */}
             {(!isMobileDevice || !hasViewedPdf) && (
-              <div className={`overflow-hidden relative ${isMobileDevice ? 'shrink-0' : 'flex-1 min-h-0'}`}>
+              <div className="flex-1 overflow-hidden relative">
                 {previewFile.type.includes('pdf') ? (
                   isMobileDevice ? (
                     <div className="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center h-full" style={{ background: '#1A1A1A' }}>
