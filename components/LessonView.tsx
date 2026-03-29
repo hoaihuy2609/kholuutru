@@ -40,6 +40,14 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
   const [selectedCategory, setSelectedCategory] = useState<string | null>(LESSON_CATEGORIES[0]);
   const location = useLocation();
 
+  const [isMobileDevice] = useState(() => {
+    const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return isTouch || isMobileUA;
+  });
+
+  const ACCENT_COLOR = '#6B7CDB';
+
   useEffect(() => {
     const state = location.state as { previewFileId?: string };
     if (state?.previewFileId) {
@@ -519,12 +527,36 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
           <div className="flex flex-1 overflow-hidden">
 
             {/* PDF Viewer */}
-            <div className="flex-1 overflow-hidden">
-              <iframe
-                src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`}
-                className="w-full h-full border-0 block"
-                title="PDF Preview"
-              />
+            <div className="flex-1 overflow-hidden relative">
+              {isMobileDevice ? (
+                <div className="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center h-full" style={{ background: '#1A1A1A' }}>
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center mb-2"
+                    style={{ background: '#242424', border: '1px solid #333' }}
+                  >
+                    <FileText className="w-8 h-8" style={{ color: ACCENT_COLOR }} />
+                  </div>
+                  <p className="text-sm font-medium leading-relaxed max-w-[280px]" style={{ color: '#AEACA8' }}>
+                    Bấm để mở tài liệu, sau đó quay lại tab này để ghi chú nếu cần.
+                  </p>
+                  <a
+                    href={previewFile.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-8 py-3.5 rounded-xl text-sm font-bold text-white flex items-center gap-2.5 transition-all active:scale-95 shadow-lg"
+                    style={{ background: ACCENT_COLOR, boxShadow: `0 8px 24px ${ACCENT_COLOR}33` }}
+                  >
+                    <FileText className="w-4.5 h-4.5" />
+                    Xem tài liệu
+                  </a>
+                </div>
+              ) : (
+                <iframe
+                  src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`}
+                  className="w-full h-full border-0 block"
+                  title="PDF Preview"
+                />
+              )}
             </div>
 
             {/* ── Answer Panel — desktop only ── */}
