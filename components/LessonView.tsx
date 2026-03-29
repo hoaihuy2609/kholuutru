@@ -66,10 +66,14 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
     questionTypes: {},
   });
 
+  // Sau khi học sinh bấm "Xem tài liệu" trên mobile → ẩn khu vực PDF, hiện Answer Panel full-screen
+  const [hasViewedPdf, setHasViewedPdf] = useState(false);
+
   // Reset panel whenever a new file is opened
   useEffect(() => {
     if (previewFile) {
       setPanel({ numQuestionsInput: '', numQuestions: 0, answers: {}, questionTypes: {} });
+      setHasViewedPdf(false);
     }
   }, [previewFile?.id]);
 
@@ -493,7 +497,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <div className="hidden md:block">
+              <div>
                 <StudyTimer fileId={previewFile.id} />
               </div>
               {isAdmin && (
@@ -527,47 +531,66 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
           <div className="flex flex-1 overflow-hidden">
 
             {/* PDF Viewer */}
-            <div className="flex-1 overflow-hidden relative">
-              {isMobileDevice ? (
-                <div className="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center h-full" style={{ background: '#1A1A1A' }}>
-                  <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center mb-2"
-                    style={{ background: '#242424', border: '1px solid #333' }}
-                  >
-                    <FileText className="w-8 h-8" style={{ color: ACCENT_COLOR }} />
+            {(!isMobileDevice || !hasViewedPdf) && (
+              <div className={`overflow-hidden relative ${isMobileDevice ? 'shrink-0' : 'flex-1 min-h-0'}`}>
+                {isMobileDevice ? (
+                  <div className="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center h-full" style={{ background: '#1A1A1A' }}>
+                    <div
+                      className="w-16 h-16 rounded-2xl flex items-center justify-center mb-2"
+                      style={{ background: '#242424', border: '1px solid #333' }}
+                    >
+                      <FileText className="w-8 h-8" style={{ color: ACCENT_COLOR }} />
+                    </div>
+                    <p className="text-sm font-medium leading-relaxed max-w-[280px]" style={{ color: '#AEACA8' }}>
+                      Bấm để mở tài liệu, sau đó quay lại tab này để điền đáp án.
+                    </p>
+                    <a
+                      href={previewFile.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setHasViewedPdf(true)}
+                      className="px-8 py-3.5 rounded-xl text-sm font-bold text-white flex items-center gap-2.5 transition-all active:scale-95 shadow-lg"
+                      style={{ background: ACCENT_COLOR, boxShadow: `0 8px 24px ${ACCENT_COLOR}33` }}
+                    >
+                      <FileText className="w-4.5 h-4.5" />
+                      Xem tài liệu
+                    </a>
                   </div>
-                  <p className="text-sm font-medium leading-relaxed max-w-[280px]" style={{ color: '#AEACA8' }}>
-                    Bấm để mở tài liệu, sau đó quay lại tab này để ghi chú nếu cần.
-                  </p>
+                ) : (
+                  <iframe
+                    src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`}
+                    className="w-full h-full border-0 block"
+                    title="PDF Preview"
+                  />
+                )}
+              </div>
+            )}
+
+            {/* ── Answer Panel ── */}
+            <div
+              className={`flex flex-col shrink-0 ${isMobileDevice && hasViewedPdf ? 'flex-1' : 'hidden md:flex w-[220px]'}`}
+              style={{
+                background: '#1E1E1E',
+                borderLeft: isMobileDevice && hasViewedPdf ? 'none' : '1px solid #333',
+              }}
+            >
+              {/* Nút mở lại tài liệu — chỉ hiện trên mobile sau khi đã bấm Xem */}
+              {isMobileDevice && hasViewedPdf && (
+                <div className="flex items-center justify-between px-4 py-2 shrink-0" style={{ borderBottom: '1px solid #2D2D2D', background: '#242424' }}>
+                  <span className="text-xs" style={{ color: '#787774' }}>Điền đáp án bên dưới</span>
                   <a
                     href={previewFile.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-8 py-3.5 rounded-xl text-sm font-bold text-white flex items-center gap-2.5 transition-all active:scale-95 shadow-lg"
-                    style={{ background: ACCENT_COLOR, boxShadow: `0 8px 24px ${ACCENT_COLOR}33` }}
+                    className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg transition-all active:scale-95"
+                    style={{ color: ACCENT_COLOR, background: '#2A2A2A', border: `1px solid ${ACCENT_COLOR}33` }}
                   >
-                    <FileText className="w-4.5 h-4.5" />
-                    Xem tài liệu
+                    <FileText className="w-3 h-3" />
+                    Mở lại tài liệu
                   </a>
                 </div>
-              ) : (
-                <iframe
-                  src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`}
-                  className="w-full h-full border-0 block"
-                  title="PDF Preview"
-                />
               )}
-            </div>
 
-            {/* ── Answer Panel — desktop only ── */}
-            <div
-              className="hidden md:flex flex-col shrink-0"
-              style={{
-                width: '220px',
-                background: '#1E1E1E',
-                borderLeft: '1px solid #333',
-              }}
-            >
               {/* Panel header */}
               <div
                 className="flex items-center justify-between px-3 py-2.5 shrink-0"
@@ -718,7 +741,6 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                 </>
               )}
             </div>
-
           </div>
         </div>
       )}
@@ -727,4 +749,3 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
 };
 
 export default LessonView;
-
