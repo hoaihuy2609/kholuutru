@@ -77,6 +77,7 @@ export interface Exam {
   createdAt: number;
   answers: ExamAnswers;
   category?: 'school' | 'chapter';
+  subCategory?: string;
 }
 
 export interface ExamSubmission {

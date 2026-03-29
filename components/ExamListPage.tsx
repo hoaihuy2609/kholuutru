@@ -225,81 +225,77 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
                     );
                 }
                 return (
-                    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
-                        {filteredExams.map((exam, idx) => {
-                            const bestScore = doneMap[exam.id];
-                            const isDone = bestScore !== undefined;
-                            return (
-                                <div
-                                    key={exam.id}
-                                    className="flex items-center gap-4 px-4 py-3.5 cursor-pointer group pv-row-hover"
-                                    style={{
-                                        borderBottom: idx < filteredExams.length - 1 ? '1px solid #F1F0EC' : 'none',
-                                        background: '#FFFFFF',
-                                        borderLeft: isDone ? '3px solid #448361' : '3px solid transparent',
-                                    }}
-                                    onClick={() => onSelectExam(exam)}
-                                >
-                                    {/* Index badge */}
-                                    <div
-                                        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-bold text-sm"
-                                        style={{
-                                            background: isDone ? '#EAF3EE' : '#EEF0FB',
-                                            color: isDone ? '#448361' : ACCENT,
-                                        }}
-                                    >
-                                        {isDone
-                                            ? <CheckCircle className="w-4 h-4" />
-                                            : idx + 1
-                                        }
-                                    </div>
-
-                                    {/* Info */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <h3 className="text-sm font-semibold truncate" style={{ color: '#1A1A1A' }}>
-                                                {exam.title}
-                                            </h3>
-                                            {isDone && (
-                                                <span
-                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0"
-                                                    style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #B7D9C4' }}
-                                                >
-                                                    <CheckCircle className="w-2.5 h-2.5" />
-                                                    {bestScore.toFixed(2)}đ
-                                                </span>
-                                            )}
+                    <div className="space-y-8 animate-fade-in">
+                        {activeCategory === 'school' ? (
+                            <div className="rounded-xl overflow-hidden shadow-sm" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
+                                {filteredExams.map((exam, idx) => {
+                                    const bestScore = doneMap[exam.id];
+                                    const isDone = bestScore !== undefined;
+                                    return (
+                                        <div key={exam.id} className="flex items-center gap-4 px-4 py-3.5 cursor-pointer group pv-row-hover" style={{ borderBottom: idx < filteredExams.length - 1 ? '1px solid #F1F0EC' : 'none', background: '#FFFFFF', borderLeft: isDone ? '3px solid #448361' : '3px solid transparent' }} onClick={() => onSelectExam(exam)}>
+                                            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-bold text-sm" style={{ background: isDone ? '#EAF3EE' : '#EEF0FB', color: isDone ? '#448361' : ACCENT }}>
+                                                {isDone ? <CheckCircle className="w-4 h-4" /> : idx + 1}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <h3 className="text-sm font-semibold truncate" style={{ color: '#1A1A1A' }}>{exam.title}</h3>
+                                                    {isDone && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0" style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #B7D9C4' }}><CheckCircle className="w-2.5 h-2.5" />{bestScore.toFixed(2)}đ</span>}
+                                                </div>
+                                                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                                    <span className="flex items-center gap-1 text-xs" style={{ color: '#787774' }}><Clock className="w-3 h-3" style={{ color: '#D9730D' }} />{exam.duration} phút</span>
+                                                    <span className="flex items-center gap-1 text-xs truncate max-w-[180px]" style={{ color: '#AEACA8' }}><FileText className="w-3 h-3" />{exam.pdfFileName}</span>
+                                                    <span className="text-[11px] px-1.5 py-0.5 rounded" style={{ background: '#F1F0EC', color: '#AEACA8' }}>{new Date(exam.createdAt).toLocaleDateString('vi-VN')}</span>
+                                                </div>
+                                            </div>
+                                            <button className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold shrink-0 active:scale-95 ${isDone ? 'pv-btn-secondary-hover' : 'pv-btn-primary-hover'}`} style={{ background: isDone ? '#F1F0EC' : ACCENT, color: isDone ? '#57564F' : '#fff' }} onClick={e => { e.stopPropagation(); onSelectExam(exam); }}><Play className="w-3.5 h-3.5" />{isDone ? 'Làm lại' : 'Làm bài'}</button>
                                         </div>
-                                        <div className="flex items-center gap-3 mt-1 flex-wrap">
-                                            <span className="flex items-center gap-1 text-xs" style={{ color: '#787774' }}>
-                                                <Clock className="w-3 h-3" style={{ color: '#D9730D' }} />
-                                                {exam.duration} phút
-                                            </span>
-                                            <span className="flex items-center gap-1 text-xs truncate max-w-[180px]" style={{ color: '#AEACA8' }}>
-                                                <FileText className="w-3 h-3" />
-                                                {exam.pdfFileName}
-                                            </span>
-                                            <span className="text-[11px] px-1.5 py-0.5 rounded" style={{ background: '#F1F0EC', color: '#AEACA8' }}>
-                                                {new Date(exam.createdAt).toLocaleDateString('vi-VN')}
-                                            </span>
-                                        </div>
-                                    </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (() => {
+                            // Logic gom nhóm cho "Ôn theo chương"
+                            const groups: Record<string, Exam[]> = {};
+                            filteredExams.forEach(e => {
+                                const g = e.subCategory || 'Chưa phân loại';
+                                if (!groups[g]) groups[g] = [];
+                                groups[g].push(e);
+                            });
 
-                                    {/* CTA */}
-                                    <button
-                                        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold shrink-0 active:scale-95 ${isDone ? 'pv-btn-secondary-hover' : 'pv-btn-primary-hover'}`}
-                                        style={{
-                                            background: isDone ? '#F1F0EC' : ACCENT,
-                                            color: isDone ? '#57564F' : '#fff',
-                                        }}
-                                        onClick={e => { e.stopPropagation(); onSelectExam(exam); }}
-                                    >
-                                        <Play className="w-3.5 h-3.5" />
-                                        {isDone ? 'Làm lại' : 'Làm bài'}
-                                    </button>
+                            return Object.entries(groups).map(([groupName, groupExams], gIdx) => (
+                                <div key={groupName} className="space-y-3">
+                                    <div className="flex items-center gap-3 px-1">
+                                        <div className="w-1.5 h-4 rounded-full" style={{ background: ACCENT }} />
+                                        <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: '#1A1A1A' }}>{groupName}</h2>
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded-md font-bold" style={{ background: '#F1F0EC', color: '#787774' }}>{groupExams.length} đề</span>
+                                    </div>
+                                    <div className="rounded-xl overflow-hidden shadow-sm" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
+                                        {groupExams.map((exam, idx) => {
+                                            const bestScore = doneMap[exam.id];
+                                            const isDone = bestScore !== undefined;
+                                            return (
+                                                <div key={exam.id} className="flex items-center gap-4 px-4 py-3.5 cursor-pointer group pv-row-hover" style={{ borderBottom: idx < groupExams.length - 1 ? '1px solid #F1F0EC' : 'none', background: '#FFFFFF', borderLeft: isDone ? '3px solid #448361' : '3px solid transparent' }} onClick={() => onSelectExam(exam)}>
+                                                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-bold text-sm" style={{ background: isDone ? '#EAF3EE' : '#EEF0FB', color: isDone ? '#448361' : ACCENT }}>
+                                                        {isDone ? <CheckCircle className="w-4 h-4" /> : idx + 1}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <h3 className="text-sm font-semibold truncate" style={{ color: '#1A1A1A' }}>{exam.title}</h3>
+                                                            {isDone && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0" style={{ background: '#EAF3EE', color: '#448361', border: '1px solid #B7D9C4' }}><CheckCircle className="w-2.5 h-2.5" />{bestScore.toFixed(2)}đ</span>}
+                                                        </div>
+                                                        <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                                            <span className="flex items-center gap-1 text-xs" style={{ color: '#787774' }}><Clock className="w-3 h-3" style={{ color: '#D9730D' }} />{exam.duration} phút</span>
+                                                            <span className="flex items-center gap-1 text-xs truncate max-w-[180px]" style={{ color: '#AEACA8' }}><FileText className="w-3 h-3" />{exam.pdfFileName}</span>
+                                                            <span className="text-[11px] px-1.5 py-0.5 rounded" style={{ background: '#F1F0EC', color: '#AEACA8' }}>{new Date(exam.createdAt).toLocaleDateString('vi-VN')}</span>
+                                                        </div>
+                                                    </div>
+                                                    <button className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold shrink-0 active:scale-95 ${isDone ? 'pv-btn-secondary-hover' : 'pv-btn-primary-hover'}`} style={{ background: isDone ? '#F1F0EC' : ACCENT, color: isDone ? '#57564F' : '#fff' }} onClick={e => { e.stopPropagation(); onSelectExam(exam); }}><Play className="w-3.5 h-3.5" />{isDone ? 'Làm lại' : 'Làm bài'}</button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            );
-                        })}
+                            ));
+                        })())}
                     </div>
                 );
             })()}

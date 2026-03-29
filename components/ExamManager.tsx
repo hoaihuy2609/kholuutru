@@ -170,7 +170,7 @@ const ExamManager: React.FC<ExamManagerProps> = ({
                                             </span>
                                             {exam.category === 'chapter' ? (
                                                 <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#1A1A1A', background: '#E9E9E7', padding: '2px 6px', borderRadius: '4px' }}>
-                                                    Ôn theo Chương
+                                                    {exam.subCategory ? `Chương: ${exam.subCategory}` : 'Ôn theo Chương'}
                                                 </span>
                                             ) : (
                                                 <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#D9730D', background: '#FFF7ED', padding: '2px 6px', borderRadius: '4px' }}>
@@ -276,6 +276,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
     const [duration, setDuration] = useState(examToEdit?.duration.toString() || '50');
     const [grade, setGrade] = useState(examToEdit?.grade || initialGrade);
     const [category, setCategory] = useState<'school' | 'chapter'>(examToEdit?.category || 'school');
+    const [subCategory, setSubCategory] = useState(examToEdit?.subCategory || '');
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [pdfProgress, setPdfProgress] = useState(0);
     const [pdfUploading, setPdfUploading] = useState(false);
@@ -333,6 +334,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                 createdAt: examToEdit ? examToEdit.createdAt : Date.now(),
                 answers,
                 category,
+                subCategory: category === 'chapter' ? subCategory.trim() : undefined,
             };
             const updatedAllExams = examToEdit 
                 ? allExams.map(e => e.id === exam.id ? exam : e)
@@ -415,6 +417,23 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                                     >Ôn theo Chương</button>
                                 </div>
                             </div>
+
+                            {/* Tên Chương (Chỉ hiện khi chọn Ôn theo Chương) */}
+                            {category === 'chapter' && (
+                                <div className="animate-fade-in">
+                                    <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>Tên chương / Nhóm chương (Ví dụ: Chương 1, Chương 1-2...)</label>
+                                    <input
+                                        type="text"
+                                        value={subCategory}
+                                        onChange={e => setSubCategory(e.target.value)}
+                                        placeholder="Nhập tên chương để phân loại..."
+                                        className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
+                                        style={{ border: '1.5px solid #E9E9E7', background: '#F7F6F3', color: '#1A1A1A' }}
+                                        onFocus={e => (e.target as HTMLElement).style.borderColor = ACCENT}
+                                        onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
+                                    />
+                                </div>
+                            )}
 
                             {/* Thời gian + Lớp */}
                             <div className="grid grid-cols-2 gap-4">
@@ -604,6 +623,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                                 <p className="text-xs font-semibold mb-2" style={{ color: ACCENT }}>Tóm tắt đề thi</p>
                                 <div className="space-y-1 text-xs" style={{ color: '#57564F' }}>
                                     <div className="flex justify-between"><span>📋 Tên đề:</span><span className="font-medium">{title}</span></div>
+                                    {category === 'chapter' && subCategory && <div className="flex justify-between"><span>🏷️ Chương:</span><span className="font-medium">{subCategory}</span></div>}
                                     <div className="flex justify-between"><span>📚 Khối:</span><span className="font-medium">Lớp {grade}</span></div>
                                     <div className="flex justify-between"><span>⏱️ Thời gian:</span><span className="font-medium">{duration} phút</span></div>
                                     <div className="flex justify-between"><span>I. Trắc nghiệm:</span><span className="font-medium">{answers.mc.filter(Boolean).length}/18 câu</span></div>
