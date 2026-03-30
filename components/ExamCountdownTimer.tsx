@@ -51,7 +51,7 @@ const ExamCountdownTimer: React.FC<ExamCountdownTimerProps> = ({ initialSeconds,
             </div>
 
             {/* Timer progress bar (Absolute layout across the top) */}
-            <div className="absolute top-[52px] left-0 right-0 w-full h-1 shrink-0 z-[101]" style={{ background: '#333' }}>
+            <div className="absolute top-[57.8px] left-0 right-0 w-full h-1 shrink-0 z-[101]" style={{ background: '#333' }}>
                 <div
                     className="h-full transition-all duration-1000"
                     style={{
