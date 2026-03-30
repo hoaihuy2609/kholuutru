@@ -902,7 +902,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
                     </div>
                   ) : (
                     <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
-                      <iframe src={previewFile.url} title="PDF Preview" style={{ width: '100%', height: 'calc(100% + 52px)', marginTop: '-52px', border: 'none', display: 'block' }} />
+                      <iframe src={previewFile.url} title="PDF Preview" style={{ width: '100%', height: 'calc(100% + 56px)', marginTop: '-56px', border: 'none', display: 'block' }} />
                     </div>
                   )
                 ) : (

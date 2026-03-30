@@ -258,7 +258,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                     <iframe
                                         src={pdfUrl}
                                         title="PDF Preview"
-                                        style={{ width: '100%', height: 'calc(100% + 52px)', marginTop: '-52px', border: 'none', display: 'block' }}
+                                        style={{ width: '100%', height: 'calc(100% + 56px)', marginTop: '-56px', border: 'none', display: 'block' }}
                                     />
                                 </div>
                             )}
