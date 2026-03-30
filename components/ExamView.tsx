@@ -252,13 +252,15 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                         </div>
                     ) : pdfUrl ? (
                         <>
-                            {/* Desktop: iframe nhúng */}
+                            {/* Desktop: iframe nhúng chống tải */}
                             {!isMobileDevice && (
-                                <iframe
-                                    src={pdfUrl}
-                                    className="w-full h-full border-0"
-                                    title="PDF Preview"
-                                />
+                                <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+                                    <iframe
+                                        src={pdfUrl}
+                                        title="PDF Preview"
+                                        style={{ width: '100%', height: 'calc(100% + 52px)', marginTop: '-52px', border: 'none', display: 'block' }}
+                                    />
+                                </div>
                             )}
                             {/* Mobile/Tablet: nút mở tab mới — bấm xong sẽ collapse khu vực này */}
                             {isMobileDevice && (
