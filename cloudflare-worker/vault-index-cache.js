@@ -102,6 +102,17 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
 
+    // Security Check: Block requests from unauthorized referers
+    const referer = request.headers.get("Referer");
+    const isAllowedReferer = referer && ALLOWED_ORIGINS.some(allowed => referer.startsWith(allowed));
+    
+    if (!isAllowedReferer) {
+      return new Response(JSON.stringify({ error: "Forbidden", message: "Invalid or Missing Referer" }), { 
+        status: 403, 
+        headers: { "Content-Type": "application/json", ...corsHeaders(origin) } 
+      });
+    }
+
     // Route 1: GET /vault-index
     if (url.pathname === "/vault-index" && request.method === "GET") {
       const grade = url.searchParams.get("grade") || "0";

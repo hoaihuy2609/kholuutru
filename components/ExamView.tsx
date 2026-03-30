@@ -4,6 +4,7 @@ import { Exam, ExamTFAnswer, ExamSubmission } from '../types';
 import ExamCountdownTimer from './ExamCountdownTimer';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import { getCachedPdf, savePdfToCache } from '../src/lib/pdfCache';
+import { getSecureTime } from '../src/lib/serverTime';
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
 // ── Helpers ────────────────────────────────────────────────────────
@@ -98,20 +99,36 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
 
     const startTime = useRef(Date.now());
 
+    // Security Check: Block direct URL access before scheduled time (bypass for admins via isPreviewMode)
+    if (!isPreviewMode && exam.scheduledAt && getSecureTime() < exam.scheduledAt) {
+        return (
+            <div className="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-red-100 min-h-[50vh] text-center max-w-2xl mx-auto mt-12">
+                <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
+                <h2 className="text-xl font-bold text-red-700">TỪ CHỐI TRUY CẬP</h2>
+                <p className="text-sm mt-2 text-gray-600">
+                    Đề thi <b>"{exam.title}"</b> chưa được mở. Vui lòng quay lại danh sách chờ đến giờ thi.
+                </p>
+                <button
+                    onClick={onBack}
+                    className="mt-6 px-6 py-2.5 bg-[#F1F0EC] text-[#57564F] font-semibold rounded-lg hover:bg-[#E9E9E7] transition-colors"
+                >
+                    Trở về danh sách
+                </button>
+            </div>
+        );
+    }
+
     const ACCENT = '#6B7CDB';
     const tf_keys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
 
     // ── Load PDF: Cache → codetabs proxy → GAS fallback ──
     useEffect(() => {
-        let objectUrl = '';
         const load = async () => {
             try {
                 // ① Kiểm tra IndexedDB cache trước (nhanh nhất, ≈ 0ms)
                 const cached = await getCachedPdf(exam.id);
                 if (cached) {
-                    const pdfBlob = new Blob([cached], { type: 'application/pdf' });
-                    objectUrl = URL.createObjectURL(pdfBlob);
-                    setPdfUrl(objectUrl);
+                    setPdfUrl(cached);
                     setPdfLoading(false);
                     console.log('[PDF] ✅ Loaded from cache');
                     return;
@@ -131,10 +148,14 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                 }
 
                 if (blob) {
-                    // ⑤ Lưu vào IndexedDB cache cho lần sau
-                    savePdfToCache(exam.id, blob);
-                    objectUrl = URL.createObjectURL(blob);
-                    setPdfUrl(objectUrl);
+                    // ⑤ Đọc PDF thành Data URI (Base64) để lưu vào Cache dạng String
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64data = reader.result as string;
+                        savePdfToCache(exam.id, base64data);
+                        setPdfUrl(base64data);
+                    };
+                    reader.readAsDataURL(blob);
                 }
             } catch (err) {
                 console.error('[PDF] Lỗi không xử lý được:', err);
@@ -143,7 +164,6 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
             }
         };
         load();
-        return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
     }, [exam.id, exam.pdfTelegramFileId]);
 
     // ── Countdown ──
@@ -235,7 +255,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                             {/* Desktop: iframe nhúng */}
                             {!isMobileDevice && (
                                 <iframe
-                                    src={`${pdfUrl}#toolbar=0`}
+                                    src={pdfUrl}
                                     className="w-full h-full border-0"
                                     title="PDF Preview"
                                 />

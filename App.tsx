@@ -15,6 +15,7 @@ import { useDataStore } from './src/stores/useDataStore';
 import { useExamStore, useBlogStore } from './src/stores/useContentStore';
 import { useShallow } from 'zustand/react/shallow';
 import { syncPendingOnStartup } from './src/services/examService';
+import { syncServerTime } from './src/lib/serverTime';
 
 const ChapterView = React.lazy(() => import('./components/ChapterView'));
 const LessonView = React.lazy(() => import('./components/LessonView'));
@@ -58,6 +59,22 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   useEffect(() => { setLessons(cloud.lessons); }, [cloud.lessons, setLessons]);
   useEffect(() => { setStoredFiles(cloud.storedFiles); }, [cloud.storedFiles, setStoredFiles]);
   useEffect(() => { setLoading(cloud.loading); }, [cloud.loading, setLoading]);
+  
+  // Xóa IndexedDB cũ sau khi cập nhật Phase 1
+  useEffect(() => {
+    const MIGRATION_KEY = 'pv_v3_migrated_safe';
+    if (!localStorage.getItem(MIGRATION_KEY)) {
+      indexedDB.deleteDatabase('PhysiVaultDB');
+      indexedDB.deleteDatabase('pv_pdf_cache');
+      localStorage.removeItem('pv_exam_versions');
+      localStorage.removeItem('pv_exam_chunks_map');
+      localStorage.removeItem('pv_last_fetched_exam_index');
+      localStorage.setItem('pv_last_sync_time', '0');
+      localStorage.setItem(MIGRATION_KEY, 'true');
+      console.log('[Phase 1] Cleared legacy databases and metadata safely.');
+    }
+  }, []);
+
   useEffect(() => {
     setIsActivated(cloud.isActivated);
     if (cloud.isActivated) {
@@ -530,6 +547,11 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 // ──────────────────────────────────────────────────────────────────
 function App() {
   const cloud = useCloudStorage();
+  
+  useEffect(() => {
+    syncServerTime();
+  }, []);
+
   return (
     <>
       <AppDataSync cloud={cloud} />

@@ -78,6 +78,7 @@ export interface Exam {
   answers: ExamAnswers;
   category?: 'school' | 'chapter';
   subCategory?: string;
+  scheduledAt?: number; // THỜI GIAN HẸN GIỜ THI (Timestamp in ms)
 }
 
 export interface ExamSubmission {

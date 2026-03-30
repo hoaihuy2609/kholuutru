@@ -901,7 +901,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
                       </a>
                     </div>
                   ) : (
-                    <iframe src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`} className="w-full h-full border-0 block" title="PDF Preview" />
+                    <iframe src={previewFile.url} className="w-full h-full border-0 block" title="PDF Preview" />
                   )
                 ) : (
                   <img src={previewFile.url} alt={previewFile.name} className="w-full h-full object-contain" />

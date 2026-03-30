@@ -12,7 +12,7 @@ export const openPdfCacheDB = (): Promise<IDBDatabase> =>
         req.onerror = () => reject(req.error);
     });
 
-export const getCachedPdf = async (examId: string): Promise<Blob | null> => {
+export const getCachedPdf = async (examId: string): Promise<string | null> => {
     try {
         const db = await openPdfCacheDB();
         return new Promise(resolve => {
@@ -23,10 +23,10 @@ export const getCachedPdf = async (examId: string): Promise<Blob | null> => {
     } catch { return null; }
 };
 
-export const savePdfToCache = async (examId: string, blob: Blob): Promise<void> => {
+export const savePdfToCache = async (examId: string, base64Str: string): Promise<void> => {
     try {
         const db = await openPdfCacheDB();
-        db.transaction(PDF_CACHE_STORE, 'readwrite').objectStore(PDF_CACHE_STORE).put(blob, examId);
+        db.transaction(PDF_CACHE_STORE, 'readwrite').objectStore(PDF_CACHE_STORE).put(base64Str, examId);
     } catch { /* silent */ }
 };
 

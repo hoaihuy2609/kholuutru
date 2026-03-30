@@ -558,7 +558,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                   </div>
                 ) : (
                   <iframe
-                    src={`${previewFile.url}${!isAdmin ? '#toolbar=0' : ''}`}
+                    src={previewFile.url}
                     className="w-full h-full border-0 block"
                     title="PDF Preview"
                   />

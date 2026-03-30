@@ -279,6 +279,9 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
     const [subCategory, setSubCategory] = useState(
         examToEdit?.category === 'chapter' ? (examToEdit.subCategory || '') : ''
     );
+    const [scheduledAt, setScheduledAt] = useState(
+        examToEdit?.scheduledAt ? new Date(examToEdit.scheduledAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''
+    );
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [pdfProgress, setPdfProgress] = useState(0);
     const [pdfUploading, setPdfUploading] = useState(false);
@@ -350,6 +353,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                 answers,
                 category,
                 subCategory: category === 'chapter' ? normalizedSubCategory : undefined,
+                scheduledAt: scheduledAt ? new Date(scheduledAt).getTime() : undefined,
             };
             const updatedAllExams = examToEdit 
                 ? allExams.map(e => e.id === exam.id ? exam : e)
@@ -478,6 +482,18 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                                             className="w-14 px-2 py-1.5 rounded-lg text-xs text-center outline-none"
                                             style={{ border: '1.5px solid #E9E9E7', background: '#F7F6F3', color: '#1A1A1A' }}
                                             min="1" max="180"
+                                            onFocus={e => (e.target as HTMLElement).style.borderColor = ACCENT}
+                                            onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>Hẹn thi (Tùy chọn)</label>
+                                        <input
+                                            type="datetime-local"
+                                            value={scheduledAt}
+                                            onChange={e => setScheduledAt(e.target.value)}
+                                            className="w-full px-2 py-1.5 rounded-lg text-xs outline-none"
+                                            style={{ border: '1.5px solid #E9E9E7', background: '#F7F6F3', color: '#1A1A1A' }}
                                             onFocus={e => (e.target as HTMLElement).style.borderColor = ACCENT}
                                             onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
                                         />
