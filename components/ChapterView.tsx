@@ -886,7 +886,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
                         Bấm để mở tài liệu, sau đó quay lại tab này để điền đáp án.
                       </p>
                       <a
-                        href={previewFile.url}
+                        href={`${previewFile.url}#navpanes=0`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setHasViewedPdf(true)}
@@ -902,7 +902,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
                     </div>
                   ) : (
                     <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
-                      <iframe src={previewFile.url} title="PDF Preview" style={{ width: '100%', height: 'calc(100% + 56px)', marginTop: '-56px', border: 'none', display: 'block' }} />
+                      <iframe src={`${previewFile.url}#navpanes=0`} title="PDF Preview" style={{ width: '100%', height: 'calc(100% + 56px)', marginTop: '-56px', border: 'none', display: 'block' }} />
                     </div>
                   )
                 ) : (
@@ -925,7 +925,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
                   <div className="flex items-center justify-between px-4 py-2 shrink-0" style={{ borderBottom: '1px solid #2D2D2D', background: '#242424' }}>
                     <span className="text-xs" style={{ color: '#787774' }}>Điền đáp án bên dưới</span>
                     <a
-                      href={previewFile.url}
+                      href={`${previewFile.url}#navpanes=0`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg transition-all active:scale-95"

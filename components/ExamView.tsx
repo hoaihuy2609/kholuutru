@@ -256,7 +256,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                             {!isMobileDevice && (
                                 <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
                                     <iframe
-                                        src={pdfUrl}
+                                        src={`${pdfUrl}#navpanes=0`}
                                         title="PDF Preview"
                                         style={{ width: '100%', height: 'calc(100% + 56px)', marginTop: '-56px', border: 'none', display: 'block' }}
                                     />
@@ -270,7 +270,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                         Bấm để mở đề thi, sau đó quay lại tab này điền đáp án.
                                     </p>
                                     <a
-                                        href={pdfUrl}
+                                        href={`${pdfUrl}#navpanes=0`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         onClick={() => setHasViewedPdf(true)}
@@ -302,7 +302,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                         <div className="flex items-center justify-between px-4 py-2 shrink-0" style={{ borderBottom: '1px solid #2D2D2D', background: '#242424' }}>
                             <span className="text-xs" style={{ color: '#787774' }}>Điền đáp án bên dưới</span>
                             <a
-                                href={pdfUrl}
+                                href={`${pdfUrl}#navpanes=0`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg transition-all active:scale-95"

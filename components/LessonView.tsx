@@ -545,7 +545,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                       Bấm để mở tài liệu, sau đó quay lại tab này để điền đáp án.
                     </p>
                     <a
-                      href={previewFile.url}
+                      href={`${previewFile.url}#navpanes=0`}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setHasViewedPdf(true)}
@@ -559,7 +559,7 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                 ) : (
                   <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
                     <iframe
-                      src={previewFile.url}
+                      src={`${previewFile.url}#navpanes=0`}
                       title="PDF Preview"
                       style={{ width: '100%', height: 'calc(100% + 56px)', marginTop: '-56px', border: 'none', display: 'block' }}
                     />
