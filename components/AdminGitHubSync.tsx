@@ -638,7 +638,6 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                         </div>
                     )}
                 </div>
-            </div>
 
             {/* ── Category Picker Modal ── */}
             {showCategoryModal && (
