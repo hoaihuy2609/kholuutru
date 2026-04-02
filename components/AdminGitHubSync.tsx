@@ -28,7 +28,6 @@ const CAT_CONFIG: Record<string, { short: string; color: string; bg: string }> =
 };
 
 interface AdminGitHubSyncProps {
-    onBack: () => void;
     onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void;
     lessons: Lesson[];
     storedFiles: FileStorage;
@@ -49,7 +48,7 @@ const GRADE_COLORS: Record<number, { accent: string; bg: string; label: string }
 };
 
 const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
-    onBack, onShowToast, lessons, storedFiles,
+    onShowToast, lessons, storedFiles,
     onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
 }) => {
 
@@ -207,31 +206,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex flex-col font-sans overflow-hidden animate-fade-in" style={{ background: '#F7F6F3' }}>
-
-            {/* ── Top Nav ── */}
-            <div className="flex items-center justify-between px-5 py-3" style={{ background: '#FFFFFF', borderBottom: '1px solid #E9E9E7' }}>
-                <div className="flex items-center gap-3">
-                    <button onClick={onBack} className="p-1.5 rounded-lg transition-colors" style={{ color: '#787774' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
-                        <X className="w-5 h-5" />
-                    </button>
-                    <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg" style={{ background: '#EEF0FB' }}>
-                            <MessageCircle className="w-4 h-4" style={{ color: '#6B7CDB' }} />
-                        </div>
-                        <div>
-                            <h1 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Telegram Cloud Sync</h1>
-                            <p className="text-[10px] uppercase tracking-widest" style={{ color: '#AEACA8' }}>Quản lý & Phân phối tài liệu</p>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            {/* ── Main ── */}
-            <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 custom-scrollbar">
+        <div className="space-y-4 animate-fade-in">
 
 
                 {/* Grade Tabs */}

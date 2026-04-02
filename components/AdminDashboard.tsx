@@ -12,7 +12,8 @@ import { useDebounce } from 'use-debounce';
 
 const StatsPanel = React.lazy(() => import('./StatsPanel'));
 const ExamManager = React.lazy(() => import('./ExamManager'));
-import { Exam } from '../types';
+const AdminGitHubSync = React.lazy(() => import('./AdminGitHubSync'));
+import { Exam, Lesson, FileStorage } from '../types';
 
 interface Student {
     sdt: string;
@@ -34,11 +35,18 @@ interface ClassInfo {
 interface AdminDashboardProps {
     onBack: () => void;
     onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void;
-    onOpenGitHubSync: () => void;
     onUploadExamPdf?: (file: File, onProgress: (pct: number) => void) => Promise<{ fileId: string; fileName: string }>;
     onSaveExam?: (exams: Exam[]) => Promise<void>;
     onDeleteExam?: (examId: string, allExams: Exam[]) => Promise<void>;
     onLoadExams?: () => Promise<Exam[]>;
+    lessons: Lesson[];
+    storedFiles: FileStorage;
+    onAddLesson: (name: string, chapterId: string) => Promise<void>;
+    onDeleteLesson: (id: string) => Promise<void>;
+    onUploadFiles: (files: File[], targetId: string, category?: string) => Promise<void>;
+    onDeleteFile: (fileId: string, targetId: string) => Promise<void>;
+    onSyncToGitHub: (grade: number, lessons: Lesson[], files: FileStorage) => Promise<string>;
+    syncProgress: number;
 }
 
 /* Shared inline input style */
@@ -57,8 +65,11 @@ const Loader2 = ({ className, style }: { className?: string; style?: React.CSSPr
     <RefreshCw className={`${className} animate-spin`} style={style} />
 );
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, onOpenGitHubSync, onUploadExamPdf, onSaveExam, onDeleteExam, onLoadExams }) => {
-    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats'>('students');
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
+    onBack, onShowToast, onUploadExamPdf, onSaveExam, onDeleteExam, onLoadExams,
+    lessons, storedFiles, onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
+}) => {
+    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats' | 'cloud'>('students');
 
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -332,6 +343,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                     { key: 'students', label: 'Học Sinh', icon: <Users className="w-4 h-4" /> },
                     { key: 'exams', label: 'Đề Thi', icon: <ClipboardList className="w-4 h-4" /> },
                     { key: 'stats', label: 'Thống Kê', icon: <BarChart2 className="w-4 h-4" /> },
+                    { key: 'cloud', label: 'Cloud Sync', icon: <CloudUpload className="w-4 h-4" /> },
                 ].map(tab => (
                     <button
                         key={tab.key}
@@ -345,23 +357,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onShowToast, on
                         {tab.icon}{tab.label}
                     </button>
                 ))}
-
-                {/* Cloud Sync Button */}
-                <button
-                    onClick={onOpenGitHubSync}
-                    className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-all"
-                    style={{ color: '#787774' }}
-                    title="Quản lý & Sync dữ liệu"
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#1A1A1A'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#787774'}
-                >
-                    <CloudUpload className="w-4 h-4" />
-                    Cloud Sync
-                </button>
             </div>
 
             {/* ── Main scroll area ── */}
             <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6 custom-scrollbar">
+
+                {/* ── Cloud Sync Tab ── */}
+                {activeTab === 'cloud' && (
+                    <Suspense fallback={<div className="flex items-center justify-center py-24"><RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} /></div>}>
+                        <AdminGitHubSync
+                            onShowToast={onShowToast}
+                            lessons={lessons}
+                            storedFiles={storedFiles}
+                            onAddLesson={onAddLesson}
+                            onDeleteLesson={onDeleteLesson}
+                            onUploadFiles={onUploadFiles}
+                            onDeleteFile={onDeleteFile}
+                            onSyncToGitHub={onSyncToGitHub}
+                            syncProgress={syncProgress}
+                        />
+                    </Suspense>
+                )}
 
                 {/* ── Stats Tab ── */}
                 {activeTab === 'stats' && (

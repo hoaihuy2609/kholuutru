@@ -22,7 +22,6 @@ const LessonView = React.lazy(() => import('./components/LessonView'));
 const SettingsModal = React.lazy(() => import('./components/SettingsModal'));
 const Chatbot = React.lazy(() => import('./components/Chatbot'));
 const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
-const AdminGitHubSync = React.lazy(() => import('./components/AdminGitHubSync'));
 const ExamListPage = React.lazy(() => import('./components/ExamListPage'));
 const ExamView = React.lazy(() => import('./components/ExamView'));
 const ExamResult = React.lazy(() => import('./components/ExamResult'));
@@ -345,8 +344,6 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     setMobileMenuOpen: state.setMobileMenuOpen,
     showAdminDashboard: state.showAdminDashboard,
     setShowAdminDashboard: state.setShowAdminDashboard,
-    showGitHubSync: state.showGitHubSync,
-    setShowGitHubSync: state.setShowGitHubSync,
     toasts: state.toasts,
     removeToast: state.removeToast,
     isAdmin: state.isAdmin,
@@ -445,15 +442,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
       {showAdminDashboard && (
         <ErrorBoundary>
           <Suspense fallback={<LazyFallback />}>
-            <AdminDashboard onBack={() => setShowAdminDashboard(false)} onShowToast={useUIStore.getState().showToast} onOpenGitHubSync={() => { setShowAdminDashboard(false); setShowGitHubSync(true); }} onUploadExamPdf={cloud.uploadExamPdf} onSaveExam={cloud.saveExam} onDeleteExam={cloud.deleteExam} onLoadExams={cloud.loadExams} />
-          </Suspense>
-        </ErrorBoundary>
-      )}
-
-      {showGitHubSync && (
-        <ErrorBoundary>
-          <Suspense fallback={<LazyFallback />}>
-            <AdminGitHubSync onBack={() => setShowGitHubSync(false)} onShowToast={useUIStore.getState().showToast} lessons={lessons} storedFiles={storedFiles} onAddLesson={cloud.addLesson} onDeleteLesson={cloud.deleteLesson} onUploadFiles={cloud.uploadFiles} onDeleteFile={cloud.deleteFile} onSyncToGitHub={cloud.syncToCloud} syncProgress={cloud.syncProgress} />
+            <AdminDashboard onBack={() => setShowAdminDashboard(false)} onShowToast={useUIStore.getState().showToast} onUploadExamPdf={cloud.uploadExamPdf} onSaveExam={cloud.saveExam} onDeleteExam={cloud.deleteExam} onLoadExams={cloud.loadExams} lessons={lessons} storedFiles={storedFiles} onAddLesson={cloud.addLesson} onDeleteLesson={cloud.deleteLesson} onUploadFiles={cloud.uploadFiles} onDeleteFile={cloud.deleteFile} onSyncToGitHub={cloud.syncToCloud} syncProgress={cloud.syncProgress} />
           </Suspense>
         </ErrorBoundary>
       )}
