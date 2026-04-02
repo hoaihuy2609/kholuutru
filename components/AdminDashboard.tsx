@@ -323,18 +323,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={refreshStudents}
-                        className="p-2 rounded-lg transition-colors"
-                        style={{ color: '#787774', border: '1px solid #E9E9E7', background: '#FFFFFF' }}
-                        title="Tải lại dữ liệu"
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FFFFFF'}
-                    >
-                        <RefreshCw className="w-4 h-4" />
-                    </button>
-                </div>
+                {/* Right side tools were here */}
             </div>
 
             {/* ── Tab Bar ── */}
