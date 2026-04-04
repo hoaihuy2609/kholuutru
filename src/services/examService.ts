@@ -405,7 +405,9 @@ export const getExamHistory = async (phoneFilter?: string) => {
         return _examHistoryCache.data;
     }
     try {
-        let query = supabase.from('exam_results').select('*').order('submitted_at', { ascending: false });
+        let query = supabase.from('exam_results')
+            .select('id, student_phone, student_name, exam_id, exam_title, score, total_questions, correct_answers, submitted_at, grade, part_scores, tf_breakdown')
+            .order('submitted_at', { ascending: false });
         if (normalizedPhone) {
             query = query.eq('student_phone', normalizedPhone).limit(200);
         } else {

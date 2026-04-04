@@ -31,7 +31,8 @@ export const getStudyPlans = async (): Promise<StudyPlanItem[]> => {
         return _studyPlansCache.data;
     }
     try {
-        const { data, error } = await supabase.from('study_plans').select('*')
+        const { data, error } = await supabase.from('study_plans')
+            .select('id, student_phone, task_name, is_completed, due_date, color')
             .eq('student_phone', normalizedPhone).order('due_date', { ascending: true });
         if (error) throw error;
         _studyPlansCache = { data: data as StudyPlanItem[], ts: Date.now(), phone: normalizedPhone };
@@ -106,7 +107,8 @@ export const getSchedules = async (grade: number): Promise<ScheduleItem[]> => {
         }
         // 4️⃣ Fallback: hỏi Supabase trực tiếp
         try {
-            const { data, error } = await supabase.from('schedules').select('*')
+            const { data, error } = await supabase.from('schedules')
+                .select('id, title, description, date, start_time, end_time, grade, created_at')
                 .eq('grade', grade).order('date', { ascending: true }).order('start_time', { ascending: true });
             if (error) throw error;
             localStorage.setItem(cacheKey, JSON.stringify(data));

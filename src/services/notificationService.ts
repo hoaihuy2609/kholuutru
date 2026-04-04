@@ -51,7 +51,8 @@ export const getNotifications = async (grade: number): Promise<NotificationItem[
         }
         // 4️⃣ Fallback: hỏi Supabase trực tiếp
         try {
-            const { data, error } = await supabase.from('notifications').select('*')
+            const { data, error } = await supabase.from('notifications')
+                .select('id, title, message, type, grade, fetch_enabled, created_at')
                 .eq('grade', grade).order('created_at', { ascending: false }).limit(20);
             if (error) throw error;
             const result = (data || []) as NotificationItem[];
