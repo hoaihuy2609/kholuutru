@@ -4,6 +4,7 @@ import { Clock } from 'lucide-react';
 interface ExamCountdownTimerProps {
     initialSeconds: number;
     onTimeUp: () => void;
+    paused?: boolean; // Đóng băng đồng hồ khi PDF chưa load xong
 }
 
 const formatTime = (secs: number) => {
@@ -14,10 +15,12 @@ const formatTime = (secs: number) => {
 
 const ACCENT = '#6B7CDB';
 
-const ExamCountdownTimer: React.FC<ExamCountdownTimerProps> = ({ initialSeconds, onTimeUp }) => {
+const ExamCountdownTimer: React.FC<ExamCountdownTimerProps> = ({ initialSeconds, onTimeUp, paused = false }) => {
     const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
 
     useEffect(() => {
+        // ✅ FIX: Chỉ chạy đồng hồ sau khi PDF đã load xong (paused = false)
+        if (paused) return;
         const timer = setInterval(() => {
             setSecondsLeft((prev) => {
                 if (prev <= 1) {
@@ -29,7 +32,7 @@ const ExamCountdownTimer: React.FC<ExamCountdownTimerProps> = ({ initialSeconds,
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [onTimeUp]); // only dependent on onTimeUp
+    }, [onTimeUp, paused]); // re-evaluate khi paused thay đổi
 
     const pct = secondsLeft / initialSeconds;
     const isUrgent = secondsLeft <= 120;

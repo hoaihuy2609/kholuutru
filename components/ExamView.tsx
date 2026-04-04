@@ -97,7 +97,8 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
         return isTouch || isMobileUA;
     });
 
-    const startTime = useRef(Date.now());
+    const startTime = useRef<number | null>(null); // null = chưa bắt đầu tính giờ
+    const [iframeReady, setIframeReady] = useState(false); // true khi iframe render xong Base64
 
     // Security Check: Block direct URL access before scheduled time (bypass for admins via isPreviewMode)
     if (!isPreviewMode && exam.scheduledAt && getSecureTime() < exam.scheduledAt) {
@@ -148,7 +149,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                 }
 
                 if (blob) {
-                    // ⑤ Đọc PDF thành Data URI (Base64) để lưu vào Cache dạng String
+                    // ⑥ Đọc PDF thành Data URI (Base64) để lưu vào Cache dạng String
                     const reader = new FileReader();
                     reader.onloadend = () => {
                         const base64data = reader.result as string;
@@ -166,6 +167,18 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
         load();
     }, [exam.id, exam.pdfTelegramFileId]);
 
+    // ✅ FIX: Chốt startTime đúng lúc iframe render xong — chính xác 100%
+    useEffect(() => {
+        if (iframeReady && startTime.current === null) {
+            startTime.current = Date.now();
+        }
+    }, [iframeReady]);
+
+    // Reset iframeReady nếu đề đổi (trường hợp admin preview nhiều đề)
+    useEffect(() => {
+        setIframeReady(false);
+    }, [exam.id]);
+
     // ── Countdown ──
     const handleSubmitFinal = useCallback(() => {
         if (isPreviewMode) {
@@ -181,7 +194,8 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
             examId: exam.id,
             mc, tf, sa,
             submittedAt: Date.now(),
-            timeTaken: Math.round((Date.now() - startTime.current) / 1000),
+            // ✅ FIX: timeTaken tính từ lúc PDF hiện ra, không phải lúc vào trang
+            timeTaken: Math.round((Date.now() - (startTime.current ?? Date.now())) / 1000),
         };
         onSubmit(submission);
     }, [submitted, mc, tf, sa, exam.id, onSubmit, isPreviewMode, onShowToast]);
@@ -236,7 +250,11 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                     <p className="text-[10px] mt-0.5" style={{ color: '#AEACA8' }}>{answeredCount}/{totalQ} câu đã làm</p>
                 </div>
 
-                <ExamCountdownTimer initialSeconds={exam.duration * 60} onTimeUp={handleSubmitFinal} />
+                <ExamCountdownTimer
+                    initialSeconds={exam.duration * 60}
+                    onTimeUp={handleSubmitFinal}
+                    paused={!iframeReady} // ✅ FIX: Chờ iframe render xong mới bắt đầu đếm
+                />
             </div>
 
             {/* ── Main Content ── */}
@@ -252,13 +270,32 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                         </div>
                     ) : pdfUrl ? (
                         <>
-                            {/* Desktop: iframe nhúng chống tải */}
+                            {/* Desktop: iframe nhúng — ẩn cho đến khi render xong Base64 */}
                             {!isMobileDevice && (
                                 <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+                                    {/* Loading overlay — hiện khi iframe chưa sẵn sàng */}
+                                    {!iframeReady && (
+                                        <div
+                                            className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10"
+                                            style={{ background: '#1A1A1A' }}
+                                        >
+                                            <RefreshCw className="w-8 h-8 animate-spin" style={{ color: ACCENT }} />
+                                            <p className="text-sm" style={{ color: '#AEACA8' }}>Đang hiển thị đề thi...</p>
+                                        </div>
+                                    )}
                                     <iframe
                                         src={`${pdfUrl}#navpanes=0`}
                                         title="PDF Preview"
-                                        style={{ width: '100%', height: 'calc(100% + 56px)', marginTop: '-56px', border: 'none', display: 'block' }}
+                                        onLoad={() => setIframeReady(true)} // ✅ FIX: Bật đồng hồ khi PDF render xong
+                                        style={{
+                                            width: '100%',
+                                            height: 'calc(100% + 56px)',
+                                            marginTop: '-56px',
+                                            border: 'none',
+                                            display: 'block',
+                                            opacity: iframeReady ? 1 : 0, // Tàng hình cho đến khi render xong
+                                            transition: 'opacity 0.3s ease',
+                                        }}
                                     />
                                 </div>
                             )}

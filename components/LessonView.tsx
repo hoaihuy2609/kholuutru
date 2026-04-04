@@ -5,7 +5,18 @@ import SearchBar from './SearchBar';
 import { useLocation } from 'react-router-dom';
 import StudyTimer from './StudyTimer';
 
-
+// ✅ PERF: Prefetch PDF vào Disk Cache khi học sinh hover — load tức thì khi bấm xem
+const _prefetchedUrls = new Set<string>();
+const prefetchPdf = (url: string) => {
+  if (!url || _prefetchedUrls.has(url)) return;
+  _prefetchedUrls.add(url);
+  const link = document.createElement('link');
+  link.rel = 'prefetch';
+  link.as = 'fetch';
+  link.href = url;
+  link.crossOrigin = 'anonymous';
+  document.head.appendChild(link);
+};
 interface LessonViewProps {
   lesson: Lesson;
   files: StoredFile[];
@@ -180,6 +191,27 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
     return counts;
   }, [files]);
 
+  // ✅ PERF (Mobile): Intersection Observer — tự động prefetch PDF khi card cuộn vào viewport
+  const fileGridRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const grid = fileGridRef.current;
+    if (!grid) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const url = (entry.target as HTMLElement).dataset.prefetchUrl;
+            if (url) prefetchPdf(url);
+          }
+        });
+      },
+      { rootMargin: '200px' } // Bắt đầu prefetch khi cách viewport 200px
+    );
+    const cards = grid.querySelectorAll('[data-prefetch-url]');
+    cards.forEach(card => observer.observe(card));
+    return () => observer.disconnect();
+  }, [filteredAndSortedFiles]); // Re-observe khi danh sách file thay đổi
+
   return (
     <>
       <div className="space-y-6 animate-fade-in relative pb-10">
@@ -339,10 +371,11 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4 p-3 md:p-4">
+            <div ref={fileGridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4 p-3 md:p-4">
               {filteredAndSortedFiles.map(file => (
                 <div
                   key={file.id}
+                  data-prefetch-url={file.url} // ✅ PERF (Mobile): IntersectionObserver sẽ dùng attribute này
                   className="group rounded-xl overflow-hidden transition-colors
                              flex items-center gap-3 p-3
                              md:flex-col md:items-stretch md:gap-0 md:p-0 md:h-[260px]"
@@ -350,6 +383,8 @@ const LessonView: React.FC<LessonViewProps> = ({ lesson, files, isAdmin, onBack,
                   onMouseEnter={e => {
                     (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
                     (e.currentTarget as HTMLElement).style.background = '#FAFAF9';
+                    // ✅ PERF: Prefetch PDF khi hover card — trình duyệt tải ngầm vào Disk Cache
+                    if (file.url) prefetchPdf(file.url);
                   }}
                   onMouseLeave={e => {
                     (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';

@@ -6,6 +6,18 @@ import { Chapter, Lesson, StoredFile } from '../types';
 import { useLocation } from 'react-router-dom';
 import StudyTimer from './StudyTimer';
 
+// ✅ PERF: Prefetch PDF vào Disk Cache khi học sinh hover — load tức thì khi bấm xem
+const _prefetchedUrls = new Set<string>();
+const prefetchPdf = (url: string) => {
+  if (!url || _prefetchedUrls.has(url)) return;
+  _prefetchedUrls.add(url);
+  const link = document.createElement('link');
+  link.rel = 'prefetch';
+  link.as = 'fetch';
+  link.href = url;
+  link.crossOrigin = 'anonymous';
+  document.head.appendChild(link);
+};
 
 // ── Progress Types ──────────────────────────────────────────
 type ProgressStatus = 'none' | 'done';
@@ -288,6 +300,27 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
     return isTouch || isMobileUA;
   });
 
+  // ✅ PERF (Mobile): Intersection Observer — tự động prefetch PDF khi file row cuộn vào viewport
+  const chapterGridRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const grid = chapterGridRef.current;
+    if (!grid) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const url = (entry.target as HTMLElement).dataset.prefetchUrl;
+            if (url) prefetchPdf(url);
+          }
+        });
+      },
+      { rootMargin: '200px' }
+    );
+    const rows = grid.querySelectorAll('[data-prefetch-url]');
+    rows.forEach(row => observer.observe(row));
+    return () => observer.disconnect();
+  }, [chapterFiles]); // Re-observe khi danh sách file thay đổi
+
   const getAccentColor = (category?: string) => {
     switch (category) {
       case 'Lý thuyết trọng tâm (Chương)': return '#D9730D';
@@ -468,10 +501,15 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
   /* ── Reusable file row ── */
   const FileRow = ({ file, accentColor }: { file: StoredFile; accentColor: string }) => (
     <div
+      data-prefetch-url={file.url} // ✅ PERF (Mobile): IntersectionObserver sẽ dùng attribute này
       className="flex items-center justify-between px-3 md:px-4 py-2.5 rounded-lg cursor-pointer transition-colors group/file"
       style={{ border: '1px solid #E9E9E7' }}
       onClick={() => setPreviewFile(file)}
-      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F7F6F3'}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.background = '#F7F6F3';
+        // ✅ PERF: Prefetch PDF khi hover — trình duyệt tải ngầm vào Disk Cache
+        if (file.url) prefetchPdf(file.url);
+      }}
       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FFFFFF'}
     >
       <div className="flex items-center gap-2.5 overflow-hidden">
@@ -610,7 +648,7 @@ const ChapterView: React.FC<ChapterViewProps> = React.memo(({
       </div>
 
       {files.length > 0 ? (
-        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2" style={{ background: '#FAFAF9' }}>
+        <div ref={chapterGridRef} className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2" style={{ background: '#FAFAF9' }}>
           {files.map(file => (
             <React.Fragment key={file.id}>
               <FileRow file={file} accentColor={accentColor} />

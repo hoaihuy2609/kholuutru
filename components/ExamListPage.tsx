@@ -197,8 +197,12 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
             // Cleanup timeouts cũ trước khi tạo mới
             prefetchTimeoutsRef.current.forEach(id => clearTimeout(id));
             prefetchTimeoutsRef.current = [];
-            // ✅ PERF: Chỉ prefetch 3 đề gần nhất — tiết kiệm Cloudflare Worker quota
-            gradedExams.slice(0, 3).forEach((exam, i) => {
+            // ✅ SECURITY FIX: Chỉ tải ngầm đề ĐÃ MỞ CÔNG KHAI (không có scheduledAt, hoặc đã qua giờ thi)
+            // Đề hẹn giờ đang bị khóa (LOCKED) sẽ KHÔNG được tải sớm để tránh lộ đề
+            // Chúng đã có cơ chế tải riêng trong 5 phút cuối (trạng thái READY ở ExamRowCard)
+            const now = getSecureTime();
+            const openExams = gradedExams.filter(e => !e.scheduledAt || e.scheduledAt <= now);
+            openExams.slice(0, 3).forEach((exam, i) => {
                 const id = window.setTimeout(() => prefetchExamPdf(exam), i * 2000); // stagger 2s each
                 prefetchTimeoutsRef.current.push(id);
             });
