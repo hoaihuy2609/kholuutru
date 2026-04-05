@@ -1,6 +1,6 @@
 // src/lib/serverTime.ts
 let serverOffset = 0; // ms difference between server and local clock (serverTime - localTime)
-let isSynced = false;
+export let isServerSynced = false; // exported so callers can check if time was successfully synced
 
 // Gọi hàm này 1 lần lúc app khởi động (hoặc khi cần verify time)
 export const syncServerTime = async () => {
@@ -14,7 +14,7 @@ export const syncServerTime = async () => {
             const latency = (Date.now() - start) / 2;
             const trueServerTime = serverTime + latency;
             serverOffset = trueServerTime - Date.now();
-            isSynced = true;
+            isServerSynced = true;
             console.log(`[TimeSync] 🕒 Server offset: ${serverOffset}ms`);
         }
     } catch {

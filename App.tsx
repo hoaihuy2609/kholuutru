@@ -8,7 +8,7 @@ import Toast from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
 import { getActivatedPhone } from './src/utils/phone';
-import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Home, Bell, FlaskConical, Settings, Menu, X } from 'lucide-react';
+import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Bell, Menu } from 'lucide-react';
 import KickedScreen from './components/auth/KickedScreen';
 import { useUIStore } from './src/stores/useUIStore';
 import { useDataStore } from './src/stores/useDataStore';
@@ -59,19 +59,30 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   useEffect(() => { setStoredFiles(cloud.storedFiles); }, [cloud.storedFiles, setStoredFiles]);
   useEffect(() => { setLoading(cloud.loading); }, [cloud.loading, setLoading]);
   
-  // Xóa IndexedDB cũ sau khi cập nhật Phase 1
+  // ── Migration Runner — bump MIGRATION_VER and add a new if-block below for future migrations
   useEffect(() => {
-    const MIGRATION_KEY = 'pv_v3_migrated_safe';
-    if (!localStorage.getItem(MIGRATION_KEY)) {
+    const MIGRATION_VER = 3;
+    // Backward compat: học sinh cũ đã có key cũ 'pv_v3_migrated_safe'
+    if (localStorage.getItem('pv_v3_migrated_safe') && !localStorage.getItem('pv_migration_ver')) {
+      localStorage.setItem('pv_migration_ver', '3');
+      localStorage.removeItem('pv_v3_migrated_safe');
+    }
+    const lastRan = parseInt(localStorage.getItem('pv_migration_ver') || '0', 10);
+    if (lastRan >= MIGRATION_VER) return;
+
+    // v3: Xóa legacy IndexedDB và metadata từ bản cũ
+    if (lastRan < 3) {
       indexedDB.deleteDatabase('PhysiVaultDB');
       indexedDB.deleteDatabase('pv_pdf_cache');
       localStorage.removeItem('pv_exam_versions');
       localStorage.removeItem('pv_exam_chunks_map');
       localStorage.removeItem('pv_last_fetched_exam_index');
       localStorage.setItem('pv_last_sync_time', '0');
-      localStorage.setItem(MIGRATION_KEY, 'true');
-      console.log('[Phase 1] Cleared legacy databases and metadata safely.');
+      console.log('[Migration v3] Cleared legacy databases.');
     }
+    // Để thêm migration mới: tăng MIGRATION_VER lên 4 và thêm: if (lastRan < 4) { ... }
+
+    localStorage.setItem('pv_migration_ver', String(MIGRATION_VER));
   }, []);
 
   useEffect(() => {
@@ -334,7 +345,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   }, []);
   const {
     isSettingsOpen, setSettingsOpen, isMobileMenuOpen, setMobileMenuOpen,
-    showAdminDashboard, setShowAdminDashboard, showGitHubSync, setShowGitHubSync,
+    showAdminDashboard, setShowAdminDashboard,
     toasts, removeToast, isAdmin, previewMode, setPreviewMode,
     isKicked, notificationUnreadCount, toggleAdmin, isSimulationFullscreen,
   } = useUIStore(useShallow(state => ({

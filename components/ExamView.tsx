@@ -6,7 +6,6 @@ import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import { getCachedPdf, savePdfToCache } from '../src/lib/pdfCache';
 import { getSecureTime } from '../src/lib/serverTime';
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlcTDkj2-GO1mdE6CZ1vaI5pBPWJAGZsChsQxpapw3eO0sKslB0tkNxam8l3Y4G5E8/exec";
 // ── Helpers ────────────────────────────────────────────────────────
 const normalizeSA = (s: string) =>
     s.trim().replace(',', '.').toLowerCase();

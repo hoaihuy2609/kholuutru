@@ -13,7 +13,6 @@ interface UIStore {
   isSettingsOpen: boolean;
   isMobileMenuOpen: boolean;
   showAdminDashboard: boolean;
-  showGitHubSync: boolean;
 
   // Toast
   toasts: ToastMessage[];
@@ -35,7 +34,6 @@ interface UIStore {
   setSettingsOpen: (v: boolean) => void;
   setMobileMenuOpen: (v: boolean) => void;
   setShowAdminDashboard: (v: boolean) => void;
-  setShowGitHubSync: (v: boolean) => void;
 
   showToast: (message: string, type?: ToastMessage['type'], duration?: number) => void;
   removeToast: (id: string) => void;
@@ -52,7 +50,6 @@ export const useUIStore = create<UIStore>((set) => ({
   isSettingsOpen: false,
   isMobileMenuOpen: false,
   showAdminDashboard: false,
-  showGitHubSync: false,
 
   toasts: [],
 
@@ -66,7 +63,6 @@ export const useUIStore = create<UIStore>((set) => ({
   setSettingsOpen: (v) => set({ isSettingsOpen: v }),
   setMobileMenuOpen: (v) => set({ isMobileMenuOpen: v }),
   setShowAdminDashboard: (v) => set({ showAdminDashboard: v }),
-  setShowGitHubSync: (v) => set({ showGitHubSync: v }),
 
   showToast: (message, type = 'success', _duration = 4000) => {
     // Timer auto-dismiss được xử lý bởi Toast component (tránh 2 timer chạy song song)
