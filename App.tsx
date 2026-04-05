@@ -431,7 +431,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   };
 
   return (
-    <div className="min-h-screen font-sans" style={{ background: '#F7F6F3', color: '#1A1A1A' }}>
+    <div className="min-h-screen font-sans" style={{ background: isForumTopicActive ? '#FFFFFF' : '#F7F6F3', color: '#1A1A1A' }}>
       {isMobileMenuOpen && <div className="fixed inset-0 z-40 md:hidden" style={{ background: 'rgba(26,26,26,0.4)' }} onClick={() => setMobileMenuOpen(false)} />}
 
       {/* Mobile Sidebar */}
