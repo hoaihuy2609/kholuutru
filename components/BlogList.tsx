@@ -111,7 +111,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
             </div>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #E9E9E7', marginBottom: '24px', overflowX: 'auto' }}>
+            <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #E9E9E7', marginBottom: '24px', flexWrap: 'wrap' }}>
                 <button
                     onClick={() => setActiveTab('blogs')}
                     style={{
