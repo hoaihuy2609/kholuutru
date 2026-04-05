@@ -230,7 +230,6 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                             </div>
                         </div>
                     </div>
-                </div>
 
                 {/* Replies Thread */}
                 <div className="bg-white">
