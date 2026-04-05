@@ -5,6 +5,7 @@ import ExamCountdownTimer from './ExamCountdownTimer';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import { getCachedPdf, savePdfToCache } from '../src/lib/pdfCache';
 import { getSecureTime } from '../src/lib/serverTime';
+import ExamCommentSection from './ExamCommentSection';
 
 // ── Helpers ────────────────────────────────────────────────────────
 const normalizeSA = (s: string) =>
@@ -550,6 +551,17 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                 ))}
                             </div>
                         </div>
+
+                        {/* ── Exam Comments ── */}
+                        <div className="pt-4 mt-8" style={{ borderTop: '1px dashed #333' }}>
+                            <ExamCommentSection
+                                examId={exam.id}
+                                examTitle={exam.title}
+                                isAdmin={!!isPreviewMode}
+                                adminKey={import.meta.env.VITE_COMMENT_ADMIN_KEY}
+                            />
+                        </div>
+
                     </div>
 
                     {/* Submit Button */}

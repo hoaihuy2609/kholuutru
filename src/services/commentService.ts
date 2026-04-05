@@ -7,7 +7,7 @@
 import { ExamComment } from '../../types';
 import { getMachineId } from '../hooks/useCloudStorage';
 
-const WORKER_URL = import.meta.env.VITE_CLOUDFLARE_PROXY_URL || '';
+const WORKER_URL = import.meta.env.VITE_COMMENT_WORKER_URL || '';
 
 // ── Nickname (lưu local, không cần server) ──────────────────────
 const NICKNAME_KEY = 'pv_user_nickname';

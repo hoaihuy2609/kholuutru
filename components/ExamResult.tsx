@@ -3,6 +3,7 @@ import { CheckCircle, XCircle, Minus, RotateCcw, Home, Clock, HelpCircle, Send, 
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { Exam, ExamSubmission, ExamTFAnswer } from '../types';
 import { calcScore } from './ExamView';
+import ExamCommentSection from './ExamCommentSection';
 
 interface ExamResultProps {
     exam: Exam;
@@ -429,6 +430,13 @@ const ExamResult: React.FC<ExamResultProps> = ({ exam, submission, onRetry, onBa
                         </div>
                     </div>
                 </div>
+
+                {/* ── Thảo luận Đề thi ── */}
+                <ExamCommentSection
+                    examId={exam.id}
+                    examTitle={exam.title}
+                    isAdmin={false} // Student view always false, admin views via Preview Mode
+                />
 
                 {/* ── Actions ── */}
                 <div className="flex gap-4 pb-8">
