@@ -228,13 +228,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                                 )}
                             </div>
 
-                            {/* Footer / Reactions (Mockup) */}
-                            <div className="mx-4 mb-3 px-3 py-2 bg-[#F9F9F9] border border-[#E5E5E5] rounded flex items-center gap-2">
-                                <div className="text-[#185886]">
-                                   <ThumbsUp className="w-3.5 h-3.5" stroke="currentColor"/>
-                                </div>
-                                <span className="text-[12px] text-[#185886]">admin</span>
-                            </div>
+                            {/* Footer / Reactions (Removed) */}
 
                             {isAdmin && (
                                 <div className="px-4 pb-3">

@@ -124,7 +124,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
     };
 
     return (
-        <div className="mt-6 rounded-none overflow-hidden" style={{ border: hideHeader ? 'none' : '1px solid #E5E7EB', background: hideHeader ? 'transparent' : '#FFFFFF' }}>
+        <div className={hideHeader ? "rounded-none overflow-hidden" : "mt-6 rounded-none overflow-hidden"} style={{ border: hideHeader ? 'none' : '1px solid #E5E7EB', background: hideHeader ? 'transparent' : '#FFFFFF' }}>
 
             {/* Header */}
             {!hideHeader && (
@@ -205,13 +205,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                                             )}
                                         </div>
 
-                                        {/* Footer / Reactions (Mockup) */}
-                                        <div className="mx-4 mb-3 px-3 py-2 bg-[#F9F9F9] border border-[#E5E5E5] rounded flex items-center gap-2">
-                                            <div className="text-[#185886]">
-                                               <ThumbsUp className="w-3.5 h-3.5" stroke="currentColor"/>
-                                            </div>
-                                            <span className="text-[12px] text-[#185886]">Vô Cưu and tqtuankg92</span>
-                                        </div>
+                                        {/* Footer / Reactions (Removed) */}
 
                                         {isAdmin && (
                                             <div className="px-4 pb-3">
