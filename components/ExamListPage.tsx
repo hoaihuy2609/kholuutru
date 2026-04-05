@@ -9,11 +9,15 @@ import { getSecureTime } from '../src/lib/serverTime';
 
 const prefetchExamPdf = async (exam: Exam) => {
     try {
-        if (await isPdfCached(exam.id)) return;
+        // Truyền fileId để cache key bao gồm version của file — tự invalidate khi admin upload đề mới
+        if (await isPdfCached(exam.id, exam.pdfTelegramFileId)) return;
         const res = await fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`);
         if (res.ok) {
-            const blob = await res.blob();
-            await savePdfToCache(exam.id, blob);
+            // FIX: Force MIME type application/pdf — res.blob() có thể trả về MIME sai từ Telegram
+            // nếu không force, iframe có thể không render được PDF
+            const buffer = await res.arrayBuffer();
+            const blob = new Blob([buffer], { type: 'application/pdf' });
+            await savePdfToCache(exam.id, blob, exam.pdfTelegramFileId);
             console.log(`[Prefetch] ✅ ${exam.title}`);
         }
     } catch { /* silent */ }
@@ -198,8 +202,9 @@ const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, 
             // Chúng đã có cơ chế tải riêng trong 5 phút cuối (trạng thái READY ở ExamRowCard)
             const now = getSecureTime();
             const openExams = gradedExams.filter(e => !e.scheduledAt || e.scheduledAt <= now);
-            openExams.slice(0, 3).forEach((exam, i) => {
-                const id = window.setTimeout(() => prefetchExamPdf(exam), i * 2000); // stagger 2s each
+            // FIX: Tăng lên 5 đề, stagger 1500ms mỗi đề — cân bằng UX vs network
+            openExams.slice(0, 5).forEach((exam, i) => {
+                const id = window.setTimeout(() => prefetchExamPdf(exam), i * 1500); // stagger 1.5s each
                 prefetchTimeoutsRef.current.push(id);
             });
         } catch { /* silent */ }

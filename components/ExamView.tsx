@@ -131,7 +131,8 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
         const load = async () => {
             try {
                 // ① Kiểm tra IndexedDB cache trước (nhanh nhất, ≈ 0ms)
-                const cachedBlob = await getCachedPdf(exam.id);
+                // Truyền fileId để cache key bao gồm version file — tự invalidate khi admin đổi đề
+                const cachedBlob = await getCachedPdf(exam.id, exam.pdfTelegramFileId);
                 if (cachedBlob && !cancelled) {
                     const url = URL.createObjectURL(cachedBlob);
                     objectUrlRef.current = url;
@@ -152,7 +153,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                 console.log('[PDF] ✅ Loaded via Cloudflare proxy (Blob)');
 
                 if (!cancelled) {
-                    savePdfToCache(exam.id, blob);
+                    savePdfToCache(exam.id, blob, exam.pdfTelegramFileId);
                     const url = URL.createObjectURL(blob);
                     objectUrlRef.current = url;
                     setPdfUrl(url);

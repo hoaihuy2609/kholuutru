@@ -6,15 +6,16 @@ import { useLocation } from 'react-router-dom';
 import StudyTimer from './StudyTimer';
 
 // ✅ PERF: Prefetch PDF vào Disk Cache khi học sinh hover — load tức thì khi bấm xem
+// FIX: Không set link.as='fetch' vì iframe dùng navigation request, sẽ miss cache.
+// Bỏ 'as' để browser dùng generic prefetch cache — match mọi loại request.
 const _prefetchedUrls = new Set<string>();
 const prefetchPdf = (url: string) => {
   if (!url || _prefetchedUrls.has(url)) return;
   _prefetchedUrls.add(url);
   const link = document.createElement('link');
   link.rel = 'prefetch';
-  link.as = 'fetch';
+  // Không set link.as — để browser cache generic, iframe sẽ hit cache đúng
   link.href = url;
-  link.crossOrigin = 'anonymous';
   document.head.appendChild(link);
 };
 interface LessonViewProps {
