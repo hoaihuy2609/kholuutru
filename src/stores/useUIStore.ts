@@ -28,6 +28,7 @@ interface UIStore {
 
   // Thêm cờ Fullscreen cho bài mô phỏng
   isSimulationFullscreen: boolean;
+  isForumTopicActive: boolean;
 
   // Actions
   setSettingsOpen: (v: boolean) => void;
@@ -42,6 +43,7 @@ interface UIStore {
   setKicked: (v: boolean) => void;
   setNotificationUnreadCount: (n: number) => void;
   setSimulationFullscreen: (v: boolean) => void;
+  setForumTopicActive: (v: boolean) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -56,6 +58,7 @@ export const useUIStore = create<UIStore>((set) => ({
   isKicked: false,
   notificationUnreadCount: 0,
   isSimulationFullscreen: false,
+  isForumTopicActive: false,
 
   setSettingsOpen: (v) => set({ isSettingsOpen: v }),
   setMobileMenuOpen: (v) => set({ isMobileMenuOpen: v }),
@@ -79,4 +82,5 @@ export const useUIStore = create<UIStore>((set) => ({
   setKicked: (v) => set({ isKicked: v }),
   setNotificationUnreadCount: (n) => set({ notificationUnreadCount: n }),
   setSimulationFullscreen: (v) => set({ isSimulationFullscreen: v }),
+  setForumTopicActive: (v) => set({ isForumTopicActive: v }),
 }));

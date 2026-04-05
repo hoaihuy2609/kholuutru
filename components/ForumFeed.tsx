@@ -3,6 +3,7 @@ import { MessageCircle, Image as ImageIcon, Trash2, User, Check, Send } from 'lu
 import { ExamComment } from '../types';
 import { fetchComments, postComment, deleteComment, uploadCommentImage, getNickname, saveNickname } from '../src/services/commentService';
 import ExamCommentSection from './ExamCommentSection';
+import { useUIStore } from '../src/stores/useUIStore';
 
 function timeAgo(ms: number): string {
     const diff = Date.now() - ms;
@@ -89,6 +90,13 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     
     // View state
     const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+
+    const setForumTopicActive = useUIStore(state => state.setForumTopicActive);
+
+    useEffect(() => {
+        setForumTopicActive(activeThreadId !== null);
+        return () => setForumTopicActive(false);
+    }, [activeThreadId, setForumTopicActive]);
 
     // Composer state
     const [titleStr, setTitleStr] = useState('');

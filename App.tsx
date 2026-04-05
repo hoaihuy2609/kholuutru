@@ -347,7 +347,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     isSettingsOpen, setSettingsOpen, isMobileMenuOpen, setMobileMenuOpen,
     showAdminDashboard, setShowAdminDashboard,
     toasts, removeToast, isAdmin, previewMode, setPreviewMode,
-    isKicked, notificationUnreadCount, toggleAdmin, isSimulationFullscreen,
+    isKicked, notificationUnreadCount, toggleAdmin, isSimulationFullscreen, isForumTopicActive,
   } = useUIStore(useShallow(state => ({
     isSettingsOpen: state.isSettingsOpen,
     setSettingsOpen: state.setSettingsOpen,
@@ -362,6 +362,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     notificationUnreadCount: state.notificationUnreadCount,
     toggleAdmin: state.toggleAdmin,
     isSimulationFullscreen: state.isSimulationFullscreen,
+    isForumTopicActive: state.isForumTopicActive,
   })));
   const { lessons, storedFiles, loading, isActivated, studentGradeValue } = useDataStore(useShallow(state => ({
     lessons: state.lessons,
@@ -400,7 +401,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const isOnNotification = path === '/notifications';
   const isOnSimLab = path === '/lab';
 
-  const hideSidebar = isSimulationFullscreen || path === '/admin/editor' || path === '/admin' || (effectiveIsAdmin && (isCreatingBlog || !!activeAdminBlog));
+  const hideSidebar = isSimulationFullscreen || isForumTopicActive || path === '/admin/editor' || path === '/admin' || (effectiveIsAdmin && (isCreatingBlog || !!activeAdminBlog));
 
   if (isKicked && !isAdmin) return <KickedScreen />;
 
