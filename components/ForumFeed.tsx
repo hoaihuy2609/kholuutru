@@ -192,12 +192,17 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                     </button>
                 </div>
 
-                <div className="p-4 bg-white border border-[#E5E7EB] border-b-0 shadow-[0_2px_8px_rgba(0,0,0,0.05)] rounded-t-lg">
-                    <h1 className="text-[20px] font-bold text-[#1A1A1A]">{title}</h1>
+                <div className="mb-6 pt-2">
+                    <h1 className="text-[24px] md:text-[26px] font-bold text-[#1A1A1A] mb-1">{title}</h1>
+                    <div className="flex items-center gap-1.5 text-[13px] text-[#8C8C8C]">
+                        <span className="font-bold text-[#185886] hover:underline cursor-pointer">{activeThread.author_name}</span>
+                        <span className="opacity-60">·</span>
+                        <span>{new Date(activeThread.created_at).toLocaleDateString('vi-VN')} lúc {new Date(activeThread.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
                 </div>
 
                     {/* Original Post Content (Post #1) */}
-                    <div className="flex border border-[#E5E7EB] mb-4 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] rounded-b-lg overflow-hidden transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+                    <div className="flex border border-[#E5E7EB] mb-4 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] rounded-lg overflow-hidden transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
                         {/* Left Profile Column */}
                         <div className="w-[120px] md:w-[150px] p-4 flex flex-col items-center bg-white shrink-0 border-r border-[#E5E7EB]">
                             <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-white text-[24px] font-bold mb-2" style={{ background: getAvatarColor(activeThread.author_name) }}>
