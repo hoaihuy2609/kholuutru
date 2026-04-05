@@ -176,7 +176,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     if (activeThread) {
         const { title, content } = parsePostContent(activeThread.text);
         return (
-            <div className="w-full mx-auto pb-20 animate-fade-in shadow-sm rounded-lg bg-[#F5F5F5] min-h-screen">
+            <div className="w-full mx-auto pb-20 animate-fade-in shadow-sm rounded-lg bg-[#EBEBEB] min-h-screen">
                 {/* Header Back Button */}
                 <div className="p-4 bg-[#23497c] flex items-center shadow-md sticky top-0 z-50">
                     <button onClick={() => setActiveThreadId(null)} className="text-white text-sm font-semibold flex items-center gap-1 hover:underline">
@@ -184,14 +184,14 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                     </button>
                 </div>
 
-                <div className="p-4 bg-white border border-[#E9E9E7] border-b-0 shadow-sm rounded-t-md">
+                <div className="p-4 bg-white border border-[#D1D1D1] border-b-0 shadow-sm rounded-t-md">
                     <h1 className="text-[20px] font-bold text-[#1A1A1A]">{title}</h1>
                 </div>
 
                     {/* Original Post Content (Post #1) */}
-                    <div className="flex border border-[#E9E9E7] mb-3 bg-white rounded-sm shadow-sm relative">
+                    <div className="flex border border-[#D1D1D1] mb-2 bg-white rounded-sm shadow-sm relative">
                         {/* Left Profile Column */}
-                        <div className="w-[120px] md:w-[150px] p-3 flex flex-col items-center border-r border-[#E9E9E7] shrink-0 bg-[#F9F9F9]">
+                        <div className="w-[120px] md:w-[150px] p-3 flex flex-col items-center border-r border-[#D1D1D1] shrink-0 bg-[#F0F2F5]">
                             <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-white text-[24px] font-bold shadow-sm mb-2" style={{ background: getAvatarColor(activeThread.author_name) }}>
                                 {activeThread.author_name.charAt(0).toUpperCase()}
                             </div>
@@ -202,7 +202,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                         {/* Right Content Column */}
                         <div className="flex-1 min-w-0 flex flex-col bg-white relative">
                             {/* Speech arrow */}
-                            <div className="absolute top-5 -left-[5px] w-2.5 h-2.5 bg-white border-l border-b border-[#E9E9E7] transform rotate-45 z-10" />
+                            <div className="absolute top-5 -left-[5px] w-2.5 h-2.5 bg-white border-l border-b border-[#D1D1D1] transform rotate-45 z-10" />
                             
                             {/* Header */}
                             <div className="flex items-center justify-between p-2 border-b border-[#F0F2F5] text-[12px] text-[#8E8D8A]">
@@ -214,8 +214,8 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                             <div className="p-4">
                                 <p className="text-[15px] leading-relaxed text-[#1A1A1A] whitespace-pre-wrap">{content}</p>
                                 {activeThread.image_url && (
-                                    <div className="mt-4 border-t border-dashed border-[#E9E9E7] pt-4">
-                                        <img src={activeThread.image_url} className="max-h-[500px] object-cover rounded shadow-sm border border-[#E9E9E7]" />
+                                    <div className="mt-4 border-t border-dashed border-[#D1D1D1] pt-4">
+                                        <img src={activeThread.image_url} className="max-h-[500px] object-cover rounded shadow-sm border border-[#D1D1D1]" />
                                     </div>
                                 )}
                                 {isAdmin && (
