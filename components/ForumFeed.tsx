@@ -176,7 +176,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     if (activeThread) {
         const { title, content } = parsePostContent(activeThread.text);
         return (
-            <div className="max-w-5xl mx-auto pb-20 animate-fade-in shadow-sm rounded-lg bg-[#F5F5F5] min-h-screen">
+            <div className="w-full mx-auto pb-20 animate-fade-in shadow-sm rounded-lg bg-[#F5F5F5] min-h-screen">
                 {/* Header Back Button */}
                 <div className="p-4 bg-[#23497c] flex items-center shadow-md sticky top-0 z-50">
                     <button onClick={() => setActiveThreadId(null)} className="text-white text-sm font-semibold flex items-center gap-1 hover:underline">
@@ -184,12 +184,12 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                     </button>
                 </div>
 
-                <div className="p-4 bg-white border-b border-[#E9E9E7] mb-2 shadow-sm rounded-b-md">
+                <div className="p-4 bg-white border border-[#E9E9E7] border-b-0 shadow-sm rounded-t-md">
                     <h1 className="text-[20px] font-bold text-[#1A1A1A]">{title}</h1>
                 </div>
 
                     {/* Original Post Content (Post #1) */}
-                    <div className="flex border border-[#E9E9E7] mb-2 bg-[#FAFAF9] rounded-sm relative">
+                    <div className="flex border border-[#E9E9E7] -mb-[1px] bg-[#FAFAF9] relative z-10">
                         {/* Left Profile Column */}
                         <div className="w-[120px] md:w-[150px] p-3 flex flex-col items-center border-r border-[#E9E9E7] shrink-0 bg-[#F5F5F5]">
                             <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-white text-[24px] font-bold shadow-sm mb-2" style={{ background: getAvatarColor(activeThread.author_name) }}>
@@ -228,7 +228,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                     </div>
 
                 {/* Replies Thread */}
-                <div className="bg-white">
+                <div className="bg-transparent flex flex-col">
                     <ExamCommentSection
                         examId={activeThread.id}
                         examTitle={title}
@@ -243,7 +243,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
 
     // ── THREAD LIST VIEW ──
     return (
-        <div className="max-w-5xl mx-auto pb-20 animate-fade-in bg-white rounded-xl shadow-sm border border-[#E9E9E7] overflow-hidden">
+        <div className="w-full mx-auto pb-20 animate-fade-in bg-white rounded-xl shadow-sm border border-[#E9E9E7] overflow-hidden">
             {/* Header */}
             <div className="bg-[#23497c] px-4 py-3 text-white font-bold text-[16px] shadow-sm flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-white" />
