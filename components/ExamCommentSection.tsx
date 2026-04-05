@@ -45,8 +45,6 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
     const [uploading, setUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
-    const [expandedReplyId, setExpandedReplyId] = useState<string | null>(null);
-
     // Nickname
     const [nickname, setNickname] = useState(getNickname);
     const [editingNickname, setEditingNickname] = useState(false);
@@ -164,100 +162,52 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {comments.map((comment, index) => {
-                            const isLast = index === comments.length - 1;
-                            return (
-                                <div key={comment.id} className="group flex gap-2 relative">
-                                    {(nestedLevel || 0) > 0 && (
-                                        <>
-                                            {/* Đường đâm ngược lên Avatar của Cha (chỉ mọc ở Comment đầu tiên) */}
-                                            {index === 0 && (
-                                                <div className="absolute top-[-35px] -left-[24px] w-[2px] h-[35px] bg-[#CED0D4]" />
-                                            )}
-                                            {/* Rẽ nhánh ngang bo cong vào Avatar con */}
-                                            <div className="absolute top-0 -left-[24px] w-[24px] h-[20px] border-b-[2px] border-l-[2px] border-[#CED0D4] rounded-bl-xl z-0" />
-                                            
-                                            {/* Thân dọc tiếp tục đâm xuống Comment kế tiếp (nếu chưa phải là cuối cùng) */}
-                                            {!isLast && (
-                                                <div className="absolute top-[20px] -left-[24px] w-[2px] bottom-[-12px] bg-[#CED0D4] z-0" />
-                                            )}
-                                        </>
-                                    )}
-
+                        {comments.map((comment, index) => (
+                                <div key={comment.id} className="flex gap-4 relative pb-6 border-b border-[#E9E9E7] pt-4">
                                     {/* Avatar */}
                                     <div
-                                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 mt-1 relative z-10"
+                                        className="w-12 h-12 rounded-full flex items-center justify-center text-[19px] font-bold text-white shrink-0 mt-1 shadow-sm"
                                         style={{ background: getAvatarColor(comment.author_name) }}
                                     >
                                         {comment.author_name.charAt(0).toUpperCase()}
                                     </div>
 
-                                <div className="flex-1 min-w-0">
-                                    {/* Bubble */}
-                                    <div className="inline-block px-3 py-2.5 rounded-2xl bg-[#F0F2F5] max-w-full">
-                                        <span className="text-[13px] font-bold block mb-0.5" style={{ color: '#1A1A1A' }}>
-                                            {comment.author_name}
-                                        </span>
-                                        {comment.text && (
-                                            <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words" style={{ color: '#1A1A1A' }}>
-                                                {comment.text}
-                                            </p>
-                                        )}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="font-bold text-[#1877F2] text-[16px]">{comment.author_name}</span>
+                                            <span className="text-xs font-semibold text-[#AEACA8]">#{index + 2}</span>
+                                        </div>
+                                        {/* Divider & Timestamp */}
+                                        <div className="text-[13px] text-[#8E8D8A] mb-3 pb-2 border-b border-[#F0F2F5]">
+                                            {new Date(comment.created_at).toLocaleString('vi-VN')}
+                                        </div>
+
+                                        <p className="text-[15px] leading-relaxed text-[#1A1A1A] whitespace-pre-wrap">
+                                            {comment.text}
+                                        </p>
+                                        
                                         {comment.image_url && (
-                                            <a href={comment.image_url} target="_blank" rel="noopener noreferrer" className="mt-2 block">
+                                            <div className="mt-4">
                                                 <img
                                                     src={comment.image_url}
                                                     alt="Ảnh đính kèm"
-                                                    className="max-h-60 rounded-lg object-cover transition-opacity hover:opacity-90 border border-[#E9E9E7]"
+                                                    className="max-h-80 rounded shadow border border-[#E9E9E7] object-cover"
                                                     loading="lazy"
                                                 />
-                                            </a>
+                                            </div>
                                         )}
-                                    </div>
 
-                                    {/* Actions */}
-                                    <div className="flex items-center gap-4 mt-1 ml-2">
-                                        <span className="text-[12px] font-medium" style={{ color: '#65676B' }}>
-                                            {timeAgo(comment.created_at)}
-                                        </span>
-                                        {(nestedLevel || 0) < 1 && (
-                                            <button
-                                                onClick={() => setExpandedReplyId(expandedReplyId === comment.id ? null : comment.id)}
-                                                className="text-[12px] font-bold cursor-pointer hover:underline"
-                                                style={{ color: expandedReplyId === comment.id ? '#1877F2' : '#65676B' }}
-                                            >
-                                                {expandedReplyId === comment.id ? 'Đóng' : 'Trả lời'}
-                                            </button>
-                                        )}
                                         {isAdmin && (
                                             <button
                                                 onClick={() => handleDelete(comment.id)}
-                                                className="opacity-0 group-hover:opacity-100 text-[12px] font-bold text-red-500 hover:underline transition-opacity"
+                                                className="text-[12px] font-bold text-red-500 hover:underline mt-4"
                                             >
-                                                Xóa
+                                                Xóa bình luận này
                                             </button>
                                         )}
                                     </div>
-
-                                    {/* Nested Replies */}
-                                    {expandedReplyId === comment.id && (
-                                        <div className="mt-1 relative">
-                                            <div className="pl-10">
-                                                <ExamCommentSection
-                                                    hideHeader
-                                                    nestedLevel={(nestedLevel || 0) + 1}
-                                                    examId={comment.id}
-                                                    examTitle={`Trả lời ${comment.author_name}`}
-                                                    isAdmin={isAdmin}
-                                                    adminKey={adminKey}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
-                            );
-                        })}
+                        ))}
                     </div>
                 )}
 

@@ -24,30 +24,62 @@ interface ForumFeedProps {
     adminKey?: string;
 }
 
-const PostCommentButton: React.FC<{
-    postId: string;
-    isExpanded: boolean;
-    onClick: () => void;
-}> = ({ postId, isExpanded, onClick }) => {
-    const [count, setCount] = useState<number | null>(null);
+// ── Helpers Parsing ─────────────────────────────────────────────
+const parsePostContent = (raw: string) => {
+    try {
+        const obj = JSON.parse(raw);
+        if (obj.t && obj.c) return { title: obj.t, content: obj.c };
+        return { title: 'Không có tiêu đề', content: raw };
+    } catch {
+        const titleExtract = raw.length > 50 ? raw.substring(0, 50) + '...' : raw;
+        return { title: titleExtract, content: raw };
+    }
+};
+const buildPostContent = (title: string, content: string) => JSON.stringify({ t: title.trim(), c: content.trim() });
+
+// ── Single Topic Item Component ─────────────────────────────────
+const ThreadListItem: React.FC<{ post: ExamComment; onClick: () => void }> = ({ post, onClick }) => {
+    const { title } = parsePostContent(post.text);
+    const [replyCount, setReplyCount] = useState<number | null>(null);
+    const [lastActivity, setLastActivity] = useState<number>(post.created_at);
 
     useEffect(() => {
         let isMounted = true;
-        fetchComments(postId).then(data => {
-            if (isMounted) setCount(data.length);
+        fetchComments(post.id).then(data => {
+            if (isMounted) {
+                setReplyCount(data.length);
+                if (data.length > 0) setLastActivity(Math.max(...data.map(c => c.created_at)));
+            }
         }).catch(() => {});
         return () => { isMounted = false; };
-    }, [postId]);
+    }, [post.id]);
 
     return (
-        <button
-            onClick={onClick}
-            className="flex items-center gap-1.5 text-sm font-semibold transition-colors px-2 py-1.5 rounded-lg hover:bg-[#F3F3F2]"
-            style={{ color: isExpanded ? '#6B7CDB' : '#57564F' }}
-        >
-            <MessageCircle className="w-[20px] h-[20px]" style={{ strokeWidth: 2 }} />
-            <span className="text-[15px] translate-y-[1px]">{isExpanded ? 'Thu gọn' : (count ? count : 'Bình luận')}</span>
-        </button>
+        <div onClick={onClick} className="flex gap-4 p-4 border-b border-[#E9E9E7] hover:bg-[#F3F4F6] cursor-pointer transition-colors group bg-white">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center text-[19px] font-medium text-white shrink-0 shadow-sm" style={{ background: getAvatarColor(post.author_name) }}>
+                {post.author_name.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                     {post.image_url && (
+                         <span className="px-2 py-0.5 bg-[#FEF9C3] text-[#A16207] text-[11px] font-semibold rounded shrink-0">
+                            Video + ảnh
+                         </span>
+                     )}
+                     <h3 className="font-semibold text-[16px] text-[#1877F2] group-hover:underline break-words">{title}</h3>
+                </div>
+                <div className="text-[13px] text-[#65676B] flex items-center gap-1.5 font-medium">
+                    <span>{post.author_name}</span>
+                    <span>·</span>
+                    <span>Góc học tập</span>
+                </div>
+                <div className="text-[13px] text-[#8E8D8A] mt-1 flex items-center gap-1.5">
+                    <span>Trả lời: {replyCount !== null ? replyCount : '...'}</span>
+                    <span>·</span>
+                    <span>{timeAgo(lastActivity)}</span>
+                </div>
+            </div>
+        </div>
     );
 };
 
@@ -55,16 +87,17 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     const [posts, setPosts] = useState<ExamComment[]>([]);
     const [loading, setLoading] = useState(true);
     
+    // View state
+    const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+
     // Composer state
+    const [titleStr, setTitleStr] = useState('');
     const [text, setText] = useState('');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // Reply state
-    const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
 
     // Nickname
     const [nickname, setNickname] = useState(getNickname());
@@ -104,21 +137,25 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     };
 
     const handleSubmitPost = async () => {
-        if (!text.trim() && !imageFile) return;
+        if (!titleStr.trim()) { setError('Vui lòng nhập tiêu đề!'); return; }
+        if (!text.trim() && !imageFile) { setError('Vui lòng điền nội dung!'); return; }
         if (!nickname) { setEditingNickname(true); setError('Vui lòng đặt tên hiển thị trước'); return; }
+        
         setError('');
         setSubmitting(true);
         try {
             let imageUrl: string | undefined;
-            if (imageFile) {
-                imageUrl = await uploadCommentImage(imageFile);
-            }
-            const newPost = await postComment('GLOBAL_FORUM', text, imageUrl);
+            if (imageFile) imageUrl = await uploadCommentImage(imageFile);
+            
+            const encoded = buildPostContent(titleStr, text);
+            const newPost = await postComment('GLOBAL_FORUM', encoded, imageUrl);
             setPosts(prev => [newPost, ...prev]);
+            setTitleStr('');
             setText('');
             removeImage();
+            setActiveThreadId(newPost.id); // View thread immediately
         } catch (err: any) {
-            setError(err.message || 'Lỗi đăng bài');
+            setError(err.message || 'Lỗi tạo chủ đề');
         } finally {
             setSubmitting(false);
         }
@@ -134,153 +171,147 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
         }
     };
 
+    // ── THREAD DETAIL VIEW ──
+    const activeThread = activeThreadId ? posts.find(p => p.id === activeThreadId) : null;
+    if (activeThread) {
+        const { title, content } = parsePostContent(activeThread.text);
+        return (
+            <div className="max-w-3xl mx-auto pb-20 animate-fade-in shadow-sm rounded-lg bg-[#F5F5F5] min-h-screen">
+                {/* Header Back Button */}
+                <div className="p-4 bg-[#23497c] flex items-center shadow-md sticky top-0 z-50">
+                    <button onClick={() => setActiveThreadId(null)} className="text-white text-sm font-semibold flex items-center gap-1 hover:underline">
+                        ← Góc học tập
+                    </button>
+                    <span className="text-white ml-auto text-xs opacity-70">Forum View</span>
+                </div>
+
+                <div className="p-4 bg-white border-b border-[#E9E9E7]">
+                    <h1 className="text-[20px] font-bold text-[#1A1A1A] mb-3">{title}</h1>
+                    <div className="text-xs text-[#65676B] flex items-center justify-between mb-4 pb-2 border-b border-[#F0F2F5]">
+                         <span className="font-semibold text-[#1877F2]">Khởi tạo bởi {activeThread.author_name}</span>
+                         <span>{new Date(activeThread.created_at).toLocaleString('vi-VN')}</span>
+                    </div>
+
+                    {/* Original Post Content (Post #1) */}
+                    <div className="flex gap-3 relative pb-6 border-b-2 border-dashed border-[#E9E9E7]">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0" style={{ background: getAvatarColor(activeThread.author_name) }}>
+                            {activeThread.author_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="font-bold text-[#1877F2] text-sm">{activeThread.author_name}</span>
+                                <span className="text-xs font-semibold text-[#AEACA8]">#1</span>
+                            </div>
+                            <p className="text-[15px] leading-relaxed text-[#1A1A1A] whitespace-pre-wrap mt-2">{content}</p>
+                            {activeThread.image_url && (
+                                <div className="mt-4">
+                                    <span className="text-[#1877F2] text-sm mb-2 block font-medium">Đính kèm:</span>
+                                    <img src={activeThread.image_url} className="max-h-80 object-cover rounded shadow border border-[#E9E9E7]" />
+                                </div>
+                            )}
+                            {isAdmin && (
+                                <button onClick={() => {
+                                    handleDeletePost(activeThread.id);
+                                    setActiveThreadId(null);
+                                }} className="text-xs font-bold text-red-500 mt-4 underline">
+                                    [Xóa toàn bộ Topic này]
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Replies Thread */}
+                <div className="bg-white">
+                    <ExamCommentSection
+                        examId={activeThread.id}
+                        examTitle={title}
+                        isAdmin={isAdmin}
+                        adminKey={adminKey}
+                        hideHeader={true}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    // ── THREAD LIST VIEW ──
     return (
-        <div className="max-w-2xl mx-auto pb-20 animate-fade-in">
-            {/* ── CREATE POST BOX ── */}
-            <div className="bg-white rounded-2xl border border-[#E9E9E7] p-5 mb-8 shadow-sm">
-                
-                {/* Nickname */}
-                <div className="flex items-center gap-2 px-3 py-2 bg-[#FAFAF9] rounded-xl border border-[#E9E9E7] mb-4">
+        <div className="max-w-3xl mx-auto pb-20 animate-fade-in bg-white rounded-xl shadow-sm border border-[#E9E9E7] overflow-hidden">
+            {/* Header */}
+            <div className="bg-[#23497c] px-4 py-3 text-white font-bold text-[16px] shadow-sm flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-white" />
+                Diễn đàn Thảo Luận
+            </div>
+
+            {/* Create Topic Area */}
+            <div className="p-5 border-b-[4px] border-[#F0F2F5] bg-[#FAFAF9]">
+                <h2 className="text-[#1A1A1A] font-bold text-[15px] mb-3">Tạo chủ đề mới</h2>
+                {/* Nickname Input */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-[#E9E9E7] mb-3 max-w-sm">
                     <User className="w-4 h-4 text-[#AEACA8]" />
                     {editingNickname ? (
                         <div className="flex gap-2 flex-1">
-                            <input
-                                autoFocus
-                                type="text"
-                                value={nicknameInput}
-                                onChange={e => setNicknameInput(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleSaveNickname()}
-                                placeholder="Nhập tên của bạn để đăng bài..."
-                                maxLength={30}
-                                className="flex-1 text-sm bg-transparent outline-none text-[#1A1A1A]"
-                            />
-                            <button onClick={handleSaveNickname} className="text-xs font-semibold px-3 py-1 bg-[#1A1A1A] text-white rounded-md">Lưu</button>
+                            <input autoFocus type="text" value={nicknameInput} onChange={e => setNicknameInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSaveNickname()} placeholder="Tên hiển thị..." maxLength={30} className="flex-1 text-sm bg-transparent outline-none" />
+                            <button onClick={handleSaveNickname} className="text-xs font-semibold px-2 py-1 bg-[#1A1A1A] text-white rounded">Lưu</button>
                         </div>
                     ) : (
                         <div className="flex-1 flex items-center justify-between">
                             <span className="text-sm font-semibold text-[#1A1A1A]">{nickname}</span>
-                            <button onClick={() => setEditingNickname(true)} className="text-[11px] font-medium text-[#6B7CDB] hover:underline">Sửa tên</button>
+                            <button onClick={() => setEditingNickname(true)} className="text-[11px] font-medium text-[#6B7CDB] hover:underline">Đổi tên</button>
                         </div>
                     )}
                 </div>
 
-                {/* Text Input */}
+                <input
+                    type="text"
+                    value={titleStr}
+                    onChange={e => setTitleStr(e.target.value)}
+                    placeholder="Tiêu đề thảo luận..."
+                    className="w-full px-3 py-2 text-sm border border-[#E9E9E7] rounded-lg mb-2 outline-none font-bold placeholder-[#AEACA8] focus:border-[#23497c]"
+                />
                 <textarea
                     value={text}
                     onChange={e => setText(e.target.value)}
-                    placeholder="Bạn muốn hỏi bài hay thảo luận gì nào?"
-                    className="w-full resize-none outline-none text-[15px] min-h-[80px] bg-transparent text-[#1A1A1A] placeholder-[#AEACA8]"
+                    placeholder="Nội dung chuyên sâu..."
+                    className="w-full resize-none outline-none p-3 text-[14px] min-h-[80px] bg-white border border-[#E9E9E7] rounded-lg focus:border-[#23497c]"
                 />
 
                 {imagePreview && (
-                    <div className="relative inline-block mt-3 mb-2">
-                        <img src={imagePreview} alt="preview" className="rounded-xl border border-[#E9E9E7] max-h-48 object-cover" />
-                        <button
-                            onClick={removeImage}
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-[#1A1A1A] text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
-                        >
-                            <User className="hidden" /> {/* just to skip importing X icon, let's use text X */}
-                            <span className="text-xs font-bold font-sans">×</span>
-                        </button>
+                    <div className="relative inline-block mt-2">
+                        <img src={imagePreview} className="rounded border border-[#E9E9E7] max-h-32" />
+                        <button onClick={removeImage} className="absolute -top-2 -right-2 w-5 h-5 bg-black text-white rounded-full flex items-center justify-center font-bold text-xs hover:bg-red-500">×</button>
                     </div>
                 )}
 
                 {error && <p className="text-xs text-[#E03E3E] mt-2 font-medium">{error}</p>}
 
-                {/* Actions */}
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#F0F0EE]">
-                    <div>
+                <div className="flex items-center justify-between mt-3">
+                    <div className="relative">
                         <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageChange} className="hidden" />
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[#57564F] bg-[#F7F6F3] hover:bg-[#E9E9E7] transition-colors"
-                        >
-                            <ImageIcon className="w-4 h-4 text-[#448361]" />
-                            Đính kèm ảnh
+                        <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1 px-3 py-1.5 rounded bg-white border border-[#E9E9E7] text-xs font-semibold text-[#57564F] hover:bg-[#F0F2F5]">
+                            <ImageIcon className="w-3.5 h-3.5 text-[#A16207]" />
+                            Chèn ảnh
                         </button>
                     </div>
-
-                    <button
-                        onClick={handleSubmitPost}
-                        disabled={submitting || (!text.trim() && !imageFile)}
-                        className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ background: '#6B7CDB' }}
-                    >
-                        {submitting ? 'Đang đăng...' : 'Đăng bài'}
-                        <Send className="w-4 h-4" />
+                    <button onClick={handleSubmitPost} disabled={submitting || (!titleStr.trim())} className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-[#23497c] text-xs font-bold text-white disabled:opacity-50 hover:bg-[#1e3f6b]">
+                        {submitting ? 'Đang tạo...' : 'Tạo Thớt'}
+                        <Send className="w-3.5 h-3.5" />
                     </button>
                 </div>
             </div>
 
-            {/* ── FEED LIST ── */}
-            <div className="space-y-6">
-                {loading && <div className="text-center py-10 text-[#AEACA8] text-sm">Đang tải bảng tin...</div>}
-                
+            {/* Topic List */}
+            <div className="bg-[#E5E7EB] h-1" /> {/* Divider */}
+            <div>
+                {loading && <div className="text-center py-10 text-[#AEACA8] text-sm">Đang tải danh sách...</div>}
                 {!loading && posts.length === 0 && (
-                    <div className="text-center py-12 bg-white rounded-2xl border border-[#E9E9E7]">
-                        <MessageCircle className="w-10 h-10 text-[#E9E9E7] mx-auto mb-3" />
-                        <p className="text-[#787774] text-sm font-medium">Chưa có bài thảo luận nào.</p>
-                        <p className="text-[#AEACA8] text-xs mt-1">Hãy đăng câu hỏi đầu tiên của bạn!</p>
+                    <div className="text-center py-12">
+                        <p className="text-[#AEACA8] text-sm font-medium">Chưa có bài thảo luận nào.</p>
                     </div>
                 )}
-
                 {posts.map(post => (
-                    <div key={post.id} className="bg-white rounded-2xl border border-[#E9E9E7] shadow-sm overflow-hidden">
-                        {/* Post Header */}
-                        <div className="p-5 pb-3 flex gap-3">
-                            <div
-                                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
-                                style={{ background: getAvatarColor(post.author_name) }}
-                            >
-                                {post.author_name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1">
-                                <div className="flex items-center justify-between">
-                                    <h4 className="font-bold text-[15px] text-[#1A1A1A]">{post.author_name}</h4>
-                                    {isAdmin && (
-                                        <button onClick={() => handleDeletePost(post.id)} className="text-[#AEACA8] hover:text-[#E03E3E] transition-colors p-1">
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                </div>
-                                <p className="text-xs text-[#AEACA8] font-medium">{timeAgo(post.created_at)}</p>
-                            </div>
-                        </div>
-
-                        {/* Post Content */}
-                        <div className="px-5 pb-3">
-                            <p className="text-[15px] text-[#1A1A1A] whitespace-pre-wrap leading-relaxed">
-                                {post.text}
-                            </p>
-                            {post.image_url && (
-                                <div className="mt-3 rounded-xl overflow-hidden border border-[#E9E9E7]">
-                                    <img src={post.image_url} alt="Post image" className="w-full h-auto" loading="lazy" />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Post Footer / Actions */}
-                        <div className="px-3 py-2 border-t border-[#F0F0EE] flex items-center gap-4">
-                            <PostCommentButton 
-                                postId={post.id} 
-                                isExpanded={expandedPostId === post.id} 
-                                onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)} 
-                            />
-                        </div>
-
-                        {/* Nested Comments (The Facebook trick) */}
-                        {expandedPostId === post.id && (
-                            <div className="px-5 py-4 bg-[#FAFAF9] border-t border-[#E9E9E7]">
-                                <ExamCommentSection
-                                    hideHeader
-                                    examId={post.id}
-                                    examTitle={`Bình luận bài của ${post.author_name}`}
-                                    isAdmin={isAdmin}
-                                    adminKey={adminKey}
-                                />
-                            </div>
-                        )}
-                    </div>
+                    <ThreadListItem key={post.id} post={post} onClick={() => setActiveThreadId(post.id)} />
                 ))}
             </div>
         </div>
