@@ -87,7 +87,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
         } finally {
             setLoading(false);
         }
-    }, [grade, isAdmin]);
+    }, [grade, isAdmin, onGetNotifications, onGetFetchedIds]);
 
     useEffect(() => { load(); }, [load]);
 

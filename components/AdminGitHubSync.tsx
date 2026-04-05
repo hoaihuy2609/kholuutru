@@ -214,7 +214,8 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                     {([12, 11, 10] as const).map(grade => {
                         const c = GRADE_COLORS[grade];
                         const gLessons = lessons.filter(l => CURRICULUM.find(g => g.level === grade)?.chapters.map(ch => ch.id).includes(l.chapterId));
-                        const gFileCount = gLessons.reduce((s, l) => s + (storedFiles[l.id]?.length || 0), 0);
+                        const gFileCount = gLessons.reduce((s, l) => s + (storedFiles[l.id]?.length || 0), 0)
+                            + (CURRICULUM.find(g => g.level === grade)?.chapters.reduce((s, ch) => s + (storedFiles[ch.id]?.length || 0), 0) ?? 0);
                         const isActive = selectedGrade === grade;
                         return (
                             <button key={grade} onClick={() => setSelectedGrade(grade)}

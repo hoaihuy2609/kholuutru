@@ -56,7 +56,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         if (isOpen) {
             setMyMachineId(getMachineId());
             const history = localStorage.getItem('pv_activation_history');
-            if (history) setActivationHistory(JSON.parse(history));
+            if (history) {
+                try { setActivationHistory(JSON.parse(history)); }
+                catch { localStorage.removeItem('pv_activation_history'); }
+            }
             const savedSdt = localStorage.getItem('pv_activated_sdt');
             const pendingSdt = localStorage.getItem('pv_pending_sdt');
             if (pendingSdt) setStudentSdt(pendingSdt);

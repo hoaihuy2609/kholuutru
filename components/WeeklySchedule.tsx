@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ScheduleItem } from '../types';
 import { Calendar, Clock, Plus, Trash2, Edit2, ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
@@ -75,18 +75,19 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
         if (!isAdmin && studentGrade) setSelectedGrade(studentGrade);
     }, [isAdmin, studentGrade]);
 
-    useEffect(() => { fetchSchedules(); }, [selectedGrade]);
-
-
-
-    const fetchSchedules = async () => {
+    const fetchSchedules = useCallback(async () => {
         setLoading(true);
-        const data = isAllGrades
-            ? await onLoadAllSchedules()
-            : await onLoadSchedules(selectedGrade);
-        setSchedules(data || []);
-        setLoading(false);
-    };
+        try {
+            const data = isAllGrades
+                ? await onLoadAllSchedules()
+                : await onLoadSchedules(selectedGrade);
+            setSchedules(data || []);
+        } finally {
+            setLoading(false);
+        }
+    }, [isAllGrades, selectedGrade, onLoadAllSchedules, onLoadSchedules]);
+
+    useEffect(() => { fetchSchedules(); }, [fetchSchedules]);
 
     const handleNextWeek = () => {
         const next = new Date(currentWeekStart);

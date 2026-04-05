@@ -53,22 +53,24 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
   const storedFiles = useDataStore(state => state.storedFiles);
   const studentGradeValue = useDataStore(state => state.studentGradeValue);
 
-  // Load exams & blogs once when opened
+  // Load exams & blogs once when opened; reload blogs if isAdmin changes
+  const lastIsAdmin = useRef<boolean | undefined>(undefined);
   useEffect(() => {
     if (!isOpen) return;
     setQuery('');
     setSelectedIndex(0);
     setTimeout(() => inputRef.current?.focus(), 50);
 
-    // Load exams
+    // Load exams once
     if (onLoadExams && exams.length === 0) {
       onLoadExams().then(data => setExams(data || [])).catch(() => {});
     }
-    // Load blogs
-    if (onGetBlogs && blogs.length === 0) {
+    // Load blogs; reload if isAdmin changed (draft visibility changes)
+    if (onGetBlogs && (blogs.length === 0 || lastIsAdmin.current !== !!isAdmin)) {
+      lastIsAdmin.current = !!isAdmin;
       onGetBlogs(!!isAdmin).then(data => setBlogs(data || [])).catch(() => {});
     }
-  }, [isOpen]);
+  }, [isOpen, isAdmin]);
 
   // Build static chapter results
   const chapterResults: SearchResult[] = useMemo(() => {
