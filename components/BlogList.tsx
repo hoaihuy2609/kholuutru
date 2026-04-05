@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BlogPost } from '../types';
 import { BookOpen, Calendar, ChevronRight, Edit3, Plus, Search, Clock, Filter, Atom, FileText, Tag, MessageCircle } from 'lucide-react';
-import ExamCommentSection from './ExamCommentSection';
+import ForumFeed from './ForumFeed';
 
 interface BlogListProps {
     isAdmin: boolean;
@@ -149,16 +149,8 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
             </div>
 
             {activeTab === 'forum' ? (
-                <div className="animate-fade-in" style={{
-                    background: '#fff', borderRadius: '16px', border: '1px solid #E9E9E7',
-                    padding: '24px', boxShadow: '0 4px 24px rgba(0,0,0,0.02)'
-                }}>
-                    <ExamCommentSection
-                        examId="GLOBAL_FORUM"
-                        examTitle="Cộng Đồng Hỏi Đáp Vật Lý"
-                        isAdmin={isAdmin}
-                        adminKey={import.meta.env.VITE_COMMENT_ADMIN_KEY}
-                    />
+                <div className="animate-fade-in">
+                    <ForumFeed isAdmin={isAdmin} adminKey={import.meta.env.VITE_COMMENT_ADMIN_KEY} />
                 </div>
             ) : (
                 <>

@@ -13,6 +13,7 @@ interface ExamCommentSectionProps {
     examTitle: string;
     isAdmin: boolean;
     adminKey?: string; // VITE_ADMIN_KEY để xác thực xóa
+    hideHeader?: boolean;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────
@@ -33,7 +34,7 @@ function getAvatarColor(name: string): string {
 
 // ── Main Component ──────────────────────────────────────────────
 const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
-    examId, examTitle, isAdmin, adminKey,
+    examId, examTitle, isAdmin, adminKey, hideHeader
 }) => {
     const [comments, setComments] = useState<ExamComment[]>([]);
     const [loading, setLoading] = useState(true);
@@ -123,10 +124,11 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
     };
 
     return (
-        <div className="mt-6 rounded-2xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
+        <div className="mt-6 rounded-2xl overflow-hidden" style={{ border: hideHeader ? 'none' : '1px solid #E9E9E7', background: hideHeader ? 'transparent' : '#FFFFFF' }}>
 
             {/* Header */}
-            <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: '1px solid #E9E9E7' }}>
+            {!hideHeader && (
+                <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: '1px solid #E9E9E7' }}>
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#EEF0FB' }}>
                     <MessageCircle className="w-4 h-4" style={{ color: ACCENT }} />
                 </div>
@@ -142,9 +144,11 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                 >
                     {comments.length} bình luận
                 </span>
-            </div>
+                </div>
+            )}
 
-            <div className="p-5 space-y-5">
+            <div className={`${hideHeader ? 'p-0 pt-2' : 'p-5'} space-y-5`}>
+
 
                 {/* Nickname Bar */}
                 <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: '#FAFAF9', border: '1px solid #E9E9E7' }}>
