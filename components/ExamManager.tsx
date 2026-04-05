@@ -521,40 +521,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                                             onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
                                         />
                                     </div>
-                                    <div className="flex-1 grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>Hẹn thi (Tùy chọn)</label>
-                                            <input
-                                                type="datetime-local"
-                                                value={scheduledAt}
-                                                onChange={e => setScheduledAt(e.target.value)}
-                                                className="w-full px-2 py-1.5 rounded-lg text-xs outline-none"
-                                                style={{ border: '1.5px solid #E9E9E7', background: '#F7F6F3', color: '#1A1A1A' }}
-                                                onFocus={e => (e.target as HTMLElement).style.borderColor = ACCENT}
-                                                onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold mb-1.5 flex items-center gap-1" style={{ color: '#57564F' }}>
-                                                <Lock style={{ width: 11, height: 11, color: '#E03E3E' }} />
-                                                Đóng đề lúc (Tùy chọn)
-                                            </label>
-                                            <input
-                                                type="datetime-local"
-                                                value={closedAt}
-                                                onChange={e => setClosedAt(e.target.value)}
-                                                className="w-full px-2 py-1.5 rounded-lg text-xs outline-none"
-                                                style={{ border: '1.5px solid #E9E9E7', background: '#F7F6F3', color: '#1A1A1A' }}
-                                                onFocus={e => (e.target as HTMLElement).style.borderColor = '#E03E3E'}
-                                                onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
-                                            />
-                                            {closedAt && (
-                                                <p className="text-[10px] mt-1" style={{ color: '#E03E3E' }}>
-                                                    ⚠️ Học sinh chưa làm bài sẽ bị khóa. Người đang thi sẽ bị tự động nộp bài.
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>Khối lớp *</label>
@@ -568,6 +534,42 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                                             >Lớp {g}</button>
                                         ))}
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Lịch thi */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>Hẹn thi (Tùy chọn)</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={scheduledAt}
+                                        onChange={e => setScheduledAt(e.target.value)}
+                                        className="w-full px-2 py-1.5 rounded-lg text-xs outline-none"
+                                        style={{ border: '1.5px solid #E9E9E7', background: '#F7F6F3', color: '#1A1A1A' }}
+                                        onFocus={e => (e.target as HTMLElement).style.borderColor = ACCENT}
+                                        onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold mb-1.5 flex items-center gap-1" style={{ color: '#57564F' }}>
+                                        <Lock style={{ width: 11, height: 11, color: '#E03E3E' }} />
+                                        Đóng đề lúc (Tùy chọn)
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        value={closedAt}
+                                        onChange={e => setClosedAt(e.target.value)}
+                                        className="w-full px-2 py-1.5 rounded-lg text-xs outline-none"
+                                        style={{ border: '1.5px solid #E9E9E7', background: '#F7F6F3', color: '#1A1A1A' }}
+                                        onFocus={e => (e.target as HTMLElement).style.borderColor = '#E03E3E'}
+                                        onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
+                                    />
+                                    {closedAt && (
+                                        <p className="text-[10px] mt-1" style={{ color: '#E03E3E' }}>
+                                            ⚠️ Học sinh chưa làm bài sẽ bị khóa. Người đang thi sẽ bị tự động nộp bài.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             {/* Upload PDF */}
