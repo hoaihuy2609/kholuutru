@@ -160,3 +160,22 @@ export interface BlogPost {
   created_at: string;
   updated_at: string;
 }
+
+// ── Exam Comment Types ──────────────────────────────────────────
+
+export interface ExamComment {
+  id: string;
+  exam_id: string;
+  author_id: string;      // machine_id của học sinh (định danh ẩn danh)
+  author_name: string;    // nickname tự đặt
+  text: string;           // nội dung comment
+  image_url?: string;     // URL ảnh trên Cloudflare R2 (nếu có)
+  created_at: number;     // timestamp ms
+  is_deleted?: boolean;   // Admin xóa mềm
+}
+
+export interface UserNickname {
+  machine_id: string;
+  nickname: string;
+  updated_at: number;
+}

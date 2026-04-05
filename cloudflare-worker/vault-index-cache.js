@@ -409,6 +409,135 @@ export default {
       });
     }
 
+    // ── Route: GET /comments?exam_id=xxx ─────────────────────────────
+    // Lấy danh sách comment theo đề thi từ Cloudflare D1
+    if (url.pathname === "/comments" && request.method === "GET") {
+      const examId = url.searchParams.get("exam_id");
+      if (!examId) {
+        return new Response(JSON.stringify({ error: "Thiếu exam_id" }), {
+          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+      try {
+        const { results } = await env.DB.prepare(
+          "SELECT * FROM exam_comments WHERE exam_id = ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 100"
+        ).bind(examId).all();
+        return new Response(JSON.stringify(results), {
+          headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: "DB error", detail: err.message }), {
+          status: 500, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+    }
+
+    // ── Route: POST /comments ─────────────────────────────────────────
+    // Đăng comment mới vào D1
+    if (url.pathname === "/comments" && request.method === "POST") {
+      let body = {};
+      try { body = await request.json(); } catch {
+        return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+      const { exam_id, author_id, author_name, text, image_url } = body;
+      if (!exam_id || !author_id || !author_name || (!text && !image_url)) {
+        return new Response(JSON.stringify({ error: "Thiếu dữ liệu bắt buộc" }), {
+          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+      // Rate limit: 1 SĐT/machine chỉ gửi 1 comment/10 giây
+      const rateLimitKey = new Request(
+        `https://physivault-proxy.hoaihuy2609.workers.dev/__comment_rl__/${author_id}`
+      );
+      if (await caches.default.match(rateLimitKey)) {
+        return new Response(JSON.stringify({ error: "Gửi quá nhanh, thử lại sau" }), {
+          status: 429, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+      await caches.default.put(rateLimitKey, new Response("rl", {
+        headers: { "Cache-Control": "public, max-age=10" },
+      }));
+
+      const id = crypto.randomUUID();
+      const created_at = Date.now();
+      try {
+        await env.DB.prepare(
+          "INSERT INTO exam_comments (id, exam_id, author_id, author_name, text, image_url, created_at, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?, 0)"
+        ).bind(id, exam_id, author_id, author_name, text || "", image_url || null, created_at).run();
+        return new Response(JSON.stringify({ id, exam_id, author_id, author_name, text, image_url, created_at }), {
+          status: 201, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: "DB error", detail: err.message }), {
+          status: 500, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+    }
+
+    // ── Route: DELETE /comments/:id ───────────────────────────────────
+    // Admin xóa mềm comment (set is_deleted = 1)
+    if (url.pathname.startsWith("/comments/") && request.method === "DELETE") {
+      const auth = request.headers.get("Authorization") || "";
+      const adminKey = env.ADMIN_KEY || "";
+      if (!adminKey || auth !== `Bearer ${adminKey}`) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+      const commentId = url.pathname.split("/comments/")[1];
+      if (!commentId) {
+        return new Response(JSON.stringify({ error: "Thiếu comment ID" }), {
+          status: 400, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+      try {
+        await env.DB.prepare(
+          "UPDATE exam_comments SET is_deleted = 1 WHERE id = ?"
+        ).bind(commentId).run();
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: "DB error", detail: err.message }), {
+          status: 500, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+    }
+
+    // ── Route: POST /upload-image ─────────────────────────────────────
+    // Upload ảnh comment lên Cloudflare R2
+    if (url.pathname === "/upload-image" && request.method === "POST") {
+      const contentType = request.headers.get("Content-Type") || "image/jpeg";
+      const fileNameEncoded = request.headers.get("x-file-name") || `comments/${Date.now()}.jpg`;
+      const fileName = decodeURIComponent(fileNameEncoded);
+
+      // Giới hạn 5MB
+      const contentLength = parseInt(request.headers.get("Content-Length") || "0");
+      if (contentLength > 5 * 1024 * 1024) {
+        return new Response(JSON.stringify({ error: "Ảnh tối đa 5MB" }), {
+          status: 413, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+
+      try {
+        const buffer = await request.arrayBuffer();
+        await env.IMAGES.put(fileName, buffer, {
+          httpMetadata: { contentType },
+        });
+        // Public URL của R2 object (cần bật Public Access trên bucket)
+        const publicUrl = `${env.R2_PUBLIC_URL}/${fileName}`;
+        return new Response(JSON.stringify({ url: publicUrl }), {
+          status: 201, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: "Upload thất bại", detail: err.message }), {
+          status: 500, headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+        });
+      }
+    }
+
     return new Response(JSON.stringify({ error: "Not found" }), {
       status: 404,
       headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
