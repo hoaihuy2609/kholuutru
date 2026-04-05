@@ -20,6 +20,7 @@ const DAYS_OF_WEEK = [
     { id: 4, name: 'Thứ 5', short: 'T5', dateOffset: 3 },
     { id: 5, name: 'Thứ 6', short: 'T6', dateOffset: 4 },
     { id: 6, name: 'Thứ 7', short: 'T7', dateOffset: 5 },
+    { id: 7, name: 'Chủ nhật', short: 'CN', dateOffset: 6 },
 ];
 
 const GRADES = [10, 11, 12];
@@ -147,7 +148,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
     };
 
     const currentWeekEnd = new Date(currentWeekStart);
-    currentWeekEnd.setDate(currentWeekEnd.getDate() + 5);
+    currentWeekEnd.setDate(currentWeekEnd.getDate() + 6);
 
     const fmtDate = (d: Date) => d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
     const fmtMonth = (d: Date) => d.toLocaleDateString('vi-VN', { month: 'long' });
