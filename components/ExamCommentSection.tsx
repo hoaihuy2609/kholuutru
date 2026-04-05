@@ -14,6 +14,7 @@ interface ExamCommentSectionProps {
     isAdmin: boolean;
     adminKey?: string; // VITE_ADMIN_KEY để xác thực xóa
     hideHeader?: boolean;
+    nestedLevel?: number;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────
@@ -34,7 +35,7 @@ function getAvatarColor(name: string): string {
 
 // ── Main Component ──────────────────────────────────────────────
 const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
-    examId, examTitle, isAdmin, adminKey, hideHeader
+    examId, examTitle, isAdmin, adminKey, hideHeader, nestedLevel = 0
 }) => {
     const [comments, setComments] = useState<ExamComment[]>([]);
     const [loading, setLoading] = useState(true);
