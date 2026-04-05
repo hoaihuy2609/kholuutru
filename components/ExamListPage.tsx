@@ -12,13 +12,9 @@ const prefetchExamPdf = async (exam: Exam) => {
         if (await isPdfCached(exam.id)) return;
         const res = await fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`);
         if (res.ok) {
-            const blob = new Blob([await res.arrayBuffer()], { type: 'application/pdf' });
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                await savePdfToCache(exam.id, reader.result as string);
-                console.log(`[Prefetch] ✅ ${exam.title}`);
-            };
-            reader.readAsDataURL(blob);
+            const blob = await res.blob();
+            await savePdfToCache(exam.id, blob);
+            console.log(`[Prefetch] ✅ ${exam.title}`);
         }
     } catch { /* silent */ }
 };

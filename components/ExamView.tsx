@@ -89,7 +89,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     const [submitted, setSubmitted] = useState(false);
     // Sau khi học sinh bấm "Xem đề thi" trên mobile → ẩn khu vực PDF, full-screen form
     const [hasViewedPdf, setHasViewedPdf] = useState(false);
-    
+
     // Thiết bị mobile/tablet (để ẩn iframe và hiện nút link thật)
     const [isMobileDevice] = useState(() => {
         const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -98,7 +98,8 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     });
 
     const startTime = useRef<number | null>(null); // null = chưa bắt đầu tính giờ
-    const [iframeReady, setIframeReady] = useState(false); // true khi iframe render xong Base64
+    const [iframeReady, setIframeReady] = useState(false); // true khi iframe render xong PDF
+    const objectUrlRef = useRef<string | null>(null); // giữ objectURL để revoke khi unmount
 
     // Security Check: Block direct URL access before scheduled time (bypass for admins via isPreviewMode)
     if (!isPreviewMode && exam.scheduledAt && getSecureTime() < exam.scheduledAt) {
@@ -122,49 +123,57 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     const ACCENT = '#6B7CDB';
     const tf_keys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
 
-    // ── Load PDF: Cache → codetabs proxy → GAS fallback ──
+    // ── Load PDF: Cache (Blob) → Cloudflare Proxy ──
     useEffect(() => {
+        let cancelled = false;
+
         const load = async () => {
             try {
                 // ① Kiểm tra IndexedDB cache trước (nhanh nhất, ≈ 0ms)
-                const cached = await getCachedPdf(exam.id);
-                if (cached) {
-                    setPdfUrl(cached);
+                const cachedBlob = await getCachedPdf(exam.id);
+                if (cachedBlob && !cancelled) {
+                    const url = URL.createObjectURL(cachedBlob);
+                    objectUrlRef.current = url;
+                    setPdfUrl(url);
                     setPdfLoading(false);
-                    console.log('[PDF] ✅ Loaded from cache');
+                    console.log('[PDF] ✅ Loaded from cache (Blob)');
                     return;
                 }
 
                 // ② Lấy PDF qua Cloudflare Proxy (nhanh, an toàn, đã ẩn Token)
-                let blob: Blob | null = null;
                 const proxyUrl = `${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`;
                 const res = await fetch(proxyUrl);
 
-                if (res.ok) {
-                    const buffer = await res.arrayBuffer();
-                    blob = new Blob([buffer], { type: 'application/pdf' });
-                    console.log('[PDF] ✅ Loaded via Cloudflare proxy');
-                } else {
-                    throw new Error(`Cloudflare proxy lỗi: ${res.status}`);
-                }
+                if (!res.ok) throw new Error(`Cloudflare proxy lỗi: ${res.status}`);
 
-                if (blob) {
-                    // ⑥ Đọc PDF thành Data URI (Base64) để lưu vào Cache dạng String
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        const base64data = reader.result as string;
-                        savePdfToCache(exam.id, base64data);
-                        setPdfUrl(base64data);
-                    };
-                    reader.readAsDataURL(blob);
+                const blob = await res.blob();
+                console.log('[PDF] ✅ Loaded via Cloudflare proxy (Blob)');
+
+                if (!cancelled) {
+                    // Lưu Blob vào IndexedDB (không tốn CPU encode)
+                    savePdfToCache(exam.id, blob);
+                    // Tạo Object URL trỏ thẳng vào RAM — iframe render ngay lập tức
+                    const url = URL.createObjectURL(blob);
+                    objectUrlRef.current = url;
+                    setPdfUrl(url);
                 }
             } catch (err) {
                 console.error('[PDF] Lỗi không xử lý được:', err);
             } finally {
-                setPdfLoading(false);
+                if (!cancelled) setPdfLoading(false);
             }
         };
+
         load();
+
+        // Cleanup: revoke Object URL khi unmount để tránh memory leak
+        return () => {
+            cancelled = true;
+            if (objectUrlRef.current) {
+                URL.revokeObjectURL(objectUrlRef.current);
+                objectUrlRef.current = null;
+            }
+        };
     }, [exam.id, exam.pdfTelegramFileId]);
 
     // ✅ FIX: Chốt startTime đúng lúc iframe render xong — chính xác 100%
