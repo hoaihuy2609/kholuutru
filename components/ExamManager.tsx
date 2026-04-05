@@ -521,7 +521,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                                             onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
                                         />
                                     </div>
-                                    <div className="flex-1 space-y-3">
+                                    <div className="flex-1 grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>Hẹn thi (Tùy chọn)</label>
                                             <input
