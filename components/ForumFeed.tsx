@@ -176,13 +176,12 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     if (activeThread) {
         const { title, content } = parsePostContent(activeThread.text);
         return (
-            <div className="max-w-3xl mx-auto pb-20 animate-fade-in shadow-sm rounded-lg bg-[#F5F5F5] min-h-screen">
+            <div className="max-w-5xl mx-auto pb-20 animate-fade-in shadow-sm rounded-lg bg-[#F5F5F5] min-h-screen">
                 {/* Header Back Button */}
                 <div className="p-4 bg-[#23497c] flex items-center shadow-md sticky top-0 z-50">
                     <button onClick={() => setActiveThreadId(null)} className="text-white text-sm font-semibold flex items-center gap-1 hover:underline">
                         ← Góc học tập
                     </button>
-                    <span className="text-white ml-auto text-xs opacity-70">Forum View</span>
                 </div>
 
                 <div className="p-4 bg-white border-b border-[#E9E9E7] mb-2 shadow-sm rounded-b-md">
@@ -208,10 +207,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                             {/* Header */}
                             <div className="flex items-center justify-between p-2 border-b border-[#F0F2F5] text-[12px] text-[#8E8D8A]">
                                 <span>{new Date(activeThread.created_at).toLocaleString('vi-VN')}</span>
-                                <div>
-                                    <span className="mr-2 cursor-pointer hover:text-[#1877F2]">➦ Share</span>
-                                    <span className="font-semibold">#1</span>
-                                </div>
+                                <span className="font-semibold">#1</span>
                             </div>
 
                             {/* Body */}
@@ -247,7 +243,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
 
     // ── THREAD LIST VIEW ──
     return (
-        <div className="max-w-3xl mx-auto pb-20 animate-fade-in bg-white rounded-xl shadow-sm border border-[#E9E9E7] overflow-hidden">
+        <div className="max-w-5xl mx-auto pb-20 animate-fade-in bg-white rounded-xl shadow-sm border border-[#E9E9E7] overflow-hidden">
             {/* Header */}
             <div className="bg-[#23497c] px-4 py-3 text-white font-bold text-[16px] shadow-sm flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-white" />
@@ -305,7 +301,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                         </button>
                     </div>
                     <button onClick={handleSubmitPost} disabled={submitting || (!titleStr.trim())} className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-[#23497c] text-xs font-bold text-white disabled:opacity-50 hover:bg-[#1e3f6b]">
-                        {submitting ? 'Đang tạo...' : 'Tạo Thớt'}
+                        {submitting ? 'Đang tạo...' : 'Đăng bài'}
                         <Send className="w-3.5 h-3.5" />
                     </button>
                 </div>

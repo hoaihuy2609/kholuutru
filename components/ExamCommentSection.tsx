@@ -184,10 +184,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                                         {/* Header */}
                                         <div className="flex items-center justify-between p-2 border-b border-[#F0F2F5] text-[12px] text-[#8E8D8A]">
                                             <span>{new Date(comment.created_at).toLocaleString('vi-VN')}</span>
-                                            <div>
-                                                <span className="mr-2 cursor-pointer hover:text-[#1877F2]">➦ Share</span>
-                                                <span className="font-semibold">#{index + 2}</span>
-                                            </div>
+                                            <span className="font-semibold">#{index + 2}</span>
                                         </div>
 
                                         {/* Body */}
