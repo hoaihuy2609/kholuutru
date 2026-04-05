@@ -83,8 +83,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     const [mc, setMC] = useState<string[]>(emptyMC());
     const [tf, setTF] = useState<ExamTFAnswer[]>(emptyTF());
     const [sa, setSA] = useState<string[]>(emptySA());
-    const [pdfUrl, setPdfUrl] = useState<string | null>(null);       // blob: URL cho iframe desktop
-    const [pdfDirectUrl, setPdfDirectUrl] = useState<string | null>(null); // Cloudflare URL cho mobile link
+    const [pdfUrl, setPdfUrl] = useState<string | null>(null);       // blob: URL cho iframe desktop + mobile
     const [pdfLoading, setPdfLoading] = useState(true);
     const [showConfirm, setShowConfirm] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -127,11 +126,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     // ── Load PDF: Cache (Blob) → Cloudflare Proxy ──
     useEffect(() => {
         let cancelled = false;
-        const proxyUrl = `${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`;
 
-        // Mobile: luôn set direct URL ngay để nút "Xem đề" hoạt động cả khi chưa cache
-        // (blob: URL không mở được trong tab mới)
-        setPdfDirectUrl(proxyUrl);
 
         const load = async () => {
             try {
@@ -147,6 +142,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                 }
 
                 // ② Lấy PDF qua Cloudflare Proxy
+                const proxyUrl = `${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`;
                 const res = await fetch(proxyUrl);
                 if (!res.ok) throw new Error(`Cloudflare proxy lỗi: ${res.status}`);
 
@@ -318,17 +314,17 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                     <p className="text-xs text-center px-6" style={{ color: '#AEACA8' }}>
                                         Bấm để mở đề thi, sau đó quay lại tab này điền đáp án.
                                     </p>
-                                    <a
-                                        href={`${pdfDirectUrl}#navpanes=0`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={() => setHasViewedPdf(true)}
+                                    <button
+                                        onClick={() => {
+                                            if (pdfUrl) window.open(pdfUrl, '_blank');
+                                            setHasViewedPdf(true);
+                                        }}
                                         className="px-6 py-3 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all active:scale-95"
                                         style={{ background: ACCENT }}
                                     >
                                         <FileText className="w-4 h-4" />
                                         Xem đề thi
-                                    </a>
+                                    </button>
                                 </div>
                             )}
                         </>
@@ -347,19 +343,17 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                     style={{ background: '#1E1E1E', borderLeft: 'none', borderTop: isMobileDevice && hasViewedPdf ? 'none' : '1px solid #333' }}
                 >
                     {/* Nút mở lại đề (fallback) — chỉ hiện trên mobile sau khi đã bấm Xem đề */}
-                    {isMobileDevice && hasViewedPdf && pdfDirectUrl && (
+                    {isMobileDevice && hasViewedPdf && pdfUrl && (
                         <div className="flex items-center justify-between px-4 py-2 shrink-0" style={{ borderBottom: '1px solid #2D2D2D', background: '#242424' }}>
                             <span className="text-xs" style={{ color: '#787774' }}>Điền đáp án bên dưới</span>
-                            <a
-                                href={`${pdfDirectUrl}#navpanes=0`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            <button
+                                onClick={() => { if (pdfUrl) window.open(pdfUrl, '_blank'); }}
                                 className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg transition-all active:scale-95"
                                 style={{ color: ACCENT, background: '#2A2A2A', border: `1px solid ${ACCENT}33` }}
                             >
                                 <FileText className="w-3 h-3" />
                                 Mở lại đề
-                            </a>
+                            </button>
                         </div>
                     )}
                     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3B3B3B #1E1E1E' }}>
