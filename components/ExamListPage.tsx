@@ -39,7 +39,7 @@ const getExamSubCategoryLabel = (exam: Exam) => {
     return raw || 'Chưa phân loại';
 };
 
-const ExamRowCard = ({ exam, idx, total, bestScore, onSelectExam, isAdmin }: any) => {
+const ExamRowCard = React.memo(({ exam, idx, total, bestScore, onSelectExam, isAdmin }: any) => {
     const isDone = bestScore !== undefined;
     const [now, setNow] = useState(getSecureTime());
 
@@ -58,9 +58,12 @@ const ExamRowCard = ({ exam, idx, total, bestScore, onSelectExam, isAdmin }: any
         else if (diff > 0) status = 'ARMED';
     }
 
-    // Prefetch khi READY
+    // In-flight guard: chi prefetch 1 lan du component re-render voi status=READY
+    // Neu khong co guard: exam object ref thay doi -> [status, exam] effect re-run -> double download
+    const hasPrefetchedRef = useRef(false);
     useEffect(() => {
-        if (status === 'READY') {
+        if (status === 'READY' && !hasPrefetchedRef.current) {
+            hasPrefetchedRef.current = true;
             prefetchExamPdf(exam);
         }
     }, [status, exam]);
@@ -154,7 +157,16 @@ const ExamRowCard = ({ exam, idx, total, bestScore, onSelectExam, isAdmin }: any
             </button>
         </div>
     );
-};
+// Custom comparator: chi re-render khi examId/bestScore/isAdmin/scheduledAt thay doi
+// Ngan toan bo list bi re-render moi giay do now-tick o card khac
+}, (prev, next) =>
+    prev.exam.id === next.exam.id &&
+    prev.exam.scheduledAt === next.exam.scheduledAt &&
+    prev.bestScore === next.bestScore &&
+    prev.isAdmin === next.isAdmin &&
+    prev.idx === next.idx &&
+    prev.total === next.total
+);
 
 const ExamListPage: React.FC<ExamListPageProps> = ({ onSelectExam, onLoadExams, onLoadHistory, isAdmin, previewMode }) => {
     const [exams, setExams] = useState<Exam[]>([]);

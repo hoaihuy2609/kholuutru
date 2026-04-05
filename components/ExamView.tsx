@@ -125,7 +125,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     // ── Load PDF: Cache (Blob) → Cloudflare Proxy ──
     useEffect(() => {
         let cancelled = false;
-
+        const abortCtrl = new AbortController(); // ✅ PERF FIX: cancel fetch khi navigate ra trước khi load xong
 
         const load = async () => {
             try {
@@ -141,9 +141,9 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                     return;
                 }
 
-                // ② Lấy PDF qua Cloudflare Proxy
+                // ② Lấy PDF qua Cloudflare Proxy — truyền signal để cancel khi unmount
                 const proxyUrl = `${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`;
-                const res = await fetch(proxyUrl);
+                const res = await fetch(proxyUrl, { signal: abortCtrl.signal });
                 if (!res.ok) throw new Error(`Cloudflare proxy lỗi: ${res.status}`);
 
                 // Force MIME type application/pdf để iframe luôn render đúng
@@ -157,7 +157,8 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                     objectUrlRef.current = url;
                     setPdfUrl(url);
                 }
-            } catch (err) {
+            } catch (err: any) {
+                if (err?.name === 'AbortError') return; // navigate ra → cancel bình thường, không log lỗi
                 console.error('[PDF] Lỗi không xử lý được:', err);
             } finally {
                 if (!cancelled) setPdfLoading(false);
@@ -168,12 +169,14 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
 
         return () => {
             cancelled = true;
+            abortCtrl.abort(); // ✅ Cancel fetch nếu component unmount trước khi tải xong
             if (objectUrlRef.current) {
                 URL.revokeObjectURL(objectUrlRef.current);
                 objectUrlRef.current = null;
             }
         };
     }, [exam.id, exam.pdfTelegramFileId]);
+
 
     // ✅ FIX: Chốt startTime đúng lúc iframe render xong — chính xác 100%
     useEffect(() => {

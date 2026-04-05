@@ -12,8 +12,13 @@ export const PDF_CACHE_STORE = 'pdfs';
 export const makeCacheKey = (examId: string, fileId?: string): string =>
     fileId ? `${examId}__${fileId}` : examId;
 
-export const openPdfCacheDB = (): Promise<IDBDatabase> =>
-    new Promise((resolve, reject) => {
+// ✅ PERF FIX: Cache DB connection — tránh tạo IDBOpenRequest mới mỗi lần gọi
+// Pattern giống db.ts, đảm bảo chỉ mở 1 kết nối duy nhất cho toàn bộ session
+let _pdfCacheDB: IDBDatabase | null = null;
+
+export const openPdfCacheDB = (): Promise<IDBDatabase> => {
+    if (_pdfCacheDB) return Promise.resolve(_pdfCacheDB);
+    return new Promise((resolve, reject) => {
         const req = indexedDB.open(PDF_CACHE_DB, 2); // version 2: migrate từ base64 string → Blob
         req.onupgradeneeded = (e) => {
             const db = (e.target as IDBOpenDBRequest).result;
@@ -23,9 +28,16 @@ export const openPdfCacheDB = (): Promise<IDBDatabase> =>
             }
             db.createObjectStore(PDF_CACHE_STORE);
         };
-        req.onsuccess = () => resolve(req.result);
+        req.onsuccess = () => {
+            _pdfCacheDB = req.result;
+            // Reset cache khi connection đóng hoặc version thay đổi (pattern giống db.ts)
+            _pdfCacheDB.onclose = () => { _pdfCacheDB = null; };
+            _pdfCacheDB.onversionchange = () => { _pdfCacheDB?.close(); _pdfCacheDB = null; };
+            resolve(_pdfCacheDB);
+        };
         req.onerror = () => reject(req.error);
     });
+};
 
 export const getCachedPdf = async (examId: string, fileId?: string): Promise<Blob | null> => {
     try {
@@ -43,11 +55,18 @@ export const getCachedPdf = async (examId: string, fileId?: string): Promise<Blo
     } catch { return null; }
 };
 
+// ✅ RELIABILITY FIX: await transaction để đảm bảo commit trước khi trả về
+// Trước đây: không await tx.oncomplete → silent data loss nếu tab đóng ngay sau khi gọi
 export const savePdfToCache = async (examId: string, pdfBlob: Blob, fileId?: string): Promise<void> => {
     try {
         const db = await openPdfCacheDB();
         const key = makeCacheKey(examId, fileId);
-        db.transaction(PDF_CACHE_STORE, 'readwrite').objectStore(PDF_CACHE_STORE).put(pdfBlob, key);
+        await new Promise<void>((resolve, reject) => {
+            const tx = db.transaction(PDF_CACHE_STORE, 'readwrite');
+            tx.objectStore(PDF_CACHE_STORE).put(pdfBlob, key);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
     } catch { /* silent */ }
 };
 
@@ -68,6 +87,11 @@ export const deletePdfFromCache = async (examId: string, fileId?: string): Promi
     try {
         const db = await openPdfCacheDB();
         const key = makeCacheKey(examId, fileId);
-        db.transaction(PDF_CACHE_STORE, 'readwrite').objectStore(PDF_CACHE_STORE).delete(key);
+        await new Promise<void>((resolve, reject) => {
+            const tx = db.transaction(PDF_CACHE_STORE, 'readwrite');
+            tx.objectStore(PDF_CACHE_STORE).delete(key);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
     } catch { /* silent */ }
 };

@@ -401,7 +401,8 @@ let _examHistoryCache: { data: any[]; ts: number; key: string } | null = null;
 export const getExamHistory = async (phoneFilter?: string) => {
     const normalizedPhone = phoneFilter !== undefined ? normalizePhone(phoneFilter) : null;
     const cacheKey = normalizedPhone || '__admin__';
-    if (normalizedPhone && _examHistoryCache && _examHistoryCache.key === cacheKey && Date.now() - _examHistoryCache.ts < 60_000) {
+    // Cache 60s cho cả học sinh lẫn admin — tránh N+1 queries khi navigate nhiều lần
+    if (_examHistoryCache && _examHistoryCache.key === cacheKey && Date.now() - _examHistoryCache.ts < 60_000) {
         return _examHistoryCache.data;
     }
     try {
@@ -434,7 +435,7 @@ export const getExamHistory = async (phoneFilter?: string) => {
             return merged;
         }
 
-        if (!normalizedPhone) return dbData; // Admin: dữ liệu thực, không merge pending
+        // Admin: dữ liệu thực, không merge pending — cache và return
         _examHistoryCache = { data: dbData, ts: Date.now(), key: cacheKey };
         return dbData;
     } catch (e) { console.error('Lỗi khi lấy lịch sử làm bài:', e); return []; }
