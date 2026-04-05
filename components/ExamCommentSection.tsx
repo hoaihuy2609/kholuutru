@@ -56,7 +56,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
     useEffect(() => {
         setLoading(true);
         fetchComments(examId)
-            .then(data => setComments(data.sort((a, b) => b.created_at - a.created_at)))
+            .then(data => setComments(data.sort((a, b) => a.created_at - b.created_at)))
             .catch(() => setComments([]))
             .finally(() => setLoading(false));
     }, [examId]);
@@ -101,7 +101,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                 setUploading(false);
             }
             const newComment = await postComment(examId, text, imageUrl);
-            setComments(prev => [newComment, ...prev]);
+            setComments(prev => [...prev, newComment]);
             setText('');
             removeImage();
         } catch (err: any) {
@@ -148,6 +148,77 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
             )}
 
             <div className={`${hideHeader ? 'p-0 pt-2' : 'p-5'} space-y-5`}>
+
+                {/* Comment List */}
+                {loading ? (
+                    <div className="flex items-center justify-center gap-2 py-8" style={{ color: '#AEACA8' }}>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span className="text-sm">Đang tải bình luận...</span>
+                    </div>
+                ) : comments.length === 0 ? (
+                    <div className="text-center py-10" style={{ color: '#AEACA8' }}>
+                        <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {comments.map(comment => (
+                            <div
+                                key={comment.id}
+                                className="flex gap-3 p-3 rounded-xl group"
+                                style={{ background: '#FAFAF9', border: '1px solid #F1F0EC' }}
+                            >
+                                {/* Avatar */}
+                                <div
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                                    style={{ background: getAvatarColor(comment.author_name) }}
+                                >
+                                    {comment.author_name.charAt(0).toUpperCase()}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-baseline gap-2 flex-wrap">
+                                        <span className="text-xs font-semibold" style={{ color: '#1A1A1A' }}>
+                                            {comment.author_name}
+                                        </span>
+                                        <span className="text-[10px]" style={{ color: '#AEACA8' }}>
+                                            {timeAgo(comment.created_at)}
+                                        </span>
+                                        {isAdmin && (
+                                            <button
+                                                onClick={() => handleDelete(comment.id)}
+                                                className="opacity-0 group-hover:opacity-100 ml-auto text-[10px] flex items-center gap-1 px-2 py-0.5 rounded transition-all"
+                                                style={{ color: '#E03E3E', background: '#FEF0F0' }}
+                                            >
+                                                <Trash2 className="w-3 h-3" /> Xóa
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {comment.text && (
+                                        <p className="text-sm mt-1 leading-relaxed whitespace-pre-wrap break-words" style={{ color: '#3D3D38' }}>
+                                            {comment.text}
+                                        </p>
+                                    )}
+
+                                    {comment.image_url && (
+                                        <a href={comment.image_url} target="_blank" rel="noopener noreferrer" className="mt-2 block">
+                                            <img
+                                                src={comment.image_url}
+                                                alt="Ảnh đính kèm"
+                                                className="max-h-60 rounded-lg object-cover transition-opacity hover:opacity-90"
+                                                style={{ border: '1px solid #E9E9E7' }}
+                                                loading="lazy"
+                                            />
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div className="h-px w-full" style={{ background: '#E9E9E7' }} />
 
 
                 {/* Nickname Bar */}
@@ -275,74 +346,8 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                     </div>
                 )}
 
-                {/* Comment List */}
-                {loading ? (
-                    <div className="flex items-center justify-center gap-2 py-8" style={{ color: '#AEACA8' }}>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">Đang tải bình luận...</span>
-                    </div>
-                ) : comments.length === 0 ? (
-                    <div className="text-center py-10" style={{ color: '#AEACA8' }}>
-                        <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                        <p className="text-sm">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {comments.map(comment => (
-                            <div
-                                key={comment.id}
-                                className="flex gap-3 p-3 rounded-xl group"
-                                style={{ background: '#FAFAF9', border: '1px solid #F1F0EC' }}
-                            >
-                                {/* Avatar */}
-                                <div
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                                    style={{ background: getAvatarColor(comment.author_name) }}
-                                >
-                                    {comment.author_name.charAt(0).toUpperCase()}
-                                </div>
+                {/* End of Input Section */}
 
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-baseline gap-2 flex-wrap">
-                                        <span className="text-xs font-semibold" style={{ color: '#1A1A1A' }}>
-                                            {comment.author_name}
-                                        </span>
-                                        <span className="text-[10px]" style={{ color: '#AEACA8' }}>
-                                            {timeAgo(comment.created_at)}
-                                        </span>
-                                        {isAdmin && (
-                                            <button
-                                                onClick={() => handleDelete(comment.id)}
-                                                className="opacity-0 group-hover:opacity-100 ml-auto text-[10px] flex items-center gap-1 px-2 py-0.5 rounded transition-all"
-                                                style={{ color: '#E03E3E', background: '#FEF0F0' }}
-                                            >
-                                                <Trash2 className="w-3 h-3" /> Xóa
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {comment.text && (
-                                        <p className="text-sm mt-1 leading-relaxed whitespace-pre-wrap break-words" style={{ color: '#3D3D38' }}>
-                                            {comment.text}
-                                        </p>
-                                    )}
-
-                                    {comment.image_url && (
-                                        <a href={comment.image_url} target="_blank" rel="noopener noreferrer" className="mt-2 block">
-                                            <img
-                                                src={comment.image_url}
-                                                alt="Ảnh đính kèm"
-                                                className="max-h-60 rounded-lg object-cover transition-opacity hover:opacity-90"
-                                                style={{ border: '1px solid #E9E9E7' }}
-                                                loading="lazy"
-                                            />
-                                        </a>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
             </div>
         </div>
     );
