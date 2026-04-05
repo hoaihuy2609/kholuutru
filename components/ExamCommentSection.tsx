@@ -161,11 +161,11 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                         <p className="text-sm">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
                     </div>
                 ) : (
-                    <div className="flex flex-col">
+                    <div className="space-y-3">
                         {comments.map((comment, index) => (
-                                <div key={comment.id} className="flex border border-[#E9E9E7] -mb-[1px] bg-[#FAFAF9] relative z-10">
+                                <div key={comment.id} className="flex border border-[#E9E9E7] bg-white rounded-sm shadow-sm relative">
                                     {/* Left Profile Column */}
-                                    <div className="w-[120px] md:w-[150px] p-3 flex flex-col items-center border-r border-[#E9E9E7] shrink-0 bg-[#F5F5F5]">
+                                    <div className="w-[120px] md:w-[150px] p-3 flex flex-col items-center border-r border-[#E9E9E7] shrink-0 bg-[#F9F9F9]">
                                         <div
                                             className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-[24px] font-bold text-white shadow-sm mb-2"
                                             style={{ background: getAvatarColor(comment.author_name) }}

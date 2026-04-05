@@ -189,9 +189,9 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                 </div>
 
                     {/* Original Post Content (Post #1) */}
-                    <div className="flex border border-[#E9E9E7] -mb-[1px] bg-[#FAFAF9] relative z-10">
+                    <div className="flex border border-[#E9E9E7] mb-3 bg-white rounded-sm shadow-sm relative">
                         {/* Left Profile Column */}
-                        <div className="w-[120px] md:w-[150px] p-3 flex flex-col items-center border-r border-[#E9E9E7] shrink-0 bg-[#F5F5F5]">
+                        <div className="w-[120px] md:w-[150px] p-3 flex flex-col items-center border-r border-[#E9E9E7] shrink-0 bg-[#F9F9F9]">
                             <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-white text-[24px] font-bold shadow-sm mb-2" style={{ background: getAvatarColor(activeThread.author_name) }}>
                                 {activeThread.author_name.charAt(0).toUpperCase()}
                             </div>
