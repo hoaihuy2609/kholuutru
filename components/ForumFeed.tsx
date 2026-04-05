@@ -24,6 +24,33 @@ interface ForumFeedProps {
     adminKey?: string;
 }
 
+const PostCommentButton: React.FC<{
+    postId: string;
+    isExpanded: boolean;
+    onClick: () => void;
+}> = ({ postId, isExpanded, onClick }) => {
+    const [count, setCount] = useState<number | null>(null);
+
+    useEffect(() => {
+        let isMounted = true;
+        fetchComments(postId).then(data => {
+            if (isMounted) setCount(data.length);
+        }).catch(() => {});
+        return () => { isMounted = false; };
+    }, [postId]);
+
+    return (
+        <button
+            onClick={onClick}
+            className="flex items-center gap-1.5 text-sm font-semibold transition-colors px-2 py-1.5 rounded-lg hover:bg-[#F3F3F2]"
+            style={{ color: isExpanded ? '#6B7CDB' : '#57564F' }}
+        >
+            <MessageCircle className="w-[20px] h-[20px]" style={{ strokeWidth: 2 }} />
+            <span className="text-[15px] translate-y-[1px]">{isExpanded ? 'Thu gọn' : (count ? count : 'Bình luận')}</span>
+        </button>
+    );
+};
+
 const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     const [posts, setPosts] = useState<ExamComment[]>([]);
     const [loading, setLoading] = useState(true);
@@ -233,15 +260,12 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                         </div>
 
                         {/* Post Footer / Actions */}
-                        <div className="px-5 py-3 border-t border-[#F0F0EE] flex items-center gap-4">
-                            <button
-                                onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)}
-                                className="flex items-center gap-1.5 text-sm font-semibold transition-colors"
-                                style={{ color: expandedPostId === post.id ? '#6B7CDB' : '#787774' }}
-                            >
-                                <MessageCircle className="w-4 h-4" />
-                                {expandedPostId === post.id ? 'Thu gọn' : 'Bình luận'}
-                            </button>
+                        <div className="px-3 py-2 border-t border-[#F0F0EE] flex items-center gap-4">
+                            <PostCommentButton 
+                                postId={post.id} 
+                                isExpanded={expandedPostId === post.id} 
+                                onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)} 
+                            />
                         </div>
 
                         {/* Nested Comments (The Facebook trick) */}
