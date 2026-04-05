@@ -196,7 +196,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                                 {activeThread.author_name.charAt(0).toUpperCase()}
                             </div>
                             <span className="text-[13px] font-bold text-[#1877F2] text-center w-full break-words">{activeThread.author_name}</span>
-                            <span className="text-[11px] text-[#A6A6A6] mt-1 text-center">Chủ thớt</span>
+                            <span className="text-[11px] text-[#A6A6A6] mt-1 text-center">Người đăng</span>
                         </div>
 
                         {/* Right Content Column */}
