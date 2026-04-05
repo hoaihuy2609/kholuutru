@@ -56,6 +56,13 @@ const SCENARIOS = {
             { duration: '5s', target: 0 },
         ],
     },
+    exam_storm: {
+        stages: [
+            { duration: '10s', target: 500 },
+            { duration: '20s', target: 2000 },
+            { duration: '10s', target: 0 },
+        ],
+    },
     // CHIẾN DỊCH 5.000 EM (CỰC HẠN NHƯNG AN TOÀN)
     safe_5000: {
         stages: [
@@ -122,6 +129,21 @@ export default function () {
         // Test lock: dùng chung 1 sđt cho tất cả VUs
         const body = JSON.stringify({ exam_id: 'lock-test', part_name: 'I', question_number: 1, student_phone: '0912121212' });
         http.post(`${WORKER_BASE}/vote`, body, { headers: { 'Content-Type': 'application/json' } });
+
+    } else if (type === 'exam_storm') {
+        // Áp lực lớn nhất vào database nộp bài thi thử (gọi RPC submit_exam_result với logic bảo mật thời gian mới)
+        const payload = JSON.stringify({
+            p_student_phone: '0912121212',
+            p_exam_id: 'exam-storm-123',
+            p_exam_title: 'Bài Bắn Phá Khảo Sát',
+            p_grade: 12,
+            p_score: 8.5,
+            p_student_name: 'Chiến Binh K6',
+            p_correct_answers: 32,
+            p_total_questions: 40,
+            p_time_taken: 2000
+        });
+        http.post(`${SUPABASE_URL}/rest/v1/rpc/submit_exam_result`, payload, params);
     }
 
     sleep(0.5);

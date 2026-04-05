@@ -353,8 +353,6 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     setSettingsOpen: state.setSettingsOpen,
     isMobileMenuOpen: state.isMobileMenuOpen,
     setMobileMenuOpen: state.setMobileMenuOpen,
-    showAdminDashboard: state.showAdminDashboard,
-    setShowAdminDashboard: state.setShowAdminDashboard,
     toasts: state.toasts,
     removeToast: state.removeToast,
     isAdmin: state.isAdmin,
@@ -402,7 +400,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const isOnNotification = path === '/notifications';
   const isOnSimLab = path === '/lab';
 
-  const hideSidebar = isSimulationFullscreen || path === '/admin/editor' || (effectiveIsAdmin && (isCreatingBlog || !!activeAdminBlog));
+  const hideSidebar = isSimulationFullscreen || path === '/admin/editor' || path === '/admin' || (effectiveIsAdmin && (isCreatingBlog || !!activeAdminBlog));
 
   if (isKicked && !isAdmin) return <KickedScreen />;
 
@@ -446,17 +444,9 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
       {/* Settings Modal */}
       <ErrorBoundary>
         <Suspense fallback={null}>
-          <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} onShowToast={useUIStore.getState().showToast} isAdmin={isAdmin} isActivated={isActivated} lessons={lessons} storedFiles={storedFiles} onActivateSystem={cloud.activateSystem} onFetchLessons={cloud.fetchLessonsFromCloud} onToggleAdmin={toggleAdmin} onOpenDashboard={() => { setShowAdminDashboard(true); setSettingsOpen(false); }} onLoadExams={cloud.loadExams} />
+          <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} onShowToast={useUIStore.getState().showToast} isAdmin={isAdmin} isActivated={isActivated} lessons={lessons} storedFiles={storedFiles} onActivateSystem={cloud.activateSystem} onFetchLessons={cloud.fetchLessonsFromCloud} onToggleAdmin={toggleAdmin} onOpenDashboard={() => { navigate('/admin'); setSettingsOpen(false); }} onLoadExams={cloud.loadExams} />
         </Suspense>
       </ErrorBoundary>
-
-      {showAdminDashboard && (
-        <ErrorBoundary>
-          <Suspense fallback={<LazyFallback />}>
-            <AdminDashboard onBack={() => setShowAdminDashboard(false)} onShowToast={useUIStore.getState().showToast} onUploadExamPdf={cloud.uploadExamPdf} onSaveExam={cloud.saveExam} onDeleteExam={cloud.deleteExam} onLoadExams={cloud.loadExams} lessons={lessons} storedFiles={storedFiles} onAddLesson={cloud.addLesson} onDeleteLesson={cloud.deleteLesson} onUploadFiles={cloud.uploadFiles} onDeleteFile={cloud.deleteFile} onSyncToGitHub={cloud.syncToCloud} syncProgress={cloud.syncProgress} />
-          </Suspense>
-        </ErrorBoundary>
-      )}
 
       {/* Main Content */}
       <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 relative ${hideSidebar ? '' : 'md:ml-64'}`}>
@@ -506,6 +496,15 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
                 ? <div className="flex items-center justify-center h-[50vh]"><RefreshCw className="w-10 h-10 animate-spin" style={{ color: '#6B7CDB' }} /><span className="ml-3 text-lg font-medium" style={{ color: '#6B7CDB' }}>từ từ nó đang load...</span></div>
                 : <Dashboard onSelectGrade={(g) => navigate(g ? `/grade/${g}` : '/')} fileCounts={fileCounts} isAdmin={effectiveIsAdmin} onLoadLeaderboard={cloud.getLeaderboard} previewMode={previewMode} studentGrade={studentGradeValue} />
             } />
+            <Route path="/admin" element={
+              effectiveIsAdmin ? (
+                <ErrorBoundary>
+                  <Suspense fallback={<LazyFallback />}>
+                    <AdminDashboard onBack={() => navigate('/')} onShowToast={useUIStore.getState().showToast} onUploadExamPdf={cloud.uploadExamPdf} onSaveExam={cloud.saveExam} onDeleteExam={cloud.deleteExam} onLoadExams={cloud.loadExams} lessons={lessons} storedFiles={storedFiles} onAddLesson={cloud.addLesson} onDeleteLesson={cloud.deleteLesson} onUploadFiles={cloud.uploadFiles} onDeleteFile={cloud.deleteFile} onSyncToGitHub={cloud.syncToCloud} syncProgress={cloud.syncProgress} />
+                  </Suspense>
+                </ErrorBoundary>
+              ) : <Navigate to="/" replace />
+            } />
             <Route path="/grade/:level" element={<GradeOverviewPage cloud={cloud} />} />
             <Route path="/grade/:level/chapter/:chapterId" element={<ChapterPage cloud={cloud} />} />
             <Route path="/grade/:level/chapter/:chapterId/lesson/:lessonId" element={<LessonPage cloud={cloud} />} />
@@ -528,7 +527,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 
 
 
-      {isOnHome && !showAdminDashboard && !isActivated && !isAdmin && (
+      {isOnHome && !isActivated && !isAdmin && (
         <ErrorBoundary><Suspense fallback={null}><Chatbot /></Suspense></ErrorBoundary>
       )}
 

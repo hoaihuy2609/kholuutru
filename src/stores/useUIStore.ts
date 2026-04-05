@@ -12,7 +12,6 @@ interface UIStore {
   // Modal / overlay states
   isSettingsOpen: boolean;
   isMobileMenuOpen: boolean;
-  showAdminDashboard: boolean;
 
   // Toast
   toasts: ToastMessage[];
@@ -33,7 +32,6 @@ interface UIStore {
   // Actions
   setSettingsOpen: (v: boolean) => void;
   setMobileMenuOpen: (v: boolean) => void;
-  setShowAdminDashboard: (v: boolean) => void;
 
   showToast: (message: string, type?: ToastMessage['type'], duration?: number) => void;
   removeToast: (id: string) => void;
@@ -49,7 +47,6 @@ interface UIStore {
 export const useUIStore = create<UIStore>((set) => ({
   isSettingsOpen: false,
   isMobileMenuOpen: false,
-  showAdminDashboard: false,
 
   toasts: [],
 
@@ -62,7 +59,6 @@ export const useUIStore = create<UIStore>((set) => ({
 
   setSettingsOpen: (v) => set({ isSettingsOpen: v }),
   setMobileMenuOpen: (v) => set({ isMobileMenuOpen: v }),
-  setShowAdminDashboard: (v) => set({ showAdminDashboard: v }),
 
   showToast: (message, type = 'success', _duration = 4000) => {
     // Timer auto-dismiss được xử lý bởi Toast component (tránh 2 timer chạy song song)
