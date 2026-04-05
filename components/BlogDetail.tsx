@@ -7,7 +7,6 @@ import 'katex/dist/katex.min.css';
 import { BlogPost } from '../types';
 import { Calendar, ChevronLeft, Tag, Clock, Copy, Check, List } from 'lucide-react';
 import SolutionRenderer from './SolutionRenderer';
-import ExamCommentSection from './ExamCommentSection';
 
 interface BlogDetailProps {
     blog: BlogPost;
@@ -413,15 +412,6 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
                     </div>
                 </div>
             )}
-
-            {/* ── Thảo luận bài viết ── */}
-            <div className="mt-12 pt-10" style={{ borderTop: '1px solid var(--color-border)' }}>
-                <ExamCommentSection
-                    examId={blog.id}
-                    examTitle={blog.title}
-                    isAdmin={false}
-                />
-            </div>
 
             {/* Scroll to Top */}
             {showScrollTop && (
