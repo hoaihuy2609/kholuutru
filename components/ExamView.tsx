@@ -101,43 +101,11 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     const objectUrlRef = useRef<string | null>(null); // giữ objectURL để revoke khi unmount
     const [msUntilGlobalClose, setMsUntilGlobalClose] = useState<number>(Infinity); // ms còn lại đến giờ đóng chung
 
-    // Security Check: Block direct URL access before scheduled time (bypass for admins via isPreviewMode)
-    if (!isPreviewMode && exam.scheduledAt && getSecureTime() < exam.scheduledAt) {
-        return (
-            <div className="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-red-100 min-h-[50vh] text-center max-w-2xl mx-auto mt-12">
-                <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
-                <h2 className="text-xl font-bold text-red-700">TỪ CHỐI TRUY CẬP</h2>
-                <p className="text-sm mt-2 text-gray-600">
-                    Đề thi <b>"{exam.title}"</b> chưa được mở. Vui lòng quay lại danh sách chờ đến giờ thi.
-                </p>
-                <button
-                    onClick={onBack}
-                    className="mt-6 px-6 py-2.5 bg-[#F1F0EC] text-[#57564F] font-semibold rounded-lg hover:bg-[#E9E9E7] transition-colors"
-                >
-                    Trở về danh sách
-                </button>
-            </div>
-        );
-    }
-
-    // Security Check: Block entry if exam is already past its global closing time
-    if (!isPreviewMode && exam.closedAt && getSecureTime() > exam.closedAt) {
-        return (
-            <div className="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-red-100 min-h-[50vh] text-center max-w-2xl mx-auto mt-12">
-                <Lock className="w-12 h-12 text-red-500 mb-4" />
-                <h2 className="text-xl font-bold text-red-700">ĐỀ THI ĐÃ ĐÓNG</h2>
-                <p className="text-sm mt-2 text-gray-600">
-                    Thời gian nộp bài cho đề <b>"{exam.title}"</b> đã kết thúc.
-                </p>
-                <button
-                    onClick={onBack}
-                    className="mt-6 px-6 py-2.5 bg-[#F1F0EC] text-[#57564F] font-semibold rounded-lg hover:bg-[#E9E9E7] transition-colors"
-                >
-                    Trở về danh sách
-                </button>
-            </div>
-        );
-    }
+    // ✅ FIX: React Rules of Hooks — KHÔNG được early return trước hooks.
+    // Compute guard flags here (after all hooks), render blocker UI inside JSX instead.
+    const nowAtMount = useRef(getSecureTime()).current;
+    const isNotYetOpen = !isPreviewMode && !!exam.scheduledAt && nowAtMount < exam.scheduledAt;
+    const isAlreadyClosed = !isPreviewMode && !!exam.closedAt && nowAtMount > exam.closedAt;
 
     const ACCENT = '#6B7CDB';
     const tf_keys: (keyof ExamTFAnswer)[] = ['a', 'b', 'c', 'd'];
@@ -291,6 +259,43 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
         + tf.filter(t => t.a || t.b || t.c || t.d).length
         + sa.filter(Boolean).length;
     const totalQ = 18 + 4 + 6;
+
+    // Render guard UIs INSIDE return (after all hooks) — avoids Rules of Hooks violation
+    if (isNotYetOpen) {
+        return (
+            <div className="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-red-100 min-h-[50vh] text-center max-w-2xl mx-auto mt-12">
+                <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
+                <h2 className="text-xl font-bold text-red-700">TỪ CHỐI TRUY CẬP</h2>
+                <p className="text-sm mt-2 text-gray-600">
+                    Đề thi <b>"{exam.title}"</b> chưa được mở. Vui lòng quay lại danh sách chờ đến giờ thi.
+                </p>
+                <button
+                    onClick={onBack}
+                    className="mt-6 px-6 py-2.5 bg-[#F1F0EC] text-[#57564F] font-semibold rounded-lg hover:bg-[#E9E9E7] transition-colors"
+                >
+                    Trở về danh sách
+                </button>
+            </div>
+        );
+    }
+
+    if (isAlreadyClosed) {
+        return (
+            <div className="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-red-100 min-h-[50vh] text-center max-w-2xl mx-auto mt-12">
+                <Lock className="w-12 h-12 text-red-500 mb-4" />
+                <h2 className="text-xl font-bold text-red-700">ĐỀ THI ĐÃ ĐÓNG</h2>
+                <p className="text-sm mt-2 text-gray-600">
+                    Thời gian nộp bài cho đề <b>"{exam.title}"</b> đã kết thúc.
+                </p>
+                <button
+                    onClick={onBack}
+                    className="mt-6 px-6 py-2.5 bg-[#F1F0EC] text-[#57564F] font-semibold rounded-lg hover:bg-[#E9E9E7] transition-colors"
+                >
+                    Trở về danh sách
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#1A1A1A' }}>
