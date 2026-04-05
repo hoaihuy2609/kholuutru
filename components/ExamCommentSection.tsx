@@ -165,7 +165,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                         {comments.map((comment, index) => (
                                 <div key={comment.id} className="flex border border-[#E5E7EB] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] rounded-lg overflow-hidden transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
                                     {/* Left Profile Column */}
-                                    <div className="w-[120px] md:w-[150px] p-4 flex flex-col items-center bg-[#F3F4F6] shrink-0 border-r border-[#DFDFDF]">
+                                    <div className="w-[120px] md:w-[150px] p-4 flex flex-col items-center bg-white shrink-0 border-r border-[#E5E7EB]">
                                         <div
                                             className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-[24px] font-bold text-white mb-2"
                                             style={{ background: getAvatarColor(comment.author_name) }}
