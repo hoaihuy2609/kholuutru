@@ -163,48 +163,61 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                 ) : (
                     <div className="space-y-3">
                         {comments.map((comment, index) => (
-                                <div key={comment.id} className="flex gap-4 relative pb-6 border-b border-[#E9E9E7] pt-4">
-                                    {/* Avatar */}
-                                    <div
-                                        className="w-12 h-12 rounded-full flex items-center justify-center text-[19px] font-bold text-white shrink-0 mt-1 shadow-sm"
-                                        style={{ background: getAvatarColor(comment.author_name) }}
-                                    >
-                                        {comment.author_name.charAt(0).toUpperCase()}
+                                <div key={comment.id} className="flex border border-[#E9E9E7] mb-2 bg-[#FAFAF9] rounded-sm relative">
+                                    {/* Left Profile Column */}
+                                    <div className="w-[120px] md:w-[150px] p-3 flex flex-col items-center border-r border-[#E9E9E7] shrink-0 bg-[#F5F5F5]">
+                                        <div
+                                            className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-[24px] font-bold text-white shadow-sm mb-2"
+                                            style={{ background: getAvatarColor(comment.author_name) }}
+                                        >
+                                            {comment.author_name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span className="text-[13px] font-bold text-[#1877F2] text-center w-full break-words">{comment.author_name}</span>
+                                        <span className="text-[11px] text-[#A6A6A6] mt-1 text-center">Thành viên</span>
                                     </div>
 
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <span className="font-bold text-[#1877F2] text-[16px]">{comment.author_name}</span>
-                                            <span className="text-xs font-semibold text-[#AEACA8]">#{index + 2}</span>
-                                        </div>
-                                        {/* Divider & Timestamp */}
-                                        <div className="text-[13px] text-[#8E8D8A] mb-3 pb-2 border-b border-[#F0F2F5]">
-                                            {new Date(comment.created_at).toLocaleString('vi-VN')}
-                                        </div>
+                                    {/* Right Content Column */}
+                                    <div className="flex-1 min-w-0 flex flex-col bg-white relative">
+                                        {/* Speech arrow */}
+                                        <div className="absolute top-5 -left-[5px] w-2.5 h-2.5 bg-white border-l border-b border-[#E9E9E7] transform rotate-45 z-10" />
 
-                                        <p className="text-[15px] leading-relaxed text-[#1A1A1A] whitespace-pre-wrap">
-                                            {comment.text}
-                                        </p>
-                                        
-                                        {comment.image_url && (
-                                            <div className="mt-4">
-                                                <img
-                                                    src={comment.image_url}
-                                                    alt="Ảnh đính kèm"
-                                                    className="max-h-80 rounded shadow border border-[#E9E9E7] object-cover"
-                                                    loading="lazy"
-                                                />
+                                        {/* Header */}
+                                        <div className="flex items-center justify-between p-2 border-b border-[#F0F2F5] text-[12px] text-[#8E8D8A]">
+                                            <span>{new Date(comment.created_at).toLocaleString('vi-VN')}</span>
+                                            <div>
+                                                <span className="mr-2 cursor-pointer hover:text-[#1877F2]">➦ Share</span>
+                                                <span className="font-semibold">#{index + 2}</span>
                                             </div>
-                                        )}
+                                        </div>
 
-                                        {isAdmin && (
-                                            <button
-                                                onClick={() => handleDelete(comment.id)}
-                                                className="text-[12px] font-bold text-red-500 hover:underline mt-4"
-                                            >
-                                                Xóa bình luận này
-                                            </button>
-                                        )}
+                                        {/* Body */}
+                                        <div className="p-4 flex-1">
+                                            <p className="text-[15px] leading-relaxed text-[#1A1A1A] whitespace-pre-wrap">
+                                                {comment.text}
+                                            </p>
+                                            
+                                            {comment.image_url && (
+                                                <div className="mt-4 border-t border-dashed border-[#E9E9E7] pt-4">
+                                                    <img
+                                                        src={comment.image_url}
+                                                        alt="Ảnh đính kèm"
+                                                        className="max-h-[500px] rounded shadow-sm border border-[#E9E9E7] object-cover"
+                                                        loading="lazy"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {isAdmin && (
+                                                <div className="mt-4 border-t border-[#F0F0EE] pt-2">
+                                                    <button
+                                                        onClick={() => handleDelete(comment.id)}
+                                                        className="text-[11px] font-bold text-red-500 hover:underline"
+                                                    >
+                                                        [Xóa Reply]
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                         ))}

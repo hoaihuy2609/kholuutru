@@ -185,38 +185,49 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                     <span className="text-white ml-auto text-xs opacity-70">Forum View</span>
                 </div>
 
-                <div className="p-4 bg-white border-b border-[#E9E9E7]">
-                    <h1 className="text-[20px] font-bold text-[#1A1A1A] mb-3">{title}</h1>
-                    <div className="text-xs text-[#65676B] flex items-center justify-between mb-4 pb-2 border-b border-[#F0F2F5]">
-                         <span className="font-semibold text-[#1877F2]">Khởi tạo bởi {activeThread.author_name}</span>
-                         <span>{new Date(activeThread.created_at).toLocaleString('vi-VN')}</span>
-                    </div>
+                <div className="p-4 bg-white border-b border-[#E9E9E7] mb-2 shadow-sm rounded-b-md">
+                    <h1 className="text-[20px] font-bold text-[#1A1A1A]">{title}</h1>
+                </div>
 
                     {/* Original Post Content (Post #1) */}
-                    <div className="flex gap-3 relative pb-6 border-b-2 border-dashed border-[#E9E9E7]">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0" style={{ background: getAvatarColor(activeThread.author_name) }}>
-                            {activeThread.author_name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-[#1877F2] text-sm">{activeThread.author_name}</span>
-                                <span className="text-xs font-semibold text-[#AEACA8]">#1</span>
+                    <div className="flex border border-[#E9E9E7] mb-2 bg-[#FAFAF9] rounded-sm relative">
+                        {/* Left Profile Column */}
+                        <div className="w-[120px] md:w-[150px] p-3 flex flex-col items-center border-r border-[#E9E9E7] shrink-0 bg-[#F5F5F5]">
+                            <div className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-white text-[24px] font-bold shadow-sm mb-2" style={{ background: getAvatarColor(activeThread.author_name) }}>
+                                {activeThread.author_name.charAt(0).toUpperCase()}
                             </div>
-                            <p className="text-[15px] leading-relaxed text-[#1A1A1A] whitespace-pre-wrap mt-2">{content}</p>
-                            {activeThread.image_url && (
-                                <div className="mt-4">
-                                    <span className="text-[#1877F2] text-sm mb-2 block font-medium">Đính kèm:</span>
-                                    <img src={activeThread.image_url} className="max-h-80 object-cover rounded shadow border border-[#E9E9E7]" />
+                            <span className="text-[13px] font-bold text-[#1877F2] text-center w-full break-words">{activeThread.author_name}</span>
+                            <span className="text-[11px] text-[#A6A6A6] mt-1 text-center">Chủ thớt</span>
+                        </div>
+
+                        {/* Right Content Column */}
+                        <div className="flex-1 min-w-0 flex flex-col bg-white relative">
+                            {/* Speech arrow */}
+                            <div className="absolute top-5 -left-[5px] w-2.5 h-2.5 bg-white border-l border-b border-[#E9E9E7] transform rotate-45 z-10" />
+                            
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-2 border-b border-[#F0F2F5] text-[12px] text-[#8E8D8A]">
+                                <span>{new Date(activeThread.created_at).toLocaleString('vi-VN')}</span>
+                                <div>
+                                    <span className="mr-2 cursor-pointer hover:text-[#1877F2]">➦ Share</span>
+                                    <span className="font-semibold">#1</span>
                                 </div>
-                            )}
-                            {isAdmin && (
-                                <button onClick={() => {
-                                    handleDeletePost(activeThread.id);
-                                    setActiveThreadId(null);
-                                }} className="text-xs font-bold text-red-500 mt-4 underline">
-                                    [Xóa toàn bộ Topic này]
-                                </button>
-                            )}
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-4">
+                                <p className="text-[15px] leading-relaxed text-[#1A1A1A] whitespace-pre-wrap">{content}</p>
+                                {activeThread.image_url && (
+                                    <div className="mt-4 border-t border-dashed border-[#E9E9E7] pt-4">
+                                        <img src={activeThread.image_url} className="max-h-[500px] object-cover rounded shadow-sm border border-[#E9E9E7]" />
+                                    </div>
+                                )}
+                                {isAdmin && (
+                                    <button onClick={() => { handleDeletePost(activeThread.id); setActiveThreadId(null); }} className="text-[11px] font-bold text-red-500 mt-4 underline">
+                                        [Xóa Topic]
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
