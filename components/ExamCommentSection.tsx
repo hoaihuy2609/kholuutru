@@ -147,7 +147,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                 </div>
             )}
 
-            <div className={`${hideHeader ? 'p-0 pt-2' : 'p-5'} space-y-5`}>
+            <div className={`${hideHeader ? 'p-0' : 'p-5'} space-y-5`}>
 
                 {/* Comment List */}
                 {loading ? (
