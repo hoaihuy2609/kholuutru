@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Send, Image, X, Pencil, Trash2, User, RefreshCw, AlertCircle } from 'lucide-react';
+import { MessageCircle, Send, Image, X, Pencil, Trash2, User, RefreshCw, AlertCircle, Share2, ThumbsUp } from 'lucide-react';
 import { ExamComment } from '../types';
 import {
     fetchComments, postComment, deleteComment,
@@ -163,58 +163,66 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                 ) : (
                     <div className="space-y-2">
                         {comments.map((comment, index) => (
-                                <div key={comment.id} className="flex border border-[#D1D1D1] bg-white rounded-sm shadow-sm relative">
+                                <div key={comment.id} className="flex border border-[#DFDFDF] bg-white mb-2 shadow-sm rounded-none">
                                     {/* Left Profile Column */}
-                                    <div className="w-[120px] md:w-[150px] p-3 flex flex-col items-center border-r border-[#D1D1D1] shrink-0 bg-[#F0F2F5]">
+                                    <div className="w-[120px] md:w-[150px] p-4 flex flex-col items-center bg-[#F3F4F6] shrink-0 border-r border-[#DFDFDF]">
                                         <div
-                                            className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-[24px] font-bold text-white shadow-sm mb-2"
+                                            className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-[24px] font-bold text-white mb-2"
                                             style={{ background: getAvatarColor(comment.author_name) }}
                                         >
                                             {comment.author_name.charAt(0).toUpperCase()}
                                         </div>
-                                        <span className="text-[13px] font-bold text-[#1877F2] text-center w-full break-words">{comment.author_name}</span>
-                                        <span className="text-[11px] text-[#A6A6A6] mt-1 text-center">Thành viên</span>
+                                        <span className="text-[13px] font-bold text-[#185886] hover:underline cursor-pointer text-center w-full break-words">{comment.author_name}</span>
+                                        <span className="text-[11px] text-[#8C8C8C] mt-1 text-center">Yếu sinh lý</span>
                                     </div>
 
                                     {/* Right Content Column */}
-                                    <div className="flex-1 min-w-0 flex flex-col bg-white relative">
-                                        {/* Speech arrow */}
-                                        <div className="absolute top-5 -left-[5px] w-2.5 h-2.5 bg-white border-l border-b border-[#D1D1D1] transform rotate-45 z-10" />
-
+                                    <div className="flex-1 min-w-0 flex flex-col bg-white">
                                         {/* Header */}
-                                        <div className="flex items-center justify-between p-2 border-b border-[#F0F2F5] text-[12px] text-[#8E8D8A]">
-                                            <span>{new Date(comment.created_at).toLocaleString('vi-VN')}</span>
-                                            <span className="font-semibold">#{index + 2}</span>
+                                        <div className="flex items-center justify-between px-3 py-2 text-[12px] text-[#8C8C8C] border-b border-[#F0F0F0]">
+                                            <span>{new Date(comment.created_at).toLocaleDateString('vi-VN')}</span>
+                                            <div className="flex items-center gap-3">
+                                                <button className="hover:text-[#185886]" title="Chia sẻ"><Share2 className="w-3.5 h-3.5" /></button>
+                                                <span className="font-semibold">#{index + 2}</span>
+                                            </div>
                                         </div>
 
                                         {/* Body */}
                                         <div className="p-4 flex-1">
-                                            <p className="text-[15px] leading-relaxed text-[#1A1A1A] whitespace-pre-wrap">
+                                            <p className="text-[15px] leading-relaxed text-[#141414] whitespace-pre-wrap font-sans">
                                                 {comment.text}
                                             </p>
                                             
                                             {comment.image_url && (
-                                                <div className="mt-4 border-t border-dashed border-[#D1D1D1] pt-4">
+                                                <div className="mt-4 pt-4 border-t border-dashed border-[#E5E5E5]">
                                                     <img
                                                         src={comment.image_url}
                                                         alt="Ảnh đính kèm"
-                                                        className="max-h-[500px] rounded shadow-sm border border-[#D1D1D1] object-cover"
+                                                        className="max-h-[400px] object-cover"
                                                         loading="lazy"
                                                     />
                                                 </div>
                                             )}
-
-                                            {isAdmin && (
-                                                <div className="mt-4 border-t border-[#F0F0EE] pt-2">
-                                                    <button
-                                                        onClick={() => handleDelete(comment.id)}
-                                                        className="text-[11px] font-bold text-red-500 hover:underline"
-                                                    >
-                                                        [Xóa Reply]
-                                                    </button>
-                                                </div>
-                                            )}
                                         </div>
+
+                                        {/* Footer / Reactions (Mockup) */}
+                                        <div className="mx-4 mb-3 px-3 py-2 bg-[#F9F9F9] border border-[#E5E5E5] rounded flex items-center gap-2">
+                                            <div className="text-[#185886]">
+                                               <ThumbsUp className="w-3.5 h-3.5" stroke="currentColor"/>
+                                            </div>
+                                            <span className="text-[12px] text-[#185886]">Vô Cưu and tqtuankg92</span>
+                                        </div>
+
+                                        {isAdmin && (
+                                            <div className="px-4 pb-3">
+                                                <button
+                                                    onClick={() => handleDelete(comment.id)}
+                                                    className="text-[11px] font-bold text-red-500 hover:underline"
+                                                >
+                                                    [Xóa Reply]
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                         ))}
