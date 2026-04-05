@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Clock, ChevronLeft, Send, AlertTriangle, CheckCircle, RefreshCw, FileText } from 'lucide-react';
+import { Clock, ChevronLeft, Send, AlertTriangle, CheckCircle, RefreshCw, FileText, Lock } from 'lucide-react';
 import { Exam, ExamTFAnswer, ExamSubmission } from '../types';
 import ExamCountdownTimer from './ExamCountdownTimer';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
@@ -99,6 +99,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     const startTime = useRef<number | null>(null); // null = chưa bắt đầu tính giờ
     const [iframeReady, setIframeReady] = useState(false); // true khi iframe render xong PDF
     const objectUrlRef = useRef<string | null>(null); // giữ objectURL để revoke khi unmount
+    const [msUntilGlobalClose, setMsUntilGlobalClose] = useState<number>(Infinity); // ms còn lại đến giờ đóng chung
 
     // Security Check: Block direct URL access before scheduled time (bypass for admins via isPreviewMode)
     if (!isPreviewMode && exam.scheduledAt && getSecureTime() < exam.scheduledAt) {
@@ -108,6 +109,25 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                 <h2 className="text-xl font-bold text-red-700">TỪ CHỐI TRUY CẬP</h2>
                 <p className="text-sm mt-2 text-gray-600">
                     Đề thi <b>"{exam.title}"</b> chưa được mở. Vui lòng quay lại danh sách chờ đến giờ thi.
+                </p>
+                <button
+                    onClick={onBack}
+                    className="mt-6 px-6 py-2.5 bg-[#F1F0EC] text-[#57564F] font-semibold rounded-lg hover:bg-[#E9E9E7] transition-colors"
+                >
+                    Trở về danh sách
+                </button>
+            </div>
+        );
+    }
+
+    // Security Check: Block entry if exam is already past its global closing time
+    if (!isPreviewMode && exam.closedAt && getSecureTime() > exam.closedAt) {
+        return (
+            <div className="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-red-100 min-h-[50vh] text-center max-w-2xl mx-auto mt-12">
+                <Lock className="w-12 h-12 text-red-500 mb-4" />
+                <h2 className="text-xl font-bold text-red-700">ĐỀ THI ĐÃ ĐÓNG</h2>
+                <p className="text-sm mt-2 text-gray-600">
+                    Thời gian nộp bài cho đề <b>"{exam.title}"</b> đã kết thúc.
                 </p>
                 <button
                     onClick={onBack}
@@ -190,6 +210,53 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
         setIframeReady(false);
     }, [exam.id]);
 
+    // ── Double-Deadline Countdown ──
+    // Tính toán thời gian còn lại dựa trên deadline cá nhân VÀ giờ đóng chung của hệ thống
+    const calculateMsLeft = useCallback(() => {
+        const sTime = startTime.current;
+        if (!sTime) return exam.duration * 60 * 1000; // Chưa bắt đầu → trả về max
+        const now = getSecureTime();
+        const personalDeadline = sTime + exam.duration * 60 * 1000;
+        const globalDeadline = exam.closedAt ?? Infinity;
+        return Math.max(0, Math.min(personalDeadline, globalDeadline) - now);
+    }, [exam.duration, exam.closedAt]);
+
+    // Cập nhật msUntilGlobalClose mỗi giây để hiển thị banner cảnh báo
+    useEffect(() => {
+        if (!exam.closedAt || isPreviewMode) return;
+        const tick = () => setMsUntilGlobalClose(Math.max(0, exam.closedAt! - getSecureTime()));
+        tick();
+        const iv = setInterval(tick, 1000);
+        return () => clearInterval(iv);
+    }, [exam.closedAt, isPreviewMode]);
+
+    // Hàm tự nộp bài (dùng trong visibility change + global close)
+    // ✅ FIX: Khai báo TRƯỚC useEffect visibility để tránh Temporal Dead Zone
+    const handleAutoSubmit = useCallback(() => {
+        if (submitted || isPreviewMode) return;
+        setSubmitted(true);
+        const submission: ExamSubmission = {
+            examId: exam.id,
+            mc, tf, sa,
+            submittedAt: Date.now(),
+            timeTaken: Math.round((Date.now() - (startTime.current ?? Date.now())) / 1000),
+        };
+        onSubmit(submission);
+    }, [submitted, isPreviewMode, mc, tf, sa, exam.id, onSubmit]);
+
+    // Cơ chế tự nộp bài khi học sinh quay lại tab sau khi hết giờ (chống để tab ngủ)
+    useEffect(() => {
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible' && iframeReady && !submitted) {
+                if (calculateMsLeft() <= 0) {
+                    handleAutoSubmit();
+                }
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
+    }, [iframeReady, submitted, calculateMsLeft, handleAutoSubmit]);
+
     // ── Countdown ──
     const handleSubmitFinal = useCallback(() => {
         if (isPreviewMode) {
@@ -228,6 +295,16 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     return (
         <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#1A1A1A' }}>
 
+            {/* ── Emergency Global Close Banner (≤5min) ── */}
+            {!isPreviewMode && exam.closedAt && msUntilGlobalClose > 0 && msUntilGlobalClose <= 300000 && (
+                <div
+                    className="shrink-0 px-4 py-2 text-center text-xs font-bold"
+                    style={{ background: '#7F1D1D', color: '#FCA5A5', animation: 'pulse 1s infinite' }}
+                >
+                    ⚠️ HỆ THỐNG SẮP ĐÓNG ĐỀ CHUNG TRONG {Math.ceil(msUntilGlobalClose / 60000)} PHÚT — HÃY NỘP BÀI NGAY!
+                </div>
+            )}
+
             {/* ── Top Bar ── */}
             <div
                 className="flex items-center justify-between px-4 py-2.5 shrink-0"
@@ -262,7 +339,15 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                 </div>
 
                 <ExamCountdownTimer
-                    initialSeconds={exam.duration * 60}
+                    // ✅ FIX BUG 1: Truyền đúng effective seconds = min(personalDuration, globalDeadline)
+                    // Trước đây luôn dùng exam.duration * 60 bất kể closedAt
+                    initialSeconds={exam.closedAt
+                        ? Math.max(0, Math.round(Math.min(
+                            exam.duration * 60 * 1000,
+                            exam.closedAt - getSecureTime()
+                          ) / 1000))
+                        : exam.duration * 60
+                    }
                     onTimeUp={handleSubmitFinal}
                     paused={!iframeReady} // ✅ FIX: Chờ iframe render xong mới bắt đầu đếm
                 />

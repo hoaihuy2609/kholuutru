@@ -5,6 +5,11 @@
 export const PDF_CACHE_DB = 'pv_pdf_cache';
 export const PDF_CACHE_STORE = 'pdfs';
 
+// ✅ FIX BUG 5: Giới hạn số lượng PDF cache tối đa để tránh IndexedDB phình to trên mobile
+// Browser có thể xóa sạch IndexedDB khi bộ nhớ đầy → mất cache toàn bộ
+// LRU: khi vượt MAX_CACHE_ENTRIES, xóa entry CŨ NHẤT (theo thứ tự key)
+const MAX_CACHE_ENTRIES = 15;
+
 /**
  * Tạo cache key gồm examId + pdfTelegramFileId.
  * Khi admin upload đề mới, fileId thay đổi → cache key mới → tự động invalidate entry cũ.
@@ -12,7 +17,7 @@ export const PDF_CACHE_STORE = 'pdfs';
 export const makeCacheKey = (examId: string, fileId?: string): string =>
     fileId ? `${examId}__${fileId}` : examId;
 
-// ✅ PERF FIX: Cache DB connection — tránh tạo IDBOpenRequest mới mỗi lần gọi
+// ✅ PERF FIX: Cache DB connection — tránh tạo IDBOpenDBRequest mới mỗi lần gọi
 // Pattern giống db.ts, đảm bảo chỉ mở 1 kết nối duy nhất cho toàn bộ session
 let _pdfCacheDB: IDBDatabase | null = null;
 
@@ -61,9 +66,32 @@ export const savePdfToCache = async (examId: string, pdfBlob: Blob, fileId?: str
     try {
         const db = await openPdfCacheDB();
         const key = makeCacheKey(examId, fileId);
+
+        // ✅ FIX BUG 5: LRU Eviction — xóa entry cũ nhất nếu vượt MAX_CACHE_ENTRIES
         await new Promise<void>((resolve, reject) => {
             const tx = db.transaction(PDF_CACHE_STORE, 'readwrite');
-            tx.objectStore(PDF_CACHE_STORE).put(pdfBlob, key);
+            const store = tx.objectStore(PDF_CACHE_STORE);
+
+            // Lấy danh sách tất cả key hiện có
+            const keysReq = store.getAllKeys();
+            keysReq.onsuccess = () => {
+                const allKeys = keysReq.result as string[];
+                // Xóa các entry cũ nếu đã đạt giới hạn (giữ MAX_CACHE_ENTRIES - 1 slot cho entry mới)
+                const keysToDelete = allKeys
+                    .filter(k => k !== key) // không xóa key hiện tại nếu đã tồn tại
+                    .slice(0, Math.max(0, allKeys.length - MAX_CACHE_ENTRIES + 1));
+                for (const k of keysToDelete) {
+                    store.delete(k);
+                    console.log(`[PdfCache] 🗑️ Evicted: ${k.substring(0, 20)}... (LRU limit ${MAX_CACHE_ENTRIES})`);
+                }
+                // Lưu blob mới
+                store.put(pdfBlob, key);
+            };
+            keysReq.onerror = () => {
+                // Fallback: save anyway nếu không đọc được keys
+                store.put(pdfBlob, key);
+            };
+
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
         });

@@ -25,12 +25,13 @@ interface GlobalSearchProps {
   isAdmin?: boolean;
 }
 
-const CATEGORY_CONFIG = {
-  chapter: { icon: FolderOpen, label: 'Chương', color: '#6B7CDB', bg: '#EEF0FB' },
-  lesson: { icon: FileText, label: 'Bài học', color: '#6B7CDB', bg: '#EEF0FB' },
-  file: { icon: File, label: 'Tài liệu', color: '#787774', bg: '#F1F0EC' },
-  exam: { icon: ClipboardList, label: 'Đề thi', color: '#D9730D', bg: '#FFF3E8' },
-  blog: { icon: BookOpen, label: 'Blog', color: '#D9730D', bg: '#FFF3E8' },
+// Nhãn hiển thị cho badge loại kết quả
+const CATEGORY_LABEL: Record<string, string> = {
+  chapter: 'Chương',
+  lesson: 'Bài học',
+  file: 'Tài liệu',
+  exam: 'Đề thi',
+  blog: 'Blog',
 };
 
 const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExams, onGetBlogs, isAdmin }) => {
@@ -70,7 +71,8 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
       lastIsAdmin.current = !!isAdmin;
       onGetBlogs(!!isAdmin).then(data => setBlogs(data || [])).catch(() => {});
     }
-  }, [isOpen, isAdmin]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, isAdmin, onLoadExams, onGetBlogs]);
 
   // Build static chapter results
   const chapterResults: SearchResult[] = useMemo(() => {
@@ -394,20 +396,16 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
             ) : (
               <div className="divide-y divide-[#F1F0EC]" ref={listRef}>
                 {filtered.map((result, index) => {
-                  const cfg = CATEGORY_CONFIG[result.category] || CATEGORY_CONFIG.file;
-                  
-                  let itemColor = cfg.color;
-                  let itemBg = cfg.bg;
-                  let Icon = cfg.icon;
+                  // Xác định màu & icon dựa trên loại và fileCategory
+                  let itemColor = '#6B7CDB';
+                  let itemBg = '#EEF0FB';
+                  let Icon: React.ElementType = FileText;
 
-                  // Mặc định màu xanh dương
-                  itemColor = '#6B7CDB'; itemBg = '#EEF0FB';
-                  
                   if (result.category === 'exam') {
-                    itemColor = '#787774'; itemBg = '#F1F0EC'; // Xám
+                    itemColor = '#787774'; itemBg = '#F1F0EC';
                     Icon = ClipboardList;
                   } else if (result.category === 'blog') {
-                    itemColor = '#D9730D'; itemBg = '#FFF3E8'; // Cam
+                    itemColor = '#D9730D'; itemBg = '#FFF3E8';
                     Icon = BookOpen;
                   } else if (result.category === 'chapter') {
                     Icon = FolderOpen;
@@ -415,27 +413,29 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                     Icon = BookOpen;
                   }
 
+                  // File: override màu theo fileCategory
                   if (result.fileCategory) {
                     const lowerCat = result.fileCategory.toLowerCase();
                     if (lowerCat.includes('lý thuyết trọng tâm')) {
-                      itemColor = '#D9730D'; itemBg = '#FFF3E8';   // Cam
+                      itemColor = '#D9730D'; itemBg = '#FFF3E8';
                       Icon = BookOpen;
                     } else if (lowerCat.includes('lý thuyết (đúng/sai)')) {
-                      itemColor = '#6B7CDB'; itemBg = '#EEF0FB';   // Xanh nước biển
+                      itemColor = '#6B7CDB'; itemBg = '#EEF0FB';
                       Icon = FileText;
                     } else if (lowerCat.includes('đúng/sai')) {
-                      itemColor = '#448361'; itemBg = '#EAF3EE';   // Xanh lá (chương & khác)
+                      itemColor = '#448361'; itemBg = '#EAF3EE';
                       Icon = FileText;
                     } else if (lowerCat.includes('nâng cao')) {
-                      itemColor = '#9065B0'; itemBg = '#F3ECF8';   // Tím
+                      itemColor = '#9065B0'; itemBg = '#F3ECF8';
                       Icon = Zap;
                     } else {
-                      // Trắc nghiệm bình thường, bài tập cơ bản
                       Icon = FileText;
                     }
                   }
 
                   const isActive = index === selectedIndex;
+                  const label = CATEGORY_LABEL[result.category] ?? 'Khác';
+
                   return (
                     <div
                       key={result.id}
@@ -460,16 +460,16 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
                           {result.subtitle}
                         </p>
                       </div>
-                      <span 
-                        className="text-[10px] font-bold px-3 py-1.5 rounded-lg shrink-0 uppercase tracking-widest border transition-all" 
-                        style={{ 
-                          background: isActive ? itemBg : '#FFFFFF', 
+                      <span
+                        className="text-[10px] font-bold px-3 py-1.5 rounded-lg shrink-0 uppercase tracking-widest border transition-all"
+                        style={{
+                          background: isActive ? itemBg : '#FFFFFF',
                           color: itemColor,
                           borderColor: isActive ? 'transparent' : `${itemColor}30`,
                           boxShadow: isActive ? 'none' : '0 1px 2px rgba(0,0,0,0.02)'
                         }}
                       >
-                        {cfg.label}
+                        {label}
                       </span>
                     </div>
                   );

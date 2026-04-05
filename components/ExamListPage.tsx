@@ -44,14 +44,18 @@ const ExamRowCard = React.memo(({ exam, idx, total, bestScore, onSelectExam, isA
     const [now, setNow] = useState(getSecureTime());
 
     useEffect(() => {
-        if (!exam.scheduledAt || isDone || isAdmin) return;
+        if ((!exam.scheduledAt && !exam.closedAt) || isDone || isAdmin) return;
         const iv = setInterval(() => setNow(getSecureTime()), 1000);
         return () => clearInterval(iv);
-    }, [exam.scheduledAt, isDone, isAdmin]);
+    }, [exam.scheduledAt, exam.closedAt, isDone, isAdmin]);
 
-    let status: 'LOCKED' | 'READY' | 'ARMED' | 'OPEN' = 'OPEN';
+    let status: 'LOCKED' | 'READY' | 'ARMED' | 'CLOSED' | 'OPEN' = 'OPEN';
     let diff = 0;
-    if (exam.scheduledAt && !isAdmin && !isDone) {
+
+    // CLOSED: Đề đã quá giờ đóng chung — chỉ khóa người CHƯА LÀM BÀI
+    if (exam.closedAt && now > exam.closedAt && !isDone && !isAdmin) {
+        status = 'CLOSED';
+    } else if (exam.scheduledAt && !isAdmin && !isDone) {
         diff = Math.floor((exam.scheduledAt - now) / 1000);
         if (diff > 300) status = 'LOCKED';
         else if (diff > 60) status = 'READY';
@@ -62,6 +66,7 @@ const ExamRowCard = React.memo(({ exam, idx, total, bestScore, onSelectExam, isA
     // Neu khong co guard: exam object ref thay doi -> [status, exam] effect re-run -> double download
     const hasPrefetchedRef = useRef(false);
     useEffect(() => {
+        // Only prefetch when READY (5 min before open) — skip CLOSED/LOCKED to prevent early PDF leaks
         if (status === 'READY' && !hasPrefetchedRef.current) {
             hasPrefetchedRef.current = true;
             prefetchExamPdf(exam);
@@ -84,17 +89,18 @@ const ExamRowCard = React.memo(({ exam, idx, total, bestScore, onSelectExam, isA
                 opacity: status === 'LOCKED' ? 0.6 : 1,
             }}
             onClick={() => {
-                if (status === 'OPEN' || isAdmin) onSelectExam();
+                // ✅ FIX BUG 4: Thêm ngoặc tường minh — tránh bug operator precedence
+                if ((status === 'OPEN') || (status === 'CLOSED' && isDone) || isAdmin) onSelectExam();
             }}
         >
             <div
                 className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-bold text-sm"
                 style={{
-                    background: isDone ? '#EAF3EE' : (status === 'LOCKED' ? '#F1F0EC' : '#EEF0FB'),
-                    color: isDone ? '#448361' : (status === 'LOCKED' ? '#AEACA8' : ACCENT),
+                    background: isDone ? '#EAF3EE' : (status === 'LOCKED' || status === 'CLOSED' ? '#F1F0EC' : '#EEF0FB'),
+                    color: isDone ? '#448361' : (status === 'LOCKED' || status === 'CLOSED' ? '#AEACA8' : ACCENT),
                 }}
             >
-                {isDone ? <CheckCircle className="w-4 h-4" /> : (status === 'LOCKED' ? <Lock className="w-4 h-4" /> : idx + 1)}
+                {isDone ? <CheckCircle className="w-4 h-4" /> : (status === 'LOCKED' || status === 'CLOSED' ? <Lock className="w-4 h-4" /> : idx + 1)}
             </div>
 
             <div className="flex-1 min-w-0">
@@ -147,6 +153,8 @@ const ExamRowCard = React.memo(({ exam, idx, total, bestScore, onSelectExam, isA
             >
                 {status === 'LOCKED' ? (
                     <><Lock className="w-3.5 h-3.5" /> Chưa mở</>
+                ) : status === 'CLOSED' ? (
+                    <><Lock className="w-3.5 h-3.5" /> Đã khóa</>
                 ) : status === 'READY' ? (
                     <><Zap className="w-3.5 h-3.5" style={{color: '#D9730D'}}/> Đang tải...</>
                 ) : status === 'ARMED' ? (
@@ -162,6 +170,7 @@ const ExamRowCard = React.memo(({ exam, idx, total, bestScore, onSelectExam, isA
 }, (prev, next) =>
     prev.exam.id === next.exam.id &&
     prev.exam.scheduledAt === next.exam.scheduledAt &&
+    prev.exam.closedAt === next.exam.closedAt &&
     prev.bestScore === next.bestScore &&
     prev.isAdmin === next.isAdmin &&
     prev.idx === next.idx &&

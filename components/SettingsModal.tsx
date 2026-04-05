@@ -37,6 +37,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [password, setPassword] = useState('');
     const [showPassInput, setShowPassInput] = useState(false);
+    const [isVerifyingAdmin, setIsVerifyingAdmin] = useState(false);
 
     const [myMachineId, setMyMachineId] = useState('');
     const [studentKeyInput, setStudentKeyInput] = useState('');
@@ -204,15 +205,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
         }
     };
 
-    const handleVerifyPassword = () => {
-        const _ref = import.meta.env.VITE_ADMIN_KEY;
-        if (password === _ref) {
-            onToggleAdmin(true);
-            onShowToast('Đã kích hoạt quyền quản trị viên!', 'success');
-            setShowPassInput(false);
-            setPassword('');
-        } else {
-            onShowToast('Sai mã xác thực hệ thống!', 'error');
+    const handleVerifyPassword = async () => {
+        if (!password.trim() || isVerifyingAdmin) return;
+        setIsVerifyingAdmin(true);
+        try {
+            // Xác minh qua Supabase RPC (SECURITY DEFINER) — password không bao giờ lộ ở client bundle
+            const { data, error } = await supabase.rpc('admin_verify_password', {
+                p_password: password,
+            });
+            if (error) throw error;
+            if (data === true) {
+                onToggleAdmin(true);
+                onShowToast('Đã kích hoạt quyền quản trị viên!', 'success');
+                setShowPassInput(false);
+                setPassword('');
+            } else {
+                onShowToast('Sai mã xác thực hệ thống!', 'error');
+            }
+        } catch (err: any) {
+            // Nếu RPC chưa được tạo trên Supabase, báo lỗi rõ ràng
+            console.error('[SettingsModal] admin_verify_password RPC error:', err);
+            onShowToast('Lỗi xác thực: ' + (err.message ?? 'Không thể kết nối'), 'error');
+        } finally {
+            setIsVerifyingAdmin(false);
         }
     };
 
@@ -344,18 +359,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onShowTo
                                             style={{ ...inputStyle, padding: '8px 12px 8px 36px' }}
                                             onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
                                             onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
-                                            onKeyDown={e => e.key === 'Enter' && handleVerifyPassword()}
+                                            onKeyDown={e => e.key === 'Enter' && !isVerifyingAdmin && handleVerifyPassword()}
                                             autoFocus
+                                            disabled={isVerifyingAdmin}
                                         />
                                     </div>
                                     <button
                                         onClick={handleVerifyPassword}
-                                        className="w-full py-2 text-sm font-medium text-white rounded-lg transition-colors"
+                                        disabled={isVerifyingAdmin || !password.trim()}
+                                        className="w-full py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
                                         style={{ background: '#6B7CDB' }}
-                                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#5a6bc9'}
+                                        onMouseEnter={e => !isVerifyingAdmin && ((e.currentTarget as HTMLElement).style.background = '#5a6bc9')}
                                         onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#6B7CDB'}
                                     >
-                                        Xác thực quyền Admin
+                                        {isVerifyingAdmin ? (
+                                            <>
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                Đang xác thực...
+                                            </>
+                                        ) : (
+                                            'Xác thực quyền Admin'
+                                        )}
                                     </button>
                                 </div>
                             ) : (

@@ -23,29 +23,44 @@ const FocusTimer: React.FC = () => {
     const [isRunning, setIsRunning] = useState(false);
 
     const timerRef = useRef<number | null>(null);
+    const shouldStopRef = useRef(false); // sync flag to prevent extra tick
     const ACCENT = '#448361'; // Xanh lá cây đậm
 
     useEffect(() => {
         if (isRunning) {
+            shouldStopRef.current = false;
             timerRef.current = window.setInterval(() => {
                 if (mode === 'pomodoro') {
                     setTimeLeft((prev) => {
                         if (prev <= 1) {
+                            // Mark stop synchronously so interval doesn't fire again
+                            shouldStopRef.current = true;
+                            if (timerRef.current) {
+                                clearInterval(timerRef.current);
+                                timerRef.current = null;
+                            }
                             setIsRunning(false);
-                            if (timerRef.current) clearInterval(timerRef.current);
                             return 0;
                         }
                         return prev - 1;
                     });
                 } else {
-                    setTimeElapsed((prev) => prev + 1);
+                    if (!shouldStopRef.current) {
+                        setTimeElapsed((prev) => prev + 1);
+                    }
                 }
             }, 1000);
-        } else if (timerRef.current) {
-            clearInterval(timerRef.current);
+        } else {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
         }
         return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
         };
     }, [isRunning, mode]);
 

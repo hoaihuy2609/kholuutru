@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Trash2, Upload, FileText, Clock, ChevronLeft, ChevronRight, Save, X, Check, RefreshCw, ClipboardList, Flag, User, AlertCircle, Edit } from 'lucide-react';
+import { Plus, Trash2, Upload, FileText, Clock, ChevronLeft, ChevronRight, Save, X, Check, RefreshCw, ClipboardList, Flag, User, AlertCircle, Edit, Lock } from 'lucide-react';
 import { Exam, ExamAnswers, ExamTFAnswer } from '../types';
 import { useCloudStorage } from '../src/hooks/useCloudStorage';
 import { getAllExamTopVotes } from '../src/services/notificationService';
+import { supabase } from '../src/lib/supabase';
 
 const Loader2 = ({ className, style }: { className?: string, style?: React.CSSProperties }) => (
     <RefreshCw className={`${className} animate-spin`} style={style} />
@@ -282,6 +283,9 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
     const [scheduledAt, setScheduledAt] = useState(
         examToEdit?.scheduledAt ? new Date(examToEdit.scheduledAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''
     );
+    const [closedAt, setClosedAt] = useState(
+        examToEdit?.closedAt ? new Date(examToEdit.closedAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''
+    );
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [pdfProgress, setPdfProgress] = useState(0);
     const [pdfUploading, setPdfUploading] = useState(false);
@@ -341,6 +345,23 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
             return;
         }
 
+        // Validate closedAt: must be after scheduledAt + duration
+        const closedAtMs = closedAt ? new Date(closedAt).getTime() : undefined;
+        if (closedAtMs) {
+            const scheduledAtMs = scheduledAt ? new Date(scheduledAt).getTime() : Date.now();
+            const minClosedAt = scheduledAtMs + parseInt(duration) * 60000;
+            if (closedAtMs <= minClosedAt) {
+                onShowToast('Giờ đóng đề phải sau khi kết thúc thời gian làm bài dự kiến!', 'warning');
+                setSaving(false);
+                return;
+            }
+            // Warn admin if they are shortening an active exam
+            if (examToEdit?.closedAt && closedAtMs < examToEdit.closedAt && examToEdit.closedAt > Date.now()) {
+                const ok = window.confirm('⚠️ Có thể có học sinh đang làm bài. Rút ngắn giờ đóng sẽ buộc họ nộp bài sớm. Xác nhận?');
+                if (!ok) { setSaving(false); return; }
+            }
+        }
+
         try {
             const exam: Exam = {
                 id: examToEdit ? examToEdit.id : crypto.randomUUID(),
@@ -354,11 +375,25 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                 category,
                 subCategory: category === 'chapter' ? normalizedSubCategory : undefined,
                 scheduledAt: scheduledAt ? new Date(scheduledAt).getTime() : undefined,
+                closedAt: closedAtMs,
             };
             const updatedAllExams = examToEdit 
                 ? allExams.map(e => e.id === exam.id ? exam : e)
                 : [...allExams, exam];
             await onSaveExam(updatedAllExams);
+
+            // Sync metadata to Supabase so backend RPC can enforce closing time
+            try {
+                await supabase.rpc('admin_upsert_exam_metadata', {
+                    p_id: exam.id,
+                    p_closed_at: exam.closedAt ? new Date(exam.closedAt).toISOString() : null,
+                    p_duration: exam.duration,
+                });
+            } catch (supaErr) {
+                // Non-fatal: log but don't block save
+                console.warn('[ExamManager] Failed to sync exam metadata to Supabase:', supaErr);
+            }
+
             onSaved(exam);
         } catch (err: any) {
             onShowToast(err.message || 'Lỗi lưu đề thi', 'error');
@@ -486,17 +521,39 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                                             onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
                                         />
                                     </div>
-                                    <div className="flex-1">
-                                        <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>Hẹn thi (Tùy chọn)</label>
-                                        <input
-                                            type="datetime-local"
-                                            value={scheduledAt}
-                                            onChange={e => setScheduledAt(e.target.value)}
-                                            className="w-full px-2 py-1.5 rounded-lg text-xs outline-none"
-                                            style={{ border: '1.5px solid #E9E9E7', background: '#F7F6F3', color: '#1A1A1A' }}
-                                            onFocus={e => (e.target as HTMLElement).style.borderColor = ACCENT}
-                                            onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
-                                        />
+                                    <div className="flex-1 space-y-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold mb-1.5" style={{ color: '#57564F' }}>Hẹn thi (Tùy chọn)</label>
+                                            <input
+                                                type="datetime-local"
+                                                value={scheduledAt}
+                                                onChange={e => setScheduledAt(e.target.value)}
+                                                className="w-full px-2 py-1.5 rounded-lg text-xs outline-none"
+                                                style={{ border: '1.5px solid #E9E9E7', background: '#F7F6F3', color: '#1A1A1A' }}
+                                                onFocus={e => (e.target as HTMLElement).style.borderColor = ACCENT}
+                                                onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold mb-1.5 flex items-center gap-1" style={{ color: '#57564F' }}>
+                                                <Lock style={{ width: 11, height: 11, color: '#E03E3E' }} />
+                                                Đóng đề lúc (Tùy chọn)
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                value={closedAt}
+                                                onChange={e => setClosedAt(e.target.value)}
+                                                className="w-full px-2 py-1.5 rounded-lg text-xs outline-none"
+                                                style={{ border: '1.5px solid #E9E9E7', background: '#F7F6F3', color: '#1A1A1A' }}
+                                                onFocus={e => (e.target as HTMLElement).style.borderColor = '#E03E3E'}
+                                                onBlur={e => (e.target as HTMLElement).style.borderColor = '#E9E9E7'}
+                                            />
+                                            {closedAt && (
+                                                <p className="text-[10px] mt-1" style={{ color: '#E03E3E' }}>
+                                                    ⚠️ Học sinh chưa làm bài sẽ bị khóa. Người đang thi sẽ bị tự động nộp bài.
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div>

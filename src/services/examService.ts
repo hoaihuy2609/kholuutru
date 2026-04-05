@@ -289,7 +289,8 @@ export const saveExamResult = async (
     totalQuestions: number,
     correctAnswers: number,
     partScores?: { mc: number; tf: number; sa: number },
-    tfBreakdown?: number[]
+    tfBreakdown?: number[],
+    timeTaken?: number
 ): Promise<void> => {
     const normalizedPhone = getActivatedPhone();
     if (!normalizedPhone) return;
@@ -309,6 +310,7 @@ export const saveExamResult = async (
         grade,
         part_scores: partScores,
         tf_breakdown: tfBreakdown,
+        time_taken: timeTaken ?? 0,
     };
 
     // ✅ OPTIMISTIC SUBMIT — Lá chắn 1: lưu localStorage TRƯỚC khi đụng mạng
@@ -338,6 +340,7 @@ const _syncToSupabase = async (payload: any): Promise<void> => {
         p_part_scores:     payload.part_scores ?? null,
         p_tf_breakdown:    payload.tf_breakdown ?? null,
         p_submitted_at:    payload.submitted_at,
+        p_time_taken:      payload.time_taken ?? 0,
     });
     if (error) throw new Error(error.message);
 };

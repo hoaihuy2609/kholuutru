@@ -410,6 +410,45 @@ GRANT EXECUTE ON FUNCTION admin_clear_all_notifications() TO anon;
 
 
 -- ╔═══════════════════════════════════════════════════════════════════════╗
+-- ║  PHẦN 2b: BẢNG EXAMS METADATA  (exam closing & duration)            ║
+-- ╚═══════════════════════════════════════════════════════════════════════╝
+
+-- Bảng metadata đề thi — lưu closed_at và duration để backend validate
+CREATE TABLE IF NOT EXISTS exams (
+  id          TEXT PRIMARY KEY,
+  closed_at   TIMESTAMPTZ,
+  duration    INT NOT NULL DEFAULT 50
+);
+
+-- RLS: Cho phép anon đọc (danh sách đề hiển thị trạng thái)
+ALTER TABLE exams ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "exams_select" ON exams;
+CREATE POLICY "exams_select" ON exams FOR SELECT USING (true);
+
+-- Admin upsert metadata qua RPC (anon bị REVOKE write trực tiếp)
+DROP FUNCTION IF EXISTS admin_upsert_exam_metadata(TEXT, TIMESTAMPTZ, INT);
+CREATE OR REPLACE FUNCTION admin_upsert_exam_metadata(
+  p_id         TEXT,
+  p_closed_at  TIMESTAMPTZ,
+  p_duration   INT
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  INSERT INTO exams (id, closed_at, duration)
+  VALUES (p_id, p_closed_at, p_duration)
+  ON CONFLICT (id) DO UPDATE SET
+    closed_at = EXCLUDED.closed_at,
+    duration  = EXCLUDED.duration;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION admin_upsert_exam_metadata(TEXT, TIMESTAMPTZ, INT) TO anon;
+
+
+-- ╔═══════════════════════════════════════════════════════════════════════╗
 -- ║  PHẦN 2: EXAM SUBMISSION RPC & INDEX  (exam_result_rpc_and_index)   ║
 -- ╚═══════════════════════════════════════════════════════════════════════╝
 
@@ -446,6 +485,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_exam_results_phone_exam_id
 
 -- ───────────────────────────────────────────────────────────
 -- FIX 1: RPC Stored Procedure — bỏ qua RLS, ghi thẳng bằng quyền root
+-- + Validate closed_at và duration để chống gian lận giờ giấc
 -- ───────────────────────────────────────────────────────────
 
 CREATE OR REPLACE FUNCTION submit_exam_result(
@@ -459,13 +499,29 @@ CREATE OR REPLACE FUNCTION submit_exam_result(
   p_total_questions INT,
   p_part_scores     JSONB    DEFAULT NULL,
   p_tf_breakdown    JSONB    DEFAULT NULL,
-  p_submitted_at    TIMESTAMPTZ DEFAULT now()
+  p_submitted_at    TIMESTAMPTZ DEFAULT now(),
+  p_time_taken      INT     DEFAULT 0  -- Thời gian làm bài thực tế (giây)
 )
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER  -- Chạy với quyền root, bỏ qua RLS overhead
 AS $$
+DECLARE
+  v_exam RECORD;
 BEGIN
+  -- Đọc metadata đề thi (có thể NULL nếu admin chưa sync)
+  SELECT closed_at, duration INTO v_exam FROM exams WHERE id = p_exam_id;
+
+  -- Check 1: Chặn nếu đã quá giờ đóng chung (ân huệ 60s để xử lý network lag)
+  IF v_exam.closed_at IS NOT NULL AND now() > v_exam.closed_at + interval '60 seconds' THEN
+    RAISE EXCEPTION 'EXAM_CLOSED';
+  END IF;
+
+  -- Check 2: Chặn nếu làm bài quá thời gian quy định (ân huệ 60s)
+  IF v_exam.duration IS NOT NULL AND p_time_taken > v_exam.duration * 60 + 60 THEN
+    RAISE EXCEPTION 'TIME_LIMIT_EXCEEDED';
+  END IF;
+
   INSERT INTO exam_results (
     student_phone, exam_id, exam_title, grade,
     score, student_name,

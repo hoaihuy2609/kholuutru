@@ -79,6 +79,7 @@ export interface Exam {
   category?: 'school' | 'chapter';
   subCategory?: string;
   scheduledAt?: number; // THỜI GIAN HẸN GIỜ THI (Timestamp in ms)
+  closedAt?: number;    // THỜI GIAN ĐÓNG ĐỀ CHUNG (Timestamp in ms) — khóa nộp bài sau thời điểm này
 }
 
 export interface ExamSubmission {

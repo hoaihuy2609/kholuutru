@@ -25,6 +25,13 @@ const GRADE_CONFIG = [
     { grade: 10, label: 'Khối 10', accent: '#448361', bg: '#EAF3EE' },
 ];
 
+/** Google Meet links theo khối — cập nhật tại đây nếu link thay đổi */
+const MEET_URLS: Record<number, string> = {
+    10: 'https://meet.google.com/vch-rjum-kus',
+    11: 'https://meet.google.com/kup-kyii-ess',
+    12: 'https://meet.google.com/omz-jvty-osn',
+};
+
 const formatRelativeTime = (isoString: string): string => {
     const now = new Date();
     const date = new Date(isoString);
@@ -229,9 +236,7 @@ const NotificationPage: React.FC<NotificationPageProps> = ({
                         // Nếu là admin, ta có thể hiển thị chọn link dropdown hoặc tạm lấy mặc định khối 12 nếu thầy không chọn filter.
                         const targetGrade = isAdmin && adminGradeFilter ? adminGradeFilter : stdGrade;
                         const meetConfig = GRADE_CONFIG.find(g => g.grade === targetGrade) || GRADE_CONFIG[0];
-                        const url = meetConfig.grade === 10 ? 'https://meet.google.com/vch-rjum-kus'
-                            : meetConfig.grade === 11 ? 'https://meet.google.com/kup-kyii-ess'
-                                : 'https://meet.google.com/omz-jvty-osn';
+                        const url = MEET_URLS[meetConfig.grade] ?? MEET_URLS[12];
                         return (
                             <a
                                 href={url}

@@ -274,7 +274,7 @@ function ExamRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
           const { calcScore } = await import('./components/ExamView'); 
           const score = calcScore(sub, activeExam.answers); 
           const totalQ = (activeExam.answers.mc?.length ?? 0) + (activeExam.answers.tf?.length ?? 0) + (activeExam.answers.sa?.length ?? 0); 
-          cloud.saveExamResult(activeExam, score.total, totalQ, score.correctCount, { mc: score.mc, tf: score.tf, sa: score.sa }, score.tfBreakdown); 
+          cloud.saveExamResult(activeExam, score.total, totalQ, score.correctCount, { mc: score.mc, tf: score.tf, sa: score.sa }, score.tfBreakdown, sub.timeTaken); 
         }} />
       </Suspense></ErrorBoundary>
     );
