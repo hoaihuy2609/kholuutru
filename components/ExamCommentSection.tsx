@@ -124,7 +124,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
     };
 
     return (
-        <div className="mt-6 rounded-2xl overflow-hidden" style={{ border: hideHeader ? 'none' : '1px solid #E9E9E7', background: hideHeader ? 'transparent' : '#FFFFFF' }}>
+        <div className="mt-6 rounded-none overflow-hidden" style={{ border: hideHeader ? 'none' : '1px solid #E5E7EB', background: hideHeader ? 'transparent' : '#FFFFFF' }}>
 
             {/* Header */}
             {!hideHeader && (
@@ -161,9 +161,9 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                         <p className="text-sm">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
                     </div>
                 ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                         {comments.map((comment, index) => (
-                                <div key={comment.id} className="flex border border-[#DFDFDF] bg-white mb-2 shadow-sm rounded-none">
+                                <div key={comment.id} className="flex border border-[#E5E7EB] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] rounded-lg overflow-hidden transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
                                     {/* Left Profile Column */}
                                     <div className="w-[120px] md:w-[150px] p-4 flex flex-col items-center bg-[#F3F4F6] shrink-0 border-r border-[#DFDFDF]">
                                         <div
