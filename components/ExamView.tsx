@@ -411,6 +411,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                         onClick={() => {
                                             if (pdfUrl) window.open(pdfUrl, '_blank');
                                             setHasViewedPdf(true);
+                                            setIframeReady(true); // ✅ FIX MOBILE: Kích hoạt đồng hồ ngay khi học sinh mở đề (thay thế cho onLoad của iframe vốn không tồn tại trên mobile)
                                         }}
                                         className="px-6 py-3 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all active:scale-95"
                                         style={{ background: ACCENT }}
