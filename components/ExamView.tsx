@@ -83,7 +83,8 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     const [mc, setMC] = useState<string[]>(emptyMC());
     const [tf, setTF] = useState<ExamTFAnswer[]>(emptyTF());
     const [sa, setSA] = useState<string[]>(emptySA());
-    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+    const [pdfUrl, setPdfUrl] = useState<string | null>(null);       // blob: URL cho iframe desktop
+    const [pdfDirectUrl, setPdfDirectUrl] = useState<string | null>(null); // Cloudflare URL cho mobile link
     const [pdfLoading, setPdfLoading] = useState(true);
     const [showConfirm, setShowConfirm] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -126,6 +127,11 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
     // ── Load PDF: Cache (Blob) → Cloudflare Proxy ──
     useEffect(() => {
         let cancelled = false;
+        const proxyUrl = `${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`;
+
+        // Mobile: luôn set direct URL ngay để nút "Xem đề" hoạt động cả khi chưa cache
+        // (blob: URL không mở được trong tab mới)
+        setPdfDirectUrl(proxyUrl);
 
         const load = async () => {
             try {
@@ -140,19 +146,17 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                     return;
                 }
 
-                // ② Lấy PDF qua Cloudflare Proxy (nhanh, an toàn, đã ẩn Token)
-                const proxyUrl = `${CLOUDFLARE_PROXY_URL}/getFile/${exam.pdfTelegramFileId}`;
+                // ② Lấy PDF qua Cloudflare Proxy
                 const res = await fetch(proxyUrl);
-
                 if (!res.ok) throw new Error(`Cloudflare proxy lỗi: ${res.status}`);
 
-                const blob = await res.blob();
+                // Force MIME type application/pdf để iframe luôn render đúng
+                const buffer = await res.arrayBuffer();
+                const blob = new Blob([buffer], { type: 'application/pdf' });
                 console.log('[PDF] ✅ Loaded via Cloudflare proxy (Blob)');
 
                 if (!cancelled) {
-                    // Lưu Blob vào IndexedDB (không tốn CPU encode)
                     savePdfToCache(exam.id, blob);
-                    // Tạo Object URL trỏ thẳng vào RAM — iframe render ngay lập tức
                     const url = URL.createObjectURL(blob);
                     objectUrlRef.current = url;
                     setPdfUrl(url);
@@ -166,7 +170,6 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
 
         load();
 
-        // Cleanup: revoke Object URL khi unmount để tránh memory leak
         return () => {
             cancelled = true;
             if (objectUrlRef.current) {
@@ -316,7 +319,7 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                                         Bấm để mở đề thi, sau đó quay lại tab này điền đáp án.
                                     </p>
                                     <a
-                                        href={`${pdfUrl}#navpanes=0`}
+                                        href={`${pdfDirectUrl}#navpanes=0`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         onClick={() => setHasViewedPdf(true)}
@@ -344,11 +347,11 @@ const ExamView: React.FC<ExamViewProps> = ({ exam, onBack, onSubmit, isPreviewMo
                     style={{ background: '#1E1E1E', borderLeft: 'none', borderTop: isMobileDevice && hasViewedPdf ? 'none' : '1px solid #333' }}
                 >
                     {/* Nút mở lại đề (fallback) — chỉ hiện trên mobile sau khi đã bấm Xem đề */}
-                    {isMobileDevice && hasViewedPdf && pdfUrl && (
+                    {isMobileDevice && hasViewedPdf && pdfDirectUrl && (
                         <div className="flex items-center justify-between px-4 py-2 shrink-0" style={{ borderBottom: '1px solid #2D2D2D', background: '#242424' }}>
                             <span className="text-xs" style={{ color: '#787774' }}>Điền đáp án bên dưới</span>
                             <a
-                                href={`${pdfUrl}#navpanes=0`}
+                                href={`${pdfDirectUrl}#navpanes=0`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg transition-all active:scale-95"
