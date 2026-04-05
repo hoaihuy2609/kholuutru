@@ -164,15 +164,33 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {comments.map(comment => (
-                            <div key={comment.id} className="group flex gap-2">
-                                {/* Avatar */}
-                                <div
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 mt-1"
-                                    style={{ background: getAvatarColor(comment.author_name) }}
-                                >
-                                    {comment.author_name.charAt(0).toUpperCase()}
-                                </div>
+                        {comments.map((comment, index) => {
+                            const isLast = index === comments.length - 1;
+                            return (
+                                <div key={comment.id} className="group flex gap-2 relative">
+                                    {(nestedLevel || 0) > 0 && (
+                                        <>
+                                            {/* Đường đâm ngược lên Avatar của Cha (chỉ mọc ở Comment đầu tiên) */}
+                                            {index === 0 && (
+                                                <div className="absolute top-[-35px] -left-[24px] w-[2px] h-[35px] bg-[#CED0D4]" />
+                                            )}
+                                            {/* Rẽ nhánh ngang bo cong vào Avatar con */}
+                                            <div className="absolute top-0 -left-[24px] w-[24px] h-[20px] border-b-[2px] border-l-[2px] border-[#CED0D4] rounded-bl-xl z-0" />
+                                            
+                                            {/* Thân dọc tiếp tục đâm xuống Comment kế tiếp (nếu chưa phải là cuối cùng) */}
+                                            {!isLast && (
+                                                <div className="absolute top-[20px] -left-[24px] w-[2px] bottom-[-12px] bg-[#CED0D4] z-0" />
+                                            )}
+                                        </>
+                                    )}
+
+                                    {/* Avatar */}
+                                    <div
+                                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 mt-1 relative z-10"
+                                        style={{ background: getAvatarColor(comment.author_name) }}
+                                    >
+                                        {comment.author_name.charAt(0).toUpperCase()}
+                                    </div>
 
                                 <div className="flex-1 min-w-0">
                                     {/* Bubble */}
@@ -223,22 +241,23 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
 
                                     {/* Nested Replies */}
                                     {expandedReplyId === comment.id && (
-                                        <div className="mt-2 relative">
-                                            {/* Đường cong nối đuôi */}
-                                            <div className="absolute -top-3 -left-[22px] w-4 h-6 border-l-[2px] border-b-[2px] border-[#CED0D4] rounded-bl-xl" />
-                                            <ExamCommentSection
-                                                hideHeader
-                                                nestedLevel={(nestedLevel || 0) + 1}
-                                                examId={comment.id}
-                                                examTitle={`Trả lời ${comment.author_name}`}
-                                                isAdmin={isAdmin}
-                                                adminKey={adminKey}
-                                            />
+                                        <div className="mt-1 relative">
+                                            <div className="pl-10">
+                                                <ExamCommentSection
+                                                    hideHeader
+                                                    nestedLevel={(nestedLevel || 0) + 1}
+                                                    examId={comment.id}
+                                                    examTitle={`Trả lời ${comment.author_name}`}
+                                                    isAdmin={isAdmin}
+                                                    adminKey={adminKey}
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
 
