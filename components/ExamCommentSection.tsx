@@ -44,6 +44,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
     const [uploading, setUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [expandedReplyId, setExpandedReplyId] = useState<string | null>(null);
 
     // Nickname
     const [nickname, setNickname] = useState(getNickname);
@@ -163,54 +164,76 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                 ) : (
                     <div className="space-y-3">
                         {comments.map(comment => (
-                            <div
-                                key={comment.id}
-                                className="flex gap-3 p-3 rounded-xl group"
-                                style={{ background: '#FAFAF9', border: '1px solid #F1F0EC' }}
-                            >
+                            <div key={comment.id} className="group flex gap-2">
                                 {/* Avatar */}
                                 <div
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 mt-1"
                                     style={{ background: getAvatarColor(comment.author_name) }}
                                 >
                                     {comment.author_name.charAt(0).toUpperCase()}
                                 </div>
 
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-baseline gap-2 flex-wrap">
-                                        <span className="text-xs font-semibold" style={{ color: '#1A1A1A' }}>
+                                    {/* Bubble */}
+                                    <div className="inline-block px-3 py-2.5 rounded-2xl bg-[#F0F2F5] max-w-full">
+                                        <span className="text-[13px] font-bold block mb-0.5" style={{ color: '#1A1A1A' }}>
                                             {comment.author_name}
                                         </span>
-                                        <span className="text-[10px]" style={{ color: '#AEACA8' }}>
+                                        {comment.text && (
+                                            <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words" style={{ color: '#1A1A1A' }}>
+                                                {comment.text}
+                                            </p>
+                                        )}
+                                        {comment.image_url && (
+                                            <a href={comment.image_url} target="_blank" rel="noopener noreferrer" className="mt-2 block">
+                                                <img
+                                                    src={comment.image_url}
+                                                    alt="Ảnh đính kèm"
+                                                    className="max-h-60 rounded-lg object-cover transition-opacity hover:opacity-90 border border-[#E9E9E7]"
+                                                    loading="lazy"
+                                                />
+                                            </a>
+                                        )}
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-4 mt-1 ml-2">
+                                        <span className="text-[12px] font-medium" style={{ color: '#65676B' }}>
                                             {timeAgo(comment.created_at)}
                                         </span>
+                                        {(nestedLevel || 0) < 1 && (
+                                            <button
+                                                onClick={() => setExpandedReplyId(expandedReplyId === comment.id ? null : comment.id)}
+                                                className="text-[12px] font-bold cursor-pointer hover:underline"
+                                                style={{ color: expandedReplyId === comment.id ? '#1877F2' : '#65676B' }}
+                                            >
+                                                {expandedReplyId === comment.id ? 'Đóng' : 'Trả lời'}
+                                            </button>
+                                        )}
                                         {isAdmin && (
                                             <button
                                                 onClick={() => handleDelete(comment.id)}
-                                                className="opacity-0 group-hover:opacity-100 ml-auto text-[10px] flex items-center gap-1 px-2 py-0.5 rounded transition-all"
-                                                style={{ color: '#E03E3E', background: '#FEF0F0' }}
+                                                className="opacity-0 group-hover:opacity-100 text-[12px] font-bold text-red-500 hover:underline transition-opacity"
                                             >
-                                                <Trash2 className="w-3 h-3" /> Xóa
+                                                Xóa
                                             </button>
                                         )}
                                     </div>
 
-                                    {comment.text && (
-                                        <p className="text-sm mt-1 leading-relaxed whitespace-pre-wrap break-words" style={{ color: '#3D3D38' }}>
-                                            {comment.text}
-                                        </p>
-                                    )}
-
-                                    {comment.image_url && (
-                                        <a href={comment.image_url} target="_blank" rel="noopener noreferrer" className="mt-2 block">
-                                            <img
-                                                src={comment.image_url}
-                                                alt="Ảnh đính kèm"
-                                                className="max-h-60 rounded-lg object-cover transition-opacity hover:opacity-90"
-                                                style={{ border: '1px solid #E9E9E7' }}
-                                                loading="lazy"
+                                    {/* Nested Replies */}
+                                    {expandedReplyId === comment.id && (
+                                        <div className="mt-2 relative">
+                                            {/* Đường cong nối đuôi */}
+                                            <div className="absolute -top-3 -left-[22px] w-4 h-6 border-l-[2px] border-b-[2px] border-[#CED0D4] rounded-bl-xl" />
+                                            <ExamCommentSection
+                                                hideHeader
+                                                nestedLevel={(nestedLevel || 0) + 1}
+                                                examId={comment.id}
+                                                examTitle={`Trả lời ${comment.author_name}`}
+                                                isAdmin={isAdmin}
+                                                adminKey={adminKey}
                                             />
-                                        </a>
+                                        </div>
                                     )}
                                 </div>
                             </div>
