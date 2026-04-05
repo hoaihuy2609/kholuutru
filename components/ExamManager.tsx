@@ -405,7 +405,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
     return createPortal(
         <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-            style={{ background: 'rgba(26,26,26,0.5)', backdropFilter: 'blur(4px)' }}
+            style={{ background: 'rgba(26,26,26,0.45)' }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}
         >
             <div
@@ -819,7 +819,7 @@ const ExamVotesModal: React.FC<ExamVotesModalProps> = ({ exam, onClose }) => {
     return createPortal(
         <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-            style={{ background: 'rgba(26,26,26,0.5)', backdropFilter: 'blur(4px)' }}
+            style={{ background: 'rgba(26,26,26,0.45)' }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}
         >
             <div
