@@ -150,7 +150,7 @@ export const WeeklySchedule: React.FC<WeeklyScheduleProps> = React.memo(({
     const currentWeekEnd = new Date(currentWeekStart);
     currentWeekEnd.setDate(currentWeekEnd.getDate() + 6);
 
-    const fmtDate = (d: Date) => d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    const fmtDate = (d: Date) => d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }).replace(/-/g, '/');
     const fmtMonth = (d: Date) => d.toLocaleDateString('vi-VN', { month: 'long' });
 
     const todayStr = formatISODate(new Date());
