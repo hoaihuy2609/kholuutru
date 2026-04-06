@@ -92,7 +92,7 @@ ALTER TABLE classes              ENABLE ROW LEVEL SECURITY;
 REVOKE INSERT, UPDATE, DELETE ON students       FROM anon;
 REVOKE INSERT, UPDATE, DELETE ON vault_index    FROM anon;
 REVOKE INSERT, UPDATE, DELETE ON notifications  FROM anon;
-REVOKE INSERT, UPDATE, DELETE ON schedules      FROM anon;
+-- REVOKE INSERT, UPDATE, DELETE ON schedules      FROM anon;
 REVOKE INSERT, UPDATE, DELETE ON classes        FROM anon;
 
 
@@ -652,3 +652,57 @@ NOTIFY pgrst, 'reload schema';
 --     admin_delete_notification, admin_create_custom_notification,
 --     admin_clear_all_notifications, submit_exam_result, refresh_leaderboard
 -- ═══════════════════════════════════════════════════════════════════════════
+
+
+-- ╔═══════════════════════════════════════════════════════════════════════╗
+-- ║  PHẦN 6: BẢN VÁ LỖI (PATCH FIXES) VÀ AUTO CẬP NHẬT LEADERBOARD       ║
+-- ╚═══════════════════════════════════════════════════════════════════════╝
+
+-- 1. Bổ sung 2 cột bị thiếu cho bảng exams (Fix lỗi submit_exam_result)
+ALTER TABLE exams 
+ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ, 
+ADD COLUMN IF NOT EXISTS duration INT NOT NULL DEFAULT 50;
+
+-- 2. Tạo SQL Trigger để tự động cập nhật Leaderboard ngay khi có nộp bài
+CREATE OR REPLACE FUNCTION trigger_update_single_leaderboard()
+RETURNS TRIGGER 
+LANGUAGE plpgsql 
+SECURITY DEFINER AS $$
+BEGIN
+  INSERT INTO leaderboard_cache (grade, student_phone, student_name, avg_score, exam_count, best_score, recent_scores, updated_at)
+  SELECT
+    r.grade,
+    r.student_phone,
+    MAX(r.student_name),
+    ROUND(AVG(r.score)::numeric, 4),
+    COUNT(*),
+    MAX(r.score),
+    (
+      SELECT jsonb_agg(s ORDER BY s)
+      FROM (
+        SELECT score AS s FROM exam_results e2
+        WHERE e2.student_phone = r.student_phone AND e2.grade = r.grade
+        ORDER BY submitted_at DESC LIMIT 6
+      ) sub
+    ),
+    now()
+  FROM exam_results r
+  WHERE r.student_phone = NEW.student_phone AND r.grade = NEW.grade
+  GROUP BY r.grade, r.student_phone
+  ON CONFLICT (grade, student_phone) DO UPDATE SET
+    student_name  = EXCLUDED.student_name,
+    avg_score     = EXCLUDED.avg_score,
+    exam_count    = EXCLUDED.exam_count,
+    best_score    = EXCLUDED.best_score,
+    recent_scores = EXCLUDED.recent_scores,
+    updated_at    = now();
+    
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_refresh_leaderboard_on_insert ON exam_results;
+CREATE TRIGGER trg_refresh_leaderboard_on_insert
+AFTER INSERT OR UPDATE ON exam_results
+FOR EACH ROW
+EXECUTE FUNCTION trigger_update_single_leaderboard();
