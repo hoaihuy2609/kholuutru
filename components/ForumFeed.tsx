@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     MessageCircle, Image as ImageIcon, Trash2, User, Send, Share2,
     ThumbsUp, CheckCircle, Pin, ChevronLeft, RefreshCw, AlertCircle,
-    Pencil, X, Image, BookOpen, FlameKindling
+    Pencil, X, Image, BookOpen, FlameKindling, Search
 } from 'lucide-react';
 import { ExamComment } from '../types';
 import {
@@ -10,6 +10,7 @@ import {
     uploadCommentImage, getNickname, saveNickname
 } from '../src/services/commentService';
 import { useUIStore } from '../src/stores/useUIStore';
+import { CURRICULUM } from '../constants';
 
 // ── Constants ──────────────────────────────────────────────────────
 const NAVY = '#23497c';
@@ -70,8 +71,31 @@ function getUserRank(postCount: number): string {
     return 'Thành viên kỳ cựu';
 }
 
+// ── General topics for "Chung" category ─────────────────────────────
+const GENERAL_TOPICS = [
+    { id: 'general-method', name: 'Phương pháp học tập' },
+    { id: 'general-exam',   name: 'Đề thi & Tài liệu' },
+    { id: 'general-career', name: 'Tư vấn hướng nghiệp' },
+    { id: 'general-qa',     name: 'Góc hỏi đáp' },
+    { id: 'general-chat',   name: 'Tán gẫu' },
+];
+
+// ── Helper: resolve tag label from tagId ──────────────────────────────
+function resolveTagLabel(tagId: string): string | null {
+    if (!tagId) return null;
+    // Check general topics first
+    const gen = GENERAL_TOPICS.find(t => t.id === tagId);
+    if (gen) return gen.name;
+    // Check curriculum chapters
+    for (const grade of CURRICULUM) {
+        const ch = grade.chapters.find(c => c.id === tagId);
+        if (ch) return ch.name;
+    }
+    return null;
+}
+
 // ── Post content encoding/decoding ──────────────────────────────────
-interface PostMeta { title: string; content: string; category: string; solved: boolean; pinned: boolean; }
+interface PostMeta { title: string; content: string; category: string; tag: string; solved: boolean; pinned: boolean; }
 
 const decodePost = (raw: string): PostMeta => {
     try {
@@ -81,16 +105,29 @@ const decodePost = (raw: string): PostMeta => {
                 title: obj.t,
                 content: obj.c,
                 category: obj.cat || 'chung',
+                tag: obj.tag || '',
                 solved: obj.solved ?? false,
                 pinned: obj.pinned ?? false,
             };
         }
     } catch { /* fallthrough */ }
-    return { title: raw.length > 60 ? raw.substring(0, 60) + '...' : raw, content: raw, category: 'chung', solved: false, pinned: false };
+    return { title: raw.length > 60 ? raw.substring(0, 60) + '...' : raw, content: raw, category: 'chung', tag: '', solved: false, pinned: false };
 };
 
-const encodePost = (title: string, content: string, category: string) =>
-    JSON.stringify({ t: title.trim(), c: content.trim(), cat: category, solved: false, pinned: false });
+const encodePost = (title: string, content: string, category: string, tag: string) =>
+    JSON.stringify({ t: title.trim(), c: content.trim(), cat: category, tag, solved: false, pinned: false });
+
+// ── Tag Badge ─────────────────────────────────────────────────────────
+const TagBadge: React.FC<{ tagId: string }> = ({ tagId }) => {
+    const label = resolveTagLabel(tagId);
+    if (!label) return null;
+    return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium shrink-0"
+            style={{ background: '#F1F0EC', color: TEXT_SECONDARY, border: `1px solid ${BORDER}` }}>
+            {label}
+        </span>
+    );
+};
 
 // ── Category Badge ──────────────────────────────────────────────────
 const CategoryBadge: React.FC<{ catId: string }> = ({ catId }) => {
@@ -127,7 +164,7 @@ interface ThreadListItemProps {
 }
 
 const ThreadListItem: React.FC<ThreadListItemProps> = ({ post, isAdmin, onClick, onDelete, allPosts }) => {
-    const { title, category, solved, pinned } = decodePost(post.text);
+    const { title, category, tag, solved, pinned } = decodePost(post.text);
     const [replyCount, setReplyCount] = useState<number | null>(null);
     const [lastActivity, setLastActivity] = useState<number>(post.created_at);
     const [lastReplier, setLastReplier] = useState<string>('');
@@ -174,6 +211,7 @@ const ThreadListItem: React.FC<ThreadListItemProps> = ({ post, isAdmin, onClick,
                             </span>
                         )}
                         <CategoryBadge catId={category} />
+                        {tag && <TagBadge tagId={tag} />}
                         {solved && (
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
                                 style={{ background: ACCENT_GREEN_LIGHT, color: ACCENT_GREEN }}>
@@ -469,12 +507,14 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     const [loading, setLoading] = useState(true);
     const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
     const [activeCategory, setActiveCategory] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
     const [showComposer, setShowComposer] = useState(false);
     const setForumTopicActive = useUIStore(state => state.setForumTopicActive);
 
     // New post state
     const [newTitle, setNewTitle] = useState('');
     const [newCategory, setNewCategory] = useState('chung');
+    const [newTag, setNewTag] = useState('');
     const [composerError, setComposerError] = useState('');
     const [creating, setCreating] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
@@ -507,6 +547,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     const handleCreatePost = async () => {
         if (!newTitle.trim()) { setComposerError('Vui lòng nhập tiêu đề!'); return; }
         if (!newContent.trim() && !newImageFile) { setComposerError('Vui lòng nhập nội dung!'); return; }
+        if (!newTag) { setComposerError('Vui lòng chọn chủ đề / chương!'); return; }
         const nick = getNickname();
         if (!nick) { setComposerError('Vui lòng đặt tên hiển thị trước khi đăng bài!'); return; }
         setComposerError('');
@@ -514,12 +555,13 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
         try {
             let imageUrl: string | undefined;
             if (newImageFile) imageUrl = await uploadCommentImage(newImageFile);
-            const encoded = encodePost(newTitle, newContent, newCategory);
+            const encoded = encodePost(newTitle, newContent, newCategory, newTag);
             const newPost = await postComment('GLOBAL_FORUM', encoded, imageUrl);
             setPosts(prev => [newPost, ...prev]);
             setNewTitle('');
             setNewContent('');
             setNewCategory('chung');
+            setNewTag('');
             setNewImageFile(null);
             if (newImagePreview) URL.revokeObjectURL(newImagePreview);
             setNewImagePreview(null);
@@ -532,10 +574,27 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
         }
     };
 
+    // Helpers: get available tags for current category in composer
+    const getTagsForCategory = (cat: string) => {
+        if (cat === 'chung') return GENERAL_TOPICS.map(t => ({ id: t.id, name: t.name }));
+        const catMap: Record<string, string> = { vl10: 'Vật Lý 10', vl11: 'Vật Lý 11', vl12: 'Vật Lý 12' };
+        const grade = CURRICULUM.find(g => g.title === catMap[cat]);
+        return grade ? grade.chapters.map(c => ({ id: c.id, name: c.name })) : [];
+    };
+
     const filteredPosts = posts.filter(p => {
-        if (activeCategory === 'all') return true;
-        const { category } = decodePost(p.text);
-        return category === activeCategory;
+        const { category, title, content } = decodePost(p.text);
+        // Filter by category tab
+        if (activeCategory !== 'all' && category !== activeCategory) return false;
+        // Filter by search query
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            const inTitle = title.toLowerCase().includes(q);
+            const inContent = content.toLowerCase().includes(q);
+            const inAuthor = p.author_name.toLowerCase().includes(q);
+            if (!inTitle && !inContent && !inAuthor) return false;
+        }
+        return true;
     });
 
     // ── Thread Detail View ───────────────────────────────────────────
@@ -566,45 +625,71 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     // ── Thread List View ─────────────────────────────────────────────
     return (
         <div className="w-full mx-auto pb-20 animate-fade-in">
-            {/* ── Control Bar: Category tabs + New post button ────────────── */}
-            <div className="flex items-center justify-between gap-3 py-3 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-                <div className="flex items-center gap-1.5 shrink-0">
-                    {CATEGORIES.map(cat => {
-                        const isActive = activeCategory === cat.id;
-                        const dot = CATEGORY_DOTS[cat.id];
-                        return (
-                            <button
-                                key={cat.id}
-                                onClick={() => setActiveCategory(cat.id)}
-                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all shrink-0"
-                                style={{
-                                    background: isActive ? NAVY : '#FFFFFF',
-                                    color: isActive ? '#FFFFFF' : TEXT_SECONDARY,
-                                    border: `1px solid ${isActive ? NAVY : BORDER}`,
-                                    boxShadow: isActive ? '0 2px 8px rgba(35,73,124,0.2)' : 'none',
-                                }}
-                            >
-                                {dot && <span style={{ width: 7, height: 7, borderRadius: '50%', background: isActive ? 'rgba(255,255,255,0.7)' : dot, display: 'inline-block', flexShrink: 0 }} />}
-                                {cat.label}
-                            </button>
-                        );
-                    })}
+            {/* ── Control Bar: Category tabs + Search + New post button ────── */}
+            <div className="flex flex-col gap-2 py-3">
+                {/* Row 1: Category tabs + New post button */}
+                <div className="flex items-center justify-between gap-3 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        {CATEGORIES.map(cat => {
+                            const isActive = activeCategory === cat.id;
+                            const dot = CATEGORY_DOTS[cat.id];
+                            return (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setActiveCategory(cat.id)}
+                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all shrink-0"
+                                    style={{
+                                        background: isActive ? NAVY : '#FFFFFF',
+                                        color: isActive ? '#FFFFFF' : TEXT_SECONDARY,
+                                        border: `1px solid ${isActive ? NAVY : BORDER}`,
+                                        boxShadow: isActive ? '0 2px 8px rgba(35,73,124,0.2)' : 'none',
+                                    }}
+                                >
+                                    {dot && <span style={{ width: 7, height: 7, borderRadius: '50%', background: isActive ? 'rgba(255,255,255,0.7)' : dot, display: 'inline-block', flexShrink: 0 }} />}
+                                    {cat.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <button
+                        onClick={() => setShowComposer(v => !v)}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold transition-all shrink-0"
+                        style={{
+                            background: showComposer ? NAVY : '#FFFFFF',
+                            color: showComposer ? '#FFFFFF' :  NAVY,
+                            border: `1px solid ${NAVY}`,
+                            boxShadow: showComposer ? '0 2px 8px rgba(35,73,124,0.2)' : 'none',
+                        }}
+                        onMouseEnter={e => { if (!showComposer) { (e.currentTarget as HTMLElement).style.background = NAVY_LIGHT; } }}
+                        onMouseLeave={e => { if (!showComposer) { (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; } }}
+                    >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Tạo chủ đề
+                    </button>
                 </div>
-                <button
-                    onClick={() => setShowComposer(v => !v)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold transition-all shrink-0"
-                    style={{
-                        background: showComposer ? NAVY : '#FFFFFF',
-                        color: showComposer ? '#FFFFFF' :  NAVY,
-                        border: `1px solid ${NAVY}`,
-                        boxShadow: showComposer ? '0 2px 8px rgba(35,73,124,0.2)' : 'none',
-                    }}
-                    onMouseEnter={e => { if (!showComposer) { (e.currentTarget as HTMLElement).style.background = NAVY_LIGHT; } }}
-                    onMouseLeave={e => { if (!showComposer) { (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; } }}
-                >
-                    <Pencil className="w-3.5 h-3.5" />
-                    Tạo chủ đề
-                </button>
+                {/* Row 2: Search bar */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: TEXT_MUTED }} />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Tìm kiếm bài viết, tiêu đề, người đăng..."
+                        className="w-full pl-9 pr-4 py-2 rounded-xl text-[13px] outline-none transition-all"
+                        style={{ background: '#FFFFFF', border: `1px solid ${BORDER}`, color: TEXT_PRIMARY }}
+                        onFocus={e => (e.currentTarget.style.borderColor = NAVY)}
+                        onBlur={e => (e.currentTarget.style.borderColor = BORDER)}
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full"
+                            style={{ color: TEXT_MUTED }}
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* ── Composer (collapsible) ──────────────────────────────────── */}
@@ -632,7 +717,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                             return (
                                 <button
                                     key={cat.id}
-                                    onClick={() => setNewCategory(cat.id)}
+                                    onClick={() => { setNewCategory(cat.id); setNewTag(''); }}
                                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all"
                                     style={{
                                         background: isSelected ? colors.bg : 'transparent',
@@ -645,6 +730,29 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                                 </button>
                             );
                         })}
+                    </div>
+
+                    {/* Tag / Chapter selector */}
+                    <div className="mb-3">
+                        <p className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: TEXT_MUTED }}>
+                            {newCategory === 'chung' ? 'Chủ đề' : 'Chương'}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5" style={{ maxHeight: 120, overflowY: 'auto', scrollbarWidth: 'thin' }}>
+                            {getTagsForCategory(newCategory).map(tag => (
+                                <button
+                                    key={tag.id}
+                                    onClick={() => setNewTag(tag.id)}
+                                    className="px-2.5 py-1 rounded-lg text-[12px] font-medium transition-all"
+                                    style={{
+                                        background: newTag === tag.id ? NAVY : '#F1F0EC',
+                                        color: newTag === tag.id ? '#FFFFFF' : TEXT_SECONDARY,
+                                        border: `1px solid ${newTag === tag.id ? NAVY : BORDER}`,
+                                    }}
+                                >
+                                    {tag.name}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     {/* Title */}
@@ -898,6 +1006,7 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
                 </button>
                 <div className="flex items-center gap-2">
                     <CategoryBadge catId={category} />
+                    <TagBadge tagId={thread.text ? (decodePost(thread.text).tag || '') : ''} />
                     {solved && (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
                             style={{ background: ACCENT_GREEN_LIGHT, color: ACCENT_GREEN }}>
