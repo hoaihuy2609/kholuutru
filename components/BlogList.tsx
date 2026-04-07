@@ -365,6 +365,8 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
                             </article>
                         );
                     })}
+                </div>
+            )}
         </div>
     );
 };

@@ -1,3 +1,4 @@
+import React, { useState, useRef, useEffect } from 'react';
 import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield, Search, FileText, Users } from 'lucide-react';
 import { GradeLevel } from '../types';
 
