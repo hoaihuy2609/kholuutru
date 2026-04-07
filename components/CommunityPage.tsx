@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, MessageCircle, TrendingUp, Shield } from 'lucide-react';
+import { Users } from 'lucide-react';
 import ForumFeed from './ForumFeed';
 
 interface CommunityPageProps {
@@ -45,46 +45,11 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ isAdmin }) => {
                         </div>
                     </div>
 
-                    {/* Info chips */}
-                    <div className="hidden md:flex items-center gap-2">
-                        <span
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium"
-                            style={{ background: '#EEF2F8', color: NAVY }}
-                        >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            Hỏi đáp Vật lý
-                        </span>
-                        <span
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium"
-                            style={{ background: '#EAF3EE', color: '#448361' }}
-                        >
-                            <TrendingUp className="w-3.5 h-3.5" />
-                            Cộng đồng hoạt động
-                        </span>
-                        {isAdmin && (
-                            <span
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold"
-                                style={{ background: '#F3ECF8', color: '#9065B0' }}
-                            >
-                                <Shield className="w-3.5 h-3.5" />
-                                Quản trị viên
-                            </span>
-                        )}
-                    </div>
+
                 </div>
             </div>
 
-            {/* ── Rules Banner (subtle, not intrusive) ─────────────────────── */}
-            <div
-                className="border-b px-5 py-2.5"
-                style={{ background: '#FEFDF9', borderColor: '#F0EDDE' }}
-            >
-                <div className="max-w-4xl mx-auto flex gap-4 text-[11px] flex-wrap" style={{ color: TEXT_SECONDARY }}>
-                    <span>📐 Đặt câu hỏi rõ ràng, kèm công thức nếu cần</span>
-                    <span>·</span>
-                    <span>🤝 Tôn trọng và hỗ trợ lẫn nhau</span>
-                </div>
-            </div>
+
 
             {/* ── Forum Feed ──────────────────────────────────────────────── */}
             <div className="max-w-4xl mx-auto px-4 py-5">
