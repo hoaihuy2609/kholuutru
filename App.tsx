@@ -34,6 +34,7 @@ const BlogDetail = React.lazy(() => import('./components/BlogDetail'));
 const AdminBlogEditor = React.lazy(() => import('./components/AdminBlogEditor'));
 const GlobalSearch = React.lazy(() => import('./components/GlobalSearch'));
 const SolutionEditor = React.lazy(() => import('./components/SolutionEditor'));
+const CommunityPage = React.lazy(() => import('./components/CommunityPage'));
 
 const LazyFallback = () => (
   <div className="flex items-center justify-center h-[40vh]">
@@ -400,6 +401,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const isOnExams = path.startsWith('/exams');
   const isOnNotification = path === '/notifications';
   const isOnSimLab = path === '/lab';
+  const isOnCommunity = path.startsWith('/community');
 
   const hideSidebar = isSimulationFullscreen || isForumTopicActive || path === '/admin/editor' || path === '/admin' || (effectiveIsAdmin && (isCreatingBlog || !!activeAdminBlog));
 
@@ -415,6 +417,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     onOpenNotification: (isActivated || isAdmin) ? () => navigate('/notifications') : undefined,
     onOpenSimLab: (isActivated || isAdmin) ? () => navigate('/lab') : undefined,
     onOpenBlog: (isActivated || isAdmin) ? () => navigate('/blog') : undefined,
+    onOpenCommunity: (isActivated || isAdmin) ? () => navigate('/community') : undefined,
     showExamList: isOnExams,
     showContactBook: path === '/contact-book',
     showStudyPlanner: path === '/planner',
@@ -422,6 +425,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     notificationUnreadCount,
     showSimLab: isOnSimLab,
     showBlog: path.startsWith('/blog'),
+    showCommunity: isOnCommunity,
     isAdmin,
     previewMode,
     onSetPreviewMode: handlePreviewMode,
@@ -436,7 +440,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 
       {/* Mobile Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 shadow-xl transform transition-transform duration-300 ease-out md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#F1F0EC', borderRight: '1px solid #E9E9E7' }}>
-        <Sidebar {...sidebarCommonProps} onSelectGrade={(g) => { navigate(g ? `/grade/${g}` : '/'); setMobileMenuOpen(false); }} onOpenSettings={() => { setSettingsOpen(true); setMobileMenuOpen(false); }} onOpenExamList={(isActivated || isAdmin) ? () => { navigate('/exams'); setMobileMenuOpen(false); } : undefined} onOpenContactBook={(isActivated || isAdmin) ? () => { navigate('/contact-book'); setMobileMenuOpen(false); } : undefined} onOpenStudyPlanner={(isActivated || isAdmin) ? () => { navigate('/planner'); setMobileMenuOpen(false); } : undefined} onOpenNotification={(isActivated || isAdmin) ? () => { navigate('/notifications'); setMobileMenuOpen(false); } : undefined} onOpenSimLab={(isActivated || isAdmin) ? () => { navigate('/lab'); setMobileMenuOpen(false); } : undefined} onOpenBlog={(isActivated || isAdmin) ? () => { navigate('/blog'); setMobileMenuOpen(false); } : undefined} className="w-full" />
+        <Sidebar {...sidebarCommonProps} onSelectGrade={(g) => { navigate(g ? `/grade/${g}` : '/'); setMobileMenuOpen(false); }} onOpenSettings={() => { setSettingsOpen(true); setMobileMenuOpen(false); }} onOpenExamList={(isActivated || isAdmin) ? () => { navigate('/exams'); setMobileMenuOpen(false); } : undefined} onOpenContactBook={(isActivated || isAdmin) ? () => { navigate('/contact-book'); setMobileMenuOpen(false); } : undefined} onOpenStudyPlanner={(isActivated || isAdmin) ? () => { navigate('/planner'); setMobileMenuOpen(false); } : undefined} onOpenNotification={(isActivated || isAdmin) ? () => { navigate('/notifications'); setMobileMenuOpen(false); } : undefined} onOpenSimLab={(isActivated || isAdmin) ? () => { navigate('/lab'); setMobileMenuOpen(false); } : undefined} onOpenBlog={(isActivated || isAdmin) ? () => { navigate('/blog'); setMobileMenuOpen(false); } : undefined} onOpenCommunity={(isActivated || isAdmin) ? () => { navigate('/community'); setMobileMenuOpen(false); } : undefined} className="w-full" />
       </div>
 
       {/* Desktop Sidebar */}
@@ -515,6 +519,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
             <Route path="/notifications" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><NotificationPage onGetNotifications={cloud.getNotifications} onGetFetchedIds={cloud.getFetchedNotificationIds} onMarkFetched={cloud.markNotificationFetched} onFetchLessons={cloud.fetchLessonsFromCloud} onShowToast={useUIStore.getState().showToast} isAdmin={effectiveIsAdmin} onDeleteNotification={cloud.deleteNotification} onCreateNotification={cloud.createCustomNotification} /></Suspense></ErrorBoundary>} />
             <Route path="/lab" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><SimulationLab onBack={() => navigate('/')} /></Suspense></ErrorBoundary>} />
             <Route path="/blog/*" element={<BlogRoutes cloud={cloud} />} />
+            <Route path="/community" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><CommunityPage isAdmin={effectiveIsAdmin} /></Suspense></ErrorBoundary>} />
             <Route path="/admin/editor" element={effectiveIsAdmin ? <ErrorBoundary><Suspense fallback={<LazyFallback />}><SolutionEditor /></Suspense></ErrorBoundary> : <Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

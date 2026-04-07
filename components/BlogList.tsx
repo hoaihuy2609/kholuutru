@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BlogPost } from '../types';
 import { BookOpen, Calendar, ChevronRight, Edit3, Plus, Search, Clock, Filter, Atom, FileText, Tag, MessageCircle } from 'lucide-react';
-import ForumFeed from './ForumFeed';
 
 interface BlogListProps {
     isAdmin: boolean;
@@ -23,7 +22,6 @@ const GRADE_COLORS: Record<number, { bg: string; text: string; dot: string }> = 
 };
 
 const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, onCreateBlog, onBlogsLoaded, getBlogs }) => {
-    const [activeTab, setActiveTab] = useState<'blogs' | 'forum'>('blogs');
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -110,52 +108,8 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
                 )}
             </div>
 
-            {/* Tabs */}
-            <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #E9E9E7', marginBottom: '24px', flexWrap: 'wrap' }}>
-                <button
-                    onClick={() => setActiveTab('blogs')}
-                    style={{
-                        padding: '12px 16px', border: 'none', background: 'transparent', cursor: 'pointer',
-                        fontSize: '15px', fontWeight: 600, position: 'relative',
-                        color: activeTab === 'blogs' ? '#1A1A1A' : '#AEACA8',
-                        transition: 'all 0.2s', whiteSpace: 'nowrap'
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <BookOpen style={{ width: '18px', height: '18px' }} />
-                        Tủ Sách Chuyên Đề
-                    </div>
-                    {activeTab === 'blogs' && (
-                        <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, height: '2px', background: '#1A1A1A', borderRadius: '2px 2px 0 0' }} />
-                    )}
-                </button>
-                <button
-                    onClick={() => setActiveTab('forum')}
-                    style={{
-                        padding: '12px 16px', border: 'none', background: 'transparent', cursor: 'pointer',
-                        fontSize: '15px', fontWeight: 600, position: 'relative',
-                        color: activeTab === 'forum' ? '#6B7CDB' : '#AEACA8',
-                        transition: 'all 0.2s', whiteSpace: 'nowrap'
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <MessageCircle style={{ width: '18px', height: '18px' }} />
-                        Cộng Đồng Hỏi Đáp
-                    </div>
-                    {activeTab === 'forum' && (
-                        <div style={{ position: 'absolute', bottom: -1, left: 0, right: 0, height: '2px', background: '#6B7CDB', borderRadius: '2px 2px 0 0' }} />
-                    )}
-                </button>
-            </div>
-
-            {activeTab === 'forum' ? (
-                <div className="animate-fade-in">
-                    <ForumFeed isAdmin={isAdmin} adminKey={import.meta.env.VITE_COMMENT_ADMIN_KEY} />
-                </div>
-            ) : (
-                <>
-                    {/* Filter Bar */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+            {/* Filter Bar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
                 {gradeTabs.map(tab => (
                     <button
                         key={tab.value}
@@ -411,10 +365,6 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
                             </article>
                         );
                     })}
-                </div>
-            )}
-                </>
-            )}
         </div>
     );
 };

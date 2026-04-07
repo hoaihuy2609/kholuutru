@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield, Search, FileText } from 'lucide-react';
+import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield, Search, FileText, Users } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 // ── Hover Prefetch: tải ngầm chunk khi user lướt chuột qua nút ──────────
@@ -34,6 +33,8 @@ interface SidebarProps {
   showSimLab?: boolean;
   onOpenBlog?: () => void;
   showBlog?: boolean;
+  onOpenCommunity?: () => void;
+  showCommunity?: boolean;
   className?: string;
   isAdmin?: boolean;
   previewMode?: GradeLevel | null;
@@ -51,7 +52,7 @@ const PREVIEW_OPTIONS = [
   { value: String(GradeLevel.Grade10), label: 'Học sinh Lớp 10', color: '#448361', bg: '#EAF3EE', border: '#B7D9C4', dot: '#448361', icon: Activity },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, onOpenBlog, showBlog, className, isAdmin, previewMode, onSetPreviewMode, studentGrade, onOpenSearch, onOpenSolutionEditor }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, onOpenBlog, showBlog, onOpenCommunity, showCommunity, className, isAdmin, previewMode, onSetPreviewMode, studentGrade, onOpenSearch, onOpenSolutionEditor }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -124,14 +125,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           onClick={() => onSelectGrade(null)}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
           style={{
-            background: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog ? '#E3E2DE' : 'transparent',
-            color: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog ? '#1A1A1A' : '#57564F',
-            fontWeight: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog ? 500 : 400,
+            background: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog && !showCommunity ? '#E3E2DE' : 'transparent',
+            color: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog && !showCommunity ? '#1A1A1A' : '#57564F',
+            fontWeight: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog && !showCommunity ? 500 : 400,
           }}
-          onMouseEnter={e => { if (!(currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog)) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
-          onMouseLeave={e => { if (!(currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog)) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          onMouseEnter={e => { if (!(currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog && !showCommunity)) (e.currentTarget as HTMLElement).style.background = '#EBEBEA'; }}
+          onMouseLeave={e => { if (!(currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog && !showCommunity)) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
-          <Home className="w-4 h-4 shrink-0" style={{ color: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog ? '#1A1A1A' : '#AEACA8' }} />
+          <Home className="w-4 h-4 shrink-0" style={{ color: currentGrade === null && !showExamList && !showContactBook && !showStudyPlanner && !showNotification && !showSimLab && !showBlog && !showCommunity ? '#1A1A1A' : '#AEACA8' }} />
           Tổng quan
         </button>
 
@@ -294,6 +295,27 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           >
             <ClipboardList className="w-4 h-4 shrink-0" style={{ color: showBlog ? '#D9730D' : '#AEACA8' }} />
             <span>Góc Học Tập</span>
+          </button>
+        )}
+
+        {/* Cộng Đồng Hỏi Đáp */}
+        {onOpenCommunity && (
+          <button
+            onClick={() => { onOpenCommunity(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
+            style={{
+              background: showCommunity ? '#EEF0FB' : 'transparent',
+              color: showCommunity ? '#6B7CDB' : '#57564F',
+              fontWeight: showCommunity ? 500 : 400,
+            }}
+            onMouseEnter={e => {
+              prefetch('CommunityPage', () => import('./CommunityPage'));
+              if (!showCommunity) (e.currentTarget as HTMLElement).style.background = '#EBEBEA';
+            }}
+            onMouseLeave={e => { if (!showCommunity) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          >
+            <Users className="w-4 h-4 shrink-0" style={{ color: showCommunity ? '#6B7CDB' : '#AEACA8' }} />
+            <span>Cộng Đồng Hỏi Đáp</span>
           </button>
         )}
 
