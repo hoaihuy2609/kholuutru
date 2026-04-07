@@ -234,11 +234,17 @@ const ReplyItem: React.FC<ReplyItemProps> = ({ comment, index, isAdmin, adminKey
     const rank = isAdminUser ? 'Giảng viên' : getUserRank(authorAllRepliesCount);
 
     return (
-        <div className="flex border-b" style={{ borderColor: BORDER, background: index % 2 === 0 ? '#FFFFFF' : '#FAFAF9' }}>
-            {/* Left profile column */}
-            <div className="w-[130px] md:w-[150px] p-4 flex flex-col items-center shrink-0 border-r" style={{ borderColor: BORDER }}>
-                <Avatar name={comment.author_name} size={52} />
-                <span className="text-[13px] font-bold mt-2 text-center break-words w-full"
+        <div
+            className="flex overflow-hidden border rounded-xl"
+            style={{ borderColor: BORDER, background: '#FFFFFF' }}
+        >
+            {/* Left profile column – subtle warm bg */}
+            <div
+                className="w-[110px] md:w-[130px] p-4 flex flex-col items-center shrink-0 border-r"
+                style={{ borderColor: BORDER, background: '#F7F6F3' }}
+            >
+                <Avatar name={comment.author_name} size={46} />
+                <span className="text-[12px] font-bold mt-2 text-center break-words w-full"
                     style={{ color: NAVY }}>
                     {comment.author_name}
                 </span>
@@ -253,7 +259,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({ comment, index, isAdmin, adminKey
                         {rank}
                     </span>
                 )}
-                <div className="mt-2 text-[11px]" style={{ color: TEXT_MUTED }}>
+                <div className="mt-1.5 text-[10px]" style={{ color: TEXT_MUTED }}>
                     {authorAllRepliesCount} bài viết
                 </div>
             </div>
@@ -288,7 +294,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({ comment, index, isAdmin, adminKey
                             <img
                                 src={comment.image_url}
                                 alt="Ảnh đính kèm"
-                                className="max-h-[400px] rounded-lg object-contain"
+                                className="max-h-[400px] rounded-xl object-contain"
                                 loading="lazy"
                             />
                         </div>
@@ -801,7 +807,7 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
     replies.forEach(r => { replierCounts[r.author_name] = (replierCounts[r.author_name] || 0) + 1; });
 
     return (
-        <div className="w-full mx-auto pb-20 animate-fade-in bg-white min-h-screen">
+        <div className="w-full mx-auto pb-20 animate-fade-in min-h-screen" style={{ background: '#F1F0EC' }}>
             {/* Sticky nav header */}
             <div className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3 shadow-md"
                 style={{ background: NAVY }}>
@@ -822,7 +828,7 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
             </div>
 
             {/* Thread title */}
-            <div className="px-5 pt-5 pb-3 border-b" style={{ borderColor: BORDER }}>
+            <div className="px-5 pt-5 pb-4" style={{ background: '#F1F0EC' }}>
                 <h1 className="text-[22px] md:text-[24px] font-bold leading-snug" style={{ color: TEXT_PRIMARY }}>{title}</h1>
                 <div className="flex items-center gap-2 mt-2 text-[12px]" style={{ color: TEXT_SECONDARY }}>
                     <span className="font-semibold" style={{ color: NAVY }}>{thread.author_name}</span>
@@ -841,12 +847,21 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
                 </div>
             </div>
 
-            {/* Original Post (Post #1) */}
-            <div className="flex border-b" style={{ borderColor: BORDER }}>
+            {/* Cards zone – warm background, all cards stacked with gap */}
+            <div className="px-4 flex flex-col gap-3">
+
+            {/* Original Post card (Post #1) */}
+            <div
+                className="flex overflow-hidden border rounded-xl"
+                style={{ borderColor: BORDER, background: '#FFFFFF' }}
+            >
                 {/* Left profile column */}
-                <div className="w-[130px] md:w-[150px] p-4 flex flex-col items-center shrink-0 border-r" style={{ borderColor: BORDER, background: '#FAFAF9' }}>
-                    <Avatar name={thread.author_name} size={56} />
-                    <span className="text-[13px] font-bold mt-2 text-center break-words w-full" style={{ color: NAVY }}>
+                <div
+                    className="w-[110px] md:w-[130px] p-4 flex flex-col items-center shrink-0 border-r"
+                    style={{ borderColor: BORDER, background: '#F7F6F3' }}
+                >
+                    <Avatar name={thread.author_name} size={50} />
+                    <span className="text-[12px] font-bold mt-2 text-center break-words w-full" style={{ color: NAVY }}>
                         {thread.author_name}
                     </span>
                     {isAdminAuthor ? (
@@ -854,7 +869,7 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
                     ) : (
                         <span className="mt-1 text-[11px] text-center px-1" style={{ color: TEXT_MUTED }}>{rank}</span>
                     )}
-                    <div className="mt-2 text-[11px]" style={{ color: TEXT_MUTED }}>{authorPostCount} bài viết</div>
+                    <div className="mt-1.5 text-[10px]" style={{ color: TEXT_MUTED }}>{authorPostCount} bài viết</div>
                 </div>
 
                 {/* Right content */}
@@ -872,7 +887,7 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
                         <p className="text-[15px] leading-relaxed whitespace-pre-wrap" style={{ color: TEXT_PRIMARY }}>{content}</p>
                         {thread.image_url && (
                             <div className="mt-4 pt-4 border-t border-dashed" style={{ borderColor: BORDER }}>
-                                <img src={thread.image_url} className="max-h-[500px] rounded-lg object-contain" loading="lazy" />
+                                <img src={thread.image_url} className="max-h-[500px] rounded-xl object-contain" loading="lazy" />
                             </div>
                         )}
                     </div>
@@ -894,16 +909,16 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
                 </div>
             </div>
 
-            {/* Reply count banner */}
+            {/* Reply count divider label */}
             {replies.length > 0 && (
-                <div className="flex items-center gap-2 px-5 py-2.5 border-b text-[13px] font-semibold"
-                    style={{ borderColor: BORDER, background: '#F1F0EC', color: TEXT_SECONDARY }}>
-                    <MessageCircle className="w-4 h-4" />
+                <div className="flex items-center gap-2 pt-1 pb-0 text-[12px] font-semibold uppercase tracking-wide"
+                    style={{ color: TEXT_MUTED }}>
+                    <MessageCircle className="w-3.5 h-3.5" />
                     {replies.length} câu trả lời
                 </div>
             )}
 
-            {/* Replies */}
+            {/* Replies – each is a standalone card */}
             {loadingReplies ? (
                 <div className="flex items-center justify-center gap-2 py-10" style={{ color: TEXT_MUTED }}>
                     <RefreshCw className="w-4 h-4 animate-spin" />
@@ -928,8 +943,10 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
                 ))
             )}
 
-            {/* Reply composer */}
-            <div className="p-5 border-t-2" style={{ borderColor: BORDER }}>
+            </div>{/* end cards zone */}
+
+            {/* Reply composer – sits outside the warm zone, white bg */}
+            <div className="mx-4 mt-3 mb-4 p-5 rounded-xl border" style={{ borderColor: BORDER, background: '#FFFFFF' }}>
                 <h3 className="text-[14px] font-bold mb-3" style={{ color: TEXT_PRIMARY }}>
                     Gửi câu trả lời
                 </h3>
