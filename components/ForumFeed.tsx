@@ -776,7 +776,6 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
 }) => {
     const [replies, setReplies] = useState<ExamComment[]>([]);
     const [loadingReplies, setLoadingReplies] = useState(true);
-    const [isSolved, setIsSolved] = useState(solved);
     const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
@@ -917,7 +916,7 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
                 <span className="text-white opacity-40 text-sm">/</span>
                 <div className="flex items-center gap-2">
                     <CategoryBadge catId={category} />
-                    {isSolved && (
+                    {solved && (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded"
                             style={{ background: ACCENT_GREEN_LIGHT, color: ACCENT_GREEN }}>
                             <CheckCircle className="w-3 h-3" /> Đã giải đáp
@@ -996,14 +995,7 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
                         <button className="flex items-center gap-1 hover:text-green-600 transition-colors font-medium">
                             <ThumbsUp className="w-3.5 h-3.5" /> Hữu ích
                         </button>
-                        {isAdmin && !isSolved && (
-                            <button
-                                onClick={() => setIsSolved(true)}
-                                className="flex items-center gap-1 font-semibold transition-colors"
-                                style={{ color: ACCENT_GREEN }}>
-                                <CheckCircle className="w-3.5 h-3.5" /> Đánh dấu đã giải đáp
-                            </button>
-                        )}
+
                     </div>
                 </div>
             </div>
