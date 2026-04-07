@@ -305,8 +305,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             onClick={() => { onOpenCommunity(); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
             style={{
-              background: showCommunity ? '#EEF0FB' : 'transparent',
-              color: showCommunity ? '#6B7CDB' : '#57564F',
+              background: showCommunity ? '#FEF9C3' : 'transparent',
+              color: showCommunity ? '#EAB308' : '#57564F',
               fontWeight: showCommunity ? 500 : 400,
             }}
             onMouseEnter={e => {
@@ -315,7 +315,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             }}
             onMouseLeave={e => { if (!showCommunity) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
-            <Users className="w-4 h-4 shrink-0" style={{ color: showCommunity ? '#6B7CDB' : '#AEACA8' }} />
+            <Users className="w-4 h-4 shrink-0" style={{ color: showCommunity ? '#EAB308' : '#AEACA8' }} />
             <span>Cộng Đồng Hỏi Đáp</span>
           </button>
         )}
