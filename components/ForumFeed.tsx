@@ -143,54 +143,57 @@ const ThreadListItem: React.FC<ThreadListItemProps> = ({ post, isAdmin, onClick,
 
     return (
         <div
-            className="flex items-stretch gap-0 bg-white border-b cursor-pointer group transition-colors"
-            style={{ borderColor: BORDER }}
+            className="flex items-stretch gap-0 cursor-pointer group transition-all"
+            style={{ background: '#FFFFFF', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: `1px solid ${BORDER}`, marginBottom: 6 }}
             onClick={onClick}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = '0 3px 12px rgba(0,0,0,0.08)'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'}
         >
             {/* Left accent for pinned */}
-            {pinned && <div className="w-1 shrink-0 rounded-l" style={{ background: '#D9730D' }} />}
+            {pinned && <div className="w-1 shrink-0" style={{ background: '#D9730D', borderRadius: '12px 0 0 12px' }} />}
 
             <div className="flex-1 flex items-center gap-4 px-5 py-4">
                 {/* Avatar */}
-                <Avatar name={post.author_name} size={42} />
+                <Avatar name={post.author_name} size={40} />
 
                 {/* Main content */}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                         {pinned && (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded"
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
                                 style={{ background: '#FEF3C7', color: '#B45309' }}>
                                 <Pin className="w-3 h-3" /> Ghim
                             </span>
                         )}
                         <CategoryBadge catId={category} />
                         {solved && (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded"
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
                                 style={{ background: ACCENT_GREEN_LIGHT, color: ACCENT_GREEN }}>
                                 <CheckCircle className="w-3 h-3" /> Đã giải đáp
                             </span>
                         )}
-                        <h3 className="font-semibold text-[15px] group-hover:underline truncate"
-                            style={{ color: NAVY }}>
-                            {title}
-                        </h3>
                     </div>
-                    <div className="text-[12px] flex items-center gap-1.5" style={{ color: TEXT_SECONDARY }}>
-                        <span className="font-semibold" style={{ color: TEXT_PRIMARY }}>{post.author_name}</span>
-                        <span>·</span>
+                    <h3 className="font-semibold text-[15px] group-hover:text-blue-700 truncate mt-0.5 transition-colors"
+                        style={{ color: NAVY }}>
+                        {title}
+                    </h3>
+                    <div className="text-[12px] flex items-center gap-1.5 mt-1" style={{ color: TEXT_SECONDARY }}>
+                        <span className="font-medium" style={{ color: TEXT_PRIMARY }}>{post.author_name}</span>
+                        <span style={{ color: TEXT_MUTED }}>·</span>
                         <span>{timeAgo(post.created_at)}</span>
+                        {replyCount !== null && replyCount > 0 && (
+                            <>
+                                <span style={{ color: TEXT_MUTED }}>·</span>
+                                <span className="inline-flex items-center gap-1" style={{ color: NAVY }}>
+                                    <MessageCircle className="w-3 h-3" /> {replyCount}
+                                </span>
+                            </>
+                        )}
                     </div>
                 </div>
 
                 {/* Stats columns */}
                 <div className="hidden md:flex items-center gap-6 shrink-0">
-                    {/* Replies */}
-                    <div className="text-center min-w-[50px]">
-                        <div className="text-[16px] font-bold" style={{ color: replyCount && replyCount > 0 ? NAVY : TEXT_MUTED }}>
-                            {replyCount !== null ? replyCount : '—'}
-                        </div>
-                        <div className="text-[11px]" style={{ color: TEXT_MUTED }}>Trả lời</div>
-                    </div>
                     {/* Last activity */}
                     <div className="text-right min-w-[100px]">
                         {lastReplier ? (
@@ -236,87 +239,74 @@ const ReplyItem: React.FC<ReplyItemProps> = ({ comment, index, isAdmin, adminKey
 
     return (
         <div
-            className="flex overflow-hidden border rounded-xl"
-            style={{ borderColor: BORDER, background: '#FFFFFF' }}
+            className="overflow-hidden transition-all"
+            style={{ background: '#FFFFFF', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', border: `1px solid ${BORDER}` }}
         >
-            {/* Left profile column – subtle warm bg */}
-            <div
-                className="w-[110px] md:w-[130px] p-4 flex flex-col items-center shrink-0 border-r"
-                style={{ borderColor: BORDER, background: '#F7F6F3' }}
-            >
-                <Avatar name={comment.author_name} size={46} />
-                <span className="text-[12px] font-bold mt-2 text-center break-words w-full"
-                    style={{ color: NAVY }}>
-                    {comment.author_name}
-                </span>
-                {isAdminUser && (
-                    <span className="mt-1 px-2 py-0.5 rounded text-[10px] font-bold text-white"
-                        style={{ background: NAVY }}>
-                        Giảng viên
-                    </span>
-                )}
-                {!isAdminUser && (
-                    <span className="mt-1 text-[11px] text-center px-1" style={{ color: TEXT_MUTED }}>
-                        {rank}
-                    </span>
-                )}
-                <div className="mt-1.5 text-[10px]" style={{ color: TEXT_MUTED }}>
-                    {authorAllRepliesCount} bài viết
+            {/* Comment header row */}
+            <div className="flex items-center gap-3 px-4 py-3" style={{ background: '#FAFAF9', borderBottom: `1px solid ${BORDER}` }}>
+                <Avatar name={comment.author_name} size={34} />
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-bold" style={{ color: NAVY }}>{comment.author_name}</span>
+                        {isAdminUser && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold text-white" style={{ background: NAVY }}>Giảng viên</span>
+                        )}
+                        {!isAdminUser && (
+                            <span className="text-[11px]" style={{ color: TEXT_MUTED }}>{rank}</span>
+                        )}
+                    </div>
+                    <div className="text-[11px]" style={{ color: TEXT_MUTED }}>
+                        {new Date(comment.created_at).toLocaleDateString('vi-VN')} lúc {new Date(comment.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                        <span className="mx-1">·</span>
+                        {authorAllRepliesCount} bài viết
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                    <button className="transition-colors p-1 rounded-md"
+                        style={{ color: TEXT_MUTED }}
+                        title="Chia sẻ"
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = NAVY}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = TEXT_MUTED}
+                        onClick={() => { try { navigator.clipboard.writeText(window.location.href); } catch {} }}>
+                        <Share2 className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[12px] font-semibold" style={{ color: TEXT_MUTED }}>#{index + 2}</span>
                 </div>
             </div>
 
-            {/* Right content */}
-            <div className="flex-1 min-w-0 flex flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-2 border-b" style={{ borderColor: '#F0F0EE' }}>
-                    <span className="text-[12px]" style={{ color: TEXT_SECONDARY }}>
-                        {new Date(comment.created_at).toLocaleDateString('vi-VN')} lúc {new Date(comment.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <div className="flex items-center gap-2">
-                        <button className="text-[12px] font-medium transition-colors"
-                            style={{ color: TEXT_MUTED }}
-                            title="Chia sẻ"
-                            onClick={() => { try { navigator.clipboard.writeText(window.location.href); } catch {} }}>
-                            <Share2 className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="text-[12px] font-semibold" style={{ color: TEXT_MUTED }}>
-                            #{index + 2}
-                        </span>
+            {/* Body */}
+            <div className="px-5 py-4">
+                <p className="text-[15px] leading-relaxed whitespace-pre-wrap" style={{ color: TEXT_PRIMARY }}>
+                    {comment.text}
+                </p>
+                {comment.image_url && (
+                    <div className="mt-4">
+                        <img
+                            src={comment.image_url}
+                            alt="Ảnh đính kèm"
+                            className="max-h-[400px] rounded-xl object-contain"
+                            loading="lazy"
+                        />
                     </div>
-                </div>
+                )}
+            </div>
 
-                {/* Body */}
-                <div className="p-4 flex-1">
-                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap" style={{ color: TEXT_PRIMARY }}>
-                        {comment.text}
-                    </p>
-                    {comment.image_url && (
-                        <div className="mt-4 pt-4 border-t border-dashed" style={{ borderColor: BORDER }}>
-                            <img
-                                src={comment.image_url}
-                                alt="Ảnh đính kèm"
-                                className="max-h-[400px] rounded-xl object-contain"
-                                loading="lazy"
-                            />
-                        </div>
-                    )}
-                </div>
-
-                {/* Footer actions */}
-                <div className="flex items-center gap-4 px-4 pb-3 text-[12px]" style={{ color: TEXT_MUTED }}>
-                    <button className="flex items-center gap-1 hover:text-green-600 transition-colors font-medium">
-                        <ThumbsUp className="w-3.5 h-3.5" /> Hữu ích
+            {/* Footer actions */}
+            <div className="flex items-center gap-4 px-5 py-2.5 text-[12px]" style={{ color: TEXT_MUTED, borderTop: `1px solid #F0F0EE` }}>
+                <button className="flex items-center gap-1 hover:text-green-600 transition-colors font-medium p-1 rounded-md"
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F0FFF4'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+                    <ThumbsUp className="w-3.5 h-3.5" /> Hữu ích
+                </button>
+                {isAdmin && (
+                    <button
+                        onClick={() => onDelete(comment.id)}
+                        className="ml-auto font-semibold transition-colors hover:underline"
+                        style={{ color: '#E03E3E' }}
+                    >
+                        Xóa
                     </button>
-                    {isAdmin && (
-                        <button
-                            onClick={() => onDelete(comment.id)}
-                            className="ml-auto font-semibold transition-colors hover:underline"
-                            style={{ color: '#E03E3E' }}
-                        >
-                            Xóa
-                        </button>
-                    )}
-                </div>
+                )}
             </div>
         </div>
     );
@@ -576,37 +566,61 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     // ── Thread List View ─────────────────────────────────────────────
     return (
         <div className="w-full mx-auto pb-20 animate-fade-in">
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3.5 text-white shadow-md rounded-t-xl"
-                style={{ background: NAVY }}>
-                <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                        <MessageCircle className="w-4.5 h-4.5 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="font-bold text-[16px] leading-tight">Diễn đàn Thảo Luận</h1>
-                        <p className="text-[11px] opacity-70">Hỏi đáp & trao đổi kiến thức Vật lý</p>
-                    </div>
+            {/* ── Control Bar: Category tabs + New post button ────────────── */}
+            <div className="flex items-center justify-between gap-3 py-3 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {CATEGORIES.map(cat => {
+                        const isActive = activeCategory === cat.id;
+                        return (
+                            <button
+                                key={cat.id}
+                                onClick={() => setActiveCategory(cat.id)}
+                                className="flex items-center gap-1 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all shrink-0"
+                                style={{
+                                    background: isActive ? NAVY : '#FFFFFF',
+                                    color: isActive ? '#FFFFFF' : TEXT_SECONDARY,
+                                    border: `1px solid ${isActive ? NAVY : BORDER}`,
+                                    boxShadow: isActive ? '0 2px 8px rgba(35,73,124,0.2)' : 'none',
+                                }}
+                            >
+                                {cat.icon && <span>{cat.icon}</span>}
+                                {cat.label}
+                            </button>
+                        );
+                    })}
                 </div>
                 <button
                     onClick={() => setShowComposer(v => !v)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-semibold transition-all"
-                    style={{ background: showComposer ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.15)', color: '#fff' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.25)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = showComposer ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.15)'}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold transition-all shrink-0"
+                    style={{
+                        background: showComposer ? NAVY : '#FFFFFF',
+                        color: showComposer ? '#FFFFFF' :  NAVY,
+                        border: `1px solid ${NAVY}`,
+                        boxShadow: showComposer ? '0 2px 8px rgba(35,73,124,0.2)' : 'none',
+                    }}
+                    onMouseEnter={e => { if (!showComposer) { (e.currentTarget as HTMLElement).style.background = NAVY_LIGHT; } }}
+                    onMouseLeave={e => { if (!showComposer) { (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; } }}
                 >
                     <Pencil className="w-3.5 h-3.5" />
                     Tạo chủ đề
                 </button>
             </div>
 
-            {/* Composer (collapsible) */}
+            {/* ── Composer (collapsible) ──────────────────────────────────── */}
             {showComposer && (
-                <div className="border border-t-0 p-5 animate-fade-in" style={{ borderColor: BORDER, background: '#FAFAF9' }}>
-                    <h2 className="font-bold text-[14px] mb-4" style={{ color: TEXT_PRIMARY }}>Tạo chủ đề mới</h2>
+                <div className="rounded-2xl p-5 mb-4 animate-fade-in" style={{ background: '#FFFFFF', border: `1px solid ${BORDER}`, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="font-bold text-[15px]" style={{ color: TEXT_PRIMARY }}>✏️ Tạo chủ đề mới</h2>
+                        <button onClick={() => { setShowComposer(false); setComposerError(''); }}
+                            className="p-1.5 rounded-lg transition-colors" style={{ color: TEXT_MUTED }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
 
-                    {/* Nickname */}
-                    <div className="mb-3 max-w-xs"><NicknameBar /></div>
+                    {/* Nickname inline */}
+                    <div className="mb-3"><NicknameBar /></div>
 
                     {/* Category selector */}
                     <div className="flex flex-wrap gap-2 mb-3">
@@ -617,11 +631,11 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                                 <button
                                     key={cat.id}
                                     onClick={() => setNewCategory(cat.id)}
-                                    className="flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-semibold border transition-all"
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all"
                                     style={{
-                                        background: isSelected ? colors.bg : '#FFFFFF',
+                                        background: isSelected ? colors.bg : 'transparent',
                                         color: isSelected ? colors.text : TEXT_SECONDARY,
-                                        borderColor: isSelected ? colors.text : BORDER,
+                                        border: `1px solid ${isSelected ? colors.text + '40' : BORDER}`,
                                     }}
                                 >
                                     {cat.icon} {cat.label}
@@ -634,26 +648,26 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                     <input
                         type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)}
                         placeholder="Tiêu đề thảo luận..."
-                        className="w-full px-3 py-2.5 text-[14px] border rounded-lg mb-2 outline-none font-semibold placeholder-[#AEACA8] transition-colors"
-                        style={{ borderColor: BORDER, color: TEXT_PRIMARY }}
+                        className="w-full px-4 py-3 text-[14px] rounded-xl mb-2.5 outline-none font-semibold placeholder-[#AEACA8] transition-all"
+                        style={{ background: BG_WARM, color: TEXT_PRIMARY, border: `1.5px solid transparent` }}
                         onFocus={e => e.currentTarget.style.borderColor = NAVY}
-                        onBlur={e => e.currentTarget.style.borderColor = BORDER}
+                        onBlur={e => e.currentTarget.style.borderColor = 'transparent'}
                     />
 
                     {/* Content */}
                     <textarea
                         value={newContent} onChange={e => setNewContent(e.target.value)}
                         placeholder="Mô tả câu hỏi hoặc nội dung thảo luận..."
-                        className="w-full resize-none outline-none px-3 py-2.5 text-[14px] border rounded-lg min-h-[100px] transition-colors"
-                        style={{ borderColor: BORDER, color: TEXT_PRIMARY }}
+                        className="w-full resize-none outline-none px-4 py-3 text-[14px] rounded-xl min-h-[100px] transition-all"
+                        style={{ background: BG_WARM, color: TEXT_PRIMARY, border: `1.5px solid transparent` }}
                         onFocus={e => e.currentTarget.style.borderColor = NAVY}
-                        onBlur={e => e.currentTarget.style.borderColor = BORDER}
+                        onBlur={e => e.currentTarget.style.borderColor = 'transparent'}
                     />
 
                     {/* Image preview */}
                     {newImagePreview && (
                         <div className="relative inline-block mt-2">
-                            <img src={newImagePreview} className="rounded-lg border max-h-28 object-cover" style={{ borderColor: BORDER }} />
+                            <img src={newImagePreview} className="rounded-xl max-h-28 object-cover" style={{ border: `1px solid ${BORDER}` }} />
                             <button onClick={() => { setNewImageFile(null); if (newImagePreview) URL.revokeObjectURL(newImagePreview); setNewImagePreview(null); if (fileRef.current) fileRef.current.value = ''; }}
                                 className="absolute -top-2 -right-2 w-5 h-5 bg-black text-white rounded-full flex items-center justify-center font-bold text-xs hover:bg-red-500">×</button>
                         </div>
@@ -666,66 +680,29 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                     )}
 
                     {/* Actions */}
-                    <div className="flex items-center justify-between mt-3">
+                    <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: `1px solid ${BORDER}` }}>
                         <div>
                             <input ref={fileRef} type="file" accept="image/*" className="hidden"
                                 onChange={e => { const f = e.target.files?.[0]; if (!f) return; if (f.size > 5 * 1024 * 1024) { setComposerError('Ảnh tối đa 5MB'); return; } setNewImageFile(f); setNewImagePreview(URL.createObjectURL(f)); }} />
                             <button onClick={() => fileRef.current?.click()}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
-                                style={{ color: TEXT_SECONDARY, borderColor: BORDER, background: '#FFFFFF' }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                                style={{ color: TEXT_SECONDARY }}
                                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
-                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FFFFFF'}>
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
                                 <ImageIcon className="w-3.5 h-3.5" /> Đính kèm ảnh
                             </button>
                         </div>
-                        <div className="flex gap-2">
-                            <button onClick={() => { setShowComposer(false); setComposerError(''); }}
-                                className="px-4 py-1.5 rounded-lg text-xs font-medium border transition-colors"
-                                style={{ color: TEXT_SECONDARY, borderColor: BORDER, background: '#FFFFFF' }}>
-                                Hủy
-                            </button>
-                            <button onClick={handleCreatePost} disabled={creating || !newTitle.trim()}
-                                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-                                style={{ background: NAVY, color: '#fff' }}>
-                                {creating ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Đang đăng...</> : <><Send className="w-3.5 h-3.5" /> Đăng bài</>}
-                            </button>
-                        </div>
+                        <button onClick={handleCreatePost} disabled={creating || !newTitle.trim()}
+                            className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-[13px] font-semibold transition-all disabled:opacity-50"
+                            style={{ background: NAVY, color: '#fff', boxShadow: '0 2px 8px rgba(35,73,124,0.2)' }}>
+                            {creating ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Đang đăng...</> : <><Send className="w-3.5 h-3.5" /> Đăng bài</>}
+                        </button>
                     </div>
                 </div>
             )}
 
-            {/* Category filter tabs */}
-            <div className="flex items-center gap-1 px-4 py-2.5 border-b overflow-x-auto"
-                style={{ borderColor: BORDER, background: '#FFFFFF', scrollbarWidth: 'none' }}>
-                {CATEGORIES.map(cat => {
-                    const isActive = activeCategory === cat.id;
-                    return (
-                        <button
-                            key={cat.id}
-                            onClick={() => setActiveCategory(cat.id)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold whitespace-nowrap transition-all shrink-0"
-                            style={{
-                                background: isActive ? NAVY : 'transparent',
-                                color: isActive ? '#FFFFFF' : TEXT_SECONDARY,
-                            }}
-                        >
-                            {cat.icon && <span>{cat.icon}</span>}
-                            {cat.label}
-                        </button>
-                    );
-                })}
-            </div>
-
-            {/* Column headers (desktop) */}
-            <div className="hidden md:flex items-center px-5 py-2 border-b text-[11px] uppercase font-semibold tracking-wide"
-                style={{ borderColor: BORDER, background: '#F1F0EC', color: TEXT_MUTED }}>
-                <div className="flex-1">Chủ đề</div>
-                <div className="w-[50px] text-center">Trả lời</div>
-                <div className="w-[120px] text-right ml-6 mr-1">Hoạt động cuối</div>
-            </div>
-
-            {/* Thread list */}
-            <div className="bg-white rounded-b-xl overflow-hidden border border-t-0" style={{ borderColor: BORDER }}>
+            {/* ── Thread list ─────────────────────────────────────────────── */}
+            <div className="flex flex-col">
                 {loading && (
                     <div className="flex items-center justify-center gap-2 py-16" style={{ color: TEXT_MUTED }}>
                         <RefreshCw className="w-5 h-5 animate-spin" />
@@ -733,7 +710,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                     </div>
                 )}
                 {!loading && filteredPosts.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl" style={{ background: '#FFFFFF', border: `1px solid ${BORDER}` }}>
                         <BookOpen className="w-10 h-10 mb-3" style={{ color: TEXT_MUTED }} />
                         <p className="text-sm font-medium" style={{ color: TEXT_MUTED }}>Chưa có chủ đề nào.</p>
                         <p className="text-xs mt-1" style={{ color: TEXT_MUTED }}>Hãy là người đầu tiên đặt câu hỏi!</p>
@@ -907,16 +884,19 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
     return (
         <div className="w-full mx-auto pb-20 animate-fade-in min-h-screen bg-transparent">
             {/* Clean nav header */}
-            <div className="flex items-center gap-3 px-4 py-4 pt-6">
-                <button onClick={onBack} className="flex items-center gap-1.5 text-[14px] font-semibold transition-opacity" style={{ color: TEXT_SECONDARY }}>
+            <div className="flex items-center gap-3 py-4">
+                <button onClick={onBack}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold transition-all"
+                    style={{ color: TEXT_SECONDARY }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
                     <ChevronLeft className="w-4 h-4" />
                     Quay lại
                 </button>
-                <div className="w-[1px] h-4 mx-2" style={{ background: BORDER }} />
                 <div className="flex items-center gap-2">
                     <CategoryBadge catId={category} />
                     {solved && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded"
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
                             style={{ background: ACCENT_GREEN_LIGHT, color: ACCENT_GREEN }}>
                             <CheckCircle className="w-3 h-3" /> Đã giải đáp
                         </span>
@@ -925,15 +905,15 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
             </div>
 
             {/* Thread title */}
-            <div className="px-5 pt-2 pb-4">
+            <div className="pb-5">
                 <h1 className="text-[22px] md:text-[24px] font-bold leading-snug" style={{ color: TEXT_PRIMARY }}>{title}</h1>
                 <div className="flex items-center gap-2 mt-2 text-[12px]" style={{ color: TEXT_SECONDARY }}>
                     <span className="font-semibold" style={{ color: NAVY }}>{thread.author_name}</span>
-                    <span>·</span>
+                    <span style={{ color: TEXT_MUTED }}>·</span>
                     <span>{new Date(thread.created_at).toLocaleDateString('vi-VN')} lúc {new Date(thread.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
                     {isAdmin && (
                         <>
-                            <span>·</span>
+                            <span style={{ color: TEXT_MUTED }}>·</span>
                             <button
                                 onClick={() => onDeletePost(thread.id)}
                                 className="font-semibold hover:underline" style={{ color: '#E03E3E' }}>
@@ -944,58 +924,52 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
                 </div>
             </div>
 
-            {/* Cards zone – warm background, all cards stacked with gap */}
-            <div className="px-4 flex flex-col gap-3">
+            {/* Cards zone */}
+            <div className="flex flex-col gap-3">
 
             {/* Original Post card (Post #1) */}
             <div
-                className="flex overflow-hidden border rounded-xl"
-                style={{ borderColor: BORDER, background: '#FFFFFF' }}
+                className="overflow-hidden"
+                style={{ background: '#FFFFFF', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', border: `1px solid ${BORDER}` }}
             >
-                {/* Left profile column */}
-                <div
-                    className="w-[110px] md:w-[130px] p-4 flex flex-col items-center shrink-0 border-r"
-                    style={{ borderColor: BORDER, background: '#F7F6F3' }}
-                >
-                    <Avatar name={thread.author_name} size={50} />
-                    <span className="text-[12px] font-bold mt-2 text-center break-words w-full" style={{ color: NAVY }}>
-                        {thread.author_name}
-                    </span>
-                    {isAdminAuthor ? (
-                        <span className="mt-1 px-2 py-0.5 rounded text-[10px] font-bold text-white" style={{ background: NAVY }}>Giảng viên</span>
-                    ) : (
-                        <span className="mt-1 text-[11px] text-center px-1" style={{ color: TEXT_MUTED }}>{rank}</span>
-                    )}
-                    <div className="mt-1.5 text-[10px]" style={{ color: TEXT_MUTED }}>{authorPostCount} bài viết</div>
+                {/* Post header */}
+                <div className="flex items-center gap-3 px-5 py-3" style={{ background: '#FAFAF9', borderBottom: `1px solid ${BORDER}` }}>
+                    <Avatar name={thread.author_name} size={38} />
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[13px] font-bold" style={{ color: NAVY }}>{thread.author_name}</span>
+                            {isAdminAuthor ? (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold text-white" style={{ background: NAVY }}>Giảng viên</span>
+                            ) : (
+                                <span className="text-[11px]" style={{ color: TEXT_MUTED }}>{rank}</span>
+                            )}
+                        </div>
+                        <div className="text-[11px]" style={{ color: TEXT_MUTED }}>
+                            {new Date(thread.created_at).toLocaleDateString('vi-VN')} lúc {new Date(thread.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                            <span className="mx-1">·</span>
+                            {authorPostCount} bài viết
+                        </div>
+                    </div>
+                    <span className="text-[12px] font-semibold shrink-0" style={{ color: TEXT_MUTED }}>#1</span>
                 </div>
 
-                {/* Right content */}
-                <div className="flex-1 min-w-0 flex flex-col">
-                    {/* Post header */}
-                    <div className="flex items-center justify-between px-4 py-2 border-b" style={{ borderColor: '#F0F0EE' }}>
-                        <span className="text-[12px]" style={{ color: TEXT_SECONDARY }}>
-                            {new Date(thread.created_at).toLocaleDateString('vi-VN')} lúc {new Date(thread.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <span className="text-[12px] font-semibold" style={{ color: TEXT_MUTED }}>#1</span>
-                    </div>
+                {/* Post body */}
+                <div className="px-5 py-4">
+                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap" style={{ color: TEXT_PRIMARY }}>{content}</p>
+                    {thread.image_url && (
+                        <div className="mt-4">
+                            <img src={thread.image_url} className="max-h-[500px] rounded-xl object-contain" loading="lazy" />
+                        </div>
+                    )}
+                </div>
 
-                    {/* Post body */}
-                    <div className="p-4 flex-1">
-                        <p className="text-[15px] leading-relaxed whitespace-pre-wrap" style={{ color: TEXT_PRIMARY }}>{content}</p>
-                        {thread.image_url && (
-                            <div className="mt-4 pt-4 border-t border-dashed" style={{ borderColor: BORDER }}>
-                                <img src={thread.image_url} className="max-h-[500px] rounded-xl object-contain" loading="lazy" />
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center gap-4 px-4 pb-3 text-[12px]" style={{ color: TEXT_MUTED }}>
-                        <button className="flex items-center gap-1 hover:text-green-600 transition-colors font-medium">
-                            <ThumbsUp className="w-3.5 h-3.5" /> Hữu ích
-                        </button>
-
-                    </div>
+                {/* Footer */}
+                <div className="flex items-center gap-4 px-5 py-2.5 text-[12px]" style={{ color: TEXT_MUTED, borderTop: `1px solid #F0F0EE` }}>
+                    <button className="flex items-center gap-1 hover:text-green-600 transition-colors font-medium p-1 rounded-md"
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F0FFF4'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+                        <ThumbsUp className="w-3.5 h-3.5" /> Hữu ích
+                    </button>
                 </div>
             </div>
 
@@ -1043,9 +1017,10 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
 
             </div>{/* end cards zone */}
 
-            {/* Reply composer – sits outside the warm zone, white bg */}
-            <div className="mx-4 mt-3 mb-4 p-5 rounded-xl border" style={{ borderColor: BORDER, background: '#FFFFFF' }}>
-                <h3 className="text-[14px] font-bold mb-3" style={{ color: TEXT_PRIMARY }}>
+            {/* Reply composer */}
+            <div className="mt-4 mb-4 p-5 rounded-2xl" style={{ background: '#FFFFFF', border: `1px solid ${BORDER}`, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                <h3 className="text-[14px] font-bold mb-3 flex items-center gap-2" style={{ color: TEXT_PRIMARY }}>
+                    <MessageCircle className="w-4 h-4" style={{ color: NAVY }} />
                     Gửi câu trả lời
                 </h3>
                 <div className="mb-3"><NicknameBar /></div>

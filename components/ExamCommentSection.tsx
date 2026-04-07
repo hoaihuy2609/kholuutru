@@ -6,7 +6,12 @@ import {
     uploadCommentImage, getNickname, saveNickname,
 } from '../src/services/commentService';
 
-const ACCENT = '#6B7CDB';
+const NAVY = '#23497c';
+const BORDER = '#E9E9E7';
+const TEXT_PRIMARY = '#1A1A1A';
+const TEXT_SECONDARY = '#787774';
+const TEXT_MUTED = '#AEACA8';
+const BG_WARM = '#F7F6F3';
 
 interface ExamCommentSectionProps {
     examId: string;
@@ -128,19 +133,19 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
 
             {/* Header */}
             {!hideHeader && (
-                <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: '1px solid #E9E9E7' }}>
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#EEF0FB' }}>
-                    <MessageCircle className="w-4 h-4" style={{ color: ACCENT }} />
+                <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: `1px solid ${BORDER}` }}>
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#EEF2F8' }}>
+                    <MessageCircle className="w-4 h-4" style={{ color: NAVY }} />
                 </div>
                 <div>
-                    <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>
+                    <h3 className="text-sm font-semibold" style={{ color: TEXT_PRIMARY }}>
                         Thảo luận đề thi
                     </h3>
-                    <p className="text-[11px]" style={{ color: '#AEACA8' }}>{examTitle}</p>
+                    <p className="text-[11px]" style={{ color: TEXT_MUTED }}>{examTitle}</p>
                 </div>
                 <span
                     className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full"
-                    style={{ background: '#EEF0FB', color: ACCENT }}
+                    style={{ background: '#EEF2F8', color: NAVY }}
                 >
                     {comments.length} bình luận
                 </span>
@@ -151,83 +156,83 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
 
                 {/* Comment List */}
                 {loading ? (
-                    <div className="flex items-center justify-center gap-2 py-8" style={{ color: '#AEACA8' }}>
+                    <div className="flex items-center justify-center gap-2 py-8" style={{ color: TEXT_MUTED }}>
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span className="text-sm">Đang tải bình luận...</span>
                     </div>
                 ) : comments.length === 0 ? (
-                    <div className="text-center py-10" style={{ color: '#AEACA8' }}>
+                    <div className="text-center py-10" style={{ color: TEXT_MUTED }}>
                         <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
                         <p className="text-sm">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {comments.map((comment, index) => (
-                                <div key={comment.id} className="flex border border-[#E5E7EB] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] rounded-lg overflow-hidden transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
-                                    {/* Left Profile Column */}
-                                    <div className="w-[120px] md:w-[150px] p-4 flex flex-col items-center bg-white shrink-0 border-r border-[#E5E7EB]">
+                                <div key={comment.id} className="overflow-hidden transition-all" style={{ background: '#FFFFFF', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', border: `1px solid ${BORDER}` }}>
+                                    {/* Comment header row */}
+                                    <div className="flex items-center gap-3 px-4 py-3" style={{ background: '#FAFAF9', borderBottom: `1px solid ${BORDER}` }}>
                                         <div
-                                            className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-[24px] font-bold text-white mb-2"
+                                            className="w-9 h-9 rounded-full flex items-center justify-center text-[16px] font-bold text-white shrink-0 shadow-sm"
                                             style={{ background: getAvatarColor(comment.author_name) }}
                                         >
                                             {comment.author_name.charAt(0).toUpperCase()}
                                         </div>
-                                        <span className="text-[13px] font-bold text-[#185886] hover:underline cursor-pointer text-center w-full break-words">{comment.author_name}</span>
-                                        <span className="text-[11px] text-[#8C8C8C] mt-1 text-center">Yếu sinh lý</span>
-                                    </div>
-
-                                    {/* Right Content Column */}
-                                    <div className="flex-1 min-w-0 flex flex-col bg-white">
-                                        {/* Header */}
-                                        <div className="flex items-center justify-between px-3 py-2 text-[12px] text-[#8C8C8C] border-b border-[#F0F0F0]">
-                                            <span>{new Date(comment.created_at).toLocaleDateString('vi-VN')}</span>
-                                            <div className="flex items-center gap-3">
-                                                <button className="hover:text-[#185886]" title="Chia sẻ"><Share2 className="w-3.5 h-3.5" /></button>
-                                                <span className="font-semibold">#{index + 2}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[13px] font-bold" style={{ color: NAVY }}>{comment.author_name}</span>
+                                            </div>
+                                            <div className="text-[11px]" style={{ color: TEXT_MUTED }}>
+                                                {new Date(comment.created_at).toLocaleDateString('vi-VN')}
                                             </div>
                                         </div>
-
-                                        {/* Body */}
-                                        <div className="p-4 flex-1">
-                                            <p className="text-[15px] leading-relaxed text-[#141414] whitespace-pre-wrap font-sans">
-                                                {comment.text}
-                                            </p>
-                                            
-                                            {comment.image_url && (
-                                                <div className="mt-4 pt-4 border-t border-dashed border-[#E5E5E5]">
-                                                    <img
-                                                        src={comment.image_url}
-                                                        alt="Ảnh đính kèm"
-                                                        className="max-h-[400px] object-cover"
-                                                        loading="lazy"
-                                                    />
-                                                </div>
-                                            )}
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <button className="transition-colors p-1 rounded-md" style={{ color: TEXT_MUTED }} title="Chia sẻ"
+                                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = NAVY}
+                                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = TEXT_MUTED}>
+                                                <Share2 className="w-3.5 h-3.5" />
+                                            </button>
+                                            <span className="text-[12px] font-semibold" style={{ color: TEXT_MUTED }}>#{index + 2}</span>
                                         </div>
+                                    </div>
 
-                                        {/* Footer / Reactions (Removed) */}
-
-                                        {isAdmin && (
-                                            <div className="px-4 pb-3">
-                                                <button
-                                                    onClick={() => handleDelete(comment.id)}
-                                                    className="text-[11px] font-bold text-red-500 hover:underline"
-                                                >
-                                                    [Xóa Reply]
-                                                </button>
+                                    {/* Body */}
+                                    <div className="px-5 py-4">
+                                        <p className="text-[15px] leading-relaxed whitespace-pre-wrap" style={{ color: TEXT_PRIMARY }}>
+                                            {comment.text}
+                                        </p>
+                                        
+                                        {comment.image_url && (
+                                            <div className="mt-4">
+                                                <img
+                                                    src={comment.image_url}
+                                                    alt="Ảnh đính kèm"
+                                                    className="max-h-[400px] rounded-xl object-contain"
+                                                    loading="lazy"
+                                                />
                                             </div>
                                         )}
                                     </div>
+
+                                    {isAdmin && (
+                                        <div className="flex items-center px-5 py-2.5 text-[12px]" style={{ borderTop: `1px solid #F0F0EE`, color: TEXT_MUTED }}>
+                                            <button
+                                                onClick={() => handleDelete(comment.id)}
+                                                className="font-semibold text-red-500 hover:underline"
+                                            >
+                                                Xóa
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                         ))}
                     </div>
                 )}
 
-                <div className="h-px w-full" style={{ background: '#E9E9E7' }} />
+                <div className="h-px w-full" style={{ background: BORDER }} />
 
 
                 {/* Nickname Bar */}
-                <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: '#FAFAF9', border: '1px solid #E9E9E7' }}>
+                <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: '#FAFAF9', border: `1px solid ${BORDER}` }}>
                     <User className="w-3.5 h-3.5 shrink-0" style={{ color: '#AEACA8' }} />
                     {editingNickname ? (
                         <div className="flex gap-2 flex-1">
@@ -245,7 +250,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                             <button
                                 onClick={handleSaveNickname}
                                 className="text-xs font-semibold px-3 py-1 rounded-lg transition-colors"
-                                style={{ background: ACCENT, color: '#fff' }}
+                                style={{ background: NAVY, color: '#fff' }}
                             >
                                 Lưu
                             </button>
@@ -307,7 +312,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                         </div>
                     )}
 
-                    <div className="flex items-center justify-between px-3 py-2" style={{ borderTop: '1px solid #E9E9E7', background: '#F7F6F3' }}>
+                    <div className="flex items-center justify-between px-3 py-2" style={{ borderTop: `1px solid ${BORDER}`, background: BG_WARM }}>
                         <div className="flex items-center gap-1">
                             <input
                                 ref={fileInputRef}
@@ -319,7 +324,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                             <button
                                 onClick={() => fileInputRef.current?.click()}
                                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                                style={{ color: '#787774' }}
+                                style={{ color: TEXT_SECONDARY }}
                                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
                                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                                 title="Đính kèm ảnh"
@@ -333,7 +338,7 @@ const ExamCommentSection: React.FC<ExamCommentSectionProps> = ({
                             onClick={handleSubmit}
                             disabled={submitting || (!text.trim() && !imageFile)}
                             className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 disabled:opacity-50"
-                            style={{ background: ACCENT, color: '#fff' }}
+                            style={{ background: NAVY, color: '#fff' }}
                         >
                             {submitting
                                 ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />{uploading ? 'Đang tải ảnh...' : 'Đang gửi...'}</>
