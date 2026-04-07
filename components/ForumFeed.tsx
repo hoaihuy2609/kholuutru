@@ -328,13 +328,8 @@ const ReplyItem: React.FC<ReplyItemProps> = ({ comment, index, isAdmin, adminKey
             </div>
 
             {/* Footer actions */}
-            <div className="flex items-center gap-4 px-5 py-2.5 text-[12px]" style={{ color: TEXT_MUTED, borderTop: `1px solid #F0F0EE` }}>
-                <button className="flex items-center gap-1 hover:text-green-600 transition-colors font-medium p-1 rounded-md"
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F0FFF4'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
-                    <ThumbsUp className="w-3.5 h-3.5" /> Hữu ích
-                </button>
-                {isAdmin && (
+            {isAdmin && (
+                <div className="flex items-center gap-4 px-5 py-2.5 text-[12px]" style={{ color: TEXT_MUTED, borderTop: `1px solid #F0F0EE` }}>
                     <button
                         onClick={() => onDelete(comment.id)}
                         className="ml-auto font-semibold transition-colors hover:underline"
@@ -342,8 +337,8 @@ const ReplyItem: React.FC<ReplyItemProps> = ({ comment, index, isAdmin, adminKey
                     >
                         Xóa
                     </button>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -1091,14 +1086,7 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
                     )}
                 </div>
 
-                {/* Footer */}
-                <div className="flex items-center gap-4 px-5 py-2.5 text-[12px]" style={{ color: TEXT_MUTED, borderTop: `1px solid #F0F0EE` }}>
-                    <button className="flex items-center gap-1 hover:text-green-600 transition-colors font-medium p-1 rounded-md"
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F0FFF4'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
-                        <ThumbsUp className="w-3.5 h-3.5" /> Hữu ích
-                    </button>
-                </div>
+                {/* Footer removed */}
             </div>
 
             {/* Reply count divider label */}
