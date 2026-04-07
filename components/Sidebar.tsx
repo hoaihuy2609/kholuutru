@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield, Search, FileText, Users } from 'lucide-react';
+import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield, Search, FileText, Users, FileCheck, CalendarDays, Library } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 // ── Hover Prefetch: tải ngầm chunk khi user lướt chuột qua nút ──────────
@@ -170,7 +170,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             }}
             onMouseLeave={e => { if (!showExamList) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
-            <ClipboardList className="w-4 h-4 shrink-0" style={{ color: showExamList ? '#6B7CDB' : '#AEACA8' }} />
+            <FileCheck className="w-4 h-4 shrink-0" style={{ color: showExamList ? '#6B7CDB' : '#AEACA8' }} />
             <span>Thi Thử</span>
           </button>
         )}
@@ -212,7 +212,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             }}
             onMouseLeave={e => { if (!showStudyPlanner) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
-            <ClipboardList className="w-4 h-4 shrink-0" style={{ color: showStudyPlanner ? '#448361' : '#AEACA8' }} />
+            <CalendarDays className="w-4 h-4 shrink-0" style={{ color: showStudyPlanner ? '#448361' : '#AEACA8' }} />
             <span>Mục Tiêu &amp; Lịch Trình</span>
           </button>
         )}
@@ -294,7 +294,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             }}
             onMouseLeave={e => { if (!showBlog) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
-            <ClipboardList className="w-4 h-4 shrink-0" style={{ color: showBlog ? '#D9730D' : '#AEACA8' }} />
+            <Library className="w-4 h-4 shrink-0" style={{ color: showBlog ? '#D9730D' : '#AEACA8' }} />
             <span>Góc Học Tập</span>
           </button>
         )}
