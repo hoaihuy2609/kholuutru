@@ -27,11 +27,18 @@ const REPLIES_PER_PAGE = 10;
 
 const CATEGORIES = [
     { id: 'all', label: 'Tất cả', icon: null },
-    { id: 'chung', label: 'Chung', icon: '💬' },
-    { id: 'vl10', label: 'Vật lý 10', icon: '📘' },
-    { id: 'vl11', label: 'Vật lý 11', icon: '📗' },
-    { id: 'vl12', label: 'Vật lý 12', icon: '📙' },
+    { id: 'chung', label: 'Chung', icon: null },
+    { id: 'vl10', label: 'Vật lý 10', icon: null },
+    { id: 'vl11', label: 'Vật lý 11', icon: null },
+    { id: 'vl12', label: 'Vật lý 12', icon: null },
 ];
+
+const CATEGORY_DOTS: Record<string, string> = {
+    chung: ACCENT_BLUE,
+    vl10: '#B45309',
+    vl11: ACCENT_GREEN,
+    vl12: '#9065B0',
+};
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
     chung:  { bg: ACCENT_BLUE_LIGHT, text: ACCENT_BLUE },
@@ -90,10 +97,11 @@ const CategoryBadge: React.FC<{ catId: string }> = ({ catId }) => {
     const cat = CATEGORIES.find(c => c.id === catId && c.id !== 'all');
     if (!cat) return null;
     const colors = CATEGORY_COLORS[catId] || { bg: ACCENT_BLUE_LIGHT, text: ACCENT_BLUE };
+    const dot = CATEGORY_DOTS[catId];
     return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold shrink-0"
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold shrink-0"
             style={{ background: colors.bg, color: colors.text }}>
-            {cat.icon && <span>{cat.icon}</span>}
+            {dot && <span style={{ width: 6, height: 6, borderRadius: '50%', background: dot, display: 'inline-block', flexShrink: 0 }} />}
             {cat.label}
         </span>
     );
@@ -262,14 +270,6 @@ const ReplyItem: React.FC<ReplyItemProps> = ({ comment, index, isAdmin, adminKey
                     </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                    <button className="transition-colors p-1 rounded-md"
-                        style={{ color: TEXT_MUTED }}
-                        title="Chia sẻ"
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = NAVY}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = TEXT_MUTED}
-                        onClick={() => { try { navigator.clipboard.writeText(window.location.href); } catch {} }}>
-                        <Share2 className="w-3.5 h-3.5" />
-                    </button>
                     <span className="text-[12px] font-semibold" style={{ color: TEXT_MUTED }}>#{index + 2}</span>
                 </div>
             </div>
@@ -571,11 +571,12 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                 <div className="flex items-center gap-1.5 shrink-0">
                     {CATEGORIES.map(cat => {
                         const isActive = activeCategory === cat.id;
+                        const dot = CATEGORY_DOTS[cat.id];
                         return (
                             <button
                                 key={cat.id}
                                 onClick={() => setActiveCategory(cat.id)}
-                                className="flex items-center gap-1 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all shrink-0"
+                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all shrink-0"
                                 style={{
                                     background: isActive ? NAVY : '#FFFFFF',
                                     color: isActive ? '#FFFFFF' : TEXT_SECONDARY,
@@ -583,7 +584,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                                     boxShadow: isActive ? '0 2px 8px rgba(35,73,124,0.2)' : 'none',
                                 }}
                             >
-                                {cat.icon && <span>{cat.icon}</span>}
+                                {dot && <span style={{ width: 7, height: 7, borderRadius: '50%', background: isActive ? 'rgba(255,255,255,0.7)' : dot, display: 'inline-block', flexShrink: 0 }} />}
                                 {cat.label}
                             </button>
                         );
@@ -626,19 +627,21 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                     <div className="flex flex-wrap gap-2 mb-3">
                         {CATEGORIES.filter(c => c.id !== 'all').map(cat => {
                             const colors = CATEGORY_COLORS[cat.id];
+                            const dot = CATEGORY_DOTS[cat.id];
                             const isSelected = newCategory === cat.id;
                             return (
                                 <button
                                     key={cat.id}
                                     onClick={() => setNewCategory(cat.id)}
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all"
                                     style={{
                                         background: isSelected ? colors.bg : 'transparent',
                                         color: isSelected ? colors.text : TEXT_SECONDARY,
                                         border: `1px solid ${isSelected ? colors.text + '40' : BORDER}`,
                                     }}
                                 >
-                                    {cat.icon} {cat.label}
+                                    {dot && <span style={{ width: 6, height: 6, borderRadius: '50%', background: dot, display: 'inline-block', flexShrink: 0 }} />}
+                                    {cat.label}
                                 </button>
                             );
                         })}

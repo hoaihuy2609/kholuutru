@@ -23,36 +23,29 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ isAdmin }) => {
             style={{ background: BG_WARM, fontFamily: "'Inter', -apple-system, sans-serif" }}
         >
             {/* ── Page Header ─────────────────────────────────────────────── */}
-            <div
-                className="sticky top-0 z-20 px-5 py-4 border-b"
-                style={{ background: '#FFFFFF', borderColor: BORDER }}
-            >
-                <div className="max-w-4xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div
-                            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                            style={{ background: '#EEF2F8' }}
-                        >
-                            <Users className="w-5 h-5" style={{ color: NAVY }} />
-                        </div>
-                        <div>
-                            <h1 className="font-bold text-[17px] leading-tight" style={{ color: TEXT_PRIMARY }}>
-                                Cộng Đồng Thảo Luận
-                            </h1>
-                            <p className="text-[12px] leading-tight" style={{ color: TEXT_MUTED }}>
-                                Đặt câu hỏi · Chia sẻ kiến thức · Học cùng nhau
-                            </p>
-                        </div>
+            <div className="max-w-4xl mx-auto px-4 pt-5">
+                <div className="flex items-center gap-3 mb-1">
+                    <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: '#EEF2F8' }}
+                    >
+                        <Users className="w-5 h-5" style={{ color: NAVY }} />
                     </div>
-
-
+                    <div>
+                        <h1 className="font-bold text-[17px] leading-tight" style={{ color: TEXT_PRIMARY }}>
+                            Cộng Đồng Thảo Luận
+                        </h1>
+                        <p className="text-[12px] leading-tight" style={{ color: TEXT_MUTED }}>
+                            Đặt câu hỏi · Chia sẻ kiến thức · Học cùng nhau
+                        </p>
+                    </div>
                 </div>
             </div>
 
 
 
             {/* ── Forum Feed ──────────────────────────────────────────────── */}
-            <div className="max-w-4xl mx-auto px-4 py-5">
+            <div className="max-w-4xl mx-auto px-4 py-3">
                 <ForumFeed isAdmin={isAdmin} adminKey={adminKey} />
             </div>
         </div>
