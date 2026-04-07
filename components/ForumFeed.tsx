@@ -23,6 +23,7 @@ const ACCENT_BLUE = '#6B7CDB';
 const ACCENT_BLUE_LIGHT = '#EEF0FB';
 const ACCENT_GREEN = '#448361';
 const ACCENT_GREEN_LIGHT = '#EAF3EE';
+const REPLIES_PER_PAGE = 10;
 
 const CATEGORIES = [
     { id: 'all', label: 'Tất cả', icon: null },
@@ -776,9 +777,11 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
     const [replies, setReplies] = useState<ExamComment[]>([]);
     const [loadingReplies, setLoadingReplies] = useState(true);
     const [isSolved, setIsSolved] = useState(solved);
+    const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
         setLoadingReplies(true);
+        setCurrentPage(1);
         fetchComments(thread.id)
             .then(data => setReplies(data.sort((a, b) => a.created_at - b.created_at)))
             .catch(() => setReplies([]))
@@ -799,12 +802,108 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
         let imageUrl: string | undefined;
         if (imageFile) imageUrl = await uploadCommentImage(imageFile);
         const newReply = await postComment(thread.id, text, imageUrl);
-        setReplies(prev => [...prev, newReply]);
+        setReplies(prev => {
+            const updated = [...prev, newReply];
+            // Jump to last page so the new reply is visible
+            setCurrentPage(Math.ceil(updated.length / REPLIES_PER_PAGE));
+            return updated;
+        });
     };
 
     // Count each replier's total replies IN THIS THREAD for rank calculation
     const replierCounts: Record<string, number> = {};
     replies.forEach(r => { replierCounts[r.author_name] = (replierCounts[r.author_name] || 0) + 1; });
+
+    // ── Pagination helpers ──────────────────────────────────────────
+    const totalPages = Math.max(1, Math.ceil(replies.length / REPLIES_PER_PAGE));
+    const pageStart = (currentPage - 1) * REPLIES_PER_PAGE;
+    const paginatedReplies = replies.slice(pageStart, pageStart + REPLIES_PER_PAGE);
+
+    // Global reply index offset so #2, #3... numbers stay correct across pages
+    const replyIndexOffset = pageStart;
+
+    // Pagination bar component (inline)
+    const PaginationBar = () => {
+        if (totalPages <= 1) return null;
+        // Show at most 5 page numbers centered around current page
+        const range: number[] = [];
+        const delta = 2;
+        for (let i = Math.max(1, currentPage - delta); i <= Math.min(totalPages, currentPage + delta); i++) {
+            range.push(i);
+        }
+        const btnBase = {
+            display: 'inline-flex' as const,
+            alignItems: 'center' as const,
+            justifyContent: 'center' as const,
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 600,
+            border: `1px solid ${BORDER}`,
+            cursor: 'pointer',
+            transition: 'all .15s',
+        };
+        return (
+            <div className="flex items-center justify-center gap-1.5 py-2">
+                {/* Prev */}
+                <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    style={{ ...btnBase, background: currentPage === 1 ? '#F1F0EC' : '#FFFFFF', color: currentPage === 1 ? TEXT_MUTED : TEXT_PRIMARY, opacity: currentPage === 1 ? 0.5 : 1 }}
+                    title="Trang trước"
+                >
+                    ‹
+                </button>
+
+                {/* First page + ellipsis */}
+                {range[0] > 1 && (
+                    <>
+                        <button onClick={() => setCurrentPage(1)} style={{ ...btnBase, background: '#FFFFFF', color: TEXT_PRIMARY }}>1</button>
+                        {range[0] > 2 && <span style={{ color: TEXT_MUTED, fontSize: 13 }}>…</span>}
+                    </>
+                )}
+
+                {/* Numbered pages */}
+                {range.map(p => (
+                    <button
+                        key={p}
+                        onClick={() => setCurrentPage(p)}
+                        style={{
+                            ...btnBase,
+                            background: p === currentPage ? NAVY : '#FFFFFF',
+                            color: p === currentPage ? '#FFFFFF' : TEXT_PRIMARY,
+                            borderColor: p === currentPage ? NAVY : BORDER,
+                        }}
+                    >
+                        {p}
+                    </button>
+                ))}
+
+                {/* Last page + ellipsis */}
+                {range[range.length - 1] < totalPages && (
+                    <>
+                        {range[range.length - 1] < totalPages - 1 && <span style={{ color: TEXT_MUTED, fontSize: 13 }}>…</span>}
+                        <button onClick={() => setCurrentPage(totalPages)} style={{ ...btnBase, background: '#FFFFFF', color: TEXT_PRIMARY }}>{totalPages}</button>
+                    </>
+                )}
+
+                {/* Next */}
+                <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    style={{ ...btnBase, background: currentPage === totalPages ? '#F1F0EC' : '#FFFFFF', color: currentPage === totalPages ? TEXT_MUTED : TEXT_PRIMARY, opacity: currentPage === totalPages ? 0.5 : 1 }}
+                    title="Trang sau"
+                >
+                    ›
+                </button>
+
+                <span className="ml-2 text-[11px]" style={{ color: TEXT_MUTED }}>
+                    {pageStart + 1}–{Math.min(pageStart + REPLIES_PER_PAGE, replies.length)} / {replies.length}
+                </span>
+            </div>
+        );
+    };
 
     return (
         <div className="w-full mx-auto pb-20 animate-fade-in min-h-screen" style={{ background: '#F1F0EC' }}>
@@ -918,7 +1017,7 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
                 </div>
             )}
 
-            {/* Replies – each is a standalone card */}
+            {/* Replies – paginated, each is a standalone card */}
             {loadingReplies ? (
                 <div className="flex items-center justify-center gap-2 py-10" style={{ color: TEXT_MUTED }}>
                     <RefreshCw className="w-4 h-4 animate-spin" />
@@ -930,17 +1029,25 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
                     <p className="text-sm">Chưa có câu trả lời nào. Hãy là người đầu tiên!</p>
                 </div>
             ) : (
-                replies.map((reply, index) => (
-                    <ReplyItem
-                        key={reply.id}
-                        comment={reply}
-                        index={index}
-                        isAdmin={isAdmin}
-                        adminKey={adminKey}
-                        authorAllRepliesCount={replierCounts[reply.author_name] || 1}
-                        onDelete={handleDeleteReply}
-                    />
-                ))
+                <>
+                    {/* Pagination – top */}
+                    <PaginationBar />
+
+                    {paginatedReplies.map((reply, index) => (
+                        <ReplyItem
+                            key={reply.id}
+                            comment={reply}
+                            index={replyIndexOffset + index}
+                            isAdmin={isAdmin}
+                            adminKey={adminKey}
+                            authorAllRepliesCount={replierCounts[reply.author_name] || 1}
+                            onDelete={handleDeleteReply}
+                        />
+                    ))}
+
+                    {/* Pagination – bottom */}
+                    <PaginationBar />
+                </>
             )}
 
             </div>{/* end cards zone */}
