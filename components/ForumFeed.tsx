@@ -703,7 +703,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
             {showComposer && (
                 <div className="rounded-2xl p-5 mb-4 animate-fade-in" style={{ background: '#FFFFFF', border: `1px solid ${BORDER}`, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="font-bold text-[15px]" style={{ color: TEXT_PRIMARY }}>✏️ Tạo chủ đề mới</h2>
+                        <h2 className="font-bold text-[15px]" style={{ color: TEXT_PRIMARY }}>Tạo chủ đề mới</h2>
                         <button onClick={() => { setShowComposer(false); setComposerError(''); }}
                             className="p-1.5 rounded-lg transition-colors" style={{ color: TEXT_MUTED }}
                             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
@@ -716,23 +716,32 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
                     <div className="mb-3"><NicknameBar /></div>
 
                     {/* Category selector */}
-                    <div className="flex flex-wrap gap-2 mb-3">
+                    <div className="flex items-center p-1 rounded-xl mb-3 overflow-x-auto w-auto inline-flex" style={{ background: '#F1F0EC', scrollbarWidth: 'none' }}>
                         {CATEGORIES.filter(c => c.id !== 'all').map(cat => {
-                            const colors = CATEGORY_COLORS[cat.id];
                             const dot = CATEGORY_DOTS[cat.id];
+                            const activeColor = CATEGORY_DOTS[cat.id];
                             const isSelected = newCategory === cat.id;
                             return (
                                 <button
                                     key={cat.id}
                                     onClick={() => { setNewCategory(cat.id); setNewTag(''); }}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all shrink-0"
                                     style={{
-                                        background: isSelected ? colors.bg : 'transparent',
-                                        color: isSelected ? colors.text : TEXT_SECONDARY,
-                                        border: `1px solid ${isSelected ? colors.text + '40' : BORDER}`,
+                                        background: isSelected ? '#FFFFFF' : 'transparent',
+                                        color: isSelected ? activeColor : TEXT_SECONDARY,
+                                        boxShadow: isSelected ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                                     }}
                                 >
-                                    {dot && <span style={{ width: 6, height: 6, borderRadius: '50%', background: dot, display: 'inline-block', flexShrink: 0 }} />}
+                                    {dot && (
+                                        <span
+                                            style={{
+                                                width: 6, height: 6, borderRadius: '50%',
+                                                background: isSelected ? dot : '#AEACA8',
+                                                display: 'inline-block', flexShrink: 0,
+                                                transition: 'background 0.2s'
+                                            }}
+                                        />
+                                    )}
                                     {cat.label}
                                 </button>
                             );
