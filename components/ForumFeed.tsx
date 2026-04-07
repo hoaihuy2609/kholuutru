@@ -905,15 +905,14 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
     };
 
     return (
-        <div className="w-full mx-auto pb-20 animate-fade-in min-h-screen" style={{ background: '#F1F0EC' }}>
-            {/* Sticky nav header */}
-            <div className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3 shadow-md"
-                style={{ background: NAVY }}>
-                <button onClick={onBack} className="flex items-center gap-1.5 text-white text-sm font-semibold hover:opacity-80 transition-opacity">
+        <div className="w-full mx-auto pb-20 animate-fade-in min-h-screen bg-transparent">
+            {/* Clean nav header */}
+            <div className="flex items-center gap-3 px-4 py-4 pt-6">
+                <button onClick={onBack} className="flex items-center gap-1.5 text-[14px] font-semibold transition-opacity" style={{ color: TEXT_SECONDARY }}>
                     <ChevronLeft className="w-4 h-4" />
                     Quay lại
                 </button>
-                <span className="text-white opacity-40 text-sm">/</span>
+                <div className="w-[1px] h-4 mx-2" style={{ background: BORDER }} />
                 <div className="flex items-center gap-2">
                     <CategoryBadge catId={category} />
                     {solved && (
@@ -926,7 +925,7 @@ const ThreadDetail: React.FC<ThreadDetailProps> = ({
             </div>
 
             {/* Thread title */}
-            <div className="px-5 pt-5 pb-4" style={{ background: '#F1F0EC' }}>
+            <div className="px-5 pt-2 pb-4">
                 <h1 className="text-[22px] md:text-[24px] font-bold leading-snug" style={{ color: TEXT_PRIMARY }}>{title}</h1>
                 <div className="flex items-center gap-2 mt-2 text-[12px]" style={{ color: TEXT_SECONDARY }}>
                     <span className="font-semibold" style={{ color: NAVY }}>{thread.author_name}</span>

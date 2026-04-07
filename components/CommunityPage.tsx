@@ -83,8 +83,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ isAdmin }) => {
                     <span>📐 Đặt câu hỏi rõ ràng, kèm công thức nếu cần</span>
                     <span>·</span>
                     <span>🤝 Tôn trọng và hỗ trợ lẫn nhau</span>
-                    <span>·</span>
-                    <span>✅ Đánh dấu đã giải đáp khi có câu trả lời phù hợp</span>
                 </div>
             </div>
 
