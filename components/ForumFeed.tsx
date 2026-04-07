@@ -35,16 +35,16 @@ const CATEGORIES = [
 ];
 
 const CATEGORY_DOTS: Record<string, string> = {
-    chung: ACCENT_BLUE,
-    vl10: '#B45309',
-    vl11: ACCENT_GREEN,
+    chung: NAVY,
+    vl10: '#448361',
+    vl11: '#6B7CDB',
     vl12: '#9065B0',
 };
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
-    chung:  { bg: ACCENT_BLUE_LIGHT, text: ACCENT_BLUE },
-    vl10:   { bg: '#FEF3C7', text: '#B45309' },
-    vl11:   { bg: ACCENT_GREEN_LIGHT, text: ACCENT_GREEN },
+    chung:  { bg: '#EEF2F8', text: NAVY },
+    vl10:   { bg: '#EAF3EE', text: '#448361' },
+    vl11:   { bg: '#EEF0FB', text: '#6B7CDB' },
     vl12:   { bg: '#F3ECF8', text: '#9065B0' },
 };
 
@@ -133,12 +133,10 @@ const TagBadge: React.FC<{ tagId: string }> = ({ tagId }) => {
 const CategoryBadge: React.FC<{ catId: string }> = ({ catId }) => {
     const cat = CATEGORIES.find(c => c.id === catId && c.id !== 'all');
     if (!cat) return null;
-    const colors = CATEGORY_COLORS[catId] || { bg: ACCENT_BLUE_LIGHT, text: ACCENT_BLUE };
-    const dot = CATEGORY_DOTS[catId];
+    const colors = CATEGORY_COLORS[catId] || { bg: '#EEF2F8', text: NAVY };
     return (
         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold shrink-0"
             style={{ background: colors.bg, color: colors.text }}>
-            {dot && <span style={{ width: 6, height: 6, borderRadius: '50%', background: dot, display: 'inline-block', flexShrink: 0 }} />}
             {cat.label}
         </span>
     );
@@ -629,23 +627,32 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
             <div className="flex flex-col gap-2 py-3">
                 {/* Row 1: Category tabs + New post button */}
                 <div className="flex items-center justify-between gap-3 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center p-1 rounded-xl shrink-0" style={{ background: '#F1F0EC' }}>
                         {CATEGORIES.map(cat => {
                             const isActive = activeCategory === cat.id;
                             const dot = CATEGORY_DOTS[cat.id];
+                            const activeColor = cat.id === 'all' ? NAVY : CATEGORY_DOTS[cat.id];
                             return (
                                 <button
                                     key={cat.id}
                                     onClick={() => setActiveCategory(cat.id)}
-                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all shrink-0"
+                                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-semibold whitespace-nowrap transition-all shrink-0"
                                     style={{
-                                        background: isActive ? NAVY : '#FFFFFF',
-                                        color: isActive ? '#FFFFFF' : TEXT_SECONDARY,
-                                        border: `1px solid ${isActive ? NAVY : BORDER}`,
-                                        boxShadow: isActive ? '0 2px 8px rgba(35,73,124,0.2)' : 'none',
+                                        background: isActive ? '#FFFFFF' : 'transparent',
+                                        color: isActive ? activeColor : TEXT_SECONDARY,
+                                        boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                                     }}
                                 >
-                                    {dot && <span style={{ width: 7, height: 7, borderRadius: '50%', background: isActive ? 'rgba(255,255,255,0.7)' : dot, display: 'inline-block', flexShrink: 0 }} />}
+                                    {dot && (
+                                        <span
+                                            style={{
+                                                width: 6, height: 6, borderRadius: '50%',
+                                                background: isActive ? dot : '#AEACA8',
+                                                display: 'inline-block', flexShrink: 0,
+                                                transition: 'background 0.2s'
+                                            }}
+                                        />
+                                    )}
                                     {cat.label}
                                 </button>
                             );
