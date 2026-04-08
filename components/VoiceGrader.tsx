@@ -185,40 +185,60 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     recognition.interimResults = true;
     recognition.maxAlternatives = 3;
 
+    let lastProcessedText = '';
+    let processingTimeout: NodeJS.Timeout | null = null;
+
     recognition.onresult = (e: SpeechRecognitionEvent) => {
       let interim = '';
-      for (let i = 0; i < e.results.length; i++) {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
         const result = e.results[i];
-        const transcript = result[0].transcript;
+        const transcript = result[0].transcript.trim().toLowerCase();
+        
         if (result.isFinal) {
           setInterimText('');
-          const cmd = parseVoiceCommand(transcript);
-          if (cmd) {
-            const { index, score } = cmd;
-            setStudents(prev => {
-              if (index >= prev.length) return prev;
-              const updated = prev.map((s, i) =>
-                i === index
-                  ? { ...s, score: String(score), highlight: true }
-                  : { ...s, highlight: false }
-              );
-              const filled = updated.filter(s => s.score !== '').length;
-              setFilledCount(filled);
-              return updated;
-            });
-            setLastCommand(`✅ Số ${index + 1} → ${score} điểm`);
-            // Remove highlight after 1.5s
-            setTimeout(() => {
-              setStudents(prev => prev.map(s => ({ ...s, highlight: false })));
-            }, 1500);
-          } else {
-            setLastCommand(`❓ Không nhận ra: "${transcript}"`);
-          }
+          processTranscript(transcript);
         } else {
           interim += transcript;
+          // Thử parse ngay cả khi chưa final để tăng tốc
+          if (transcript !== lastProcessedText && transcript.length > 5) {
+            if (processingTimeout) clearTimeout(processingTimeout);
+            processingTimeout = setTimeout(() => {
+              processTranscript(transcript);
+              lastProcessedText = transcript;
+            }, 300); // 300ms debounce để tránh nhảy số liên tục
+          }
         }
       }
       setInterimText(interim);
+    };
+
+    const processTranscript = (transcript: string) => {
+      const cmd = parseVoiceCommand(transcript);
+      if (cmd) {
+        const { index, score } = cmd;
+        setStudents(prev => {
+          if (index >= prev.length) return prev;
+          // Nếu điểm giống hệt điểm cũ thì không cần cập nhật để tránh nháy giao diện
+          if (prev[index].score === String(score)) return prev;
+
+          const updated = prev.map((s, i) =>
+            i === index
+              ? { ...s, score: String(score), highlight: true }
+              : { ...s, highlight: false }
+          );
+          setFilledCount(updated.filter(s => s.score !== '').length);
+          return updated;
+        });
+        setLastCommand(`✅ Số ${index + 1} → ${score} điểm`);
+        
+        // Hiệu ứng highlight ngắn hơn để cảm giác nhanh hơn
+        setTimeout(() => {
+          setStudents(prev => prev.map(s => ({ ...s, highlight: false })));
+        }, 800);
+      } else if (transcript.length > 10) {
+        // Chỉ hiện lỗi khi chuỗi đủ dài để tránh hiện lỗi khi đang nói dở
+        setLastCommand(`❓ Không nhận ra: "${transcript}"`);
+      }
     };
 
     recognition.onerror = () => {
