@@ -13,6 +13,7 @@ import { useDebounce } from 'use-debounce';
 const StatsPanel = React.lazy(() => import('./StatsPanel'));
 const ExamManager = React.lazy(() => import('./ExamManager'));
 const AdminGitHubSync = React.lazy(() => import('./AdminGitHubSync'));
+const VoiceGrader = React.lazy(() => import('./VoiceGrader'));
 import { Exam, Lesson, FileStorage } from '../types';
 
 interface Student {
@@ -69,7 +70,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onBack, onShowToast, onUploadExamPdf, onSaveExam, onDeleteExam, onLoadExams,
     lessons, storedFiles, onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
 }) => {
-    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats' | 'cloud'>('students');
+    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats' | 'cloud' | 'grader'>('students');
 
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -331,6 +332,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {[
                     { key: 'students', label: 'Học Sinh', icon: <Users className="w-4 h-4" /> },
                     { key: 'exams', label: 'Đề Thi', icon: <ClipboardList className="w-4 h-4" /> },
+                    { key: 'grader', label: '🎙️ Nhập Điểm', icon: null },
                     { key: 'stats', label: 'Thống Kê', icon: <BarChart2 className="w-4 h-4" /> },
                     { key: 'cloud', label: 'Cloud Sync', icon: <CloudUpload className="w-4 h-4" /> },
                 ].map(tab => (
@@ -350,6 +352,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {/* ── Main scroll area ── */}
             <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6 custom-scrollbar">
+
+                {/* ── Voice Grader Tab ── */}
+                {activeTab === 'grader' && (
+                    <Suspense fallback={<div className="flex items-center justify-center py-24"><RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} /></div>}>
+                        <VoiceGrader onShowToast={onShowToast} />
+                    </Suspense>
+                )}
 
                 {/* ── Cloud Sync Tab ── */}
                 {activeTab === 'cloud' && (
