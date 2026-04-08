@@ -3,7 +3,7 @@ import { supabase } from '../src/lib/supabase';
 import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import {
     Users, UserPlus, Trash2, Search, RefreshCw,
-    ShieldCheck, Monitor, Phone,
+    ShieldCheck, Monitor, Phone, Mic,
     ShieldAlert, LayoutDashboard,
     UserMinus, RotateCcw, Ban, ArrowLeft, X, CloudUpload, ClipboardList,
     Edit3, GraduationCap, Building2, Settings2, BarChart2
@@ -332,7 +332,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {[
                     { key: 'students', label: 'Học Sinh', icon: <Users className="w-4 h-4" /> },
                     { key: 'exams', label: 'Đề Thi', icon: <ClipboardList className="w-4 h-4" /> },
-                    { key: 'grader', label: '🎙️ Nhập Điểm', icon: null },
+                    { key: 'grader', label: 'Nhập Điểm', icon: <Mic className="w-4 h-4" /> },
                     { key: 'stats', label: 'Thống Kê', icon: <BarChart2 className="w-4 h-4" /> },
                     { key: 'cloud', label: 'Cloud Sync', icon: <CloudUpload className="w-4 h-4" /> },
                 ].map(tab => (
