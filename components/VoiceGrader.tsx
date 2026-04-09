@@ -115,7 +115,7 @@ const parseAllVoiceCommands = (transcript: string): { index: number; score: numb
 
   // Tách văn bản theo các điểm bắt đầu câu "số N" hoặc "[N]:" để hỗ trợ nhiều học sinh
   // Regex tìm tất cả các pattern "số N ..." hoặc "N: ..."
-  const segmentRegex = /(?:số\s*(\d+)|(?:^|[,;\s])(\d+)\s*[:.])\s*([^,;]+)/g;
+  const segmentRegex = /(?:số\s*(\d+)|(?:^|[,;\s])(\d+)\s*[:.])\s*(.*?)(?=\s*(?:số\s*\d+|(?:^|[,;\s])\d+\s*[:.])|$)/g;
   let match;
 
   while ((match = segmentRegex.exec(t)) !== null) {
