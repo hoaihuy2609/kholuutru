@@ -37,6 +37,9 @@ const SolutionEditor = React.lazy(() => import('./components/SolutionEditor'));
 const CommunityPage = React.lazy(() => import('./components/CommunityPage'));
 const GameHub = React.lazy(() => import('./components/GameHub'));
 const PhysicsBlitz = React.lazy(() => import('./components/PhysicsBlitz'));
+const DuelArena = React.lazy(() => import('./components/DuelArena'));
+const TheoryKing = React.lazy(() => import('./components/TheoryKing'));
+const TeamBattle = React.lazy(() => import('./components/TeamBattle'));
 
 const LazyFallback = () => (
   <div className="flex items-center justify-center h-[40vh]">
@@ -408,6 +411,16 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 
   // Game sub-state
   const [activeBlitzGame, setActiveBlitzGame] = useState(false);
+  const [activeDuelGame, setActiveDuelGame] = useState(false);
+  const [activeKingGame, setActiveKingGame] = useState(false);
+  const [activeTeamGame, setActiveTeamGame] = useState(false);
+
+  const resetGames = useCallback(() => {
+    setActiveBlitzGame(false);
+    setActiveDuelGame(false);
+    setActiveKingGame(false);
+    setActiveTeamGame(false);
+  }, []);
 
   const hideSidebar = isSimulationFullscreen || isForumTopicActive || path === '/admin/editor' || path === '/admin' || (effectiveIsAdmin && (isCreatingBlog || !!activeAdminBlog));
 
@@ -424,7 +437,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     onOpenSimLab: (isActivated || isAdmin) ? () => navigate('/lab') : undefined,
     onOpenBlog: (isActivated || isAdmin) ? () => navigate('/blog') : undefined,
     onOpenCommunity: (isActivated || isAdmin) ? () => navigate('/community') : undefined,
-    onOpenGame: (isActivated || isAdmin) ? () => { navigate('/game'); setActiveBlitzGame(false); } : undefined,
+    onOpenGame: (isActivated || isAdmin) ? () => { navigate('/game'); resetGames(); } : undefined,
     showExamList: isOnExams,
     showContactBook: path === '/contact-book',
     showStudyPlanner: path === '/planner',
@@ -448,7 +461,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 
       {/* Mobile Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 shadow-xl transform transition-transform duration-300 ease-out md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#F1F0EC', borderRight: '1px solid #E9E9E7' }}>
-        <Sidebar {...sidebarCommonProps} onSelectGrade={(g) => { navigate(g ? `/grade/${g}` : '/'); setMobileMenuOpen(false); }} onOpenSettings={() => { setSettingsOpen(true); setMobileMenuOpen(false); }} onOpenExamList={(isActivated || isAdmin) ? () => { navigate('/exams'); setMobileMenuOpen(false); } : undefined} onOpenContactBook={(isActivated || isAdmin) ? () => { navigate('/contact-book'); setMobileMenuOpen(false); } : undefined} onOpenStudyPlanner={(isActivated || isAdmin) ? () => { navigate('/planner'); setMobileMenuOpen(false); } : undefined} onOpenNotification={(isActivated || isAdmin) ? () => { navigate('/notifications'); setMobileMenuOpen(false); } : undefined} onOpenSimLab={(isActivated || isAdmin) ? () => { navigate('/lab'); setMobileMenuOpen(false); } : undefined} onOpenBlog={(isActivated || isAdmin) ? () => { navigate('/blog'); setMobileMenuOpen(false); } : undefined} onOpenCommunity={(isActivated || isAdmin) ? () => { navigate('/community'); setMobileMenuOpen(false); } : undefined} onOpenGame={(isActivated || isAdmin) ? () => { navigate('/game'); setMobileMenuOpen(false); setActiveBlitzGame(false); } : undefined} className="w-full" />
+        <Sidebar {...sidebarCommonProps} onSelectGrade={(g) => { navigate(g ? `/grade/${g}` : '/'); setMobileMenuOpen(false); }} onOpenSettings={() => { setSettingsOpen(true); setMobileMenuOpen(false); }} onOpenExamList={(isActivated || isAdmin) ? () => { navigate('/exams'); setMobileMenuOpen(false); } : undefined} onOpenContactBook={(isActivated || isAdmin) ? () => { navigate('/contact-book'); setMobileMenuOpen(false); } : undefined} onOpenStudyPlanner={(isActivated || isAdmin) ? () => { navigate('/planner'); setMobileMenuOpen(false); } : undefined} onOpenNotification={(isActivated || isAdmin) ? () => { navigate('/notifications'); setMobileMenuOpen(false); } : undefined} onOpenSimLab={(isActivated || isAdmin) ? () => { navigate('/lab'); setMobileMenuOpen(false); } : undefined} onOpenBlog={(isActivated || isAdmin) ? () => { navigate('/blog'); setMobileMenuOpen(false); } : undefined} onOpenCommunity={(isActivated || isAdmin) ? () => { navigate('/community'); setMobileMenuOpen(false); } : undefined} onOpenGame={(isActivated || isAdmin) ? () => { navigate('/game'); setMobileMenuOpen(false); resetGames(); } : undefined} className="w-full" />
       </div>
 
       {/* Desktop Sidebar */}
@@ -531,13 +544,18 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
             <Route path="/game" element={
               <ErrorBoundary><Suspense fallback={<LazyFallback />}>
                 {activeBlitzGame
-                  ? <PhysicsBlitz
-                      onBack={() => setActiveBlitzGame(false)}
-                      studentGrade={studentGradeValue}
-                      workerUrl={import.meta.env.VITE_COMMENT_WORKER_URL}
-                    />
+                  ? <PhysicsBlitz onBack={() => setActiveBlitzGame(false)} studentGrade={studentGradeValue} workerUrl={import.meta.env.VITE_COMMENT_WORKER_URL} />
+                  : activeDuelGame
+                  ? <DuelArena onBack={() => setActiveDuelGame(false)} />
+                  : activeKingGame
+                  ? <TheoryKing onBack={() => setActiveKingGame(false)} />
+                  : activeTeamGame
+                  ? <TeamBattle onBack={() => setActiveTeamGame(false)} />
                   : <GameHub
                       onPlayBlitz={() => setActiveBlitzGame(true)}
+                      onPlayDuel={() => setActiveDuelGame(true)}
+                      onPlayKing={() => setActiveKingGame(true)}
+                      onPlayTeam={() => setActiveTeamGame(true)}
                       isAdmin={effectiveIsAdmin}
                     />
                 }

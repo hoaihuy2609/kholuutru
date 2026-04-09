@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowLeft, Zap, CheckCircle2, XCircle, Clock, Trophy, RotateCcw, Flame, ChevronRight } from 'lucide-react';
+import MathText from './MathText';
 
 // ── Types ──────────────────────────────────────────────────────────
 interface GameQuestion {
@@ -358,9 +359,7 @@ const PhysicsBlitz: React.FC<PhysicsBlitzProps> = ({ onBack, studentGrade, worke
               </span>
             )}
           </div>
-          <p className="text-base font-medium leading-relaxed" style={{ color: '#1A1A1A' }}>
-            {q.question}
-          </p>
+          <MathText content={q.question} className="text-base font-medium leading-relaxed" style={{ color: '#1A1A1A' }} />
         </div>
 
         {/* Options */}
@@ -404,7 +403,7 @@ const PhysicsBlitz: React.FC<PhysicsBlitzProps> = ({ onBack, studentGrade, worke
                 >
                   {letter}
                 </span>
-                <span className="text-sm font-medium flex-1">{text}</span>
+                <MathText content={text} className="text-sm font-medium flex-1" />
                 {isSelected && answerResult === 'correct' && <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: '#448361' }} />}
                 {isSelected && answerResult === 'wrong' && <XCircle className="w-4 h-4 shrink-0" style={{ color: '#E03E3E' }} />}
                 {answerResult === 'wrong' && isCorrectAnswer && !isSelected && <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: '#448361' }} />}

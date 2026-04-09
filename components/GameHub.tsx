@@ -3,6 +3,9 @@ import { Zap, Swords, Trophy, Users, Lock, ChevronRight, Gamepad2, Star } from '
 
 interface GameHubProps {
   onPlayBlitz: () => void;
+  onPlayDuel: () => void;
+  onPlayKing: () => void;
+  onPlayTeam: () => void;
   isAdmin?: boolean;
 }
 
@@ -22,7 +25,7 @@ interface GameCard {
   stats?: { label: string; value: string }[];
 }
 
-const GameHub: React.FC<GameHubProps> = ({ onPlayBlitz, isAdmin }) => {
+const GameHub: React.FC<GameHubProps> = ({ onPlayBlitz, onPlayDuel, onPlayKing, onPlayTeam, isAdmin }) => {
   const games: GameCard[] = [
     {
       id: 'blitz',
@@ -51,10 +54,11 @@ const GameHub: React.FC<GameHubProps> = ({ onPlayBlitz, isAdmin }) => {
       icon: Swords,
       accentColor: '#E03E3E',
       accentBg: '#FEF2F2',
-      tag: 'SẮP RA MẮT',
-      tagColor: '#E03E3E',
-      tagBg: '#FEF2F2',
-      available: false,
+      tag: 'CHƠI NGAY',
+      tagColor: '#fff',
+      tagBg: '#E03E3E',
+      available: true,
+      onPlay: onPlayDuel,
       stats: [
         { label: 'Người chơi', value: '1v1' },
         { label: 'Câu hỏi', value: '10-20' },
@@ -69,10 +73,11 @@ const GameHub: React.FC<GameHubProps> = ({ onPlayBlitz, isAdmin }) => {
       icon: Trophy,
       accentColor: '#9065B0',
       accentBg: '#F3ECF8',
-      tag: 'SẮP RA MẮT',
-      tagColor: '#9065B0',
-      tagBg: '#F3ECF8',
-      available: false,
+      tag: 'CHƠI NGAY',
+      tagColor: '#fff',
+      tagBg: '#9065B0',
+      available: true,
+      onPlay: onPlayKing,
       stats: [
         { label: 'Chu kỳ', value: 'Mỗi tuần' },
         { label: 'Xếp hạng', value: 'Top 10' },
@@ -87,10 +92,11 @@ const GameHub: React.FC<GameHubProps> = ({ onPlayBlitz, isAdmin }) => {
       icon: Users,
       accentColor: '#448361',
       accentBg: '#EAF3EE',
-      tag: 'SẮP RA MẮT',
-      tagColor: '#448361',
-      tagBg: '#EAF3EE',
-      available: false,
+      tag: 'CHƠI NGAY',
+      tagColor: '#fff',
+      tagBg: '#448361',
+      available: true,
+      onPlay: onPlayTeam,
       stats: [
         { label: 'Người chơi', value: '2-10' },
         { label: 'Đội', value: '2 nhóm' },
