@@ -24,6 +24,7 @@ interface StudentRow {
 // ── Web Speech API type shim ───────────────────────────────────────────────
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList;
+  resultIndex: number;
 }
 interface SpeechRecognitionResultList {
   [index: number]: SpeechRecognitionResult;
@@ -91,7 +92,7 @@ const parseVietnameseScore = (text: string): number | null => {
  *   38  -> student=3,  score=8
  *   310 -> student=3,  score=10
  */
-const trySplitAmbiguousNumber = (n: number): { idx: number; score: number } | null => {
+const trySplitAmbiguousNumber = (n: number): { index: number; score: number } | null => {
   const s = String(n);
   if (s.length < 2) return null;
   const cuts = s.length === 3 ? [1, 2] : [1];
@@ -99,7 +100,7 @@ const trySplitAmbiguousNumber = (n: number): { idx: number; score: number } | nu
     const studentPart = parseInt(s.slice(0, cut));
     const scorePart = parseFloat(s.slice(cut));
     if (studentPart > 0 && !isNaN(scorePart) && scorePart >= 0 && scorePart <= 10) {
-      return { idx: studentPart - 1, score: Math.round(scorePart * 10) / 10 };
+      return { index: studentPart - 1, score: Math.round(scorePart * 10) / 10 };
     }
   }
   return null;
