@@ -14,6 +14,7 @@ const StatsPanel = React.lazy(() => import('./StatsPanel'));
 const ExamManager = React.lazy(() => import('./ExamManager'));
 const AdminGitHubSync = React.lazy(() => import('./AdminGitHubSync'));
 const VoiceGrader = React.lazy(() => import('./VoiceGrader'));
+const AdminGameManager = React.lazy(() => import('./AdminGameManager'));
 import { Exam, Lesson, FileStorage } from '../types';
 
 interface Student {
@@ -70,7 +71,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onBack, onShowToast, onUploadExamPdf, onSaveExam, onDeleteExam, onLoadExams,
     lessons, storedFiles, onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
 }) => {
-    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats' | 'cloud' | 'grader'>('students');
+    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats' | 'cloud' | 'grader' | 'game'>('students');
 
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -335,6 +336,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     { key: 'grader', label: 'Nhập Điểm', icon: <Mic className="w-4 h-4" /> },
                     { key: 'stats', label: 'Thống Kê', icon: <BarChart2 className="w-4 h-4" /> },
                     { key: 'cloud', label: 'Cloud Sync', icon: <CloudUpload className="w-4 h-4" /> },
+                    { key: 'game', label: 'Game', icon: <span className="text-base leading-none">⚡</span> },
                 ].map(tab => (
                     <button
                         key={tab.key}
@@ -357,6 +359,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {activeTab === 'grader' && (
                     <Suspense fallback={<div className="flex items-center justify-center py-24"><RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} /></div>}>
                         <VoiceGrader onShowToast={onShowToast} />
+                    </Suspense>
+                )}
+
+                {/* ── Game Tab ── */}
+                {activeTab === 'game' && (
+                    <Suspense fallback={<div className="flex items-center justify-center py-24"><RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} /></div>}>
+                        <AdminGameManager
+                            onShowToast={onShowToast}
+                            workerUrl={import.meta.env.VITE_COMMENT_WORKER_URL || ''}
+                            adminKey={import.meta.env.VITE_ADMIN_KEY || ''}
+                        />
                     </Suspense>
                 )}
 

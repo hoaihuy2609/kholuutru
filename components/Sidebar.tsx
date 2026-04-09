@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield, Search, FileText, Users, FileCheck, CalendarDays, Library } from 'lucide-react';
+import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield, Search, FileText, Users, FileCheck, CalendarDays, Library, Gamepad2 } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 // ── Hover Prefetch: tải ngầm chunk khi user lướt chuột qua nút ──────────
@@ -36,6 +36,8 @@ interface SidebarProps {
   showBlog?: boolean;
   onOpenCommunity?: () => void;
   showCommunity?: boolean;
+  onOpenGame?: () => void;
+  showGame?: boolean;
   className?: string;
   isAdmin?: boolean;
   previewMode?: GradeLevel | null;
@@ -53,7 +55,7 @@ const PREVIEW_OPTIONS = [
   { value: String(GradeLevel.Grade10), label: 'Học sinh Lớp 10', color: '#448361', bg: '#EAF3EE', border: '#B7D9C4', dot: '#448361', icon: Activity },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, onOpenBlog, showBlog, onOpenCommunity, showCommunity, className, isAdmin, previewMode, onSetPreviewMode, studentGrade, onOpenSearch, onOpenSolutionEditor }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSettings, onOpenExamList, showExamList, onOpenContactBook, showContactBook, onOpenStudyPlanner, showStudyPlanner, onOpenNotification, showNotification, notificationUnreadCount, onOpenSimLab, showSimLab, onOpenBlog, showBlog, onOpenCommunity, showCommunity, onOpenGame, showGame, className, isAdmin, previewMode, onSetPreviewMode, studentGrade, onOpenSearch, onOpenSolutionEditor }) => {
   const gradeConfig = {
     [GradeLevel.Grade12]: { icon: Atom, label: 'Lớp 12', dot: '#9065B0' },
     [GradeLevel.Grade11]: { icon: Zap, label: 'Lớp 11', dot: '#6B7CDB' },
@@ -317,6 +319,33 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           >
             <Users className="w-4 h-4 shrink-0" style={{ color: showCommunity ? '#0D9488' : '#AEACA8' }} />
             <span>Cộng Đồng Hỏi Đáp</span>
+          </button>
+        )}
+
+        {/* Game Arena */}
+        {onOpenGame && (
+          <button
+            onClick={() => { onOpenGame(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left"
+            style={{
+              background: showGame ? '#FFFBEB' : 'transparent',
+              color: showGame ? '#D97706' : '#57564F',
+              fontWeight: showGame ? 500 : 400,
+            }}
+            onMouseEnter={e => {
+              prefetch('GameHub', () => import('./GameHub'));
+              if (!showGame) (e.currentTarget as HTMLElement).style.background = '#EBEBEA';
+            }}
+            onMouseLeave={e => { if (!showGame) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          >
+            <Gamepad2 className="w-4 h-4 shrink-0" style={{ color: showGame ? '#D97706' : '#AEACA8' }} />
+            <span className="flex-1">Game</span>
+            <span
+              className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+              style={{ background: '#FEF3C7', color: '#D97706' }}
+            >
+              MỚI
+            </span>
           </button>
         )}
 

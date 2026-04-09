@@ -210,6 +210,77 @@ export default {
       }
     }
 
+
+    // ── GET /game/questions?grade=0 ─────────────────────────────
+    if (url.pathname === "/game/questions" && request.method === "GET") {
+      const grade = parseInt(url.searchParams.get("grade") || "0", 10);
+      const limit = Math.min(parseInt(url.searchParams.get("limit") || "100", 10), 200);
+      try {
+        const query = grade > 0
+          ? `SELECT * FROM game_questions WHERE grade = ? OR grade = 0 ORDER BY RANDOM() LIMIT ?`
+          : `SELECT * FROM game_questions ORDER BY RANDOM() LIMIT ?`;
+        const stmt = grade > 0
+          ? env.DB.prepare(query).bind(grade, limit)
+          : env.DB.prepare(query).bind(limit);
+        const { results } = await stmt.all();
+        return json(results, 200, origin);
+      } catch (err) {
+        console.error("[GET /game/questions]", err);
+        return json({ error: "Lỗi database" }, 500, origin);
+      }
+    }
+
+    // ── POST /game/questions (Admin only) ────────────────────────
+    if (url.pathname === "/game/questions" && request.method === "POST") {
+      const auth = request.headers.get("Authorization") || "";
+      if (!env.ADMIN_KEY || auth !== `Bearer ${env.ADMIN_KEY}`) {
+        return json({ error: "Không có quyền" }, 401, origin);
+      }
+      let body = {};
+      try { body = await request.json(); } catch {
+        return json({ error: "Body không hợp lệ" }, 400, origin);
+      }
+      const { questions } = body;
+      if (!Array.isArray(questions) || questions.length === 0) {
+        return json({ error: "Cần truyền mảng questions" }, 400, origin);
+      }
+      try {
+        const stmts = questions.map(q =>
+          env.DB.prepare(
+            `INSERT OR REPLACE INTO game_questions (id, question, option_a, option_b, option_c, option_d, answer, grade, topic, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            q.id || crypto.randomUUID(),
+            q.question, q.option_a, q.option_b, q.option_c, q.option_d,
+            q.answer, q.grade || 0, q.topic || null, Date.now()
+          )
+        );
+        await env.DB.batch(stmts);
+        return json({ success: true, count: questions.length }, 201, origin);
+      } catch (err) {
+        console.error("[POST /game/questions]", err);
+        return json({ error: "Lỗi lưu câu hỏi" }, 500, origin);
+      }
+    }
+
+    // ── DELETE /game/questions/:id (Admin only) ──────────────────
+    if (url.pathname.startsWith("/game/questions/") && request.method === "DELETE") {
+      const auth = request.headers.get("Authorization") || "";
+      if (!env.ADMIN_KEY || auth !== `Bearer ${env.ADMIN_KEY}`) {
+        return json({ error: "Không có quyền" }, 401, origin);
+      }
+      const qId = url.pathname.replace("/game/questions/", "");
+      if (!qId) return json({ error: "Thiếu ID" }, 400, origin);
+      try {
+        const info = await env.DB.prepare("DELETE FROM game_questions WHERE id = ?").bind(qId).run();
+        if (info.changes === 0) return json({ error: "Không tìm thấy câu hỏi" }, 404, origin);
+        return json({ success: true, deleted_id: qId }, 200, origin);
+      } catch (err) {
+        console.error("[DELETE /game/questions]", err);
+        return json({ error: "Lỗi xóa câu hỏi" }, 500, origin);
+      }
+    }
+
     return json({ error: "Route không tồn tại" }, 404, origin);
   },
 };
