@@ -228,6 +228,11 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     if (selectedClass) loadStudents(selectedClass);
   }, [selectedClass, loadStudents]);
 
+  // ── Auto-stop mic khi đổi lớp để tránh điền nhầm điểm sang lớp mới ──
+  useEffect(() => {
+    stopListening();
+  }, [selectedClass]);
+
   // ── Voice Recognition setup ──
   const startListening = useCallback(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
