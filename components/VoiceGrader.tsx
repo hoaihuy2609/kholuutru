@@ -67,7 +67,7 @@ const parseVietnameseScore = (text: string): number | null => {
   // Thay thế chữ số viết bằng chữ tiếng Việt
   const wordMap: Record<string, string> = {
     'không': '0', 'một': '1', 'hai': '2', 'ba': '3', 'bốn': '4',
-    'năm': '5', 'sáu': '6', 'bảy': '7', 'tám': '8', 'chín': '9', 'mười': '10',
+    'năm': '5', 'lăm': '5', 'sáu': '6', 'bảy': '7', 'tám': '8', 'chín': '9', 'mười': '10',
     'phẩy': '.', 'chấm': '.', 'phảy': '.', 'rưỡi': '.5',
     'mươi': '10',
   };
@@ -84,7 +84,7 @@ const parseVietnameseScore = (text: string): number | null => {
   if (!match) return null;
   const val = parseFloat(match[1]);
   if (isNaN(val) || val < 0 || val > 10) return null;
-  return Math.round(val * 10) / 10;
+  return Math.round(val * 100) / 100;
 };
 
 /** Khi speech API gop so (VD: "so 3 8" -> "so 38"),
@@ -100,7 +100,7 @@ const trySplitAmbiguousNumber = (n: number): { index: number; score: number } | 
     const studentPart = parseInt(s.slice(0, cut));
     const scorePart = parseFloat(s.slice(cut));
     if (studentPart > 0 && !isNaN(scorePart) && scorePart >= 0 && scorePart <= 10) {
-      return { index: studentPart - 1, score: Math.round(scorePart * 10) / 10 };
+      return { index: studentPart - 1, score: Math.round(scorePart * 100) / 100 };
     }
   }
   return null;
