@@ -175,8 +175,10 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   const [isListening, setIsListening] = useState(false);
   const [interimText, setInterimText] = useState('');
   const [lastCommand, setLastCommand] = useState('');
-  const [filledCount, setFilledCount] = useState(0);
   const [importResult, setImportResult] = useState<{ matched: number; total: number } | null>(null);
+
+  // filledCount được tính trực tiếp từ students, không dùng state riêng tránh crash React
+  const filledCount = students.filter(s => s.score !== '').length;
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -214,7 +216,6 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
         phone: s.phone,
         score: '',
       })));
-      setFilledCount(0);
     } catch (e: any) {
       onShowToast('Lỗi tải danh sách: ' + e.message, 'error');
     } finally {
@@ -265,7 +266,6 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
             if (!isFinal) processedByInterim.add(`${index}:${score}`);
             changed = true;
           }
-          if (changed) setFilledCount(updated.filter(s => s.score !== '').length);
           return changed ? updated : prev;
         });
 
@@ -321,19 +321,14 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
 
   // ── Score editing ──
   const updateScore = (stt: number, value: string) => {
-    setStudents(prev => {
-      const updated = prev.map(s =>
-        s.stt === stt ? { ...s, score: value } : s
-      );
-      setFilledCount(updated.filter(s => s.score !== '').length);
-      return updated;
-    });
+    setStudents(prev =>
+      prev.map(s => s.stt === stt ? { ...s, score: value } : s)
+    );
   };
 
   const clearAllScores = () => {
     if (!window.confirm('Xóa toàn bộ điểm đã nhập?')) return;
     setStudents(prev => prev.map(s => ({ ...s, score: '' })));
-    setFilledCount(0);
   };
 
   // ── Import CSV từ vnEdu ──
@@ -375,7 +370,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // bỏ dấu
             .replace(/\s+/g, ' ').trim();
 
-        setStudents(prev => {
+          setStudents(prev => {
           const updated = [...prev];
           for (const line of dataLines) {
             const cols = line.split(',').map(c => c.replace(/"/g, '').trim());
@@ -394,7 +389,6 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
               matched++;
             }
           }
-          setFilledCount(updated.filter(s => s.score !== '').length);
           return updated;
         });
 
