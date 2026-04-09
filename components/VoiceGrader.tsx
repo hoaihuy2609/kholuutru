@@ -3,7 +3,7 @@ import { supabase } from '../src/lib/supabase';
 import {
   Mic, MicOff, Download, RefreshCw, ChevronDown,
   Volume2, CheckCircle2, AlertCircle, FileSpreadsheet,
-  Users, Trash2, RotateCcw, Info
+  Users, Trash2, RotateCcw, Info, Upload
 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -86,26 +86,79 @@ const parseVietnameseScore = (text: string): number | null => {
   return Math.round(val * 10) / 10;
 };
 
-/** Parse "số 5: tám phẩy năm" hoặc "số 5 tám rưỡi" → { index: 4, score: 8.5 } */
-const parseVoiceCommand = (transcript: string): { index: number; score: number } | null => {
-  const t = transcript.toLowerCase().trim();
-
-  // Pattern: "số [N] [điểm] [score]" hoặc "[N] [score]"
-  const patterns = [
-    /số\s*(\d+)[,:.\s]+(.+)/,
-    /(\d+)[,:.\s]+(.+)/,
-  ];
-
-  for (const pattern of patterns) {
-    const m = t.match(pattern);
-    if (m) {
-      const idx = parseInt(m[1]) - 1; // convert 1-based to 0-based
-      if (isNaN(idx) || idx < 0) continue;
-      const score = parseVietnameseScore(m[2]);
-      if (score !== null) return { index: idx, score };
+/** Khi speech API gop so (VD: "so 3 8" -> "so 38"),
+ * thu tach N thanh (so_thu_tu, diem):
+ *   38  -> student=3,  score=8
+ *   310 -> student=3,  score=10
+ */
+const trySplitAmbiguousNumber = (n: number): { idx: number; score: number } | null => {
+  const s = String(n);
+  if (s.length < 2) return null;
+  const cuts = s.length === 3 ? [1, 2] : [1];
+  for (const cut of cuts) {
+    const studentPart = parseInt(s.slice(0, cut));
+    const scorePart = parseFloat(s.slice(cut));
+    if (studentPart > 0 && !isNaN(scorePart) && scorePart >= 0 && scorePart <= 10) {
+      return { idx: studentPart - 1, score: Math.round(scorePart * 10) / 10 };
     }
   }
   return null;
+};
+
+/** Parse nhiều câu lệnh từ một phát ngôn.
+ * VD: "số 1 tám số 2 chín rưỡi số 3 bảy" → [{ index: 0, score: 8 }, { index: 1, score: 9.5 }, { index: 2, score: 7 }]
+ */
+const parseAllVoiceCommands = (transcript: string): { index: number; score: number }[] => {
+  const t = transcript.toLowerCase().trim();
+  const results: { index: number; score: number }[] = [];
+
+  // Tách văn bản theo các điểm bắt đầu câu "số N" hoặc "[N]:" để hỗ trợ nhiều học sinh
+  // Regex tìm tất cả các pattern "số N ..." hoặc "N: ..."
+  const segmentRegex = /(?:số\s*(\d+)|(?:^|[,;\s])(\d+)\s*[:.])\s*([^,;]+)/g;
+  let match;
+
+  while ((match = segmentRegex.exec(t)) !== null) {
+    const numStr = match[1] || match[2];
+    const scoreText = match[3];
+    if (!numStr || !scoreText) continue;
+    const n = parseInt(numStr);
+    const idx = n - 1;
+    if (isNaN(idx) || idx < 0) continue;
+    const score = parseVietnameseScore(scoreText);
+    if (score !== null) {
+      results.push({ index: idx, score });
+    } else if (n > 10) {
+      // VD: "so 38 diem" -> N=38, thu tach thanh student=3 score=8
+      const split = trySplitAmbiguousNumber(n);
+      if (split) results.push(split);
+    }
+  }
+
+  // Fallback: nếu regex trên chưa bắt được thì thử parse đơn 1 câu lệnh
+  if (results.length === 0) {
+    const patterns = [
+      /số\s*(\d+)[,:.\s]+(.+)/,
+      /(\d+)[,:.\s]+(.+)/,
+    ];
+    for (const pattern of patterns) {
+      const m = t.match(pattern);
+      if (m) {
+        const n2 = parseInt(m[1]);
+        const idx = n2 - 1;
+        if (isNaN(idx) || idx < 0) continue;
+        const score = parseVietnameseScore(m[2]);
+        if (score !== null) {
+          results.push({ index: idx, score });
+          break;
+        } else if (n2 > 10) {
+          const split = trySplitAmbiguousNumber(n2);
+          if (split) { results.push(split); break; }
+        }
+      }
+    }
+  }
+
+  return results;
 };
 
 /** Format điểm để hiển thị */
@@ -123,8 +176,10 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   const [interimText, setInterimText] = useState('');
   const [lastCommand, setLastCommand] = useState('');
   const [filledCount, setFilledCount] = useState(0);
+  const [importResult, setImportResult] = useState<{ matched: number; total: number } | null>(null);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const studentsRef = useRef<StudentRow[]>([]);
   studentsRef.current = students;
 
@@ -185,60 +240,63 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     recognition.interimResults = true;
     recognition.maxAlternatives = 3;
 
-    let lastProcessedText = '';
-    let processingTimeout: NodeJS.Timeout | null = null;
+    // Theo dõi các index đã được điền bởi interim để tránh ghi đè khi final
+    let processedByInterim = new Set<string>();
+
+    const processTranscript = (transcript: string, isFinal: boolean) => {
+      const cmds = parseAllVoiceCommands(transcript);
+      if (cmds.length > 0) {
+        // Lọc ra các lệnh chưa được xử lý bởi interim (hoặc đây là final thì xử lý tất cả)
+        const newCmds = isFinal
+          ? cmds
+          : cmds.filter(c => !processedByInterim.has(`${c.index}:${c.score}`));
+
+        if (newCmds.length === 0) return;
+
+        setStudents(prev => {
+          let updated = [...prev];
+          let changed = false;
+          for (const { index, score } of newCmds) {
+            if (index >= updated.length) continue;
+            if (updated[index].score === String(score)) continue;
+            updated = updated.map((s, i) =>
+              i === index ? { ...s, score: String(score), highlight: true } : s
+            );
+            if (!isFinal) processedByInterim.add(`${index}:${score}`);
+            changed = true;
+          }
+          if (changed) setFilledCount(updated.filter(s => s.score !== '').length);
+          return changed ? updated : prev;
+        });
+
+        const label = newCmds.map(c => `Số ${c.index + 1} → ${c.score}`).join(', ');
+        setLastCommand(`✅ ${label} điểm`);
+
+        setTimeout(() => {
+          setStudents(prev => prev.map(s => ({ ...s, highlight: false })));
+        }, 1000);
+      } else if (isFinal && transcript.length > 10) {
+        setLastCommand(`❓ Không nhận ra: "${transcript}"`);
+      }
+    };
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
       let interim = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const result = e.results[i];
         const transcript = result[0].transcript.trim().toLowerCase();
-        
+
         if (result.isFinal) {
           setInterimText('');
-          processTranscript(transcript);
+          processTranscript(transcript, true);
+          processedByInterim = new Set(); // reset sau khi final
         } else {
           interim += transcript;
-          // Thử parse ngay cả khi chưa final để tăng tốc
-          if (transcript !== lastProcessedText && transcript.length > 5) {
-            if (processingTimeout) clearTimeout(processingTimeout);
-            processingTimeout = setTimeout(() => {
-              processTranscript(transcript);
-              lastProcessedText = transcript;
-            }, 300); // 300ms debounce để tránh nhảy số liên tục
-          }
+          // Xử lý tức thì không cần debounce — parse ngay khi có interim hợp lệ
+          processTranscript(transcript, false);
         }
       }
       setInterimText(interim);
-    };
-
-    const processTranscript = (transcript: string) => {
-      const cmd = parseVoiceCommand(transcript);
-      if (cmd) {
-        const { index, score } = cmd;
-        setStudents(prev => {
-          if (index >= prev.length) return prev;
-          // Nếu điểm giống hệt điểm cũ thì không cần cập nhật để tránh nháy giao diện
-          if (prev[index].score === String(score)) return prev;
-
-          const updated = prev.map((s, i) =>
-            i === index
-              ? { ...s, score: String(score), highlight: true }
-              : { ...s, highlight: false }
-          );
-          setFilledCount(updated.filter(s => s.score !== '').length);
-          return updated;
-        });
-        setLastCommand(`✅ Số ${index + 1} → ${score} điểm`);
-        
-        // Hiệu ứng highlight ngắn hơn để cảm giác nhanh hơn
-        setTimeout(() => {
-          setStudents(prev => prev.map(s => ({ ...s, highlight: false })));
-        }, 800);
-      } else if (transcript.length > 10) {
-        // Chỉ hiện lỗi khi chuỗi đủ dài để tránh hiện lỗi khi đang nói dở
-        setLastCommand(`❓ Không nhận ra: "${transcript}"`);
-      }
     };
 
     recognition.onerror = () => {
@@ -277,6 +335,82 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     setStudents(prev => prev.map(s => ({ ...s, score: '' })));
     setFilledCount(0);
   };
+
+  // ── Import CSV từ vnEdu ──
+  const importVnEduFile = useCallback((file: File) => {
+    if (!file) return;
+    if (students.length === 0) {
+      onShowToast('Vui lòng chọn lớp trước khi import.', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const raw = e.target?.result as string;
+        // Xử lý BOM nếu có
+        const text = raw.startsWith('\uFEFF') ? raw.slice(1) : raw;
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+
+        // Tìm dòng header để xác định cột điểm
+        // vnEdu format thường: STT | Họ tên | Ngày sinh | Điểm
+        const headerIdx = lines.findIndex(l =>
+          /h[oọ].*t[eê]n|h[aọ].*v[aà].*t[eê]n|full.*name/i.test(l)
+        );
+        if (headerIdx === -1) {
+          onShowToast('Không tìm thấy cột "Họ tên" trong file. Kiểm tra lại định dạng vnEdu.', 'error');
+          return;
+        }
+
+        const headerCols = lines[headerIdx].split(',').map(c => c.replace(/"/g, '').trim());
+        const nameColIdx = headerCols.findIndex(c => /h[oọ].*t[eê]n|h[aọ].*v[aà].*t[eê]n/i.test(c));
+        // Cột điểm: cột cuối cùng có chứa số hoặc tên bài kiểm tra
+        const scoreColIdx = headerCols.length - 1;
+
+        const dataLines = lines.slice(headerIdx + 1);
+        let matched = 0;
+
+        const normalize = (s: string) =>
+          s.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // bỏ dấu
+            .replace(/\s+/g, ' ').trim();
+
+        setStudents(prev => {
+          const updated = [...prev];
+          for (const line of dataLines) {
+            const cols = line.split(',').map(c => c.replace(/"/g, '').trim());
+            if (cols.length <= Math.max(nameColIdx, scoreColIdx)) continue;
+            const importedName = cols[nameColIdx];
+            const importedScore = cols[scoreColIdx];
+            if (!importedName || !importedScore) continue;
+            const scoreVal = parseFloat(importedScore);
+            if (isNaN(scoreVal) || scoreVal < 0 || scoreVal > 10) continue;
+
+            // Tìm học sinh khớp tên (bỏ dấu để so sánh mềm)
+            const normImported = normalize(importedName);
+            const studentIdx = updated.findIndex(s => normalize(s.name) === normImported);
+            if (studentIdx !== -1) {
+              updated[studentIdx] = { ...updated[studentIdx], score: String(Math.round(scoreVal * 10) / 10), highlight: true };
+              matched++;
+            }
+          }
+          setFilledCount(updated.filter(s => s.score !== '').length);
+          return updated;
+        });
+
+        setImportResult({ matched, total: dataLines.filter(l => l.trim()).length });
+        if (matched > 0) {
+          onShowToast(`Import thành công: khớp ${matched} học sinh!`, 'success');
+          setTimeout(() => setStudents(prev => prev.map(s => ({ ...s, highlight: false }))), 2000);
+        } else {
+          onShowToast('Không tìm thấy học sinh khớp. Kiểm tra lại tên trong file.', 'warning');
+        }
+      } catch (err: any) {
+        onShowToast('Lỗi đọc file: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  }, [students, onShowToast]);
 
   // ── Export Excel (chuẩn format vnEdu) ──
   const exportToExcel = () => {
@@ -364,6 +498,56 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
           />
         </div>
       </div>
+
+      {/* ── Import từ vnEdu ── */}
+      {selectedClass && students.length > 0 && (
+        <div className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Import bảng điểm mẫu từ vnEdu</p>
+              <p className="text-xs mt-0.5" style={{ color: '#787774' }}>
+                Tải file CSV/Excel mẫu từ vnEdu → Điền điểm → Upload lên đây để tự động khớp học sinh
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {importResult && (
+                <span
+                  className="text-xs px-2.5 py-1 rounded-full font-medium"
+                  style={{
+                    background: importResult.matched > 0 ? '#EAF3EE' : '#FEF0F0',
+                    color: importResult.matched > 0 ? '#448361' : '#E03E3E',
+                  }}
+                >
+                  {importResult.matched > 0
+                    ? `✅ Khớp ${importResult.matched}/${importResult.total} học sinh`
+                    : `❌ Không khớp (${importResult.total} dòng)`}
+                </span>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) importVnEduFile(f);
+                  e.target.value = '';
+                }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                style={{ background: '#EEF0FB', color: '#6B7CDB', border: '1px solid #C8D0F5' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#DDE0F7'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#EEF0FB'}
+              >
+                <Upload className="w-4 h-4" />
+                Chọn file vnEdu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Voice Control Panel ── */}
       {selectedClass && students.length > 0 && (
@@ -463,7 +647,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
           <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg" style={{ background: '#F7F6F3' }}>
             <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: '#AEACA8' }} />
             <p className="text-[11px]" style={{ color: '#787774' }}>
-              <b>Cách đọc:</b> "Số 1: tám phẩy năm" | "Số 2: bảy rưỡi" | "Số 3: chín" — Mỗi lần đọc xong một câu, dừng khoảng 0.5 giây để hệ thống xử lý.
+              <b>Cách đọc 1 em:</b> "Số 1: tám phẩy năm" | "Số 2: bảy rưỡi" — <b>Hoặc nhiều em cùng lúc:</b> "Số 1 tám, số 2 chín rưỡi, số 3 bảy" → Điểm điền vào ngay khi nhận diện.
             </p>
           </div>
         </div>
