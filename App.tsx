@@ -35,11 +35,7 @@ const AdminBlogEditor = React.lazy(() => import('./components/AdminBlogEditor'))
 const GlobalSearch = React.lazy(() => import('./components/GlobalSearch'));
 const SolutionEditor = React.lazy(() => import('./components/SolutionEditor'));
 const CommunityPage = React.lazy(() => import('./components/CommunityPage'));
-const GameHub = React.lazy(() => import('./components/GameHub'));
-const PhysicsBlitz = React.lazy(() => import('./components/PhysicsBlitz'));
-const DuelArena = React.lazy(() => import('./components/DuelArena'));
 const TheoryKing = React.lazy(() => import('./components/TheoryKing'));
-const TeamBattle = React.lazy(() => import('./components/TeamBattle'));
 
 const LazyFallback = () => (
   <div className="flex items-center justify-center h-[40vh]">
@@ -409,18 +405,8 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const isOnCommunity = path.startsWith('/community');
   const isOnGame = path.startsWith('/game');
 
-  // Game sub-state
-  const [activeBlitzGame, setActiveBlitzGame] = useState(false);
-  const [activeDuelGame, setActiveDuelGame] = useState(false);
-  const [activeKingGame, setActiveKingGame] = useState(false);
-  const [activeTeamGame, setActiveTeamGame] = useState(false);
-
-  const resetGames = useCallback(() => {
-    setActiveBlitzGame(false);
-    setActiveDuelGame(false);
-    setActiveKingGame(false);
-    setActiveTeamGame(false);
-  }, []);
+  // Game sub-state (only TheoryKing remains)
+  const resetGames = useCallback(() => {}, []);
 
   const hideSidebar = isSimulationFullscreen || isForumTopicActive || path === '/admin/editor' || path === '/admin' || (effectiveIsAdmin && (isCreatingBlog || !!activeAdminBlog));
 
@@ -543,22 +529,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
             <Route path="/community" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><CommunityPage isAdmin={effectiveIsAdmin} /></Suspense></ErrorBoundary>} />
             <Route path="/game" element={
               <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-                {activeBlitzGame
-                  ? <PhysicsBlitz onBack={() => setActiveBlitzGame(false)} studentGrade={studentGradeValue} workerUrl={import.meta.env.VITE_COMMENT_WORKER_URL} />
-                  : activeDuelGame
-                  ? <DuelArena onBack={() => setActiveDuelGame(false)} />
-                  : activeKingGame
-                  ? <TheoryKing onBack={() => setActiveKingGame(false)} />
-                  : activeTeamGame
-                  ? <TeamBattle onBack={() => setActiveTeamGame(false)} />
-                  : <GameHub
-                      onPlayBlitz={() => setActiveBlitzGame(true)}
-                      onPlayDuel={() => setActiveDuelGame(true)}
-                      onPlayKing={() => setActiveKingGame(true)}
-                      onPlayTeam={() => setActiveTeamGame(true)}
-                      isAdmin={effectiveIsAdmin}
-                    />
-                }
+                <TheoryKing onBack={() => navigate('/')} />
               </Suspense></ErrorBoundary>
             } />
             <Route path="/admin/editor" element={effectiveIsAdmin ? <ErrorBoundary><Suspense fallback={<LazyFallback />}><SolutionEditor /></Suspense></ErrorBoundary> : <Navigate to="/" replace />} />
