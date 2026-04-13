@@ -181,7 +181,7 @@ D. J
           <div>
             <h3 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Quản lý câu hỏi Game</h3>
             <p className="text-xs" style={{ color: '#787774' }}>
-              {existingQuestions.length} câu hỏi · Dùng cho Physics Blitz và các game
+              {existingQuestions.length} câu hỏi · Dùng cho Vua Lý Thuyết
             </p>
           </div>
         </div>

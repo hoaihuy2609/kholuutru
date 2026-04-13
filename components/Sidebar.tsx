@@ -333,7 +333,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
               fontWeight: showGame ? 500 : 400,
             }}
             onMouseEnter={e => {
-              prefetch('GameHub', () => import('./GameHub'));
+              prefetch('TheoryKing', () => import('./TheoryKing'));
               if (!showGame) (e.currentTarget as HTMLElement).style.background = '#EBEBEA';
             }}
             onMouseLeave={e => { if (!showGame) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
