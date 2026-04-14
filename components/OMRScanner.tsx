@@ -14,8 +14,8 @@ interface OMRScannerProps {
 type ScanStep = 'setup' | 'scanning' | 'result';
 
 const emptyKey = (): AnswerKey => ({
-  mc: Array(40).fill(''),
-  tf: Array.from({ length: 8 }, () => ({ a: '', b: '', c: '', d: '' })),
+  mc: Array(18).fill(''),
+  tf: Array.from({ length: 4 }, () => ({ a: '', b: '', c: '', d: '' })),
   sa: Array(6).fill(''),
 });
 
@@ -63,7 +63,7 @@ const AnswerKeyEditor: React.FC<{
           <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
             style={{ background: ACCENT }}>{id === 'mc' ? 'I' : id === 'tf' ? 'II' : 'III'}</div>
           <span className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>{label}</span>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{
+        <span className="text-xs px-2 py-0.5 rounded-full" style={{
             background: count === total ? '#EAF3EE' : '#F1F0EC',
             color: count === total ? '#448361' : '#787774',
           }}>{count}/{total}</span>
@@ -79,7 +79,7 @@ const AnswerKeyEditor: React.FC<{
   return (
     <div className="space-y-3">
       {/* Phần I: ABCD */}
-      <Section id="mc" label="Phần I — Trắc nghiệm ABCD" count={filled1} total={40}>
+      <Section id="mc" label="Phần I — Trắc nghiệm ABCD" count={filled1} total={18}>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
           {answerKey.mc.map((val, i) => (
             <div key={i} className="flex items-center gap-2">
@@ -104,11 +104,11 @@ const AnswerKeyEditor: React.FC<{
       </Section>
 
       {/* Phần II: Đúng/Sai */}
-      <Section id="tf" label="Phần II — Đúng / Sai" count={filled2} total={8}>
+      <Section id="tf" label="Phần II — Đúng / Sai" count={filled2} total={4}>
         <div className="grid grid-cols-2 gap-4">
           {answerKey.tf.map((t, qi) => (
             <div key={qi} className="p-3 rounded-lg" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
-              <p className="text-xs font-semibold mb-2" style={{ color: '#1A1A1A' }}>Câu {19 + qi}</p>
+              <p className="text-xs font-semibold mb-2" style={{ color: '#1A1A1A' }}>Câu {41 + qi}</p>
               {(['a', 'b', 'c', 'd'] as const).map(k => (
                 <div key={k} className="flex items-center gap-2 mb-1">
                   <span className="text-[11px] w-4" style={{ color: '#787774' }}>{k})</span>
@@ -133,7 +133,7 @@ const AnswerKeyEditor: React.FC<{
         <div className="grid grid-cols-2 gap-3">
           {answerKey.sa.map((v, i) => (
             <div key={i} className="flex items-center gap-2">
-              <span className="text-xs font-mono w-12 text-right shrink-0" style={{ color: '#AEACA8' }}>Câu {23 + i}</span>
+              <span className="text-xs font-mono w-12 text-right shrink-0" style={{ color: '#AEACA8' }}>Câu {45 + i}</span>
               <input
                 type="text"
                 value={v}
@@ -216,10 +216,10 @@ const ScoreDisplay: React.FC<{
       <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#fff' }}>
         <div className="px-4 py-2.5" style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAF9' }}>
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>
-            Phần I — {score.mcDetail.filter(Boolean).length}/40 câu đúng
+            Phần I — {score.mcDetail.filter(Boolean).length}/18 câu đúng
           </p>
         </div>
-        <div className="p-4 grid grid-cols-8 gap-1.5">
+        <div className="p-4 grid grid-cols-6 gap-1.5">
           {answers.mc.map((ans, i) => {
             const correct = score.mcDetail[i];
             const isWrong = ans && !correct;
@@ -250,10 +250,10 @@ const ScoreDisplay: React.FC<{
             Phần II — Đúng/Sai ({score.tf.toFixed(2)}đ)
           </p>
         </div>
-        <div className="p-4 grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {answers.tf.map((t, i) => (
             <div key={i} className="rounded-lg p-2.5" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
-              <p className="text-[10px] font-semibold mb-1.5" style={{ color: '#1A1A1A' }}>Câu {19 + i}</p>
+              <p className="text-[10px] font-semibold mb-1.5" style={{ color: '#1A1A1A' }}>Câu {41 + i}</p>
               {(['a', 'b', 'c', 'd'] as const).map(k => {
                 const key_val = answerKey.tf[i]?.[k];
                 const ans_val = t[k];
@@ -286,7 +286,7 @@ const ScoreDisplay: React.FC<{
             const correct = score.saDetail[i];
             return (
               <div key={i} className="rounded-lg p-2.5" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
-                <p className="text-[10px] mb-1" style={{ color: '#AEACA8' }}>Câu {23 + i}</p>
+                <p className="text-[10px] mb-1" style={{ color: '#AEACA8' }}>Câu {45 + i}</p>
                 <p className="text-sm font-bold" style={{ color: correct ? '#448361' : v ? '#E03E3E' : '#AEACA8' }}>
                   {v || '—'}
                 </p>
@@ -349,7 +349,7 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
 
   // Check đáp án đã đủ chưa
   const mcFilled = answerKey.mc.filter(Boolean).length;
-  const canScan = mcFilled >= 10; // cần nhập ít nhất 10 câu
+  const canScan = mcFilled >= 5; // cần nhập ít nhất 5 câu
 
   // ── Camera ──────────────────────────────────────────────────────────────
   const openCamera = useCallback(async () => {
@@ -543,10 +543,10 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
             <AnswerKeyEditor answerKey={answerKey} onChange={setAnswerKey} />
 
             {!canScan && (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg" style={{ background: '#FFF3E8', border: '1px solid #FDDBA0' }}>
+              <div className="flex items-center gap-2">
                 <Info className="w-3.5 h-3.5 shrink-0" style={{ color: '#D9730D' }} />
                 <p className="text-[11px]" style={{ color: '#D9730D' }}>
-                  Nhập ít nhất 10 câu đáp án Phần I để bắt đầu chấm.
+                  Nhập ít nhất 5 câu đáp án Phần I để bắt đầu chấm.
                 </p>
               </div>
             )}

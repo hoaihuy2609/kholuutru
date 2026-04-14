@@ -9,8 +9,8 @@ export interface Point { x: number; y: number; }
 export interface OMRAnswers {
   sbd: string;        // Số báo danh (6 chữ số)
   maDethi: string;    // Mã đề thi (3 chữ số)
-  mc: string[];       // Phần I: 40 câu, mỗi câu: 'A'|'B'|'C'|'D'|''
-  tf: { a: string; b: string; c: string; d: string }[]; // Phần II: 8 câu
+  mc: string[];       // Phần I: 18 câu, mỗi câu: 'A'|'B'|'C'|'D'|''
+  tf: { a: string; b: string; c: string; d: string }[]; // Phần II: 4 câu
   sa: string[];       // Phần III: 6 câu, mỗi câu là chuỗi số (VD: "3.14", "-5")
 }
 
@@ -49,28 +49,27 @@ const MA_DE_CONFIG = {
   r: 8,
 };
 
-// ─── Phần I: 40 câu ABCD — 4 nhóm × 10 câu ──────────────────────────────────
+// ─── Phần I: 18 câu ABCD — 2 nhóm × 9 câu ──────────────────────────────────
 const PART1_CONFIG = {
   groups: [
     { startQ: 1,  startX: 0.060, startY: 0.385 },
-    { startQ: 11, startX: 0.285, startY: 0.385 },
-    { startQ: 21, startX: 0.510, startY: 0.385 },
-    { startQ: 31, startX: 0.735, startY: 0.385 },
+    { startQ: 10, startX: 0.510, startY: 0.385 },
   ],
+  rowsPerGroup: 9,
   rowStep: 0.032, colStep: 0.042,
   abcdOffsetX: 0.053,
   r: 10,
 };
 
-// ─── Phần II: 8 câu Đúng/Sai ────────────────────────────────────────────────
+// ─── Phần II: 4 câu Đúng/Sai (mỗi câu có 4 ý a/b/c/d) ─────────────────────
 const PART2_CONFIG = {
   groups: [
-    { cqs: [1, 2], startX: 0.060, startY: 0.780 },
-    { cqs: [3, 4], startX: 0.285, startY: 0.780 },
-    { cqs: [5, 6], startX: 0.510, startY: 0.780 },
-    { cqs: [7, 8], startX: 0.735, startY: 0.780 },
+    { cq: 1, startX: 0.060, startY: 0.780 },
+    { cq: 2, startX: 0.285, startY: 0.780 },
+    { cq: 3, startX: 0.510, startY: 0.780 },
+    { cq: 4, startX: 0.735, startY: 0.780 },
   ],
-  qColStep: 0.115, rowStep: 0.022,
+  rowStep: 0.022,
   dsOffsetX: 0.032, dsStep: 0.040,
   r: 9,
 };
@@ -323,12 +322,13 @@ export async function processOMRImage(
     maDeDigits.push(found);
   }
 
-  // ── Đọc Phần I ─────────────────────────────────────────────────────────────
-  const mc: string[] = new Array(40).fill('');
+  // ── Đọc Phần I (18 câu ABCD) ─────────────────────────────────────────────────
+  const mc: string[] = new Array(18).fill('');
   const abcd = ['A', 'B', 'C', 'D'];
   for (const grp of PART1_CONFIG.groups) {
-    for (let q = 0; q < 10; q++) {
+    for (let q = 0; q < PART1_CONFIG.rowsPerGroup; q++) {
       const qIdx = grp.startQ - 1 + q;
+      if (qIdx >= 18) break;
       const cy = (grp.startY + q * PART1_CONFIG.rowStep) * H;
       for (let c = 0; c < 4; c++) {
         const cx = (grp.startX + PART1_CONFIG.abcdOffsetX + c * PART1_CONFIG.colStep) * W;
@@ -340,21 +340,18 @@ export async function processOMRImage(
   }
 
   // ── Đọc Phần II ────────────────────────────────────────────────────────────
-  const tf: OMRAnswers['tf'] = Array.from({ length: 8 }, () => ({ a: '', b: '', c: '', d: '' }));
+  const tf: OMRAnswers['tf'] = Array.from({ length: 4 }, () => ({ a: '', b: '', c: '', d: '' }));
   const tfKeys = ['a', 'b', 'c', 'd'] as const;
   for (const grp of PART2_CONFIG.groups) {
-    for (let qi = 0; qi < 2; qi++) {
-      const qNum = grp.cqs[qi] - 1;
-      const qStartX = grp.startX + qi * PART2_CONFIG.qColStep;
-      for (let ki = 0; ki < 4; ki++) {
-        const cy = (grp.startY + ki * PART2_CONFIG.rowStep) * H;
-        const cxD = (qStartX + PART2_CONFIG.dsOffsetX) * W;
-        const cxS = (qStartX + PART2_CONFIG.dsOffsetX + PART2_CONFIG.dsStep) * W;
-        const filledD = readBubble(cxD, cy, PART2_CONFIG.r);
-        const filledS = readBubble(cxS, cy, PART2_CONFIG.r);
-        if (filledD && !filledS) tf[qNum][tfKeys[ki]] = 'D';
-        else if (filledS && !filledD) tf[qNum][tfKeys[ki]] = 'S';
-      }
+    const qNum = grp.cq - 1;
+    for (let ki = 0; ki < 4; ki++) {
+      const cy = (grp.startY + ki * PART2_CONFIG.rowStep) * H;
+      const cxD = (grp.startX + PART2_CONFIG.dsOffsetX) * W;
+      const cxS = (grp.startX + PART2_CONFIG.dsOffsetX + PART2_CONFIG.dsStep) * W;
+      const filledD = readBubble(cxD, cy, PART2_CONFIG.r);
+      const filledS = readBubble(cxS, cy, PART2_CONFIG.r);
+      if (filledD && !filledS) tf[qNum][tfKeys[ki]] = 'D';
+      else if (filledS && !filledD) tf[qNum][tfKeys[ki]] = 'S';
     }
   }
 
@@ -402,12 +399,13 @@ export function scoreOMR(answers: OMRAnswers, key: AnswerKey): ScoreResult {
   let mcScore = 0;
   const mcDetail = answers.mc.map((ans, i) => {
     const ok = ans === key.mc[i];
-    if (ok) mcScore += 0.25;
+    if (ok) mcScore += 0.25; // 18 câu × 0.25 = 4.5đ tối đa
     return ok;
   });
 
   let tfScore = 0;
   const tfKeys = ['a', 'b', 'c', 'd'] as const;
+  // Phần II: 4 câu, mỗi câu tối đa 1.0đ → tổng 4.0đ
   const tfDetail = answers.tf.map((ans, i) => {
     const k = key.tf[i];
     const correct = k ? tfKeys.filter(ki => ans[ki] === k[ki] && ans[ki] !== '').length : 0;
