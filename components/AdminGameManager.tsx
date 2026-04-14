@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Zap, Plus, Trash2, RefreshCw, CheckCircle2, AlertCircle, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { CURRICULUM } from '../constants';
 
 interface GameQuestion {
   id: string;
@@ -234,16 +235,20 @@ D. J
             <label className="text-[10px] font-semibold uppercase tracking-wider mb-2 block" style={{ color: '#AEACA8' }}>
               Chương / Chủ đề
             </label>
-            <input
-              type="text"
+            <select
               value={selectedTopic}
               onChange={e => setSelectedTopic(e.target.value)}
-              placeholder="VD: Chương 1: Động học chất điểm"
-              className="w-full text-sm px-3 py-2 rounded-lg outline-none"
+              className="w-full text-sm px-3 py-2 rounded-lg outline-none cursor-pointer"
               style={{ background: '#F7F6F3', border: '1px solid #E9E9E7', color: '#1A1A1A' }}
               onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#9065B0'}
               onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
-            />
+              disabled={selectedGrade === 0}
+            >
+              <option value="">-- {selectedGrade === 0 ? 'Vui lòng chọn khối trước' : 'Không gán (để trống)'} --</option>
+              {selectedGrade !== 0 && CURRICULUM.find(c => c.level === selectedGrade)?.chapters.map(ch => (
+                <option key={ch.id} value={ch.name}>{ch.name}</option>
+              ))}
+            </select>
             <p className="text-[10px] mt-1" style={{ color: '#AEACA8' }}>Tất cả câu hỏi trong batch này sẽ được gán chương này (dùng trong chế độ Luyện tập).</p>
           </div>
 
