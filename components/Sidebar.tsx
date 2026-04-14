@@ -340,12 +340,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
           >
             <Gamepad2 className="w-4 h-4 shrink-0" style={{ color: showGame ? '#D97706' : '#AEACA8' }} />
             <span className="flex-1">Game</span>
-            <span
-              className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-              style={{ background: '#FEF3C7', color: '#D97706' }}
-            >
-              MỚI
-            </span>
           </button>
         )}
 
