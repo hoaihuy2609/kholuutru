@@ -6,7 +6,7 @@ import {
     ShieldCheck, Monitor, Phone, Mic,
     ShieldAlert, LayoutDashboard,
     UserMinus, RotateCcw, Ban, ArrowLeft, X, CloudUpload, ClipboardList,
-    Edit3, GraduationCap, Building2, Settings2, BarChart2, Gamepad2
+    Edit3, GraduationCap, Building2, Settings2, BarChart2, Gamepad2, ScanLine
 } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 
@@ -14,6 +14,7 @@ const StatsPanel = React.lazy(() => import('./StatsPanel'));
 const ExamManager = React.lazy(() => import('./ExamManager'));
 const AdminGitHubSync = React.lazy(() => import('./AdminGitHubSync'));
 const VoiceGrader = React.lazy(() => import('./VoiceGrader'));
+const OMRScanner = React.lazy(() => import('./OMRScanner'));
 const AdminGameManager = React.lazy(() => import('./AdminGameManager'));
 import { Exam, Lesson, FileStorage } from '../types';
 
@@ -71,7 +72,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onBack, onShowToast, onUploadExamPdf, onSaveExam, onDeleteExam, onLoadExams,
     lessons, storedFiles, onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
 }) => {
-    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats' | 'cloud' | 'grader' | 'game'>('students');
+    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats' | 'cloud' | 'grader' | 'omr' | 'game'>('students');
 
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -334,6 +335,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     { key: 'students', label: 'Học Sinh', icon: <Users className="w-4 h-4" /> },
                     { key: 'exams', label: 'Đề Thi', icon: <ClipboardList className="w-4 h-4" /> },
                     { key: 'grader', label: 'Nhập Điểm', icon: <Mic className="w-4 h-4" /> },
+                    { key: 'omr', label: 'Chấm Phiếu', icon: <ScanLine className="w-4 h-4" /> },
                     { key: 'stats', label: 'Thống Kê', icon: <BarChart2 className="w-4 h-4" /> },
                     { key: 'cloud', label: 'Cloud Sync', icon: <CloudUpload className="w-4 h-4" /> },
                     { key: 'game', label: 'Game', icon: <Gamepad2 className="w-4 h-4" /> },
@@ -359,6 +361,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {activeTab === 'grader' && (
                     <Suspense fallback={<div className="flex items-center justify-center py-24"><RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} /></div>}>
                         <VoiceGrader onShowToast={onShowToast} />
+                    </Suspense>
+                )}
+
+                {/* ── OMR Scanner Tab ── */}
+                {activeTab === 'omr' && (
+                    <Suspense fallback={<div className="flex items-center justify-center py-24"><RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} /></div>}>
+                        <OMRScanner onShowToast={onShowToast} />
                     </Suspense>
                 )}
 
