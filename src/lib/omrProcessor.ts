@@ -25,68 +25,77 @@ export interface OMRResult {
 const W = 2480;
 const H = 3508;
 
-// ─── Vị trí anchor (4 góc phiếu) ────────────────────────────────────────────
+// ─── Vị trí anchor (4 góc phiếu TNMaker) ──────────────────────────────────
 const ANCHOR_REGIONS: { x: number; y: number; size: number }[] = [
-  { x: 0.030, y: 0.020, size: 0.022 }, // Top-left
-  { x: 0.930, y: 0.020, size: 0.022 }, // Top-right
-  { x: 0.030, y: 0.980, size: 0.022 }, // Bottom-left
-  { x: 0.930, y: 0.980, size: 0.022 }, // Bottom-right
+  { x: 0.040, y: 0.013, size: 0.035 }, // Top-left
+  { x: 0.960, y: 0.013, size: 0.035 }, // Top-right
+  { x: 0.040, y: 0.987, size: 0.035 }, // Bottom-left
+  { x: 0.960, y: 0.987, size: 0.035 }, // Bottom-right
 ];
 
-// ─── SBD (Số báo danh) — 6 cột × 10 hàng (0–9) ─────────────────────────────
+// ─── SBD (Số báo danh) — 6 cột × 10 hàng (0–9) ────────────────────────────
 const SBD_CONFIG = {
   cols: 6, rows: 10,
-  startX: 0.618, startY: 0.072,
-  colStep: 0.038, rowStep: 0.020,
-  r: 8,
-};
-
-// ─── Mã đề thi — 3 cột × 10 hàng (0–9) ─────────────────────────────────────
-const MA_DE_CONFIG = {
-  cols: 3, rows: 10,
-  startX: 0.854, startY: 0.072,
-  colStep: 0.038, rowStep: 0.020,
-  r: 8,
-};
-
-// ─── Phần I: 18 câu ABCD — 2 nhóm × 9 câu ──────────────────────────────────
-const PART1_CONFIG = {
-  groups: [
-    { startQ: 1,  startX: 0.060, startY: 0.385 },
-    { startQ: 10, startX: 0.510, startY: 0.385 },
-  ],
-  rowsPerGroup: 9,
-  rowStep: 0.032, colStep: 0.042,
-  abcdOffsetX: 0.053,
+  startX: 0.580, startY: 0.038,
+  colStep: 0.036, rowStep: 0.018,
   r: 10,
 };
 
-// ─── Phần II: 4 câu Đúng/Sai (mỗi câu có 4 ý a/b/c/d) ─────────────────────
-const PART2_CONFIG = {
+// ─── Mã đề thi — 3 cột × 10 hàng (0–9) ────────────────────────────────
+const MA_DE_CONFIG = {
+  cols: 3, rows: 10,
+  startX: 0.820, startY: 0.038,
+  colStep: 0.036, rowStep: 0.018,
+  r: 10,
+};
+
+// ─── Phần I: phiếu TNMaker có 4 nhóm × 10 câu = 40 câu (chỉ đọc 18 câu đầu) ──────
+const PART1_CONFIG = {
   groups: [
-    { cq: 1, startX: 0.060, startY: 0.780 },
-    { cq: 2, startX: 0.285, startY: 0.780 },
-    { cq: 3, startX: 0.510, startY: 0.780 },
-    { cq: 4, startX: 0.735, startY: 0.780 },
+    { startQ: 1,  startX: 0.148, startY: 0.244 },
+    { startQ: 11, startX: 0.344, startY: 0.244 },
+    { startQ: 21, startX: 0.540, startY: 0.244 }, // Q21-30 không đọc
+    { startQ: 31, startX: 0.736, startY: 0.244 }, // Q31-40 không đọc
   ],
-  rowStep: 0.022,
-  dsOffsetX: 0.032, dsStep: 0.040,
+  rowsPerGroup: 10,
+  rowStep: 0.016, // khoảng cách giữa các hàng câu
+  colStep: 0.028, // khoảng cách giữa A→B→C→D
+  abcdOffsetX: 0, // startX đã trỏ thẳng vào cột A
+  r: 10,
+};
+
+// ─── Phần II: phiếu TNMaker có 8 câu (chỉ đọc 4 câu đầu) ────────────────────
+const PART2_CONFIG = {
+  // 4 câu đầu trong phiếu (câu 1–4), câu 5–8 bỏ trống
+  groups: [
+    { cq: 1, startX: 0.087 },
+    { cq: 2, startX: 0.155 },
+    { cq: 3, startX: 0.263 },
+    { cq: 4, startX: 0.331 },
+  ],
+  startY: 0.455,
+  dsOffsetX: 0.038, // offset từ startX đến tâm bùng bóng Đúng
+  dsStep:  0.025,  // khoảng cách từ Đúng → Sai
+  rowStep: 0.013,  // khoảng cách giữa a→b→c→d
   r: 9,
 };
 
-// ─── Phần III: 6 câu trả lời ngắn ───────────────────────────────────────────
+// ─── Phần III: 6 câu trả lời ngắn — Mỗi câu có 4 cột chữ số (phiếu TNMaker) ──────
 const PART3_CONFIG = {
   questions: [
-    { startX: 0.060, startY: 0.892 },
-    { startX: 0.215, startY: 0.892 },
-    { startX: 0.375, startY: 0.892 },
-    { startX: 0.530, startY: 0.892 },
-    { startX: 0.685, startY: 0.892 },
-    { startX: 0.843, startY: 0.892 },
+    { startX: 0.072 },
+    { startX: 0.235 },
+    { startX: 0.400 },
+    { startX: 0.563 },
+    { startX: 0.727 },
+    { startX: 0.890 },
   ],
-  colStep: 0.065, rowStep: 0.018,
-  r: 7,
-  chars: ['-', '.', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+  startY: 0.620,        // y của hàng đầu tiên (dấu -)
+  digitCols: 4,         // 4 cột chữ số mỗi câu
+  colStep:  0.033,      // khoảng cách giữa 2 cột cạnh nhau
+  rowStep:  0.016,      // khoảng cách giữa các hàng ký tự
+  r: 8,
+  chars: ['-', ',', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
 };
 
 // ─────────────────────────────────────────────── HELPERS ──────────────────────
@@ -339,13 +348,13 @@ export async function processOMRImage(
     }
   }
 
-  // ── Đọc Phần II ────────────────────────────────────────────────────────────
+  // ── Đọc Phần II (chỉ đọc 4 câu đầu trong phiếu TNMaker) ────────────────────────
   const tf: OMRAnswers['tf'] = Array.from({ length: 4 }, () => ({ a: '', b: '', c: '', d: '' }));
   const tfKeys = ['a', 'b', 'c', 'd'] as const;
   for (const grp of PART2_CONFIG.groups) {
     const qNum = grp.cq - 1;
     for (let ki = 0; ki < 4; ki++) {
-      const cy = (grp.startY + ki * PART2_CONFIG.rowStep) * H;
+      const cy = (PART2_CONFIG.startY + ki * PART2_CONFIG.rowStep) * H;
       const cxD = (grp.startX + PART2_CONFIG.dsOffsetX) * W;
       const cxS = (grp.startX + PART2_CONFIG.dsOffsetX + PART2_CONFIG.dsStep) * W;
       const filledD = readBubble(cxD, cy, PART2_CONFIG.r);
@@ -355,21 +364,21 @@ export async function processOMRImage(
     }
   }
 
-  // ── Đọc Phần III ───────────────────────────────────────────────────────────
+  // ── Đọc Phần III (4 cột chữ số mỗi câu) ──────────────────────────────────────────
   const sa: string[] = [];
   for (let qi = 0; qi < 6; qi++) {
     const qCfg = PART3_CONFIG.questions[qi];
     let answer = '';
-    for (let col = 0; col < 2; col++) {
+    for (let col = 0; col < PART3_CONFIG.digitCols; col++) {
       let charFound = '';
       for (let row = 0; row < PART3_CONFIG.chars.length; row++) {
         const cx = (qCfg.startX + col * PART3_CONFIG.colStep) * W;
-        const cy = (qCfg.startY + row * PART3_CONFIG.rowStep) * H;
+        const cy = (PART3_CONFIG.startY + row * PART3_CONFIG.rowStep) * H;
         if (readBubble(cx, cy, PART3_CONFIG.r)) { charFound = PART3_CONFIG.chars[row]; break; }
       }
       answer += charFound;
     }
-    sa.push(answer.trim());
+    sa.push(answer.replace(/,/g, '.').trim());
   }
 
   return {
