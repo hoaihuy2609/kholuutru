@@ -36,7 +36,7 @@ interface WeeklyRecord {
 type GameState = 'hub' | 'loading' | 'playing' | 'review' | 'finished';
 
 // ── Constants ──────────────────────────────────────────────────────
-const QUESTIONS_PER_SESSION = 20;
+const MAX_QUESTIONS_PER_SESSION = 20;
 const STREAK_THRESHOLD = 5;   // streak to get x2
 const BASE_POINT = 15;        // more than Blitz per question
 const STORAGE_KEY = 'pv_theoryking';
@@ -78,30 +78,6 @@ function loadStorage(): { history: WeeklyRecord[]; weekDone: string | null } {
 function saveStorage(data: { history: WeeklyRecord[]; weekDone: string | null }) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
-
-// ── Fallback Questions ─────────────────────────────────────────────
-const FALLBACK_QUESTIONS: GameQuestion[] = [
-  { id: 'tk1', question: 'Định luật nào của Newton phát biểu: "Lực tác dụng bằng tích của khối lượng và gia tốc"?', option_a: 'Định luật I', option_b: 'Định luật II', option_c: 'Định luật III', option_d: 'Định luật vạn vật hấp dẫn', answer: 'B', grade: 0 },
-  { id: 'tk2', question: 'Tốc độ ánh sáng trong chân không xấp xỉ bao nhiêu?', option_a: '3×10⁵ km/s', option_b: '3×10⁸ m/s', option_c: '3×10⁶ m/s', option_d: 'A và B đều đúng', answer: 'D', grade: 0 },
-  { id: 'tk3', question: 'Trong chuyển động tròn đều, gia tốc hướng về phía nào?', option_a: 'Tiếp tuyến với quỹ đạo', option_b: 'Hướng ra ngoài tâm', option_c: 'Hướng vào tâm', option_d: 'Dọc theo trục quay', answer: 'C', grade: 0 },
-  { id: 'tk4', question: 'Hiện tượng quang điện xảy ra khi ánh sáng chiếu vào kim loại có tần số như thế nào?', option_a: 'Bất kỳ tần số nào', option_b: 'Nhỏ hơn tần số giới hạn', option_c: 'Lớn hơn hoặc bằng tần số giới hạn', option_d: 'Bằng đúng tần số giới hạn', answer: 'C', grade: 0 },
-  { id: 'tk5', question: 'Công thức tính động năng của một vật là gì?', option_a: '$W_d = mgh$', option_b: '$W_d = \\frac{1}{2}mv^2$', option_c: '$W_d = mv$', option_d: '$W_d = F \\cdot d$', answer: 'B', grade: 0 },
-  { id: 'tk6', question: 'Nguyên lý bảo toàn năng lượng phát biểu điều gì?', option_a: 'Năng lượng luôn tăng dần', option_b: 'Năng lượng không thể biến đổi dạng', option_c: 'Năng lượng không tự sinh ra và không tự mất đi', option_d: 'Năng lượng luôn bằng nhau ở mọi điểm', answer: 'C', grade: 0 },
-  { id: 'tk7', question: 'Điện trở của một dây dẫn phụ thuộc vào yếu tố nào?', option_a: 'Chỉ vật liệu làm dây', option_b: 'Chỉ chiều dài dây', option_c: 'Vật liệu, chiều dài và tiết diện', option_d: 'Nhiệt độ và hiệu điện thế', answer: 'C', grade: 0 },
-  { id: 'tk8', question: 'Sóng ngang là sóng có phương dao động như thế nào?', option_a: 'Song song với phương truyền sóng', option_b: 'Vuông góc với phương truyền sóng', option_c: 'Tạo góc 45° với phương truyền sóng', option_d: 'Ngẫu nhiên', answer: 'B', grade: 0 },
-  { id: 'tk9', question: 'Hạt nhân nguyên tử gồm những hạt nào?', option_a: 'Proton và electron', option_b: 'Neutron và electron', option_c: 'Proton và neutron', option_d: 'Proton, neutron và electron', answer: 'C', grade: 0 },
-  { id: 'tk10', question: 'Công thức tính lực hấp dẫn giữa hai vật là gì?', option_a: '$F = ma$', option_b: '$F = \\frac{Gm_1m_2}{r}$', option_c: '$F = \\frac{Gm_1m_2}{r^2}$', option_d: '$F = \\frac{m_1m_2}{r^2}$', answer: 'C', grade: 0 },
-  { id: 'tk11', question: 'Trong dao động điều hòa, pha dao động được tính bằng công thức nào?', option_a: '$\\phi = \\omega t$', option_b: '$\\phi = \\omega t + \\phi_0$', option_c: '$\\phi = A\\sin(\\omega t)$', option_d: '$\\phi = 2\\pi f$', answer: 'B', grade: 0 },
-  { id: 'tk12', question: 'Hiệu suất của một máy nhiệt tính bằng công thức nào?', option_a: '$H = \\frac{Q_1}{A}$', option_b: '$H = \\frac{A}{Q_1}$', option_c: '$H = \\frac{Q_2}{Q_1}$', option_d: '$H = \\frac{A}{Q_2}$', answer: 'B', grade: 0 },
-  { id: 'tk13', question: 'Khi nào hai điện tích đẩy nhau?', option_a: 'Luôn đẩy nhau', option_b: 'Khi trái dấu nhau', option_c: 'Khi cùng dấu nhau', option_d: 'Khi đặt trong điện môi', answer: 'C', grade: 0 },
-  { id: 'tk14', question: 'Từ thông qua một vòng dây được tính bằng công thức nào?', option_a: '$\\Phi = B \\cdot S$', option_b: '$\\Phi = B \\cdot S \\cdot \\sin\\alpha$', option_c: '$\\Phi = B \\cdot S \\cdot \\cos\\alpha$', option_d: '$\\Phi = B \\cdot I$', answer: 'C', grade: 0 },
-  { id: 'tk15', question: 'Năng lượng dao động điều hòa được bảo toàn như thế nào?', option_a: 'Động năng tăng, thế năng giảm cùng lúc', option_b: 'Tổng động năng và thế năng không đổi', option_c: 'Chỉ có động năng được bảo toàn', option_d: 'Năng lượng giảm dần theo thời gian', answer: 'B', grade: 0 },
-  { id: 'tk16', question: 'Phản ứng hạt nhân bảo toàn đại lượng nào?', option_a: 'Chỉ bảo toàn số khối A', option_b: 'Chỉ bảo toàn điện tích Z', option_c: 'Bảo toàn A, Z và năng lượng toàn phần', option_d: 'Bảo toàn khối lượng nghỉ', answer: 'C', grade: 0 },
-  { id: 'tk17', question: 'Hiện tượng giao thoa ánh sáng chứng tỏ ánh sáng có tính chất gì?', option_a: 'Tính chất hạt', option_b: 'Tính chất sóng', option_c: 'Tính chất điện từ', option_d: 'Tính chất vô hướng', answer: 'B', grade: 0 },
-  { id: 'tk18', question: 'Công thức tính chu kỳ dao động của con lắc đơn?', option_a: '$T = 2\\pi\\sqrt{\\frac{m}{k}}$', option_b: '$T = 2\\pi\\sqrt{\\frac{l}{g}}$', option_c: '$T = 2\\pi\\sqrt{\\frac{g}{l}}$', option_d: '$T = \\frac{2\\pi}{\\omega}$', answer: 'B', grade: 0 },
-  { id: 'tk19', question: 'Điều kiện để xảy ra hiện tượng cộng hưởng điện?', option_a: '$R = 0$', option_b: '$Z_L = Z_C$', option_c: '$Z_L = R$', option_d: '$U_L = U_C = 0$', answer: 'B', grade: 0 },
-  { id: 'tk20', question: 'Bức xạ nào có bước sóng ngắn nhất trong các bức xạ điện từ?', option_a: 'Tia hồng ngoại', option_b: 'Tia tử ngoại', option_c: 'Tia X', option_d: 'Tia gamma', answer: 'D', grade: 0 },
-];
 
 const OPTIONS: ('A' | 'B' | 'C' | 'D')[] = ['A', 'B', 'C', 'D'];
 
@@ -164,12 +140,18 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
         });
         if (res.ok) {
           const data: GameQuestion[] = await res.json();
-          if (data && data.length >= QUESTIONS_PER_SESSION) pool = data;
+          if (data && data.length > 0) pool = data;
         }
       } catch { /* fall through */ }
     }
-    if (pool.length < QUESTIONS_PER_SESSION) pool = FALLBACK_QUESTIONS;
-    const selected = shuffle(pool).slice(0, QUESTIONS_PER_SESSION);
+    
+    if (pool.length === 0) {
+      alert("Chưa có đủ dữ liệu câu hỏi để chơi game này. Vui lòng thêm câu hỏi qua Admin Panel.");
+      setGameState('hub');
+      return;
+    }
+
+    const selected = shuffle(pool).slice(0, MAX_QUESTIONS_PER_SESSION);
     setQuestions(selected);
     setQIndex(0);
     setAnswers([]);
@@ -209,7 +191,7 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
 
   // ── Next / Finish ─────────────────────────────────────────────────
   const handleNext = useCallback(() => {
-    const isLast = qIndex >= QUESTIONS_PER_SESSION - 1;
+    const isLast = qIndex >= questions.length - 1;
     if (isLast) {
       setGameState('finished');
     } else {
@@ -306,13 +288,13 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
                 </div>
                 <h3 className="text-xl font-semibold mb-2" style={{ color: '#1A1A1A' }}>Thách thức tuần này</h3>
                 <p className="text-sm leading-relaxed mb-5 max-w-sm mx-auto" style={{ color: '#787774' }}>
-                  Trả lời <strong>{QUESTIONS_PER_SESSION} câu hỏi lý thuyết</strong> không giới hạn thời gian. Liên tiếp đúng 5 câu nhận <strong>điểm x2</strong>. Mỗi tuần chỉ chơi một lần!
+                  Trả lời <strong>tối đa {MAX_QUESTIONS_PER_SESSION} câu hỏi lý thuyết</strong> không giới hạn thời gian. Liên tiếp đúng 5 câu nhận <strong>điểm x2</strong>. Mỗi tuần chỉ chơi một lần!
                 </p>
 
                 {/* Rules */}
                 <div className="grid grid-cols-3 gap-3 mb-6">
                   {[
-                    { icon: '📚', label: `${QUESTIONS_PER_SESSION} câu`, sub: 'Mỗi tuần' },
+                    { icon: '📚', label: `Tối đa ${MAX_QUESTIONS_PER_SESSION} câu`, sub: 'Mỗi tuần' },
                     { icon: '⏳', label: 'Thoải mái', sub: 'Không tính giờ' },
                     { icon: '🔥', label: 'Streak ×2', sub: '5 câu đúng liên tiếp' },
                   ].map(r => (
@@ -419,7 +401,7 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
   if (gameState === 'playing' && questions.length > 0) {
     const q = questions[qIndex];
     const isStreakActive = streak >= STREAK_THRESHOLD;
-    const progress = ((qIndex) / QUESTIONS_PER_SESSION) * 100;
+    const progress = ((qIndex) / questions.length) * 100;
 
     return (
       <div className="animate-fade-in space-y-4 pb-10">
@@ -428,7 +410,7 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
           {/* Progress */}
           <div className="flex-1">
             <div className="flex items-center justify-between text-xs mb-1" style={{ color: '#AEACA8' }}>
-              <span>Câu {qIndex + 1} / {QUESTIONS_PER_SESSION}</span>
+              <span>Câu {qIndex + 1} / {questions.length}</span>
               <span className="font-semibold" style={{ color: '#9065B0' }}>{score} điểm</span>
             </div>
             <div className="h-2 rounded-full overflow-hidden" style={{ background: '#F1F0EC' }}>
@@ -551,7 +533,7 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
               boxShadow: '0 4px 16px rgba(144,101,176,0.3)',
             }}
           >
-            {qIndex >= QUESTIONS_PER_SESSION - 1 ? (
+            {qIndex >= questions.length - 1 ? (
               <><Trophy className="w-4 h-4" />Xem kết quả</>
             ) : (
               <><ChevronRight className="w-4 h-4" />Câu tiếp theo</>
