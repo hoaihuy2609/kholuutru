@@ -368,7 +368,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <AdminGameManager
                             onShowToast={onShowToast}
                             workerUrl={import.meta.env.VITE_COMMENT_WORKER_URL || ''}
-                            adminKey={import.meta.env.VITE_ADMIN_KEY || ''}
+                            adminKey={import.meta.env.VITE_COMMENT_ADMIN_KEY || ''}
                         />
                     </Suspense>
                 )}
