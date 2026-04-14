@@ -238,7 +238,7 @@ export default {
       const orderBy = shuffle ? "ORDER BY RANDOM()" : "ORDER BY created_at ASC";
       try {
         let query = "";
-        let params: any[] = [];
+        let params = [];
         if (grade > 0 && topic) {
           query = `SELECT * FROM game_questions WHERE (grade = ? OR grade = 0) AND topic = ? ${orderBy} LIMIT ?`;
           params = [grade, topic, limit];

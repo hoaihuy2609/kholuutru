@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ArrowLeft, Trophy, Crown, CheckCircle2, XCircle,
   Star, Flame, RotateCcw, ChevronRight, Medal, Zap, BookOpen, Lock,
-  GraduationCap, Dumbbell, School,
+  GraduationCap, Dumbbell, School, Gamepad2, Target, Clock, Award, TrendingUp, Sparkles, Info
 } from 'lucide-react';
 import MathText from './MathText';
 
@@ -96,12 +96,12 @@ const optionText = (q: GameQuestion, letter: 'A' | 'B' | 'C' | 'D') => {
   return q.option_d;
 };
 
-const GRADE_CONFIG: Record<string, { color: string; bg: string; border: string; label: string; emoji: string }> = {
-  S: { color: '#B45309', bg: '#FFFBEB', border: '#F59E0B', label: 'Xuất sắc', emoji: '👑' },
-  A: { color: '#166534', bg: '#F0FDF4', border: '#448361', label: 'Giỏi', emoji: '🥇' },
-  B: { color: '#3B4FA0', bg: '#EEF0FB', border: '#6B7CDB', label: 'Khá', emoji: '🥈' },
-  C: { color: '#92400E', bg: '#FFF7ED', border: '#D9730D', label: 'Trung bình', emoji: '🥉' },
-  D: { color: '#9F1239', bg: '#FFF1F2', border: '#E03E3E', label: 'Cần cố gắng', emoji: '💪' },
+const GRADE_CONFIG: Record<string, { color: string; bg: string; border: string; label: string; icon: React.ElementType }> = {
+  S: { color: '#B45309', bg: '#FFFBEB', border: '#F59E0B', label: 'Xuất sắc', icon: Crown },
+  A: { color: '#166534', bg: '#F0FDF4', border: '#448361', label: 'Giỏi', icon: Medal },
+  B: { color: '#3B4FA0', bg: '#EEF0FB', border: '#6B7CDB', label: 'Khá', icon: Award },
+  C: { color: '#92400E', bg: '#FFF7ED', border: '#D9730D', label: 'Trung bình', icon: Star },
+  D: { color: '#9F1239', bg: '#FFF1F2', border: '#E03E3E', label: 'Cần cố gắng', icon: TrendingUp },
 };
 
 interface AnsweredQ {
@@ -293,10 +293,10 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <span className="inline-block text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded mb-1" style={{ background: '#F3ECF8', color: '#9065B0' }}>
-              Game · Vua Lý Thuyết
-            </span>
-            <h2 className="text-2xl font-semibold" style={{ color: '#1A1A1A' }}>👑 Vua Lý Thuyết</h2>
+            <div className="flex items-center gap-2">
+              <Gamepad2 className="w-7 h-7" style={{ color: '#9065B0' }} />
+              <h2 className="text-2xl font-bold" style={{ color: '#1A1A1A' }}>Vua Lý Thuyết</h2>
+            </div>
           </div>
         </div>
 
@@ -308,43 +308,45 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
               setGameState('mode_practice');
               fetchTopics(selectedPracticeGrade);
             }}
-            className="rounded-2xl p-6 text-left transition-all active:scale-[0.98]"
-            style={{ background: '#FFFFFF', border: '2px solid #6B7CDB33', boxShadow: '0 2px 12px rgba(107,124,219,0.08)' }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB33'}
+            className="group relative rounded-[20px] p-6 text-left transition-all hover:-translate-y-1 active:scale-[0.98] overflow-hidden"
+            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}
           >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: '#EEF0FB' }}>
-              <Dumbbell className="w-6 h-6" style={{ color: '#6B7CDB' }} />
+            <div className="absolute top-0 right-0 w-32 h-32 opacity-5 pointer-events-none transition-transform group-hover:scale-110" style={{ background: 'radial-gradient(circle, #6B7CDB 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-transform group-hover:scale-105" style={{ background: 'linear-gradient(135deg, #EEF0FB, #DDE3F8)' }}>
+              <Dumbbell className="w-7 h-7" style={{ color: '#6B7CDB' }} />
             </div>
-            <h3 className="text-base font-bold mb-1" style={{ color: '#1A1A1A' }}>🏋️ Luyện tập</h3>
-            <p className="text-xs leading-relaxed" style={{ color: '#787774' }}>
-              Chọn chương cụ thể, ôn toàn bộ câu hỏi trong chương đó. Không giới hạn số lần, không tính điểm tuần.
+            <h3 className="text-lg font-extrabold mb-1.5" style={{ color: '#1A1A1A' }}>Luyện tập</h3>
+            <p className="text-xs leading-relaxed mb-6 block min-h-[36px]" style={{ color: '#787774' }}>
+              Chọn chương cụ thể, ôn toàn bộ câu hỏi. Không giới hạn số lần, không tính điểm tuần.
             </p>
-            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#6B7CDB' }}>
-              Bắt đầu luyện tập <ChevronRight className="w-3.5 h-3.5" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-sm font-bold transition-colors" style={{ color: '#6B7CDB' }}>
+                Bắt đầu <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </div>
             </div>
           </button>
 
           {/* Thi */}
           <button
             onClick={() => setGameState('mode_exam')}
-            className="rounded-2xl p-6 text-left transition-all active:scale-[0.98]"
-            style={{ background: '#FFFFFF', border: '2px solid #9065B033', boxShadow: '0 2px 12px rgba(144,101,176,0.08)' }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#9065B0'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#9065B033'}
+            className="group relative rounded-[20px] p-6 text-left transition-all hover:-translate-y-1 active:scale-[0.98] overflow-hidden"
+            style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}
           >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: '#F3ECF8' }}>
-              <Crown className="w-6 h-6" style={{ color: '#9065B0' }} />
+            <div className="absolute top-0 right-0 w-32 h-32 opacity-5 pointer-events-none transition-transform group-hover:scale-110" style={{ background: 'radial-gradient(circle, #9065B0 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-transform group-hover:scale-105" style={{ background: 'linear-gradient(135deg, #F3ECF8, #E8D5F5)' }}>
+              <Crown className="w-7 h-7" style={{ color: '#9065B0' }} />
             </div>
-            <h3 className="text-base font-bold mb-1" style={{ color: '#1A1A1A' }}>
-              👑 Thi tuần
-              {weekDone && <span className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: '#F3ECF8', color: '#9065B0' }}>Đã thi</span>}
+            <h3 className="text-lg font-extrabold mb-1.5 flex items-center gap-2" style={{ color: '#1A1A1A' }}>
+              Thi tuần
+              {weekDone && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#F3ECF8', color: '#9065B0' }}>ĐÃ THI</span>}
             </h3>
-            <p className="text-xs leading-relaxed" style={{ color: '#787774' }}>
-              Bốc ngẫu nhiên {MAX_EXAM_QUESTIONS} câu theo khối. Mỗi tuần chỉ thi một lần, tích điểm xếp hạng.
+            <p className="text-xs leading-relaxed mb-6 block min-h-[36px]" style={{ color: '#787774' }}>
+              Bốc ngẫu nhiên {MAX_EXAM_QUESTIONS} câu. Mỗi tuần chỉ thi một lần, để xếp hạng.
             </p>
-            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#9065B0' }}>
-              {weekDone ? 'Xem kết quả' : 'Vào thi ngay'} <ChevronRight className="w-3.5 h-3.5" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-sm font-bold transition-colors" style={{ color: '#9065B0' }}>
+                {weekDone ? 'Xem kết quả' : 'Vào thi ngay'} <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </div>
             </div>
           </button>
         </div>
@@ -378,7 +380,9 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
                 const cfg = GRADE_CONFIG[rec.grade] ?? GRADE_CONFIG['D'];
                 return (
                   <div key={rec.week} className="flex items-center gap-3 px-4 py-3">
-                    <span className="text-lg">{cfg.emoji}</span>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: cfg.bg }}>
+                      <cfg.icon className="w-5 h-5" style={{ color: cfg.color }} />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium" style={{ color: '#57564F' }}>
                         Tuần {rec.week.split('-W')[1]} · {rec.examGrade ? `Khối ${rec.examGrade}` : 'Tổng'} · {new Date(rec.completedAt).toLocaleDateString('vi-VN')}
@@ -422,8 +426,11 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h2 className="text-xl font-semibold" style={{ color: '#1A1A1A' }}>🏋️ Luyện tập</h2>
-            <p className="text-xs" style={{ color: '#787774' }}>Chọn khối và chương cần ôn</p>
+            <div className="flex items-center gap-2">
+              <Dumbbell className="w-6 h-6" style={{ color: '#6B7CDB' }} />
+              <h2 className="text-xl font-bold" style={{ color: '#1A1A1A' }}>Luyện tập</h2>
+            </div>
+            <p className="text-xs mt-1" style={{ color: '#787774' }}>Chọn khối và chương cần ôn</p>
           </div>
         </div>
 
@@ -439,7 +446,8 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
                   setSelectedTopic(null);
                   fetchTopics(g);
                 }}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                className="px-4 py-2 text-xs font-bold rounded-xl transition-all active:scale-[0.98]"
+
                 style={{
                   background: selectedPracticeGrade === g ? gradeColor(g) : '#F7F6F3',
                   color: selectedPracticeGrade === g ? '#FFFFFF' : '#787774',
@@ -535,32 +543,50 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h2 className="text-xl font-semibold" style={{ color: '#1A1A1A' }}>👑 Thi tuần</h2>
-            <p className="text-xs" style={{ color: '#787774' }}>Bốc {MAX_EXAM_QUESTIONS} câu ngẫu nhiên theo khối</p>
+            <div className="flex items-center gap-2">
+              <Crown className="w-6 h-6" style={{ color: '#9065B0' }} />
+              <h2 className="text-xl font-bold" style={{ color: '#1A1A1A' }}>Thi tuần</h2>
+            </div>
+            <p className="text-xs mt-1" style={{ color: '#787774' }}>Bốc {MAX_EXAM_QUESTIONS} câu ngẫu nhiên theo khối</p>
           </div>
         </div>
 
         {/* If already done this week */}
         {weekDone && thisWeekRecord ? (
-          <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '2px solid #9065B033' }}>
+          <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 8px 32px rgba(144, 101, 176, 0.08)' }}>
             <div className="h-1.5" style={{ background: 'linear-gradient(90deg, #9065B0, #6B7CDB)' }} />
-            <div className="p-6 text-center">
-              <div className="text-4xl mb-3">{GRADE_CONFIG[thisWeekRecord.grade]?.emoji ?? '🏅'}</div>
-              <p className="text-sm font-medium mb-1" style={{ color: '#787774' }}>Bài thi tuần này đã hoàn thành!</p>
-              <div className="text-4xl font-black my-2" style={{ color: '#9065B0' }}>{thisWeekRecord.score}</div>
-              <p className="text-xs mb-4" style={{ color: '#AEACA8' }}>
-                {thisWeekRecord.correct}/{thisWeekRecord.total} đúng · Hạng {GRADE_CONFIG[thisWeekRecord.grade]?.label}
-              </p>
-              <div className="flex items-center justify-center gap-2 p-3 rounded-xl mb-4" style={{ background: '#F3ECF8' }}>
-                <Lock className="w-4 h-4" style={{ color: '#9065B0' }} />
-                <span className="text-sm" style={{ color: '#9065B0' }}>Tuần mới sẽ mở vào thứ Hai!</span>
+            <div className="p-8 text-center flex flex-col items-center">
+              <div className="flex justify-center mb-5">
+                <div className="w-24 h-24 rounded-full flex items-center justify-center relative" style={{ background: GRADE_CONFIG[thisWeekRecord.grade]?.bg ?? '#F3ECF8', boxShadow: `0 0 50px ${GRADE_CONFIG[thisWeekRecord.grade]?.color ?? '#9065B0'}33` }}>
+                  <div className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ background: GRADE_CONFIG[thisWeekRecord.grade]?.color ?? '#9065B0' }}></div>
+                  {(() => {
+                    const RecordIcon = GRADE_CONFIG[thisWeekRecord.grade]?.icon ?? Trophy;
+                    return <RecordIcon className="w-12 h-12 relative z-10" style={{ color: GRADE_CONFIG[thisWeekRecord.grade]?.color ?? '#9065B0' }} />;
+                  })()}
+                </div>
+              </div>
+              <h3 className="text-2xl font-black mb-1" style={{ color: '#1A1A1A' }}>Tuyệt vời</h3>
+              <p className="text-sm font-medium mb-6" style={{ color: '#787774' }}>Bạn đã hoàn thành bài thi tuần này!</p>
+              
+              <div className="inline-block px-10 py-5 rounded-[24px] mb-8 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #F3ECF8, #FFFFFF)', border: '1px solid #9065B033' }}>
+                <div className="text-sm font-bold mb-1 tracking-wider uppercase" style={{ color: '#9065B0' }}>Điểm số</div>
+                <div className="text-6xl font-black" style={{ color: '#9065B0', textShadow: '0 4px 16px rgba(144, 101, 176, 0.25)' }}>{thisWeekRecord.score}</div>
+              </div>
+              <div className="flex justify-center items-center gap-4 text-xs font-semibold mb-8" style={{ color: '#57564F' }}>
+                <span className="px-4 py-2 rounded-xl" style={{ background: '#F7F6F3' }}>{thisWeekRecord.correct}/{thisWeekRecord.total} đúng</span>
+                <span className="px-4 py-2 rounded-xl" style={{ background: GRADE_CONFIG[thisWeekRecord.grade]?.bg ?? '#F7F6F3', color: GRADE_CONFIG[thisWeekRecord.grade]?.color ?? '#57564F' }}>Hạng {GRADE_CONFIG[thisWeekRecord.grade]?.label}</span>
+              </div>
+
+              <div className="flex items-center justify-center gap-2 p-3 rounded-xl mb-6 w-full max-w-sm" style={{ background: '#FFFBEB', border: '1px solid #F59E0B33' }}>
+                <Clock className="w-4 h-4" style={{ color: '#D97706' }} />
+                <span className="text-xs font-bold" style={{ color: '#D97706' }}>Vòng mới sẽ mở vào thứ Hai tuần sau</span>
               </div>
               <button
                 onClick={() => setGameState('review')}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold"
-                style={{ background: '#F3ECF8', color: '#9065B0', border: '1px solid #9065B033' }}
+                className="w-full max-w-sm flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{ background: 'linear-gradient(135deg, #9065B0, #6B7CDB)', boxShadow: '0 8px 24px rgba(144, 101, 176, 0.3)' }}
               >
-                <BookOpen className="w-4 h-4" />
+                <BookOpen className="w-5 h-5" />
                 Xem lại đáp án
               </button>
             </div>
@@ -593,17 +619,18 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
             </div>
 
             {/* Info */}
-            <div className="rounded-xl p-4" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
-              <div className="grid grid-cols-3 gap-3">
+            {/* Info */}
+            <div className="rounded-2xl p-5" style={{ background: '#FAFAF9', border: '1px solid #E9E9E7' }}>
+              <div className="grid grid-cols-3 gap-2">
                 {[
-                  { icon: '📚', label: `${MAX_EXAM_QUESTIONS} câu`, sub: 'Ngẫu nhiên' },
-                  { icon: '⏳', label: 'Thoải mái', sub: 'Không tính giờ' },
-                  { icon: '🔥', label: 'Streak ×2', sub: '5 câu đúng' },
+                  { icon: <Target className="w-6 h-6" style={{ color: '#6B7CDB' }} />, label: `${MAX_EXAM_QUESTIONS} câu`, sub: 'Ngẫu nhiên' },
+                  { icon: <Clock className="w-6 h-6" style={{ color: '#448361' }} />, label: 'Thoải mái', sub: 'Không tính giờ' },
+                  { icon: <Flame className="w-6 h-6" style={{ color: '#F59E0B' }} />, label: 'Streak ×2', sub: '5 câu đúng' },
                 ].map(r => (
-                  <div key={r.label} className="text-center">
-                    <div className="text-xl mb-1">{r.icon}</div>
-                    <div className="text-xs font-semibold" style={{ color: '#1A1A1A' }}>{r.label}</div>
-                    <div className="text-[10px]" style={{ color: '#AEACA8' }}>{r.sub}</div>
+                  <div key={r.label} className="text-center flex flex-col items-center">
+                    <div className="w-10 h-10 mb-2 rounded-full flex items-center justify-center bg-white shadow-sm">{r.icon}</div>
+                    <div className="text-xs font-bold" style={{ color: '#1A1A1A' }}>{r.label}</div>
+                    <div className="text-[10px] mt-0.5" style={{ color: '#787774' }}>{r.sub}</div>
                   </div>
                 ))}
               </div>
@@ -615,13 +642,17 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
                 if (!selectedExamGrade) { alert('Vui lòng chọn khối!'); return; }
                 startGame('exam', selectedExamGrade);
               }}
-              className="w-full py-3.5 rounded-2xl text-white font-bold text-base transition-all active:scale-95"
+              className="relative w-full overflow-hidden py-4 rounded-[16px] text-white font-bold text-base transition-all hover:scale-[1.02] active:scale-[0.98] group"
               style={{
                 background: `linear-gradient(135deg, ${gradeColor(selectedExamGrade)}, #6B7CDB)`,
                 boxShadow: `0 8px 24px ${gradeColor(selectedExamGrade)}66`,
               }}
             >
-              👑 Bắt đầu thi {selectedExamGrade > 0 ? `Lớp ${selectedExamGrade}` : ''}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)', transform: 'skewX(-20deg) translateX(-150%)', animation: 'shimmer 2s infinite' }} />
+              <div className="flex items-center justify-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                Bắt đầu thi {selectedExamGrade > 0 ? `Lớp ${selectedExamGrade}` : ''}
+              </div>
             </button>
           </>
         )}
@@ -658,8 +689,8 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
       <div className="animate-fade-in space-y-4 pb-10">
         {/* Mode badge */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded" style={{ background: gameMode === 'exam' ? '#F3ECF8' : '#EEF0FB', color: modeColor }}>
-            {gameMode === 'exam' ? '👑 Thi tuần' : '🏋️ Luyện tập'}
+          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase px-2.5 py-1 rounded" style={{ background: gameMode === 'exam' ? '#F3ECF8' : '#EEF0FB', color: modeColor }}>
+            {gameMode === 'exam' ? <><Crown className="w-3.5 h-3.5" /> Thi tuần</> : <><Dumbbell className="w-3.5 h-3.5" /> Luyện tập</>}
           </span>
           {q.topic && (
             <span className="text-[10px] font-medium px-2 py-0.5 rounded" style={{ background: '#F7F6F3', color: '#787774' }}>
@@ -708,8 +739,8 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
               Câu {qIndex + 1}
             </span>
             {isStreakActive && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded animate-pulse" style={{ background: '#FEF3C7', color: '#D97706' }}>
-                🔥 STREAK ×2
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded animate-pulse" style={{ background: '#FEF3C7', color: '#D97706' }}>
+                <Flame className="w-3 h-3" /> STREAK ×2
               </span>
             )}
           </div>
@@ -876,7 +907,11 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
         <div className="rounded-2xl overflow-hidden text-center" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
           <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${modeColor}, #6B7CDB)` }} />
           <div className="p-8">
-            <div className="text-5xl mb-2">{cfg.emoji}</div>
+            <div className="flex justify-center mb-5">
+              <div className="w-24 h-24 rounded-full flex items-center justify-center relative shadow-sm" style={{ background: cfg.bg }}>
+                 <cfg.icon className="w-12 h-12" style={{ color: cfg.color }} />
+              </div>
+            </div>
             <div
               className="inline-block px-4 py-1.5 rounded-full text-sm font-bold mb-4"
               style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}33` }}
@@ -888,12 +923,12 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
 
             <div className="grid grid-cols-3 gap-3 mb-5">
               {[
-                { icon: '✅', label: 'Đúng', value: correct, color: '#448361', bg: '#EAF3EE' },
-                { icon: '❌', label: 'Sai', value: wrong, color: '#E03E3E', bg: '#FEF2F2' },
-                { icon: '🎯', label: 'Chính xác', value: accuracy + '%', color: '#6B7CDB', bg: '#EEF0FB' },
+                { icon: <CheckCircle2 className="w-5 h-5 mx-auto" style={{ color: '#448361' }} />, label: 'Đúng', value: correct, color: '#448361', bg: '#EAF3EE' },
+                { icon: <XCircle className="w-5 h-5 mx-auto" style={{ color: '#E03E3E' }} />, label: 'Sai', value: wrong, color: '#E03E3E', bg: '#FEF2F2' },
+                { icon: <Target className="w-5 h-5 mx-auto" style={{ color: '#6B7CDB' }} />, label: 'Chính xác', value: accuracy + '%', color: '#6B7CDB', bg: '#EEF0FB' },
               ].map(s => (
                 <div key={s.label} className="rounded-xl p-3" style={{ background: s.bg }}>
-                  <div className="text-xl mb-0.5">{s.icon}</div>
+                  <div className="mb-2">{s.icon}</div>
                   <div className="text-lg font-black" style={{ color: s.color }}>{s.value}</div>
                   <div className="text-[10px]" style={{ color: '#AEACA8' }}>{s.label}</div>
                 </div>
