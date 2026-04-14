@@ -108,7 +108,7 @@ const AnswerKeyEditor: React.FC<{
         <div className="grid grid-cols-2 gap-4">
           {answerKey.tf.map((t, qi) => (
             <div key={qi} className="p-3 rounded-lg" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
-              <p className="text-xs font-semibold mb-2" style={{ color: '#1A1A1A' }}>Câu {41 + qi}</p>
+              <p className="text-xs font-semibold mb-2" style={{ color: '#1A1A1A' }}>Câu {qi + 1}</p>
               {(['a', 'b', 'c', 'd'] as const).map(k => (
                 <div key={k} className="flex items-center gap-2 mb-1">
                   <span className="text-[11px] w-4" style={{ color: '#787774' }}>{k})</span>
@@ -133,7 +133,7 @@ const AnswerKeyEditor: React.FC<{
         <div className="grid grid-cols-2 gap-3">
           {answerKey.sa.map((v, i) => (
             <div key={i} className="flex items-center gap-2">
-              <span className="text-xs font-mono w-12 text-right shrink-0" style={{ color: '#AEACA8' }}>Câu {45 + i}</span>
+              <span className="text-xs font-mono w-12 text-right shrink-0" style={{ color: '#AEACA8' }}>Câu {i + 1}</span>
               <input
                 type="text"
                 value={v}
@@ -253,7 +253,7 @@ const ScoreDisplay: React.FC<{
         <div className="grid grid-cols-4 gap-2">
           {answers.tf.map((t, i) => (
             <div key={i} className="rounded-lg p-2.5" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
-              <p className="text-[10px] font-semibold mb-1.5" style={{ color: '#1A1A1A' }}>Câu {41 + i}</p>
+              <p className="text-[10px] font-semibold mb-1.5" style={{ color: '#1A1A1A' }}>Câu {i + 1}</p>
               {(['a', 'b', 'c', 'd'] as const).map(k => {
                 const key_val = answerKey.tf[i]?.[k];
                 const ans_val = t[k];
@@ -286,7 +286,7 @@ const ScoreDisplay: React.FC<{
             const correct = score.saDetail[i];
             return (
               <div key={i} className="rounded-lg p-2.5" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
-                <p className="text-[10px] mb-1" style={{ color: '#AEACA8' }}>Câu {45 + i}</p>
+                <p className="text-[10px] mb-1" style={{ color: '#AEACA8' }}>Câu {i + 1}</p>
                 <p className="text-sm font-bold" style={{ color: correct ? '#448361' : v ? '#E03E3E' : '#AEACA8' }}>
                   {v || '—'}
                 </p>
