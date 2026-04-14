@@ -99,6 +99,11 @@ const AdminGameManager: React.FC<AdminGameManagerProps> = ({ onShowToast, worker
   const handleParse = () => {
     if (!rawText.trim()) return;
     setParseError('');
+    if (selectedGrade === 0) {
+      setParseError('Vui lòng chọn khối trước khi Parse!');
+      setParsedQuestions([]);
+      return;
+    }
     const result = parseQuestions(rawText, selectedGrade, selectedTopic);
     if (result.length === 0) {
       setParseError('Không parse được câu hỏi nào. Kiểm tra lại định dạng!');
@@ -213,7 +218,7 @@ D. J
               Áp dụng cho khối
             </label>
             <div className="flex gap-2 flex-wrap">
-              {([0, 12, 11, 10] as const).map(g => (
+              {([12, 11, 10] as const).map(g => (
                 <button
                   key={g}
                   onClick={() => setSelectedGrade(g)}
