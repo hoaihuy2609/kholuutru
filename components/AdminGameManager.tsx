@@ -41,7 +41,7 @@ function parseQuestions(raw: string, grade: number): Omit<GameQuestion, 'id'>[] 
 
     // Find answer: "ĐA: B" or "Đáp án: B"
     const ansLine = lines.find(l => /^(đa|đáp án|answer)\s*[:：]\s*[ABCD]/i.test(l));
-    const answer = ansLine?.match(/[ABCD]$/i)?.[0]?.toUpperCase();
+    const answer = ansLine?.match(/[ABCD]/i)?.[0]?.toUpperCase();
 
     if (optA && optB && optC && optD && answer && ['A', 'B', 'C', 'D'].includes(answer)) {
       questions.push({

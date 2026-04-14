@@ -529,7 +529,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
             <Route path="/community" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><CommunityPage isAdmin={effectiveIsAdmin} /></Suspense></ErrorBoundary>} />
             <Route path="/game" element={
               <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-                <TheoryKing onBack={() => navigate('/')} />
+                <TheoryKing onBack={() => navigate('/')} workerUrl={import.meta.env.VITE_COMMENT_WORKER_URL} studentGrade={studentGradeValue} />
               </Suspense></ErrorBoundary>
             } />
             <Route path="/admin/editor" element={effectiveIsAdmin ? <ErrorBoundary><Suspense fallback={<LazyFallback />}><SolutionEditor /></Suspense></ErrorBoundary> : <Navigate to="/" replace />} />
