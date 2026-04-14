@@ -5,6 +5,8 @@ import {
   X, Bug
 } from 'lucide-react';
 import { processOMRImage, scoreOMR, OMRAnswers, AnswerKey, ScoreResult } from '../src/lib/omrProcessor';
+import { supabase } from '../src/lib/supabase';
+import { TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface OMRScannerProps {
@@ -346,10 +348,58 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [debugMode, setDebugMode] = useState(false);
+  const [canScan, setCanScan] = useState(false);
+  const [templateFileId, setTemplateFileId] = useState<string | null>(null);
+  const [isUploadingTemplate, setIsUploadingTemplate] = useState(false);
+  const templateInputRef = useRef<HTMLInputElement>(null);
 
-  // Check đáp án đã đủ chưa
-  const mcFilled = answerKey.mc.filter(Boolean).length;
-  const canScan = mcFilled >= 5; // cần nhập ít nhất 5 câu
+  useEffect(() => {
+    const filledI = answerKey.mc.filter(Boolean).length;
+    setCanScan(filledI >= 5);
+  }, [answerKey]);
+
+  useEffect(() => {
+    const fetchTemplate = async () => {
+      try {
+        const { data } = await supabase.from('app_settings').select('value').eq('id', 'omr_template_file_id').single();
+        if (data?.value) setTemplateFileId(data.value);
+      } catch (e) { console.error('Failed to load template info', e); }
+    };
+    fetchTemplate();
+  }, []);
+
+  const handleUploadTemplate = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingTemplate(true);
+    try {
+      const formData = new FormData();
+      formData.append('chat_id', TELEGRAM_CHAT_ID);
+      formData.append('document', file);
+
+      const res = await fetch(`${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!res.ok) throw new Error('Proxy API bị lỗi');
+      const data = await res.json();
+      const fileId = data.result?.document?.file_id;
+      if (!fileId) throw new Error('Telegram không trả về file_id');
+
+      const { error } = await supabase.from('app_settings').upsert({ id: 'omr_template_file_id', value: fileId });
+      if (error) throw error;
+
+      setTemplateFileId(fileId);
+      onShowToast('Đã lưu mẫu phiếu lên Telegram và CSDL!', 'success');
+    } catch (err: any) {
+      onShowToast('Lỗi khi up mẫu phiếu: ' + err.message, 'error');
+    } finally {
+      setIsUploadingTemplate(false);
+      if (templateInputRef.current) templateInputRef.current.value = '';
+    }
+  };
 
   // ── Camera ──────────────────────────────────────────────────────────────
   const openCamera = useCallback(async () => {
@@ -554,9 +604,38 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
 
           {/* Right: Chụp/Upload */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Camera className="w-4 h-4" style={{ color: ACCENT }} />
-              <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Chấm bài</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Camera className="w-4 h-4" style={{ color: ACCENT }} />
+                <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Chấm bài</h3>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <input type="file" accept="application/pdf" className="hidden" ref={templateInputRef} onChange={handleUploadTemplate} disabled={isUploadingTemplate} />
+                <button 
+                  onClick={() => templateInputRef.current?.click()}
+                  disabled={isUploadingTemplate}
+                  className="text-[11px] px-2 py-1.5 rounded-lg font-medium transition-colors"
+                  style={{ background: '#F1F0EC', color: '#1A1A1A', opacity: isUploadingTemplate ? 0.5 : 1 }}
+                >
+                  <Upload className="w-3.5 h-3.5 inline mr-1" />
+                  {isUploadingTemplate ? 'Đang tải...' : 'Up Phiếu'}
+                </button>
+                {templateFileId ? (
+                  <a 
+                    href={`${CLOUDFLARE_PROXY_URL}/getFile/${templateFileId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] px-2 py-1.5 rounded-lg flex items-center gap-1 font-medium transition-colors"
+                    style={{ background: '#EEF0FB', color: ACCENT, border: '1px solid #C8D0F5' }}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Tải mẫu
+                  </a>
+                ) : (
+                  <span className="text-[10px] text-gray-400">Chưa có mẫu</span>
+                )}
+              </div>
             </div>
 
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#fff' }}>
