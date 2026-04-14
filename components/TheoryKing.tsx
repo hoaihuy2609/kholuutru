@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ArrowLeft, Trophy, Crown, CheckCircle2, XCircle,
   Star, Flame, RotateCcw, ChevronRight, Medal, Zap, BookOpen, Lock,
+  GraduationCap, Dumbbell, School,
 } from 'lucide-react';
 import MathText from './MathText';
 
@@ -18,6 +19,11 @@ interface GameQuestion {
   topic?: string;
 }
 
+interface TopicEntry {
+  topic: string;
+  grade: number;
+}
+
 interface TheoryKingProps {
   onBack: () => void;
   studentGrade?: number | null;
@@ -25,20 +31,22 @@ interface TheoryKingProps {
 }
 
 interface WeeklyRecord {
-  week: string;      // "2024-W15"
+  week: string;
   score: number;
   correct: number;
   total: number;
-  grade: string;     // 'S' | 'A' | 'B' | 'C' | 'D'
+  grade: string;
   completedAt: number;
+  examGrade?: number;
 }
 
-type GameState = 'hub' | 'loading' | 'playing' | 'review' | 'finished';
+type GameMode = 'practice' | 'exam';
+type GameState = 'hub' | 'mode_practice' | 'mode_exam' | 'loading' | 'playing' | 'review' | 'finished';
 
 // ── Constants ──────────────────────────────────────────────────────
-const MAX_QUESTIONS_PER_SESSION = 20;
-const STREAK_THRESHOLD = 5;   // streak to get x2
-const BASE_POINT = 15;        // more than Blitz per question
+const MAX_EXAM_QUESTIONS = 40;
+const STREAK_THRESHOLD = 5;
+const BASE_POINT = 15;
 const STORAGE_KEY = 'pv_theoryking';
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -88,7 +96,6 @@ const optionText = (q: GameQuestion, letter: 'A' | 'B' | 'C' | 'D') => {
   return q.option_d;
 };
 
-// ── Grade config ───────────────────────────────────────────────────
 const GRADE_CONFIG: Record<string, { color: string; bg: string; border: string; label: string; emoji: string }> = {
   S: { color: '#B45309', bg: '#FFFBEB', border: '#F59E0B', label: 'Xuất sắc', emoji: '👑' },
   A: { color: '#166534', bg: '#F0FDF4', border: '#448361', label: 'Giỏi', emoji: '🥇' },
@@ -97,7 +104,6 @@ const GRADE_CONFIG: Record<string, { color: string; bg: string; border: string; 
   D: { color: '#9F1239', bg: '#FFF1F2', border: '#E03E3E', label: 'Cần cố gắng', emoji: '💪' },
 };
 
-// ── Review card answer state ───────────────────────────────────────
 interface AnsweredQ {
   question: GameQuestion;
   chosen: string;
@@ -111,7 +117,9 @@ interface AnsweredQ {
 const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl }) => {
   const thisWeek = getWeekId();
 
+  // ── Core state ─────────────────────────────────────────────────
   const [gameState, setGameState] = useState<GameState>('hub');
+  const [gameMode, setGameMode] = useState<GameMode>('exam');
   const [questions, setQuestions] = useState<GameQuestion[]>([]);
   const [qIndex, setQIndex] = useState(0);
   const [answers, setAnswers] = useState<AnsweredQ[]>([]);
@@ -122,21 +130,54 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
   const [score, setScore] = useState(0);
   const [storage, setStorage] = useState(loadStorage);
 
+  // ── Practice/Exam selection state ──────────────────────────────
+  const [topics, setTopics] = useState<TopicEntry[]>([]);
+  const [selectedPracticeGrade, setSelectedPracticeGrade] = useState<number>(studentGrade || 0);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [selectedExamGrade, setSelectedExamGrade] = useState<number>(studentGrade || 0);
+  const [loadingTopics, setLoadingTopics] = useState(false);
+
   const answerLock = useRef(false);
   const scoreRef = useRef(0);
   const answersRef = useRef<AnsweredQ[]>([]);
+
   const weekDone = storage.weekDone === thisWeek;
   const thisWeekRecord = storage.history.find(h => h.week === thisWeek) ?? null;
 
-  // ── Load questions ────────────────────────────────────────────────
-  const startGame = useCallback(async () => {
+  // ── Fetch topics for practice mode ────────────────────────────
+  const fetchTopics = useCallback(async (grade: number) => {
+    if (!workerUrl) return;
+    setLoadingTopics(true);
+    try {
+      const res = await fetch(`${workerUrl}/game/topics?grade=${grade}`, {
+        headers: { Referer: window.location.origin },
+      });
+      if (res.ok) {
+        const data: TopicEntry[] = await res.json();
+        setTopics(data);
+      }
+    } catch { /* ignore */ }
+    finally { setLoadingTopics(false); }
+  }, [workerUrl]);
+
+  // ── Start game ────────────────────────────────────────────────
+  const startGame = useCallback(async (mode: GameMode, grade: number, topic?: string) => {
+    setGameMode(mode);
     setGameState('loading');
     let pool: GameQuestion[] = [];
     if (workerUrl) {
       try {
-        const grade = studentGrade || 0;
-        const res = await fetch(`${workerUrl}/game/questions?grade=${grade}&limit=60`, {
-          headers: { 'Referer': window.location.origin },
+        let url = '';
+        if (mode === 'practice') {
+          // Luyện tập: lấy tất cả câu của chương, không shuffle
+          const topicParam = topic ? `&topic=${encodeURIComponent(topic)}` : '';
+          url = `${workerUrl}/game/questions?grade=${grade}&limit=500${topicParam}&shuffle=false`;
+        } else {
+          // Thi: bốc ngẫu nhiên 40 câu theo khối
+          url = `${workerUrl}/game/questions?grade=${grade}&limit=500&shuffle=true`;
+        }
+        const res = await fetch(url, {
+          headers: { Referer: window.location.origin },
         });
         if (res.ok) {
           const data: GameQuestion[] = await res.json();
@@ -144,14 +185,19 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
         }
       } catch { /* fall through */ }
     }
-    
+
     if (pool.length === 0) {
-      alert("Chưa có đủ dữ liệu câu hỏi để chơi game này. Vui lòng thêm câu hỏi qua Admin Panel.");
-      setGameState('hub');
+      alert('Chưa có câu hỏi nào. Vui lòng thêm câu hỏi qua Admin Panel.');
+      setGameState(mode === 'practice' ? 'mode_practice' : 'mode_exam');
       return;
     }
 
-    const selected = shuffle(pool).slice(0, MAX_QUESTIONS_PER_SESSION);
+    // Exam: shuffle và lấy tối đa MAX_EXAM_QUESTIONS câu
+    // Practice: giữ thứ tự gốc, lấy tất cả
+    const selected = mode === 'exam'
+      ? shuffle(pool).slice(0, MAX_EXAM_QUESTIONS)
+      : pool;
+
     setQuestions(selected);
     setQIndex(0);
     setAnswers([]);
@@ -164,9 +210,9 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
     answersRef.current = [];
     answerLock.current = false;
     setGameState('playing');
-  }, [workerUrl, studentGrade]);
+  }, [workerUrl]);
 
-  // ── Handle answer ─────────────────────────────────────────────────
+  // ── Handle answer ─────────────────────────────────────────────
   const handleAnswer = useCallback((letter: string) => {
     if (gameState !== 'playing' || answerLock.current || answerResult !== null) return;
     answerLock.current = true;
@@ -189,7 +235,7 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
     setAnswers(answersRef.current);
   }, [gameState, questions, qIndex, streak, answerResult]);
 
-  // ── Next / Finish ─────────────────────────────────────────────────
+  // ── Next / Finish ─────────────────────────────────────────────
   const handleNext = useCallback(() => {
     const isLast = qIndex >= questions.length - 1;
     if (isLast) {
@@ -200,11 +246,11 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
       setAnswerResult(null);
       answerLock.current = false;
     }
-  }, [qIndex]);
+  }, [qIndex, questions.length]);
 
-  // ── Save on finish ─────────────────────────────────────────────────
+  // ── Save on finish (exam mode only) ──────────────────────────
   useEffect(() => {
-    if (gameState !== 'finished') return;
+    if (gameState !== 'finished' || gameMode !== 'exam') return;
     const allAnswers = answersRef.current;
     const finalScore = scoreRef.current;
     const correct = allAnswers.filter(a => a.correct).length;
@@ -216,18 +262,19 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
       total: allAnswers.length,
       grade,
       completedAt: Date.now(),
+      examGrade: selectedExamGrade,
     };
     const curStorage = loadStorage();
     const newHistory = [record, ...curStorage.history.filter(h => h.week !== thisWeek)].slice(0, 10);
     const newStorage = { history: newHistory, weekDone: thisWeek };
     setStorage(newStorage);
     saveStorage(newStorage);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState]);
 
-  // ═══════════════════════════════════
-  // HUB Screen
-  // ═══════════════════════════════════
+  // ──────────────────────────────────────────────────────────────
+  // HUB: chọn chế độ
+  // ──────────────────────────────────────────────────────────────
   if (gameState === 'hub') {
     const pastWeeks = storage.history.filter(h => h.week !== thisWeek).slice(0, 5);
     const allTimeScore = storage.history.reduce((s, h) => s + h.score, 0);
@@ -253,82 +300,61 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
           </div>
         </div>
 
-        {/* This week card */}
-        <div className="rounded-2xl overflow-hidden" style={{ border: '2px solid #9065B033', background: '#FFFFFF' }}>
-          <div className="h-1.5" style={{ background: 'linear-gradient(90deg, #9065B0, #6B7CDB)' }} />
-          <div className="p-6">
-            {weekDone && thisWeekRecord ? (
-              // Already completed this week
-              <div className="text-center">
-                <div className="text-4xl mb-3">{GRADE_CONFIG[thisWeekRecord.grade]?.emoji ?? '🏅'}</div>
-                <p className="text-sm font-medium mb-1" style={{ color: '#787774' }}>Bài thi tuần này đã hoàn thành!</p>
-                <div className="text-4xl font-black my-2" style={{ color: '#9065B0' }}>{thisWeekRecord.score}</div>
-                <p className="text-xs mb-4" style={{ color: '#AEACA8' }}>điểm · {thisWeekRecord.correct}/{thisWeekRecord.total} đúng · Hạng {GRADE_CONFIG[thisWeekRecord.grade]?.label}</p>
-                <div className="flex items-center justify-center gap-2 p-3 rounded-xl mb-4" style={{ background: '#F3ECF8' }}>
-                  <Lock className="w-4 h-4" style={{ color: '#9065B0' }} />
-                  <span className="text-sm" style={{ color: '#9065B0' }}>Tuần mới sẽ mở vào thứ Hai!</span>
-                </div>
-                <button
-                  onClick={() => setGameState('review')}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                  style={{ background: '#F3ECF8', color: '#9065B0', border: '1px solid #9065B033' }}
-                >
-                  <BookOpen className="w-4 h-4" />
-                  Xem lại đáp án
-                </button>
-              </div>
-            ) : (
-              // Ready to play
-              <div className="text-center">
-                <div
-                  className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: 'linear-gradient(135deg, #F3ECF8, #E8D5F5)' }}
-                >
-                  <Crown className="w-10 h-10" style={{ color: '#9065B0' }} />
-                </div>
-                <h3 className="text-xl font-semibold mb-2" style={{ color: '#1A1A1A' }}>Thách thức tuần này</h3>
-                <p className="text-sm leading-relaxed mb-5 max-w-sm mx-auto" style={{ color: '#787774' }}>
-                  Trả lời <strong>tối đa {MAX_QUESTIONS_PER_SESSION} câu hỏi lý thuyết</strong> không giới hạn thời gian. Liên tiếp đúng 5 câu nhận <strong>điểm x2</strong>. Mỗi tuần chỉ chơi một lần!
-                </p>
+        {/* Mode selection */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Luyện tập */}
+          <button
+            onClick={() => {
+              setGameState('mode_practice');
+              fetchTopics(selectedPracticeGrade);
+            }}
+            className="rounded-2xl p-6 text-left transition-all active:scale-[0.98]"
+            style={{ background: '#FFFFFF', border: '2px solid #6B7CDB33', boxShadow: '0 2px 12px rgba(107,124,219,0.08)' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB33'}
+          >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: '#EEF0FB' }}>
+              <Dumbbell className="w-6 h-6" style={{ color: '#6B7CDB' }} />
+            </div>
+            <h3 className="text-base font-bold mb-1" style={{ color: '#1A1A1A' }}>🏋️ Luyện tập</h3>
+            <p className="text-xs leading-relaxed" style={{ color: '#787774' }}>
+              Chọn chương cụ thể, ôn toàn bộ câu hỏi trong chương đó. Không giới hạn số lần, không tính điểm tuần.
+            </p>
+            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#6B7CDB' }}>
+              Bắt đầu luyện tập <ChevronRight className="w-3.5 h-3.5" />
+            </div>
+          </button>
 
-                {/* Rules */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                  {[
-                    { icon: '📚', label: `Tối đa ${MAX_QUESTIONS_PER_SESSION} câu`, sub: 'Mỗi tuần' },
-                    { icon: '⏳', label: 'Thoải mái', sub: 'Không tính giờ' },
-                    { icon: '🔥', label: 'Streak ×2', sub: '5 câu đúng liên tiếp' },
-                  ].map(r => (
-                    <div key={r.label} className="rounded-xl p-3" style={{ background: '#F3ECF8', border: '1px solid #E8D5F5' }}>
-                      <div className="text-2xl mb-1">{r.icon}</div>
-                      <div className="font-semibold text-xs" style={{ color: '#6B3FA0' }}>{r.label}</div>
-                      <div className="text-[10px]" style={{ color: '#9065B0' }}>{r.sub}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={startGame}
-                  className="px-10 py-3.5 rounded-2xl text-white font-bold text-base transition-all active:scale-95"
-                  style={{
-                    background: 'linear-gradient(135deg, #9065B0, #6B7CDB)',
-                    boxShadow: '0 8px 24px rgba(144,101,176,0.4)',
-                  }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.9'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
-                >
-                  👑 Bắt đầu chinh phục
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Thi */}
+          <button
+            onClick={() => setGameState('mode_exam')}
+            className="rounded-2xl p-6 text-left transition-all active:scale-[0.98]"
+            style={{ background: '#FFFFFF', border: '2px solid #9065B033', boxShadow: '0 2px 12px rgba(144,101,176,0.08)' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#9065B0'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#9065B033'}
+          >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: '#F3ECF8' }}>
+              <Crown className="w-6 h-6" style={{ color: '#9065B0' }} />
+            </div>
+            <h3 className="text-base font-bold mb-1" style={{ color: '#1A1A1A' }}>
+              👑 Thi tuần
+              {weekDone && <span className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: '#F3ECF8', color: '#9065B0' }}>Đã thi</span>}
+            </h3>
+            <p className="text-xs leading-relaxed" style={{ color: '#787774' }}>
+              Bốc ngẫu nhiên {MAX_EXAM_QUESTIONS} câu theo khối. Mỗi tuần chỉ thi một lần, tích điểm xếp hạng.
+            </p>
+            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#9065B0' }}>
+              {weekDone ? 'Xem kết quả' : 'Vào thi ngay'} <ChevronRight className="w-3.5 h-3.5" />
+            </div>
+          </button>
         </div>
 
-        {/* Stats row */}
+        {/* All-time stats */}
         {storage.history.length > 0 && (
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: 'Tổng điểm', value: allTimeScore, color: '#9065B0', bg: '#F3ECF8', icon: <Star className="w-4 h-4" /> },
-              { label: 'Tuần đã chơi', value: storage.history.length, color: '#6B7CDB', bg: '#EEF0FB', icon: <Trophy className="w-4 h-4" /> },
+              { label: 'Tổng điểm thi', value: allTimeScore, color: '#9065B0', bg: '#F3ECF8', icon: <Star className="w-4 h-4" /> },
+              { label: 'Tuần đã thi', value: storage.history.length, color: '#6B7CDB', bg: '#EEF0FB', icon: <Trophy className="w-4 h-4" /> },
               { label: 'Điểm cao nhất', value: Math.max(...storage.history.map(h => h.score)), color: '#448361', bg: '#EAF3EE', icon: <Crown className="w-4 h-4" /> },
             ].map(s => (
               <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: s.bg }}>
@@ -345,26 +371,23 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
           <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#FFFFFF' }}>
             <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAF9' }}>
               <Medal className="w-4 h-4" style={{ color: '#9065B0' }} />
-              <span className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Lịch sử các tuần</span>
+              <span className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Lịch sử thi</span>
             </div>
             <div className="divide-y" style={{ borderColor: '#E9E9E7' }}>
-              {pastWeeks.map((rec, i) => {
+              {pastWeeks.map((rec) => {
                 const cfg = GRADE_CONFIG[rec.grade] ?? GRADE_CONFIG['D'];
                 return (
                   <div key={rec.week} className="flex items-center gap-3 px-4 py-3">
                     <span className="text-lg">{cfg.emoji}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium" style={{ color: '#57564F' }}>
-                        Tuần {rec.week.split('-W')[1]} · {new Date(rec.completedAt).toLocaleDateString('vi-VN')}
+                        Tuần {rec.week.split('-W')[1]} · {rec.examGrade ? `Khối ${rec.examGrade}` : 'Tổng'} · {new Date(rec.completedAt).toLocaleDateString('vi-VN')}
                       </p>
                       <p className="text-[11px]" style={{ color: '#AEACA8' }}>{rec.correct}/{rec.total} đúng</p>
                     </div>
                     <div className="text-right">
                       <div className="text-base font-black" style={{ color: cfg.color }}>{rec.score}</div>
-                      <div
-                        className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                        style={{ background: cfg.bg, color: cfg.color }}
-                      >
+                      <div className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: cfg.bg, color: cfg.color }}>
                         {rec.grade}
                       </div>
                     </div>
@@ -378,61 +401,295 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
     );
   }
 
-  // ═══════════════════════════════════
-  // Loading
-  // ═══════════════════════════════════
-  if (gameState === 'loading') {
+  // ──────────────────────────────────────────────────────────────
+  // PRACTICE MODE SELECTION: chọn khối + chương
+  // ──────────────────────────────────────────────────────────────
+  if (gameState === 'mode_practice') {
+    const filteredTopics = topics.filter(t => !selectedPracticeGrade || t.grade === selectedPracticeGrade || t.grade === 0);
+    const gradeColor = (g: number) => g === 12 ? '#9065B0' : g === 11 ? '#6B7CDB' : g === 10 ? '#448361' : '#787774';
+    const gradeBg = (g: number) => g === 12 ? '#F3ECF8' : g === 11 ? '#EEF0FB' : g === 10 ? '#EAF3EE' : '#F1F0EC';
+
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 animate-fade-in">
-        <div
-          className="w-20 h-20 rounded-2xl flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg, #F3ECF8, #E8D5F5)' }}
-        >
-          <Crown className="w-10 h-10" style={{ color: '#9065B0' }} />
+      <div className="animate-fade-in space-y-5 pb-10">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setGameState('hub')}
+            className="p-2 rounded-lg transition-colors"
+            style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div>
+            <h2 className="text-xl font-semibold" style={{ color: '#1A1A1A' }}>🏋️ Luyện tập</h2>
+            <p className="text-xs" style={{ color: '#787774' }}>Chọn khối và chương cần ôn</p>
+          </div>
         </div>
-        <p className="text-base font-semibold" style={{ color: '#787774' }}>Đang chuẩn bị câu hỏi...</p>
+
+        {/* Grade filter */}
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#AEACA8' }}>Chọn khối</p>
+          <div className="flex gap-2 flex-wrap">
+            {([0, 10, 11, 12] as const).map(g => (
+              <button
+                key={g}
+                onClick={() => {
+                  setSelectedPracticeGrade(g);
+                  setSelectedTopic(null);
+                  fetchTopics(g);
+                }}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                style={{
+                  background: selectedPracticeGrade === g ? gradeColor(g) : '#F7F6F3',
+                  color: selectedPracticeGrade === g ? '#FFFFFF' : '#787774',
+                  border: `1px solid ${selectedPracticeGrade === g ? gradeColor(g) : '#E9E9E7'}`,
+                }}
+              >
+                {g === 0 ? 'Tất cả khối' : `Lớp ${g}`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Topics list */}
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#AEACA8' }}>Chọn chương</p>
+          {loadingTopics ? (
+            <div className="py-8 flex justify-center">
+              <RotateCcw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} />
+            </div>
+          ) : filteredTopics.length === 0 ? (
+            <div className="rounded-xl p-6 text-center" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
+              <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm" style={{ color: '#AEACA8' }}>Chưa có chương nào cho khối này.</p>
+              <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Thêm câu hỏi kèm tên chương qua Admin Panel.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* All questions in grade */}
+              <button
+                onClick={() => startGame('practice', selectedPracticeGrade, undefined)}
+                className="w-full flex items-center gap-3 p-4 rounded-xl text-left transition-all"
+                style={{ background: '#FFFFFF', border: `2px solid ${selectedTopic === null ? gradeColor(selectedPracticeGrade) : '#E9E9E7'}` }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = gradeColor(selectedPracticeGrade)}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = selectedTopic === null ? gradeColor(selectedPracticeGrade) : '#E9E9E7'}
+              >
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: gradeBg(selectedPracticeGrade) }}>
+                  <BookOpen className="w-4.5 h-4.5" style={{ color: gradeColor(selectedPracticeGrade) }} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Tất cả câu hỏi</p>
+                  <p className="text-xs" style={{ color: '#787774' }}>Ôn tập toàn bộ ngân hàng {selectedPracticeGrade > 0 ? `khối ${selectedPracticeGrade}` : ''}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
+              </button>
+
+              {filteredTopics.map((t) => (
+                <button
+                  key={t.topic}
+                  onClick={() => startGame('practice', selectedPracticeGrade, t.topic)}
+                  className="w-full flex items-center gap-3 p-4 rounded-xl text-left transition-all"
+                  style={{ background: '#FFFFFF', border: '2px solid #E9E9E7' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
+                >
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: gradeBg(t.grade) }}>
+                    <GraduationCap className="w-4 h-4" style={{ color: gradeColor(t.grade) }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: '#1A1A1A' }}>{t.topic}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: gradeBg(t.grade), color: gradeColor(t.grade) }}>
+                        Lớp {t.grade === 0 ? 'Tất cả' : t.grade}
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
-  // ═══════════════════════════════════
+  // ──────────────────────────────────────────────────────────────
+  // EXAM MODE SELECTION: chọn khối rồi thi
+  // ──────────────────────────────────────────────────────────────
+  if (gameState === 'mode_exam') {
+    const gradeColor = (g: number) => g === 12 ? '#9065B0' : g === 11 ? '#6B7CDB' : g === 10 ? '#448361' : '#787774';
+    const gradeBg = (g: number) => g === 12 ? '#F3ECF8' : g === 11 ? '#EEF0FB' : g === 10 ? '#EAF3EE' : '#F1F0EC';
+
+    return (
+      <div className="animate-fade-in space-y-5 pb-10">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setGameState('hub')}
+            className="p-2 rounded-lg transition-colors"
+            style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div>
+            <h2 className="text-xl font-semibold" style={{ color: '#1A1A1A' }}>👑 Thi tuần</h2>
+            <p className="text-xs" style={{ color: '#787774' }}>Bốc {MAX_EXAM_QUESTIONS} câu ngẫu nhiên theo khối</p>
+          </div>
+        </div>
+
+        {/* If already done this week */}
+        {weekDone && thisWeekRecord ? (
+          <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '2px solid #9065B033' }}>
+            <div className="h-1.5" style={{ background: 'linear-gradient(90deg, #9065B0, #6B7CDB)' }} />
+            <div className="p-6 text-center">
+              <div className="text-4xl mb-3">{GRADE_CONFIG[thisWeekRecord.grade]?.emoji ?? '🏅'}</div>
+              <p className="text-sm font-medium mb-1" style={{ color: '#787774' }}>Bài thi tuần này đã hoàn thành!</p>
+              <div className="text-4xl font-black my-2" style={{ color: '#9065B0' }}>{thisWeekRecord.score}</div>
+              <p className="text-xs mb-4" style={{ color: '#AEACA8' }}>
+                {thisWeekRecord.correct}/{thisWeekRecord.total} đúng · Hạng {GRADE_CONFIG[thisWeekRecord.grade]?.label}
+              </p>
+              <div className="flex items-center justify-center gap-2 p-3 rounded-xl mb-4" style={{ background: '#F3ECF8' }}>
+                <Lock className="w-4 h-4" style={{ color: '#9065B0' }} />
+                <span className="text-sm" style={{ color: '#9065B0' }}>Tuần mới sẽ mở vào thứ Hai!</span>
+              </div>
+              <button
+                onClick={() => setGameState('review')}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold"
+                style={{ background: '#F3ECF8', color: '#9065B0', border: '1px solid #9065B033' }}
+              >
+                <BookOpen className="w-4 h-4" />
+                Xem lại đáp án
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Grade selection */}
+            <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
+              <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAF9' }}>
+                <p className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Chọn khối thi</p>
+              </div>
+              <div className="p-4 grid grid-cols-3 gap-3">
+                {([10, 11, 12] as const).map(g => (
+                  <button
+                    key={g}
+                    onClick={() => setSelectedExamGrade(g)}
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all"
+                    style={{
+                      background: selectedExamGrade === g ? gradeBg(g) : '#F7F6F3',
+                      border: `2px solid ${selectedExamGrade === g ? gradeColor(g) : '#E9E9E7'}`,
+                    }}
+                  >
+                    <School className="w-6 h-6" style={{ color: selectedExamGrade === g ? gradeColor(g) : '#AEACA8' }} />
+                    <span className="text-sm font-bold" style={{ color: selectedExamGrade === g ? gradeColor(g) : '#787774' }}>
+                      Lớp {g}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Info */}
+            <div className="rounded-xl p-4" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { icon: '📚', label: `${MAX_EXAM_QUESTIONS} câu`, sub: 'Ngẫu nhiên' },
+                  { icon: '⏳', label: 'Thoải mái', sub: 'Không tính giờ' },
+                  { icon: '🔥', label: 'Streak ×2', sub: '5 câu đúng' },
+                ].map(r => (
+                  <div key={r.label} className="text-center">
+                    <div className="text-xl mb-1">{r.icon}</div>
+                    <div className="text-xs font-semibold" style={{ color: '#1A1A1A' }}>{r.label}</div>
+                    <div className="text-[10px]" style={{ color: '#AEACA8' }}>{r.sub}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Start button */}
+            <button
+              onClick={() => {
+                if (!selectedExamGrade) { alert('Vui lòng chọn khối!'); return; }
+                startGame('exam', selectedExamGrade);
+              }}
+              className="w-full py-3.5 rounded-2xl text-white font-bold text-base transition-all active:scale-95"
+              style={{
+                background: `linear-gradient(135deg, ${gradeColor(selectedExamGrade)}, #6B7CDB)`,
+                boxShadow: `0 8px 24px ${gradeColor(selectedExamGrade)}66`,
+              }}
+            >
+              👑 Bắt đầu thi {selectedExamGrade > 0 ? `Lớp ${selectedExamGrade}` : ''}
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Loading
+  // ──────────────────────────────────────────────────────────────
+  if (gameState === 'loading') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 animate-fade-in">
+        <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F3ECF8, #E8D5F5)' }}>
+          <Crown className="w-10 h-10" style={{ color: '#9065B0' }} />
+        </div>
+        <p className="text-base font-semibold" style={{ color: '#787774' }}>
+          {gameMode === 'practice' ? 'Đang tải câu hỏi luyện tập...' : 'Đang bốc đề thi...'}
+        </p>
+      </div>
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────
   // Playing
-  // ═══════════════════════════════════
+  // ──────────────────────────────────────────────────────────────
   if (gameState === 'playing' && questions.length > 0) {
     const q = questions[qIndex];
     const isStreakActive = streak >= STREAK_THRESHOLD;
-    const progress = ((qIndex) / questions.length) * 100;
+    const progress = (qIndex / questions.length) * 100;
+    const modeColor = gameMode === 'exam' ? '#9065B0' : '#6B7CDB';
 
     return (
       <div className="animate-fade-in space-y-4 pb-10">
+        {/* Mode badge */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded" style={{ background: gameMode === 'exam' ? '#F3ECF8' : '#EEF0FB', color: modeColor }}>
+            {gameMode === 'exam' ? '👑 Thi tuần' : '🏋️ Luyện tập'}
+          </span>
+          {q.topic && (
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded" style={{ background: '#F7F6F3', color: '#787774' }}>
+              {q.topic}
+            </span>
+          )}
+        </div>
+
         {/* HUD */}
         <div className="flex items-center gap-3">
-          {/* Progress */}
           <div className="flex-1">
             <div className="flex items-center justify-between text-xs mb-1" style={{ color: '#AEACA8' }}>
               <span>Câu {qIndex + 1} / {questions.length}</span>
-              <span className="font-semibold" style={{ color: '#9065B0' }}>{score} điểm</span>
+              <span className="font-semibold" style={{ color: modeColor }}>{score} điểm</span>
             </div>
             <div className="h-2 rounded-full overflow-hidden" style={{ background: '#F1F0EC' }}>
               <div
                 className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #9065B0, #6B7CDB)' }}
+                style={{ width: `${progress}%`, background: gameMode === 'exam' ? 'linear-gradient(90deg, #9065B0, #6B7CDB)' : 'linear-gradient(90deg, #6B7CDB, #448361)' }}
               />
             </div>
           </div>
 
-          {/* Streak indicator */}
+          {/* Streak */}
           <div
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl shrink-0 transition-all"
-            style={{
-              background: isStreakActive ? '#F3ECF8' : '#FFFFFF',
-              border: `1px solid ${isStreakActive ? '#9065B0' : '#E9E9E7'}`,
-            }}
+            style={{ background: isStreakActive ? '#F3ECF8' : '#FFFFFF', border: `1px solid ${isStreakActive ? '#9065B0' : '#E9E9E7'}` }}
           >
             <Flame className="w-3.5 h-3.5" style={{ color: isStreakActive ? '#9065B0' : '#AEACA8' }} />
-            <span className="text-sm font-bold" style={{ color: isStreakActive ? '#9065B0' : '#AEACA8' }}>
-              {streak}
-            </span>
+            <span className="text-sm font-bold" style={{ color: isStreakActive ? '#9065B0' : '#AEACA8' }}>{streak}</span>
             {isStreakActive && <Zap className="w-3 h-3" style={{ color: '#9065B0' }} />}
           </div>
         </div>
@@ -442,35 +699,21 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
           className="rounded-2xl p-6 transition-all"
           style={{
             background: '#FFFFFF',
-            border: `2px solid ${answerResult === 'correct' ? '#44836144' : answerResult === 'wrong' ? '#E03E3E44' : '#9065B022'}`,
-            boxShadow: answerResult === 'correct'
-              ? '0 4px 20px rgba(68,131,97,0.12)'
-              : answerResult === 'wrong'
-              ? '0 4px 20px rgba(224,62,62,0.12)'
-              : '0 2px 12px rgba(144,101,176,0.08)',
+            border: `2px solid ${answerResult === 'correct' ? '#44836144' : answerResult === 'wrong' ? '#E03E3E44' : `${modeColor}22`}`,
+            boxShadow: answerResult === 'correct' ? '0 4px 20px rgba(68,131,97,0.12)' : answerResult === 'wrong' ? '0 4px 20px rgba(224,62,62,0.12)' : `0 2px 12px ${modeColor}14`,
           }}
         >
           <div className="flex items-center gap-2 mb-3">
-            <span
-              className="text-[10px] font-bold uppercase px-2 py-0.5 rounded"
-              style={{ background: '#F3ECF8', color: '#9065B0' }}
-            >
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded" style={{ background: gameMode === 'exam' ? '#F3ECF8' : '#EEF0FB', color: modeColor }}>
               Câu {qIndex + 1}
             </span>
             {isStreakActive && (
-              <span
-                className="text-[10px] font-bold px-2 py-0.5 rounded animate-pulse"
-                style={{ background: '#FEF3C7', color: '#D97706' }}
-              >
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded animate-pulse" style={{ background: '#FEF3C7', color: '#D97706' }}>
                 🔥 STREAK ×2
               </span>
             )}
           </div>
-          <MathText
-            content={q.question}
-            className="text-base font-medium leading-relaxed"
-            style={{ color: '#1A1A1A' }}
-          />
+          <MathText content={q.question} className="text-base font-medium leading-relaxed" style={{ color: '#1A1A1A' }} />
         </div>
 
         {/* Options */}
@@ -480,10 +723,7 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
             const isSelected = selectedAnswer === letter;
             const isCorrectAnswer = letter === q.answer;
 
-            let bg = '#FFFFFF';
-            let border = '#E9E9E7';
-            let color = '#1A1A1A';
-
+            let bg = '#FFFFFF', border = '#E9E9E7', color = '#1A1A1A';
             if (answerResult && isSelected) {
               if (answerResult === 'correct') { bg = '#EAF3EE'; border = '#448361'; color = '#448361'; }
               else { bg = '#FEF2F2'; border = '#E03E3E'; color = '#E03E3E'; }
@@ -498,12 +738,8 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
                 disabled={!!answerResult}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all active:scale-[0.98] disabled:cursor-default"
                 style={{ background: bg, border: `2px solid ${border}`, color }}
-                onMouseEnter={e => {
-                  if (!answerResult) (e.currentTarget as HTMLElement).style.borderColor = '#9065B0';
-                }}
-                onMouseLeave={e => {
-                  if (!answerResult) (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7';
-                }}
+                onMouseEnter={e => { if (!answerResult) (e.currentTarget as HTMLElement).style.borderColor = modeColor; }}
+                onMouseLeave={e => { if (!answerResult) (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'; }}
               >
                 <span
                   className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
@@ -523,18 +759,15 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
           })}
         </div>
 
-        {/* Next button (only shows after answering) */}
+        {/* Next button */}
         {answerResult !== null && (
           <button
             onClick={handleNext}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-sm transition-all active:scale-95 animate-fade-in"
-            style={{
-              background: 'linear-gradient(135deg, #9065B0, #6B7CDB)',
-              boxShadow: '0 4px 16px rgba(144,101,176,0.3)',
-            }}
+            style={{ background: `linear-gradient(135deg, ${modeColor}, #6B7CDB)`, boxShadow: `0 4px 16px ${modeColor}44` }}
           >
             {qIndex >= questions.length - 1 ? (
-              <><Trophy className="w-4 h-4" />Xem kết quả</>
+              <><Trophy className="w-4 h-4" />{gameMode === 'exam' ? 'Xem kết quả' : 'Hoàn thành'}</>
             ) : (
               <><ChevronRight className="w-4 h-4" />Câu tiếp theo</>
             )}
@@ -544,16 +777,16 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
     );
   }
 
-  // ═══════════════════════════════════
-  // Review (xem lại đáp án)
-  // ═══════════════════════════════════
+  // ──────────────────────────────────────────────────────────────
+  // Review
+  // ──────────────────────────────────────────────────────────────
   if (gameState === 'review') {
-    const reviewData = answers.length > 0 ? answers : (thisWeekRecord ? [] : []);
+    const reviewData = answers.length > 0 ? answers : [];
     return (
       <div className="animate-fade-in space-y-5 pb-10">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setGameState('hub')}
+            onClick={() => setGameState(gameMode === 'exam' ? 'mode_exam' : 'hub')}
             className="p-2 rounded-lg transition-colors"
             style={{ background: '#F1F0EC', border: '1px solid #E9E9E7', color: '#57564F' }}
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
@@ -574,25 +807,13 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
             {reviewData.map((ans, i) => {
               const q = ans.question;
               return (
-                <div
-                  key={i}
-                  className="rounded-2xl overflow-hidden"
-                  style={{
-                    border: `1px solid ${ans.correct ? '#44836122' : '#E03E3E22'}`,
-                    background: '#FFFFFF',
-                  }}
-                >
-                  <div
-                    className="px-4 py-2.5 flex items-center gap-2"
-                    style={{ background: ans.correct ? '#EAF3EE' : '#FEF2F2' }}
-                  >
-                    {ans.correct
-                      ? <CheckCircle2 className="w-4 h-4" style={{ color: '#448361' }} />
-                      : <XCircle className="w-4 h-4" style={{ color: '#E03E3E' }} />
-                    }
+                <div key={i} className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${ans.correct ? '#44836122' : '#E03E3E22'}`, background: '#FFFFFF' }}>
+                  <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: ans.correct ? '#EAF3EE' : '#FEF2F2' }}>
+                    {ans.correct ? <CheckCircle2 className="w-4 h-4" style={{ color: '#448361' }} /> : <XCircle className="w-4 h-4" style={{ color: '#E03E3E' }} />}
                     <span className="text-xs font-semibold" style={{ color: ans.correct ? '#448361' : '#E03E3E' }}>
                       Câu {i + 1} · {ans.correct ? `+${ans.points} điểm` : 'Sai'}
                     </span>
+                    {q.topic && <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded" style={{ background: '#F3ECF8', color: '#9065B0' }}>{q.topic}</span>}
                   </div>
                   <div className="p-4 space-y-3">
                     <MathText content={q.question} className="text-sm font-medium" style={{ color: '#1A1A1A' }} />
@@ -605,14 +826,9 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
                           <div
                             key={letter}
                             className="flex items-start gap-2 px-3 py-2 rounded-lg text-xs"
-                            style={{
-                              background: isCorrect ? '#EAF3EE' : isChosen && !isCorrect ? '#FEF2F2' : '#F7F6F3',
-                              border: isCorrect ? '1px solid #44836133' : isChosen && !isCorrect ? '1px solid #E03E3E22' : '1px solid transparent',
-                            }}
+                            style={{ background: isCorrect ? '#EAF3EE' : isChosen && !isCorrect ? '#FEF2F2' : '#F7F6F3', border: isCorrect ? '1px solid #44836133' : isChosen && !isCorrect ? '1px solid #E03E3E22' : '1px solid transparent' }}
                           >
-                            <span className="font-bold shrink-0" style={{ color: isCorrect ? '#448361' : isChosen && !isCorrect ? '#E03E3E' : '#AEACA8' }}>
-                              {letter}.
-                            </span>
+                            <span className="font-bold shrink-0" style={{ color: isCorrect ? '#448361' : isChosen && !isCorrect ? '#E03E3E' : '#AEACA8' }}>{letter}.</span>
                             <MathText content={text} style={{ color: isCorrect ? '#448361' : isChosen && !isCorrect ? '#E03E3E' : '#57564F' }} />
                           </div>
                         );
@@ -628,15 +844,16 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
     );
   }
 
-  // ═══════════════════════════════════
+  // ──────────────────────────────────────────────────────────────
   // Finished
-  // ═══════════════════════════════════
+  // ──────────────────────────────────────────────────────────────
   if (gameState === 'finished') {
     const correct = answers.filter(a => a.correct).length;
     const wrong = answers.filter(a => !a.correct).length;
     const accuracy = answers.length > 0 ? Math.round((correct / answers.length) * 100) : 0;
     const grade = calcGrade(score, answers.length);
     const cfg = GRADE_CONFIG[grade] ?? GRADE_CONFIG['D'];
+    const modeColor = gameMode === 'exam' ? '#9065B0' : '#6B7CDB';
 
     return (
       <div className="animate-fade-in space-y-5 pb-10">
@@ -650,14 +867,15 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <h2 className="text-2xl font-semibold" style={{ color: '#1A1A1A' }}>Kết quả tuần này</h2>
+          <h2 className="text-2xl font-semibold" style={{ color: '#1A1A1A' }}>
+            {gameMode === 'exam' ? 'Kết quả thi tuần' : 'Kết quả luyện tập'}
+          </h2>
         </div>
 
         {/* Score card */}
         <div className="rounded-2xl overflow-hidden text-center" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
-          <div className="h-1.5" style={{ background: 'linear-gradient(90deg, #9065B0, #6B7CDB)' }} />
+          <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${modeColor}, #6B7CDB)` }} />
           <div className="p-8">
-            {/* Grade badge */}
             <div className="text-5xl mb-2">{cfg.emoji}</div>
             <div
               className="inline-block px-4 py-1.5 rounded-full text-sm font-bold mb-4"
@@ -665,11 +883,9 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
             >
               Hạng {grade} · {cfg.label}
             </div>
-
             <div className="text-6xl font-black mb-1" style={{ color: '#1A1A1A' }}>{score}</div>
             <div className="text-sm mb-6" style={{ color: '#AEACA8' }}>điểm</div>
 
-            {/* Stats */}
             <div className="grid grid-cols-3 gap-3 mb-5">
               {[
                 { icon: '✅', label: 'Đúng', value: correct, color: '#448361', bg: '#EAF3EE' },
@@ -690,6 +906,10 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
                 Streak dài nhất: <strong style={{ color: '#D97706' }}>{maxStreak} câu liên tiếp</strong>
               </div>
             )}
+
+            {gameMode === 'practice' && (
+              <div className="mt-4 text-xs" style={{ color: '#AEACA8' }}>Chế độ luyện tập · Không tính vào kết quả tuần</div>
+            )}
           </div>
         </div>
 
@@ -698,11 +918,7 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
           <button
             onClick={() => setGameState('review')}
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
-            style={{
-              background: 'linear-gradient(135deg, #9065B0, #6B7CDB)',
-              color: '#fff',
-              boxShadow: '0 4px 16px rgba(144,101,176,0.3)',
-            }}
+            style={{ background: `linear-gradient(135deg, ${modeColor}, #6B7CDB)`, color: '#fff', boxShadow: `0 4px 16px ${modeColor}44` }}
           >
             <BookOpen className="w-4 h-4" />
             Xem lại đáp án

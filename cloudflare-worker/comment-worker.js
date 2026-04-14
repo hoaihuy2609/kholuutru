@@ -211,18 +211,48 @@ export default {
     }
 
 
-    // ── GET /game/questions?grade=0 ─────────────────────────────
-    if (url.pathname === "/game/questions" && request.method === "GET") {
+    // ── GET /game/topics?grade=0 ─────────────────────────────────
+    if (url.pathname === "/game/topics" && request.method === "GET") {
       const grade = parseInt(url.searchParams.get("grade") || "0", 10);
-      const limit = Math.min(parseInt(url.searchParams.get("limit") || "100", 10), 200);
       try {
         const query = grade > 0
-          ? `SELECT * FROM game_questions WHERE grade = ? OR grade = 0 ORDER BY RANDOM() LIMIT ?`
-          : `SELECT * FROM game_questions ORDER BY RANDOM() LIMIT ?`;
+          ? `SELECT DISTINCT topic, grade FROM game_questions WHERE (grade = ? OR grade = 0) AND topic IS NOT NULL AND topic != '' ORDER BY grade, topic`
+          : `SELECT DISTINCT topic, grade FROM game_questions WHERE topic IS NOT NULL AND topic != '' ORDER BY grade, topic`;
         const stmt = grade > 0
-          ? env.DB.prepare(query).bind(grade, limit)
-          : env.DB.prepare(query).bind(limit);
+          ? env.DB.prepare(query).bind(grade)
+          : env.DB.prepare(query);
         const { results } = await stmt.all();
+        return json(results, 200, origin);
+      } catch (err) {
+        console.error("[GET /game/topics]", err);
+        return json({ error: "Lỗi database" }, 500, origin);
+      }
+    }
+
+    // ── GET /game/questions?grade=0&topic=...&limit=100&shuffle=true ─
+    if (url.pathname === "/game/questions" && request.method === "GET") {
+      const grade = parseInt(url.searchParams.get("grade") || "0", 10);
+      const limit = Math.min(parseInt(url.searchParams.get("limit") || "100", 10), 500);
+      const topic = url.searchParams.get("topic") || "";
+      const shuffle = url.searchParams.get("shuffle") !== "false"; // default true
+      const orderBy = shuffle ? "ORDER BY RANDOM()" : "ORDER BY created_at ASC";
+      try {
+        let query = "";
+        let params: any[] = [];
+        if (grade > 0 && topic) {
+          query = `SELECT * FROM game_questions WHERE (grade = ? OR grade = 0) AND topic = ? ${orderBy} LIMIT ?`;
+          params = [grade, topic, limit];
+        } else if (grade > 0) {
+          query = `SELECT * FROM game_questions WHERE (grade = ? OR grade = 0) ${orderBy} LIMIT ?`;
+          params = [grade, limit];
+        } else if (topic) {
+          query = `SELECT * FROM game_questions WHERE topic = ? ${orderBy} LIMIT ?`;
+          params = [topic, limit];
+        } else {
+          query = `SELECT * FROM game_questions ${orderBy} LIMIT ?`;
+          params = [limit];
+        }
+        const { results } = await env.DB.prepare(query).bind(...params).all();
         return json(results, 200, origin);
       } catch (err) {
         console.error("[GET /game/questions]", err);

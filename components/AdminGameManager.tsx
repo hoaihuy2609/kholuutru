@@ -20,7 +20,7 @@ interface AdminGameManagerProps {
 }
 
 // ── Parser: text → structured questions ──────────────────────────
-function parseQuestions(raw: string, grade: number): Omit<GameQuestion, 'id'>[] {
+function parseQuestions(raw: string, grade: number, topic: string): Omit<GameQuestion, 'id'>[] {
   const questions: Omit<GameQuestion, 'id'>[] = [];
   // Split by question number pattern: "1." "2." etc at start of line
   const blocks = raw.split(/\n(?=\d+\.\s)/);
@@ -52,6 +52,7 @@ function parseQuestions(raw: string, grade: number): Omit<GameQuestion, 'id'>[] 
         option_d: optD,
         answer,
         grade,
+        topic: topic.trim() || undefined,
       });
     }
   }
@@ -64,6 +65,7 @@ const AdminGameManager: React.FC<AdminGameManagerProps> = ({ onShowToast, worker
   const [parsedQuestions, setParsedQuestions] = useState<Omit<GameQuestion, 'id'>[]>([]);
   const [existingQuestions, setExistingQuestions] = useState<GameQuestion[]>([]);
   const [selectedGrade, setSelectedGrade] = useState<0 | 10 | 11 | 12>(0);
+  const [selectedTopic, setSelectedTopic] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [parseError, setParseError] = useState('');
@@ -96,7 +98,7 @@ const AdminGameManager: React.FC<AdminGameManagerProps> = ({ onShowToast, worker
   const handleParse = () => {
     if (!rawText.trim()) return;
     setParseError('');
-    const result = parseQuestions(rawText, selectedGrade);
+    const result = parseQuestions(rawText, selectedGrade, selectedTopic);
     if (result.length === 0) {
       setParseError('Không parse được câu hỏi nào. Kiểm tra lại định dạng!');
       setParsedQuestions([]);
@@ -225,6 +227,24 @@ D. J
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Topic input */}
+          <div>
+            <label className="text-[10px] font-semibold uppercase tracking-wider mb-2 block" style={{ color: '#AEACA8' }}>
+              Chương / Chủ đề
+            </label>
+            <input
+              type="text"
+              value={selectedTopic}
+              onChange={e => setSelectedTopic(e.target.value)}
+              placeholder="VD: Chương 1: Động học chất điểm"
+              className="w-full text-sm px-3 py-2 rounded-lg outline-none"
+              style={{ background: '#F7F6F3', border: '1px solid #E9E9E7', color: '#1A1A1A' }}
+              onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#9065B0'}
+              onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
+            />
+            <p className="text-[10px] mt-1" style={{ color: '#AEACA8' }}>Tất cả câu hỏi trong batch này sẽ được gán chương này (dùng trong chế độ Luyện tập).</p>
           </div>
 
           {/* Format hint */}
@@ -375,6 +395,11 @@ D. J
                       <span className="font-medium text-[#AEACA8] mr-1">{i + 1}.</span>
                       {q.question}
                     </p>
+                    {q.topic && (
+                      <span className="inline-block text-[10px] mt-1 px-1.5 py-0.5 rounded" style={{ background: '#F3ECF8', color: '#9065B0' }}>
+                        {q.topic}
+                      </span>
+                    )}
                     <p className="text-[11px] mt-1" style={{ color: '#448361' }}>
                       ✓ {q['answer'] === 'A' ? q.option_a : q['answer'] === 'B' ? q.option_b : q['answer'] === 'C' ? q.option_c : q.option_d}
                     </p>
