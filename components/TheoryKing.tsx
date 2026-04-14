@@ -132,9 +132,9 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
 
   // ── Practice/Exam selection state ──────────────────────────────
   const [topics, setTopics] = useState<TopicEntry[]>([]);
-  const [selectedPracticeGrade, setSelectedPracticeGrade] = useState<number>(studentGrade || 0);
+  const [selectedPracticeGrade, setSelectedPracticeGrade] = useState<number>(studentGrade || 12);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-  const [selectedExamGrade, setSelectedExamGrade] = useState<number>(studentGrade || 0);
+  const [selectedExamGrade, setSelectedExamGrade] = useState<number>(studentGrade || 12);
   const [loadingTopics, setLoadingTopics] = useState(false);
 
   const answerLock = useRef(false);
@@ -305,8 +305,11 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
           {/* Luyện tập */}
           <button
             onClick={() => {
+              // Nếu học sinh có grade, dùng grade đó; admin thì dùng selectedPracticeGrade
+              const gradeToFetch = studentGrade || selectedPracticeGrade;
+              setSelectedPracticeGrade(gradeToFetch);
               setGameState('mode_practice');
-              fetchTopics(selectedPracticeGrade);
+              fetchTopics(gradeToFetch);
             }}
             className="group relative rounded-[20px] p-6 text-left transition-all hover:-translate-y-1 active:scale-[0.98] overflow-hidden"
             style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}
@@ -409,7 +412,7 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
   // PRACTICE MODE SELECTION: chọn khối + chương
   // ──────────────────────────────────────────────────────────────
   if (gameState === 'mode_practice') {
-    const filteredTopics = topics.filter(t => !selectedPracticeGrade || t.grade === selectedPracticeGrade || t.grade === 0);
+    const filteredTopics = topics.filter(t => t.grade === selectedPracticeGrade || t.grade === 0);
     const gradeColor = (g: number) => g === 12 ? '#9065B0' : g === 11 ? '#6B7CDB' : g === 10 ? '#448361' : '#787774';
     const gradeBg = (g: number) => g === 12 ? '#F3ECF8' : g === 11 ? '#EEF0FB' : g === 10 ? '#EAF3EE' : '#F1F0EC';
 
@@ -436,28 +439,43 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
 
         {/* Grade filter */}
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#AEACA8' }}>Chọn khối</p>
-          <div className="flex gap-2 flex-wrap">
-            {([0, 10, 11, 12] as const).map(g => (
-              <button
-                key={g}
-                onClick={() => {
-                  setSelectedPracticeGrade(g);
-                  setSelectedTopic(null);
-                  fetchTopics(g);
-                }}
-                className="px-4 py-2 text-xs font-bold rounded-xl transition-all active:scale-[0.98]"
-
-                style={{
-                  background: selectedPracticeGrade === g ? gradeColor(g) : '#F7F6F3',
-                  color: selectedPracticeGrade === g ? '#FFFFFF' : '#787774',
-                  border: `1px solid ${selectedPracticeGrade === g ? gradeColor(g) : '#E9E9E7'}`,
-                }}
+          {/* Students only see their own grade; admins see all 3 */}
+          {!studentGrade && (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#AEACA8' }}>Chọn khối</p>
+              <div className="flex gap-2 flex-wrap">
+                {([10, 11, 12] as const).map(g => (
+                  <button
+                    key={g}
+                    onClick={() => {
+                      setSelectedPracticeGrade(g);
+                      setSelectedTopic(null);
+                      fetchTopics(g);
+                    }}
+                    className="px-4 py-2 text-xs font-bold rounded-xl transition-all active:scale-[0.98]"
+                    style={{
+                      background: selectedPracticeGrade === g ? gradeColor(g) : '#F7F6F3',
+                      color: selectedPracticeGrade === g ? '#FFFFFF' : '#787774',
+                      border: `1px solid ${selectedPracticeGrade === g ? gradeColor(g) : '#E9E9E7'}`,
+                    }}
+                  >
+                    Lớp {g}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {studentGrade && (
+            <div className="flex items-center gap-2">
+              <span
+                className="px-4 py-2 text-xs font-bold rounded-xl"
+                style={{ background: gradeColor(studentGrade), color: '#FFFFFF' }}
               >
-                {g === 0 ? 'Tất cả khối' : `Lớp ${g}`}
-              </button>
-            ))}
-          </div>
+                Lớp {studentGrade}
+              </span>
+              <span className="text-xs" style={{ color: '#AEACA8' }}>· Tài nguyên dành riêng cho khối bạn</span>
+            </div>
+          )}
         </div>
 
         {/* Topics list */}
@@ -475,24 +493,6 @@ const TheoryKing: React.FC<TheoryKingProps> = ({ onBack, studentGrade, workerUrl
             </div>
           ) : (
             <div className="space-y-2">
-              {/* All questions in grade */}
-              <button
-                onClick={() => startGame('practice', selectedPracticeGrade, undefined)}
-                className="w-full flex items-center gap-3 p-4 rounded-xl text-left transition-all"
-                style={{ background: '#FFFFFF', border: `2px solid ${selectedTopic === null ? gradeColor(selectedPracticeGrade) : '#E9E9E7'}` }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = gradeColor(selectedPracticeGrade)}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = selectedTopic === null ? gradeColor(selectedPracticeGrade) : '#E9E9E7'}
-              >
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: gradeBg(selectedPracticeGrade) }}>
-                  <BookOpen className="w-4.5 h-4.5" style={{ color: gradeColor(selectedPracticeGrade) }} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Tất cả câu hỏi</p>
-                  <p className="text-xs" style={{ color: '#787774' }}>Ôn tập toàn bộ ngân hàng {selectedPracticeGrade > 0 ? `khối ${selectedPracticeGrade}` : ''}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 shrink-0" style={{ color: '#AEACA8' }} />
-              </button>
-
               {filteredTopics.map((t) => (
                 <button
                   key={t.topic}
