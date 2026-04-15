@@ -1,10 +1,12 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  Camera, Upload, ScanLine, CheckCircle2, AlertCircle, RefreshCw,
-  ChevronDown, Key, FileText, Zap, RotateCcw, Info, Eye, Download,
-  X, Bug
+  Camera, Upload, ScanLine, RotateCcw, Info, Download,
+  X, AlertTriangle, CheckCheck, ChevronDown, Key, Eye,
 } from 'lucide-react';
-import { processOMRImage, scoreOMR, OMRAnswers, AnswerKey, ScoreResult } from '../src/lib/omrProcessor';
+import {
+  processOMRImage, scoreOMR, detectAnchorsFromCanvas,
+  OMRAnswers, AnswerKey, ScoreResult,
+} from '../src/lib/omrProcessor';
 import { supabase } from '../src/lib/supabase';
 import { TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 
@@ -12,17 +14,22 @@ import { TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 interface OMRScannerProps {
   onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void;
 }
-
-type ScanStep = 'setup' | 'scanning' | 'result';
+type ScanStep = 'setup' | 'scanning' | 'review' | 'result';
+interface ReviewData {
+  answers: OMRAnswers;
+  debugCanvas: HTMLCanvasElement;
+  confidence: number;
+  anchorsFound: number;
+}
 
 const emptyKey = (): AnswerKey => ({
   mc: Array(18).fill(''),
   tf: Array.from({ length: 4 }, () => ({ a: '', b: '', c: '', d: '' })),
   sa: Array(6).fill(''),
 });
-
 const ABCD = ['A', 'B', 'C', 'D'];
 const ACCENT = '#6B7CDB';
+const STABLE_THRESHOLD = 28; // frames (~0.9s at 30fps)
 
 // ── AnswerKeyEditor ─────────────────────────────────────────────────────────
 const AnswerKeyEditor: React.FC<{
@@ -36,14 +43,12 @@ const AnswerKeyEditor: React.FC<{
     mc[i] = mc[i] === v ? '' : v;
     onChange({ ...answerKey, mc });
   };
-
   const setTF = (qi: number, key: 'a' | 'b' | 'c' | 'd', v: string) => {
     const tf = answerKey.tf.map((t, i) =>
       i === qi ? { ...t, [key]: t[key] === v ? '' : v } : t
     );
     onChange({ ...answerKey, tf });
   };
-
   const setSA = (i: number, v: string) => {
     const sa = [...answerKey.sa];
     sa[i] = v;
@@ -54,7 +59,9 @@ const AnswerKeyEditor: React.FC<{
   const filled2 = answerKey.tf.filter(t => t.a || t.b || t.c || t.d).length;
   const filled3 = answerKey.sa.filter(Boolean).length;
 
-  const Section = ({ id, label, count, total, children }: { id: 'mc' | 'tf' | 'sa'; label: string; count: number; total: number; children: React.ReactNode }) => (
+  const Section = ({ id, label, count, total, children }: {
+    id: 'mc' | 'tf' | 'sa'; label: string; count: number; total: number; children: React.ReactNode;
+  }) => (
     <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7' }}>
       <button
         onClick={() => setOpenSection(openSection === id ? null : id)}
@@ -65,13 +72,13 @@ const AnswerKeyEditor: React.FC<{
           <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
             style={{ background: ACCENT }}>{id === 'mc' ? 'I' : id === 'tf' ? 'II' : 'III'}</div>
           <span className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>{label}</span>
-        <span className="text-xs px-2 py-0.5 rounded-full" style={{
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{
             background: count === total ? '#EAF3EE' : '#F1F0EC',
             color: count === total ? '#448361' : '#787774',
           }}>{count}/{total}</span>
         </div>
         <ChevronDown className="w-4 h-4 transition-transform" style={{
-          color: '#AEACA8', transform: openSection === id ? 'rotate(180deg)' : 'none'
+          color: '#AEACA8', transform: openSection === id ? 'rotate(180deg)' : 'none',
         }} />
       </button>
       {openSection === id && <div className="p-4 bg-white">{children}</div>}
@@ -80,7 +87,6 @@ const AnswerKeyEditor: React.FC<{
 
   return (
     <div className="space-y-3">
-      {/* Phần I: ABCD */}
       <Section id="mc" label="Phần I — Trắc nghiệm ABCD" count={filled1} total={18}>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
           {answerKey.mc.map((val, i) => (
@@ -88,9 +94,7 @@ const AnswerKeyEditor: React.FC<{
               <span className="text-xs font-mono w-6 text-right" style={{ color: '#AEACA8' }}>{i + 1}</span>
               <div className="flex gap-1">
                 {ABCD.map(letter => (
-                  <button
-                    key={letter}
-                    onClick={() => setMC(i, letter)}
+                  <button key={letter} onClick={() => setMC(i, letter)}
                     className="w-7 h-7 rounded-md text-xs font-bold transition-all"
                     style={{
                       background: val === letter ? ACCENT : '#F7F6F3',
@@ -105,7 +109,6 @@ const AnswerKeyEditor: React.FC<{
         </div>
       </Section>
 
-      {/* Phần II: Đúng/Sai */}
       <Section id="tf" label="Phần II — Đúng / Sai" count={filled2} total={4}>
         <div className="grid grid-cols-2 gap-4">
           {answerKey.tf.map((t, qi) => (
@@ -130,16 +133,13 @@ const AnswerKeyEditor: React.FC<{
         </div>
       </Section>
 
-      {/* Phần III: Trả lời ngắn */}
       <Section id="sa" label="Phần III — Trả lời ngắn" count={filled3} total={6}>
         <div className="grid grid-cols-2 gap-3">
           {answerKey.sa.map((v, i) => (
             <div key={i} className="flex items-center gap-2">
               <span className="text-xs font-mono w-12 text-right shrink-0" style={{ color: '#AEACA8' }}>Câu {i + 1}</span>
               <input
-                type="text"
-                value={v}
-                onChange={e => setSA(i, e.target.value)}
+                type="text" value={v} onChange={e => setSA(i, e.target.value)}
                 placeholder="VD: 3.14 hoặc -5"
                 className="flex-1 px-2.5 py-1.5 rounded-lg text-sm"
                 style={{ background: '#F7F6F3', border: '1px solid #E9E9E7', color: '#1A1A1A', outline: 'none' }}
@@ -164,26 +164,29 @@ const ScoreDisplay: React.FC<{
   debugCanvas: HTMLCanvasElement | null;
   onReset: () => void;
 }> = ({ answers, score, answerKey, confidence, anchorsFound, debugCanvas, onReset }) => {
-  const [showDebug, setShowDebug] = useState(false);
-  const debugRef = useRef<HTMLDivElement>(null);
+  const [showOverlay, setShowOverlay] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (showDebug && debugCanvas && debugRef.current) {
-      debugRef.current.innerHTML = '';
-      const scaled = document.createElement('canvas');
-      scaled.width = 620;
-      scaled.height = Math.round(620 * (debugCanvas.height / debugCanvas.width));
-      scaled.getContext('2d')!.drawImage(debugCanvas, 0, 0, scaled.width, scaled.height);
-      debugRef.current.appendChild(scaled);
+    if (showOverlay && debugCanvas && overlayRef.current) {
+      overlayRef.current.innerHTML = '';
+      const display = document.createElement('canvas');
+      const maxW = Math.min(window.innerWidth - 48, 800);
+      display.width = maxW;
+      display.height = Math.round(maxW * (debugCanvas.height / debugCanvas.width));
+      display.style.width = '100%';
+      display.style.height = 'auto';
+      display.style.display = 'block';
+      display.getContext('2d')!.drawImage(debugCanvas, 0, 0, display.width, display.height);
+      overlayRef.current.appendChild(display);
     }
-  }, [showDebug, debugCanvas]);
+  }, [showOverlay, debugCanvas]);
 
   const scoreColor = score.total >= 8 ? '#448361' : score.total >= 5 ? '#D9730D' : '#E03E3E';
   const scoreBg = score.total >= 8 ? '#EAF3EE' : score.total >= 5 ? '#FFF3E8' : '#FEF0F0';
 
   return (
     <div className="space-y-5">
-      {/* Header tổng điểm */}
       <div className="rounded-2xl p-6 text-center" style={{ background: scoreBg, border: `2px solid ${scoreColor}33` }}>
         <p className="text-sm font-semibold mb-1" style={{ color: scoreColor }}>Tổng điểm</p>
         <div className="text-6xl font-black tabular-nums" style={{ color: scoreColor }}>
@@ -199,7 +202,6 @@ const ScoreDisplay: React.FC<{
         </div>
       </div>
 
-      {/* Thông tin nhận diện */}
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'SBD', value: answers.sbd || '—', icon: '🪪' },
@@ -214,7 +216,7 @@ const ScoreDisplay: React.FC<{
         ))}
       </div>
 
-      {/* Phần I: Chi tiết ABCD */}
+      {/* Phần I */}
       <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#fff' }}>
         <div className="px-4 py-2.5" style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAF9' }}>
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>
@@ -226,6 +228,7 @@ const ScoreDisplay: React.FC<{
             const correct = score.mcDetail[i];
             const isWrong = ans && !correct;
             const missed = !ans && answerKey.mc[i];
+            const isMulti = ans === '?';
             return (
               <div key={i} title={`Câu ${i + 1}: ${ans || '—'} (đáp án: ${answerKey.mc[i]})`}
                 className="flex flex-col items-center gap-0.5"
@@ -233,11 +236,11 @@ const ScoreDisplay: React.FC<{
                 <span className="text-[9px]" style={{ color: '#AEACA8' }}>{i + 1}</span>
                 <div className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold"
                   style={{
-                    background: correct ? '#EAF3EE' : isWrong ? '#FEF0F0' : missed ? '#FFF3E8' : '#F1F0EC',
-                    color: correct ? '#448361' : isWrong ? '#E03E3E' : missed ? '#D9730D' : '#AEACA8',
-                    border: `1px solid ${correct ? '#B7D9C4' : isWrong ? '#F5C2C2' : missed ? '#FDDBA0' : '#E9E9E7'}`,
+                    background: isMulti ? '#FEF3C7' : correct ? '#EAF3EE' : isWrong ? '#FEF0F0' : missed ? '#FFF3E8' : '#F1F0EC',
+                    color: isMulti ? '#D97706' : correct ? '#448361' : isWrong ? '#E03E3E' : missed ? '#D9730D' : '#AEACA8',
+                    border: `1px solid ${isMulti ? '#FCD34D' : correct ? '#B7D9C4' : isWrong ? '#F5C2C2' : missed ? '#FDDBA0' : '#E9E9E7'}`,
                   }}>
-                  {ans || '·'}
+                  {isMulti ? '!' : ans || '·'}
                 </div>
               </div>
             );
@@ -245,14 +248,14 @@ const ScoreDisplay: React.FC<{
         </div>
       </div>
 
-      {/* Phần II: Đúng/Sai */}
+      {/* Phần II */}
       <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#fff' }}>
         <div className="px-4 py-2.5" style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAF9' }}>
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#AEACA8' }}>
             Phần II — Đúng/Sai ({score.tf.toFixed(2)}đ)
           </p>
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="p-3 grid grid-cols-4 gap-2">
           {answers.tf.map((t, i) => (
             <div key={i} className="rounded-lg p-2.5" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
               <p className="text-[10px] font-semibold mb-1.5" style={{ color: '#1A1A1A' }}>Câu {i + 1}</p>
@@ -301,31 +304,154 @@ const ScoreDisplay: React.FC<{
         </div>
       </div>
 
-      {/* Debug view */}
+      {/* Xem lại ảnh đã chấm */}
       {debugCanvas && (
         <div>
           <button
-            onClick={() => setShowDebug(!showDebug)}
-            className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg"
-            style={{ background: '#F7F6F3', color: '#787774', border: '1px solid #E9E9E7' }}
+            onClick={() => setShowOverlay(!showOverlay)}
+            className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
+            style={{ background: '#EEF0FB', color: ACCENT, border: `1px solid #C8D0F5` }}
           >
-            <Bug className="w-3.5 h-3.5" />
-            {showDebug ? 'Ẩn' : 'Xem'} ảnh debug (ô tô được đánh dấu)
+            <Eye className="w-3.5 h-3.5" />
+            {showOverlay ? 'Ẩn' : 'Xem lại'} ảnh phiếu đã nhận diện
           </button>
-          {showDebug && (
-            <div ref={debugRef} className="mt-3 rounded-xl overflow-hidden"
-              style={{ border: '1px solid #E9E9E7', maxWidth: '100%', overflowX: 'auto' }} />
+          {showOverlay && (
+            <div ref={overlayRef} className="mt-3 rounded-xl overflow-hidden"
+              style={{ border: '1px solid #E9E9E7' }} />
           )}
         </div>
       )}
 
-      <button
-        onClick={onReset}
+      <button onClick={onReset}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-colors"
-        style={{ background: '#F7F6F3', color: '#57564F', border: '1px solid #E9E9E7' }}
-      >
+        style={{ background: '#F7F6F3', color: '#57564F', border: '1px solid #E9E9E7' }}>
         <RotateCcw className="w-4 h-4" /> Chấm bài khác
       </button>
+    </div>
+  );
+};
+
+// ── ReviewScreen ────────────────────────────────────────────────────────────
+// Màn hình kiểm tra sau khi quét — hiển thị ảnh warp + overlay bubble
+const ReviewScreen: React.FC<{
+  reviewData: ReviewData;
+  answerKey: AnswerKey;
+  onConfirm: () => void;
+  onRetake: () => void;
+}> = ({ reviewData, answerKey, onConfirm, onRetake }) => {
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!canvasContainerRef.current || !reviewData.debugCanvas) return;
+    canvasContainerRef.current.innerHTML = '';
+    const { debugCanvas } = reviewData;
+    const display = document.createElement('canvas');
+    const maxW = Math.min((window.innerWidth || 800) - 32, 800);
+    const ratio = debugCanvas.height / debugCanvas.width;
+    display.width = maxW;
+    display.height = Math.round(maxW * ratio);
+    display.style.width = '100%';
+    display.style.height = 'auto';
+    display.style.display = 'block';
+    display.getContext('2d')!.drawImage(debugCanvas, 0, 0, display.width, display.height);
+    canvasContainerRef.current.appendChild(display);
+  }, [reviewData.debugCanvas]);
+
+  // Build warning list
+  const warnings: { text: string; level: 'error' | 'warn' }[] = [];
+  reviewData.answers.mc.forEach((ans, i) => {
+    if (ans === '?') warnings.push({ text: `P.I Câu ${i + 1}: Nhiều đáp án cùng được tô`, level: 'error' });
+    else if (!ans && answerKey.mc[i]) warnings.push({ text: `P.I Câu ${i + 1}: Chưa tô đáp án`, level: 'warn' });
+  });
+  if (reviewData.anchorsFound < 4)
+    warnings.push({ text: `Chỉ nhận diện được ${reviewData.anchorsFound}/4 ô vuông góc → ảnh có thể lệch`, level: 'error' });
+  if (reviewData.confidence < 0.65)
+    warnings.push({ text: `Độ rõ nét thấp (${Math.round(reviewData.confidence * 100)}%) → nên chụp lại`, level: 'warn' });
+
+  const previewScore = answerKey.mc.some(Boolean) ? scoreOMR(reviewData.answers, answerKey) : null;
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-start gap-3">
+        <div className="p-2 rounded-xl shrink-0" style={{ background: '#EEF0FB' }}>
+          <Eye className="w-5 h-5" style={{ color: ACCENT }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-sm" style={{ color: '#1A1A1A' }}>
+            Kiểm tra kết quả nhận diện
+          </h3>
+          <p className="text-xs mt-0.5" style={{ color: '#787774' }}>
+            Bong bóng <span style={{ color: '#00BB55' }}>xanh</span> = đã tô •{' '}
+            <span style={{ color: '#FF4444' }}>đỏ</span> = trống. Xác nhận khi đúng.
+          </p>
+        </div>
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0" style={{
+          background: reviewData.anchorsFound === 4 ? '#EAF3EE' : '#FEF0F0',
+          color: reviewData.anchorsFound === 4 ? '#448361' : '#E03E3E',
+        }}>
+          {reviewData.anchorsFound}/4 anchor
+        </span>
+      </div>
+
+      {/* ★ Annotated image — trung tâm của màn hình review */}
+      <div
+        ref={canvasContainerRef}
+        className="w-full rounded-xl overflow-hidden"
+        style={{
+          border: `2px solid ${reviewData.anchorsFound === 4 ? '#B7D9C4' : '#F5C2C2'}`,
+          background: '#111',
+          minHeight: 100,
+        }}
+      />
+
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <div className="rounded-xl p-4 space-y-1.5"
+          style={{ background: '#FFF8F0', border: '1px solid #FDDBA0' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: '#D9730D' }} />
+            <span className="text-sm font-semibold" style={{ color: '#D9730D' }}>
+              {warnings.length} cảnh báo
+            </span>
+          </div>
+          {warnings.map((w, i) => (
+            <p key={i} className="text-xs" style={{ color: w.level === 'error' ? '#E03E3E' : '#57564F' }}>
+              {w.level === 'error' ? '⚠ ' : '• '}{w.text}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* Quick info bar */}
+      <div className="grid grid-cols-4 gap-2">
+        {[
+          { label: 'SBD', value: reviewData.answers.sbd || '—' },
+          { label: 'Mã đề', value: reviewData.answers.maDethi || '—' },
+          { label: 'Tin cậy', value: `${Math.round(reviewData.confidence * 100)}%` },
+          { label: 'Điểm tạm', value: previewScore ? `${previewScore.total.toFixed(1)}đ` : '—' },
+        ].map(item => (
+          <div key={item.label} className="rounded-xl p-3 text-center"
+            style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
+            <div className="text-[10px] mb-0.5" style={{ color: '#AEACA8' }}>{item.label}</div>
+            <div className="text-sm font-bold" style={{ color: '#1A1A1A' }}>{item.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-3 pt-1">
+        <button onClick={onRetake}
+          className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold"
+          style={{ background: '#F7F6F3', color: '#57564F', border: '1px solid #E9E9E7' }}>
+          <RotateCcw className="w-4 h-4" /> Chụp lại
+        </button>
+        <button onClick={onConfirm}
+          className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold shadow-lg"
+          style={{ background: ACCENT, color: '#fff', boxShadow: `0 4px 20px ${ACCENT}55` }}>
+          <CheckCheck className="w-4 h-4" /> Xác nhận điểm
+        </button>
+      </div>
     </div>
   );
 };
@@ -335,6 +461,7 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
   const [step, setStep] = useState<ScanStep>('setup');
   const [answerKey, setAnswerKey] = useState<AnswerKey>(emptyKey);
   const [scanning, setScanning] = useState(false);
+  const [reviewData, setReviewData] = useState<ReviewData | null>(null);
   const [scanResult, setScanResult] = useState<{
     answers: OMRAnswers;
     score: ScoreResult;
@@ -343,58 +470,62 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
     debugCanvas: HTMLCanvasElement | null;
   } | null>(null);
 
+  // Camera
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const overlayRef = useRef<HTMLCanvasElement>(null);
+
+  // Live detection state
+  const [anchorsLive, setAnchorsLive] = useState(0);
+  const [autoProgress, setAutoProgress] = useState(0);
+  const stableCountRef = useRef(0);
+  const captureCalledRef = useRef(false);
+  const autoCaptureCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const loopRef = useRef<number>(0);
+  const [autoCaptureTrigger, setAutoCaptureTrigger] = useState(0);
+
+  // Refs to break stale-closure in RAF → state callback chain
+  const runScanRef = useRef<((source: File | HTMLCanvasElement) => Promise<void>)>(async () => { });
+  const closeCameraRef = useRef<() => void>(() => { });
+
+  // Misc
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [debugMode, setDebugMode] = useState(false);
-  const [canScan, setCanScan] = useState(false);
   const [templateFileId, setTemplateFileId] = useState<string | null>(null);
   const [isUploadingTemplate, setIsUploadingTemplate] = useState(false);
   const templateInputRef = useRef<HTMLInputElement>(null);
+  const [canScan, setCanScan] = useState(false);
 
   useEffect(() => {
-    const filledI = answerKey.mc.filter(Boolean).length;
-    setCanScan(filledI >= 5);
+    setCanScan(answerKey.mc.filter(Boolean).length >= 5);
   }, [answerKey]);
 
   useEffect(() => {
-    const fetchTemplate = async () => {
-      try {
-        const { data } = await supabase.from('app_settings').select('value').eq('id', 'omr_template_file_id').single();
-        if (data?.value) setTemplateFileId(data.value);
-      } catch (e) { console.error('Failed to load template info', e); }
-    };
-    fetchTemplate();
+    supabase.from('app_settings').select('value').eq('id', 'omr_template_file_id').single()
+      .then(({ data }) => { if (data?.value) setTemplateFileId(data.value); })
+      .catch(() => { });
   }, []);
 
+  // ── Template ──────────────────────────────────────────────────────────────
   const handleUploadTemplate = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setIsUploadingTemplate(true);
     try {
       const formData = new FormData();
       formData.append('chat_id', TELEGRAM_CHAT_ID);
       formData.append('document', file);
-
-      const res = await fetch(`${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!res.ok) throw new Error('Proxy API bị lỗi');
+      const res = await fetch(`${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`, { method: 'POST', body: formData });
+      if (!res.ok) throw new Error('Proxy API lỗi');
       const data = await res.json();
       const fileId = data.result?.document?.file_id;
-      if (!fileId) throw new Error('Telegram không trả về file_id');
-
+      if (!fileId) throw new Error('Không nhận được file_id');
       const { error } = await supabase.from('app_settings').upsert({ id: 'omr_template_file_id', value: fileId });
       if (error) throw error;
-
       setTemplateFileId(fileId);
-      onShowToast('Đã lưu mẫu phiếu lên Telegram và CSDL!', 'success');
+      onShowToast('Đã lưu mẫu phiếu!', 'success');
     } catch (err: any) {
-      onShowToast('Lỗi khi up mẫu phiếu: ' + err.message, 'error');
+      onShowToast('Lỗi: ' + err.message, 'error');
     } finally {
       setIsUploadingTemplate(false);
       if (templateInputRef.current) templateInputRef.current.value = '';
@@ -405,37 +536,31 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
     if (!templateFileId) return;
     try {
       const res = await fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${templateFileId}`);
-      if (!res.ok) throw new Error(`Lỗi tải file: ${res.status}`);
+      if (!res.ok) throw new Error(`Lỗi: ${res.status}`);
       const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = 'mau_phieu_thi.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      a.href = url; a.download = 'mau_phieu_thi.pdf';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
     } catch (err: any) {
-      onShowToast('Lỗi tải mẫu phiếu: ' + err.message, 'error');
+      onShowToast('Lỗi tải mẫu: ' + err.message, 'error');
     }
   };
 
-  // ── Camera ──────────────────────────────────────────────────────────────
+  // ── Camera open/close ─────────────────────────────────────────────────────
   const openCamera = useCallback(async () => {
-    // Check if the API is even available (requires HTTPS)
     if (!navigator.mediaDevices?.getUserMedia) {
-      onShowToast('Trình duyệt không hỗ trợ camera. Hãy dùng Chrome/Safari mới nhất và đảm bảo kết nối HTTPS.', 'error');
+      onShowToast('Trình duyệt không hỗ trợ camera. Cần HTTPS + Chrome/Safari mới nhất.', 'error');
       return;
     }
     try {
-      // Try rear camera first (mobile), fall back to any available camera
-      let stream: MediaStream | null = null;
+      let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
         });
       } catch {
-        // Rear camera failed (e.g. OverconstrainedError) — try any camera
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
       }
       setCameraStream(stream);
@@ -443,16 +568,25 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
     } catch (err: any) {
       const name = err?.name || '';
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-        onShowToast('Bạn đã từ chối quyền camera. Vào Cài đặt trình duyệt → Quyền riêng tư → Camera để cấp lại.', 'error');
-      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-        onShowToast('Không tìm thấy camera trên thiết bị này. Hãy thử upload ảnh thay thế.', 'error');
-      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
-        onShowToast('Camera đang được dùng bởi ứng dụng khác. Đóng ứng dụng đó rồi thử lại.', 'error');
+        onShowToast('Quyền camera bị từ chối. Vào Cài đặt → Camera để cấp lại.', 'error');
+      } else if (name === 'NotFoundError') {
+        onShowToast('Không tìm thấy camera. Thử upload ảnh thay thế.', 'error');
       } else {
-        onShowToast(`Không thể mở camera: ${err?.message || 'Lỗi không xác định'}. Hãy thử upload ảnh thay thế.`, 'error');
+        onShowToast(`Lỗi camera: ${err?.message || 'Không xác định'}`, 'error');
       }
     }
   }, [onShowToast]);
+
+  const closeCamera = useCallback(() => {
+    cameraStream?.getTracks().forEach(t => t.stop());
+    setCameraStream(null);
+    setIsCameraOpen(false);
+    cancelAnimationFrame(loopRef.current);
+    setAnchorsLive(0);
+    setAutoProgress(0);
+    stableCountRef.current = 0;
+    captureCalledRef.current = false;
+  }, [cameraStream]);
 
   useEffect(() => {
     if (isCameraOpen && videoRef.current && cameraStream) {
@@ -460,58 +594,172 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
     }
   }, [isCameraOpen, cameraStream]);
 
-  const closeCamera = useCallback(() => {
-    cameraStream?.getTracks().forEach(t => t.stop());
-    setCameraStream(null);
-    setIsCameraOpen(false);
-  }, [cameraStream]);
+  // ── RAF live anchor detection loop ────────────────────────────────────────
+  useEffect(() => {
+    if (!isCameraOpen) {
+      cancelAnimationFrame(loopRef.current);
+      return;
+    }
+    captureCalledRef.current = false;
+    stableCountRef.current = 0;
+    let frameIdx = 0;
 
-  const captureFromCamera = useCallback(async () => {
-    if (!videoRef.current) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    canvas.getContext('2d')!.drawImage(videoRef.current, 0, 0);
-    closeCamera();
-    await runScan(canvas);
-  }, [closeCamera, answerKey, debugMode]); // eslint-disable-line react-hooks/exhaustive-deps
+    const loop = () => {
+      if (captureCalledRef.current) return;
+      const video = videoRef.current;
+      const overlay = overlayRef.current;
+      if (!video || !overlay || !video.videoWidth || !video.videoHeight) {
+        loopRef.current = requestAnimationFrame(loop);
+        return;
+      }
 
-  // ── Scan logic ───────────────────────────────────────────────────────────
+      frameIdx++;
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      overlay.width = vw;
+      overlay.height = vh;
+      const ctx = overlay.getContext('2d')!;
+      ctx.clearRect(0, 0, vw, vh);
+
+      // Only run detection every 3rd frame for performance
+      if (frameIdx % 3 === 0) {
+        const tmp = document.createElement('canvas');
+        tmp.width = vw; tmp.height = vh;
+        tmp.getContext('2d')!.drawImage(video, 0, 0);
+        const { anchors, found } = detectAnchorsFromCanvas(tmp);
+        setAnchorsLive(found);
+
+        // Draw L-bracket markers at each anchor
+        // Corner order: TL, TR, BL, BR → dx/dy direction of the bracket arms
+        const cornerDirs: [number, number][] = [[1, 1], [-1, 1], [1, -1], [-1, -1]];
+        const expectedPos: [number, number][] = [
+          [0.04 * vw, 0.013 * vh],
+          [0.96 * vw, 0.013 * vh],
+          [0.04 * vw, 0.987 * vh],
+          [0.96 * vw, 0.987 * vh],
+        ];
+        const armLen = Math.min(vw, vh) * 0.09;
+
+        anchors.forEach((anchor, i) => {
+          const isFound = !!anchor;
+          const x = anchor ? anchor.x : expectedPos[i][0];
+          const y = anchor ? anchor.y : expectedPos[i][1];
+          const [dx, dy] = cornerDirs[i];
+
+          ctx.save();
+          ctx.strokeStyle = isFound ? '#00FF88' : 'rgba(255,255,255,0.25)';
+          ctx.lineWidth = isFound ? 5 : 2.5;
+          ctx.lineCap = 'round';
+          if (isFound) {
+            ctx.shadowColor = '#00FF88';
+            ctx.shadowBlur = 10;
+          }
+          ctx.beginPath();
+          ctx.moveTo(x + dx * armLen, y);
+          ctx.lineTo(x, y);
+          ctx.lineTo(x, y + dy * armLen);
+          ctx.stroke();
+          ctx.restore();
+
+          // Dot at corner center
+          if (isFound) {
+            ctx.save();
+            ctx.fillStyle = '#00FF88';
+            ctx.shadowColor = '#00FF88';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        });
+
+        // Auto-capture logic
+        if (found === 4) {
+          stableCountRef.current++;
+          const prog = Math.min(100, Math.round((stableCountRef.current / STABLE_THRESHOLD) * 100));
+          setAutoProgress(prog);
+
+          if (stableCountRef.current >= STABLE_THRESHOLD && !captureCalledRef.current) {
+            captureCalledRef.current = true;
+            // Capture full-res frame
+            const cap = document.createElement('canvas');
+            cap.width = vw; cap.height = vh;
+            cap.getContext('2d')!.drawImage(video, 0, 0);
+            autoCaptureCanvasRef.current = cap;
+            setAutoCaptureTrigger(n => n + 1);
+            return;
+          }
+        } else {
+          // Decay stable count when anchors lost
+          stableCountRef.current = Math.max(0, stableCountRef.current - 4);
+          setAutoProgress(Math.round((stableCountRef.current / STABLE_THRESHOLD) * 100));
+        }
+      }
+
+      loopRef.current = requestAnimationFrame(loop);
+    };
+
+    // Start when video is ready
+    const video = videoRef.current;
+    const startLoop = () => { loopRef.current = requestAnimationFrame(loop); };
+    if (video) {
+      if (video.readyState >= 2) startLoop();
+      else video.addEventListener('canplay', startLoop, { once: true });
+    }
+    return () => cancelAnimationFrame(loopRef.current);
+  }, [isCameraOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Triggered by RAF loop via setAutoCaptureTrigger
+  useEffect(() => {
+    if (autoCaptureTrigger === 0) return;
+    const canvas = autoCaptureCanvasRef.current;
+    if (!canvas) return;
+    autoCaptureCanvasRef.current = null;
+    closeCameraRef.current();
+    runScanRef.current(canvas);
+  }, [autoCaptureTrigger]);
+
+  // ── Scan / process ───────────────────────────────────────────────────────
   const runScan = useCallback(async (source: File | HTMLCanvasElement) => {
     if (!canScan) {
-      onShowToast('Vui lòng nhập ít nhất 10 câu đáp án trước khi chấm.', 'warning');
+      onShowToast('Nhập ít nhất 5 đáp án Phần I trước khi chấm.', 'warning');
       return;
     }
     setScanning(true);
     setStep('scanning');
     try {
-      const result = await processOMRImage(source, debugMode);
-      const score = scoreOMR(result.answers, answerKey);
-
-      const confidencePct = Math.round(result.confidence * 100);
-      if (result.anchorsFound < 4) {
-        onShowToast(`Chỉ tìm thấy ${result.anchorsFound}/4 anchor. Kết quả có thể kém chính xác.`, 'warning');
-      } else if (confidencePct < 70) {
-        onShowToast(`Độ tin cậy thấp (${confidencePct}%). Hãy chụp lại với ánh sáng tốt hơn.`, 'warning');
-      } else {
-        onShowToast(`Chấm xong! Điểm: ${score.total.toFixed(2)} — Độ tin cậy: ${confidencePct}%`, 'success');
-      }
-
-      setScanResult({
+      // Always enable debug=true so we get the annotated canvas for review
+      const result = await processOMRImage(source, true);
+      if (!result.debugCanvas) throw new Error('Debug canvas không được tạo');
+      setReviewData({
         answers: result.answers,
-        score,
+        debugCanvas: result.debugCanvas,
         confidence: result.confidence,
         anchorsFound: result.anchorsFound,
-        debugCanvas: result.debugCanvas || null,
       });
-      setStep('result');
+      setStep('review');
     } catch (e: any) {
       onShowToast('Lỗi xử lý ảnh: ' + e.message, 'error');
       setStep('setup');
     } finally {
       setScanning(false);
     }
-  }, [canScan, answerKey, debugMode, onShowToast]);
+  }, [canScan, onShowToast]);
+
+  // Keep refs fresh (used inside RAF → useEffect chain to avoid stale closures)
+  useEffect(() => { runScanRef.current = runScan; }, [runScan]);
+  useEffect(() => { closeCameraRef.current = closeCamera; }, [closeCamera]);
+
+  const captureManually = useCallback(async () => {
+    if (!videoRef.current) return;
+    const cap = document.createElement('canvas');
+    cap.width = videoRef.current.videoWidth;
+    cap.height = videoRef.current.videoHeight;
+    cap.getContext('2d')!.drawImage(videoRef.current, 0, 0);
+    closeCamera();
+    await runScan(cap);
+  }, [closeCamera, runScan]);
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -524,10 +772,37 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
     await runScan(file);
   }, [runScan]);
 
-  const reset = () => {
-    setScanResult(null);
+  const confirmReview = useCallback(() => {
+    if (!reviewData) return;
+    const score = scoreOMR(reviewData.answers, answerKey);
+    const confidencePct = Math.round(reviewData.confidence * 100);
+    if (reviewData.anchorsFound < 4) {
+      onShowToast(`${reviewData.anchorsFound}/4 anchor — kết quả có thể kém chính xác.`, 'warning');
+    } else if (confidencePct < 70) {
+      onShowToast(`Độ tin cậy thấp (${confidencePct}%). Nên xem xét chụp lại.`, 'warning');
+    } else {
+      onShowToast(`Chấm xong! Điểm: ${score.total.toFixed(2)}`, 'success');
+    }
+    setScanResult({
+      answers: reviewData.answers,
+      score,
+      confidence: reviewData.confidence,
+      anchorsFound: reviewData.anchorsFound,
+      debugCanvas: reviewData.debugCanvas,
+    });
+    setStep('result');
+  }, [reviewData, answerKey, onShowToast]);
+
+  const retakeFromReview = useCallback(() => {
+    setReviewData(null);
     setStep('setup');
-  };
+  }, []);
+
+  const reset = useCallback(() => {
+    setScanResult(null);
+    setReviewData(null);
+    setStep('setup');
+  }, []);
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
@@ -543,58 +818,142 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
             Chấm Phiếu Trắc Nghiệm (OMR)
           </h2>
           <p className="text-sm mt-0.5" style={{ color: '#57564F' }}>
-            Nhập đáp án → Chụp ảnh phiếu → Hệ thống tự động nhận diện & tính điểm BGD 2025.
+            Nhập đáp án → Hướng camera vào phiếu (tự chụp) → Xem lại → Xác nhận điểm.
           </p>
         </div>
       </div>
 
-      {/* Camera overlay */}
+      {/* ── CAMERA OVERLAY ─────────────────────────────────────────────── */}
       {isCameraOpen && (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
-          style={{ background: 'rgba(0,0,0,0.92)' }}>
-          <div className="relative w-full max-w-2xl">
-            <video ref={videoRef} autoPlay playsInline
-              className="w-full rounded-xl" style={{ maxHeight: '70vh', objectFit: 'cover' }} />
-            {/* Khung ngắm */}
-            <div className="absolute inset-4 rounded-xl pointer-events-none"
-              style={{ border: '2px solid rgba(107,124,219,0.8)', boxShadow: '0 0 0 9999px rgba(0,0,0,0.4)' }}>
-              {/* 4 góc */}
-              {[['top-0 left-0', '0 4px 4px 0'], ['top-0 right-0', '0 0 4px 4px'], ['bottom-0 left-0', '4px 4px 0 0'], ['bottom-0 right-0', '4px 0 0 4px']].map(([pos], i) => (
-                <div key={i} className={`absolute w-8 h-8 ${pos}`}
-                  style={{ border: '3px solid #6B7CDB', borderRadius: '4px' }} />
-              ))}
+        <div className="fixed inset-0 z-[200] flex flex-col bg-black" style={{ touchAction: 'none' }}>
+          {/* Video + canvas overlay */}
+          <div className="relative flex-1 overflow-hidden">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <canvas
+              ref={overlayRef}
+              className="absolute inset-0 w-full h-full"
+              style={{ pointerEvents: 'none', objectFit: 'cover' }}
+            />
+
+            {/* Top HUD */}
+            <div className="absolute top-0 left-0 right-0 flex flex-col items-center pt-safe pt-8 gap-3">
+              {/* Anchor status pill */}
+              <div
+                className="px-4 py-2 rounded-full text-sm font-semibold backdrop-blur-md"
+                style={{
+                  background: anchorsLive === 4
+                    ? 'rgba(0,187,85,0.85)'
+                    : anchorsLive >= 2
+                      ? 'rgba(217,115,13,0.85)'
+                      : 'rgba(0,0,0,0.6)',
+                  color: '#fff',
+                  transition: 'background 0.3s',
+                }}
+              >
+                {anchorsLive === 4
+                  ? autoProgress >= 100
+                    ? '📸 Chụp!'
+                    : `✓ 4/4 góc — giữ nguyên...`
+                  : `🔍 Đang tìm ${anchorsLive}/4 ô góc`
+                }
+              </div>
+
+              {/* Instruction */}
+              {anchorsLive < 4 && (
+                <p className="text-white text-xs opacity-60 text-center px-8">
+                  Hướng camera thẳng xuống phiếu · 4 ô đen ở 4 góc phải nằm trong khung
+                </p>
+              )}
             </div>
-            <p className="text-center text-white text-sm mt-3 opacity-75">
-              Đặt phiếu vào khung · giữ thẳng · ánh sáng đủ
-            </p>
+
+            {/* Auto-capture progress bar */}
+            {anchorsLive === 4 && autoProgress > 0 && (
+              <div className="absolute bottom-28 left-8 right-8">
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${autoProgress}%`,
+                      background: '#00FF88',
+                      transition: 'width 80ms linear',
+                      boxShadow: '0 0 8px #00FF88',
+                    }}
+                  />
+                </div>
+                <p className="text-center text-xs mt-2" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                  Đang tự động chụp... {autoProgress}%
+                </p>
+              </div>
+            )}
           </div>
-          <div className="flex gap-4 mt-6">
-            <button onClick={closeCamera}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold"
-              style={{ background: '#333', color: '#fff' }}>
+
+          {/* Bottom controls */}
+          <div
+            className="flex items-center justify-center gap-4 px-6 pb-safe"
+            style={{ background: 'rgba(0,0,0,0.8)', paddingTop: 20, paddingBottom: 32, backdropFilter: 'blur(12px)' }}
+          >
+            <button
+              onClick={closeCamera}
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-semibold"
+              style={{ background: 'rgba(255,255,255,0.12)', color: '#fff' }}
+            >
               <X className="w-4 h-4" /> Hủy
             </button>
-            <button onClick={captureFromCamera}
-              className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold"
-              style={{ background: ACCENT, color: '#fff' }}>
-              <Camera className="w-4 h-4" /> Chụp
+
+            {/* Shutter button */}
+            <button
+              onClick={captureManually}
+              style={{
+                width: 72, height: 72,
+                borderRadius: '50%',
+                background: '#fff',
+                border: '4px solid rgba(255,255,255,0.3)',
+                boxShadow: '0 0 0 2px rgba(255,255,255,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <Camera className="w-7 h-7" style={{ color: '#1A1A1A' }} />
             </button>
+
+            {/* Spacer to balance layout */}
+            <div style={{ width: 84 }} />
           </div>
         </div>
       )}
 
+      {/* ── SCANNING SPINNER ───────────────────────────────────────────── */}
       {step === 'scanning' && (
         <div className="rounded-xl py-20 flex flex-col items-center gap-4"
           style={{ background: '#fff', border: '1px solid #E9E9E7' }}>
           <ScanLine className="w-12 h-12 animate-pulse" style={{ color: ACCENT }} />
           <p className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Đang xử lý phiếu...</p>
-          <p className="text-sm" style={{ color: '#787774' }}>Đang tìm anchor · Bóp phẳng ảnh · Đọc bong bóng</p>
+          <p className="text-sm" style={{ color: '#787774' }}>
+            Tìm góc anchor · Bóp phẳng ảnh · Đọc toàn bộ bong bóng
+          </p>
           <div className="w-48 h-1.5 rounded-full overflow-hidden mt-2" style={{ background: '#F1F0EC' }}>
             <div className="h-full rounded-full animate-pulse" style={{ width: '60%', background: ACCENT }} />
           </div>
         </div>
       )}
 
+      {/* ── REVIEW SCREEN ──────────────────────────────────────────────── */}
+      {step === 'review' && reviewData && (
+        <ReviewScreen
+          reviewData={reviewData}
+          answerKey={answerKey}
+          onConfirm={confirmReview}
+          onRetake={retakeFromReview}
+        />
+      )}
+
+      {/* ── RESULT SCREEN ──────────────────────────────────────────────── */}
       {step === 'result' && scanResult && (
         <ScoreDisplay
           answers={scanResult.answers}
@@ -607,27 +966,21 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
         />
       )}
 
+      {/* ── SETUP SCREEN ───────────────────────────────────────────────── */}
       {step === 'setup' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: Đáp án */}
+          {/* Left: Bảng đáp án */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Key className="w-4 h-4" style={{ color: ACCENT }} />
                 <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Bảng đáp án</h3>
               </div>
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#787774' }}>
-                  <input type="checkbox" checked={debugMode} onChange={e => setDebugMode(e.target.checked)}
-                    className="rounded" />
-                  <Bug className="w-3 h-3" /> Debug
-                </label>
-                <button onClick={() => setAnswerKey(emptyKey())}
-                  className="text-xs px-2.5 py-1 rounded-lg"
-                  style={{ background: '#F1F0EC', color: '#787774', border: '1px solid #E9E9E7' }}>
-                  <RotateCcw className="w-3 h-3 inline mr-1" />Xóa
-                </button>
-              </div>
+              <button onClick={() => setAnswerKey(emptyKey())}
+                className="text-xs px-2.5 py-1 rounded-lg"
+                style={{ background: '#F1F0EC', color: '#787774', border: '1px solid #E9E9E7' }}>
+                <RotateCcw className="w-3 h-3 inline mr-1" />Xóa
+              </button>
             </div>
 
             <AnswerKeyEditor answerKey={answerKey} onChange={setAnswerKey} />
@@ -642,33 +995,27 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
             )}
           </div>
 
-          {/* Right: Chụp/Upload */}
+          {/* Right: Camera / Upload */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Camera className="w-4 h-4" style={{ color: ACCENT }} />
                 <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Chấm bài</h3>
               </div>
-              
               <div className="flex items-center gap-2">
-                <input type="file" accept="application/pdf" className="hidden" ref={templateInputRef} onChange={handleUploadTemplate} disabled={isUploadingTemplate} />
-                <button 
-                  onClick={() => templateInputRef.current?.click()}
-                  disabled={isUploadingTemplate}
-                  className="text-[11px] px-2 py-1.5 rounded-lg font-medium transition-colors"
-                  style={{ background: '#F1F0EC', color: '#1A1A1A', opacity: isUploadingTemplate ? 0.5 : 1 }}
-                >
+                <input type="file" accept="application/pdf" className="hidden"
+                  ref={templateInputRef} onChange={handleUploadTemplate} disabled={isUploadingTemplate} />
+                <button onClick={() => templateInputRef.current?.click()} disabled={isUploadingTemplate}
+                  className="text-[11px] px-2 py-1.5 rounded-lg font-medium"
+                  style={{ background: '#F1F0EC', color: '#1A1A1A', opacity: isUploadingTemplate ? 0.5 : 1 }}>
                   <Upload className="w-3.5 h-3.5 inline mr-1" />
                   {isUploadingTemplate ? 'Đang tải...' : 'Up Phiếu'}
                 </button>
                 {templateFileId ? (
-                  <button
-                    onClick={handleDownloadTemplate}
-                    className="text-[11px] px-2 py-1.5 rounded-lg flex items-center gap-1 font-medium transition-colors"
-                    style={{ background: '#EEF0FB', color: ACCENT, border: '1px solid #C8D0F5' }}
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Tải mẫu
+                  <button onClick={handleDownloadTemplate}
+                    className="text-[11px] px-2 py-1.5 rounded-lg flex items-center gap-1 font-medium"
+                    style={{ background: '#EEF0FB', color: ACCENT, border: '1px solid #C8D0F5' }}>
+                    <Download className="w-3.5 h-3.5" /> Tải mẫu
                   </button>
                 ) : (
                   <span className="text-[10px] text-gray-400">Chưa có mẫu</span>
@@ -678,9 +1025,7 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
 
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #E9E9E7', background: '#fff' }}>
               {/* Camera button */}
-              <button
-                onClick={openCamera}
-                disabled={!canScan}
+              <button onClick={openCamera} disabled={!canScan}
                 className="w-full flex flex-col items-center gap-3 py-10 transition-all"
                 style={{
                   borderBottom: '1px solid #E9E9E7',
@@ -688,39 +1033,33 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
                   cursor: canScan ? 'pointer' : 'not-allowed',
                 }}
                 onMouseEnter={e => canScan && ((e.currentTarget as HTMLElement).style.background = '#EEF0FB')}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
               >
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
                   style={{ background: canScan ? '#EEF0FB' : '#F1F0EC' }}>
                   <Camera className="w-8 h-8" style={{ color: canScan ? ACCENT : '#CFCFCB' }} />
                 </div>
-                <div>
+                <div className="text-center">
                   <p className="font-semibold text-sm" style={{ color: canScan ? '#1A1A1A' : '#AEACA8' }}>
                     Chụp bằng Camera
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: '#787774' }}>
-                    Dùng camera điện thoại / laptop
+                    Hướng vào phiếu · tự động chụp khi nhận diện được 4 góc
                   </p>
                 </div>
               </button>
 
               {/* Upload button */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={!canScan}
+              <button onClick={() => fileInputRef.current?.click()} disabled={!canScan}
                 className="w-full flex flex-col items-center gap-3 py-8 transition-all"
-                style={{
-                  opacity: canScan ? 1 : 0.5,
-                  cursor: canScan ? 'pointer' : 'not-allowed',
-                }}
+                style={{ opacity: canScan ? 1 : 0.5, cursor: canScan ? 'pointer' : 'not-allowed' }}
                 onMouseEnter={e => canScan && ((e.currentTarget as HTMLElement).style.background = '#F7F6F3')}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
               >
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ background: '#F1F0EC' }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: '#F1F0EC' }}>
                   <Upload className="w-6 h-6" style={{ color: canScan ? '#57564F' : '#CFCFCB' }} />
                 </div>
-                <div>
+                <div className="text-center">
                   <p className="font-medium text-sm" style={{ color: canScan ? '#1A1A1A' : '#AEACA8' }}>
                     Upload ảnh phiếu
                   </p>
@@ -737,9 +1076,10 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
               {[
                 'Để phiếu trên bàn phẳng, không cong vênh',
                 'Chụp thẳng từ trên xuống, không nghiêng',
-                'Ánh sáng đủ, không bị bóng tối',
-                'Học sinh tô đậm bằng bút chì / bút bi',
+                'Ánh sáng đủ, tránh bóng tối hoặc phản quang',
+                'Học sinh tô đậm bằng bút chì hoặc bút bi',
                 '4 ô đen góc phiếu phải rõ ràng trong ảnh',
+                'Camera sẽ tự chụp khi nhận diện đủ 4 góc',
               ].map((tip, i) => (
                 <p key={i} className="text-[11px]" style={{ color: '#787774' }}>• {tip}</p>
               ))}

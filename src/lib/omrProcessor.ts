@@ -389,6 +389,33 @@ export async function processOMRImage(
   };
 }
 
+// ─── Live Anchor Detection (dành cho camera preview) ─────────────────────────
+// Chỉ tìm 4 anchor góc, không chạy full OMR — dùng trong RAF loop
+export function detectAnchorsFromCanvas(canvas: HTMLCanvasElement): {
+  anchors: (Point | null)[];
+  found: number;
+} {
+  // Downscale về tối đa 480px để detection nhanh (~10ms/frame)
+  const maxDim = 480;
+  const scale = Math.min(1, maxDim / Math.max(canvas.width, canvas.height));
+  let src: HTMLCanvasElement = canvas;
+  if (scale < 1) {
+    const tmp = document.createElement('canvas');
+    tmp.width = Math.round(canvas.width * scale);
+    tmp.height = Math.round(canvas.height * scale);
+    tmp.getContext('2d')!.drawImage(canvas, 0, 0, tmp.width, tmp.height);
+    src = tmp;
+  }
+  const ctx = src.getContext('2d')!;
+  const data = ctx.getImageData(0, 0, src.width, src.height).data;
+  const raw = ANCHOR_REGIONS.map(a =>
+    findAnchorNear(data, src.width, src.height, a.x, a.y, a.size)
+  );
+  // Map coordinates trở lại không gian canvas gốc
+  const anchors = raw.map(a => a ? { x: a.x / scale, y: a.y / scale } : null);
+  return { anchors, found: anchors.filter(Boolean).length };
+}
+
 // ─── Tính điểm BGD 2025 ───────────────────────────────────────────────────────
 
 export interface AnswerKey {
