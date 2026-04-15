@@ -104,10 +104,12 @@ export default {
     }
 
     // Security Check: Block requests from unauthorized referers
+    // EXCEPTION: /getFile/ is accessed directly by browser for file download → skip Referer check
     const referer = request.headers.get("Referer");
+    const isGetFile = url.pathname.startsWith("/getFile/");
     const isAllowedReferer = referer && ALLOWED_ORIGINS.some(allowed => referer.startsWith(allowed));
     
-    if (!isAllowedReferer) {
+    if (!isGetFile && !isAllowedReferer) {
       return new Response(JSON.stringify({ error: "Forbidden", message: "Invalid or Missing Referer" }), { 
         status: 403, 
         headers: { "Content-Type": "application/json", ...corsHeaders(origin) } 
@@ -304,11 +306,17 @@ export default {
         const fileBuffer = await fileRes.arrayBuffer();
         const contentType = fileRes.headers.get("Content-Type") || "application/octet-stream";
 
+        // Determine filename from file_path or use a sensible default
+        const rawFileName = filePath ? filePath.split("/").pop() : "mau_phieu_thi.pdf";
+        const downloadName = rawFileName.endsWith(".pdf") ? rawFileName : "mau_phieu_thi.pdf";
+        const contentDisposition = `attachment; filename="${downloadName}"`;
+
         await cache.put(
           cacheReq,
           new Response(fileBuffer, {
             headers: {
               "Content-Type": contentType,
+              "Content-Disposition": contentDisposition,
               "Cache-Control": "public, max-age=31536000, immutable",
             },
           })
@@ -317,6 +325,7 @@ export default {
         return new Response(fileBuffer, {
           headers: {
             "Content-Type": contentType,
+            "Content-Disposition": contentDisposition,
             "Cache-Control": "public, max-age=31536000, immutable",
             "x-cache": "MISS",
             ...corsHeaders(origin),

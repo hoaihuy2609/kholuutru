@@ -401,16 +401,56 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    if (!templateFileId) return;
+    try {
+      const res = await fetch(`${CLOUDFLARE_PROXY_URL}/getFile/${templateFileId}`);
+      if (!res.ok) throw new Error(`Lỗi tải file: ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'mau_phieu_thi.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err: any) {
+      onShowToast('Lỗi tải mẫu phiếu: ' + err.message, 'error');
+    }
+  };
+
   // ── Camera ──────────────────────────────────────────────────────────────
   const openCamera = useCallback(async () => {
+    // Check if the API is even available (requires HTTPS)
+    if (!navigator.mediaDevices?.getUserMedia) {
+      onShowToast('Trình duyệt không hỗ trợ camera. Hãy dùng Chrome/Safari mới nhất và đảm bảo kết nối HTTPS.', 'error');
+      return;
+    }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-      });
+      // Try rear camera first (mobile), fall back to any available camera
+      let stream: MediaStream | null = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+        });
+      } catch {
+        // Rear camera failed (e.g. OverconstrainedError) — try any camera
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
       setCameraStream(stream);
       setIsCameraOpen(true);
-    } catch {
-      onShowToast('Không thể mở camera. Hãy thử upload ảnh thay thế.', 'error');
+    } catch (err: any) {
+      const name = err?.name || '';
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        onShowToast('Bạn đã từ chối quyền camera. Vào Cài đặt trình duyệt → Quyền riêng tư → Camera để cấp lại.', 'error');
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        onShowToast('Không tìm thấy camera trên thiết bị này. Hãy thử upload ảnh thay thế.', 'error');
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+        onShowToast('Camera đang được dùng bởi ứng dụng khác. Đóng ứng dụng đó rồi thử lại.', 'error');
+      } else {
+        onShowToast(`Không thể mở camera: ${err?.message || 'Lỗi không xác định'}. Hãy thử upload ảnh thay thế.`, 'error');
+      }
     }
   }, [onShowToast]);
 
@@ -622,16 +662,14 @@ const OMRScanner: React.FC<OMRScannerProps> = ({ onShowToast }) => {
                   {isUploadingTemplate ? 'Đang tải...' : 'Up Phiếu'}
                 </button>
                 {templateFileId ? (
-                  <a 
-                    href={`${CLOUDFLARE_PROXY_URL}/getFile/${templateFileId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={handleDownloadTemplate}
                     className="text-[11px] px-2 py-1.5 rounded-lg flex items-center gap-1 font-medium transition-colors"
                     style={{ background: '#EEF0FB', color: ACCENT, border: '1px solid #C8D0F5' }}
                   >
                     <Download className="w-3.5 h-3.5" />
                     Tải mẫu
-                  </a>
+                  </button>
                 ) : (
                   <span className="text-[10px] text-gray-400">Chưa có mẫu</span>
                 )}
