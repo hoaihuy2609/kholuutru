@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Zap, Plus, Trash2, RefreshCw, CheckCircle2, AlertCircle, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { Zap, Plus, Trash2, RefreshCw, CheckCircle2, AlertCircle, BookOpen, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
 import { CURRICULUM } from '../constants';
 
 interface GameQuestion {
@@ -12,6 +12,7 @@ interface GameQuestion {
   answer: string;
   grade: number;
   topic?: string;
+  explanation?: string;
 }
 
 interface AdminGameManagerProps {
@@ -23,26 +24,26 @@ interface AdminGameManagerProps {
 // ── Parser: text → structured questions ──────────────────────────
 function parseQuestions(raw: string, grade: number, topic: string): Omit<GameQuestion, 'id'>[] {
   const questions: Omit<GameQuestion, 'id'>[] = [];
-  // Split by question number pattern: "1." "2." etc at start of line
   const blocks = raw.split(/\n(?=\d+\.\s)/);
 
   for (const block of blocks) {
     const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
     if (lines.length < 6) continue;
 
-    // Question text: first line (may start with "1. ")
     const qLine = lines[0].replace(/^\d+\.\s*/, '').trim();
     if (!qLine) continue;
 
-    // Find options
-    const optA = lines.find(l => /^A[\.\)]\s*/i.test(l))?.replace(/^A[\.\)]\s*/i, '').trim();
-    const optB = lines.find(l => /^B[\.\)]\s*/i.test(l))?.replace(/^B[\.\)]\s*/i, '').trim();
-    const optC = lines.find(l => /^C[\.\)]\s*/i.test(l))?.replace(/^C[\.\)]\s*/i, '').trim();
-    const optD = lines.find(l => /^D[\.\)]\s*/i.test(l))?.replace(/^D[\.\)]\s*/i, '').trim();
+    const optA = lines.find(l => /^A[.)]\s*/i.test(l))?.replace(/^A[.)]\s*/i, '').trim();
+    const optB = lines.find(l => /^B[.)]\s*/i.test(l))?.replace(/^B[.)]\s*/i, '').trim();
+    const optC = lines.find(l => /^C[.)]\s*/i.test(l))?.replace(/^C[.)]\s*/i, '').trim();
+    const optD = lines.find(l => /^D[.)]\s*/i.test(l))?.replace(/^D[.)]\s*/i, '').trim();
 
-    // Find answer: "ĐA: B" or "Đáp án: B"
     const ansLine = lines.find(l => /^(đa|đáp án|answer)\s*[:：]\s*[ABCD]/i.test(l));
     const answer = ansLine?.match(/[ABCD]/i)?.[0]?.toUpperCase();
+
+    // Giải thích là tùy chọn: "Giải thích: ..." hoặc "GT: ..." hoặc "Explanation: ..."
+    const expLine = lines.find(l => /^(giải thích|gt|explanation)\s*[:：]/i.test(l));
+    const explanation = expLine?.replace(/^(giải thích|gt|explanation)\s*[:：]\s*/i, '').trim();
 
     if (optA && optB && optC && optD && answer && ['A', 'B', 'C', 'D'].includes(answer)) {
       questions.push({
@@ -54,6 +55,7 @@ function parseQuestions(raw: string, grade: number, topic: string): Omit<GameQue
         answer,
         grade,
         topic: topic.trim() || undefined,
+        explanation: explanation || undefined,
       });
     }
   }
@@ -75,7 +77,6 @@ const AdminGameManager: React.FC<AdminGameManagerProps> = ({ onShowToast, worker
 
   const authHeader = { Authorization: `Bearer ${adminKey}`, 'Content-Type': 'application/json', Referer: window.location.origin };
 
-  // ── Load existing questions ──────────────────────────────────
   const loadExisting = useCallback(async () => {
     if (!workerUrl) return;
     setIsLoading(true);
@@ -95,7 +96,6 @@ const AdminGameManager: React.FC<AdminGameManagerProps> = ({ onShowToast, worker
 
   useEffect(() => { loadExisting(); }, [loadExisting]);
 
-  // ── Parse ────────────────────────────────────────────────────
   const handleParse = () => {
     if (!rawText.trim()) return;
     setParseError('');
@@ -114,14 +114,21 @@ const AdminGameManager: React.FC<AdminGameManagerProps> = ({ onShowToast, worker
     setShowPreview(true);
   };
 
-  // ── Save ─────────────────────────────────────────────────────
   const handleSave = async () => {
     if (parsedQuestions.length === 0) return;
     setIsSaving(true);
     try {
       const questionsWithId = parsedQuestions.map(q => ({
-        ...q,
         id: crypto.randomUUID(),
+        question: q.question,
+        option_a: q.option_a,
+        option_b: q.option_b,
+        option_c: q.option_c,
+        option_d: q.option_d,
+        answer: q.answer,
+        grade: q.grade,
+        topic: q.topic,
+        explanation: q.explanation,
       }));
       const res = await fetch(`${workerUrl}/game/questions`, {
         method: 'POST',
@@ -144,7 +151,6 @@ const AdminGameManager: React.FC<AdminGameManagerProps> = ({ onShowToast, worker
     }
   };
 
-  // ── Delete ────────────────────────────────────────────────────
   const handleDelete = async (qId: string, question: string) => {
     if (!window.confirm(`Xóa câu hỏi:\n"${question.slice(0, 100)}..."?`)) return;
     try {
@@ -170,6 +176,7 @@ B. Gia tốc đặc trưng cho sự thay đổi vận tốc theo thời gian
 C. Gia tốc chỉ xuất hiện trong chuyển động thẳng
 D. Gia tốc luôn có giá trị dương
 ĐA: B
+Giải thích: Gia tốc là đại lượng đặc trưng cho sự thay đổi vận tốc, a = Δv/Δt.
 
 2. Trong hệ SI, đơn vị của lực là gì?
 A. kg
@@ -187,9 +194,9 @@ D. J
             <Zap className="w-5 h-5" style={{ color: '#F59E0B' }} />
           </div>
           <div>
-            <h3 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Quản lý câu hỏi Game</h3>
+            <h3 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Quản lý câu hỏi Luyện tập</h3>
             <p className="text-xs" style={{ color: '#787774' }}>
-              {existingQuestions.length} câu hỏi · Dùng cho Vua Lý Thuyết
+              {existingQuestions.length} câu hỏi · Hỗ trợ giải thích đáp án
             </p>
           </div>
         </div>
@@ -254,14 +261,18 @@ D. J
                 <option key={ch.id} value={ch.name}>{ch.name}</option>
               ))}
             </select>
-            <p className="text-[10px] mt-1" style={{ color: '#AEACA8' }}>Tất cả câu hỏi trong batch này sẽ được gán chương này (dùng trong chế độ Luyện tập).</p>
+            <p className="text-[10px] mt-1" style={{ color: '#AEACA8' }}>Tất cả câu hỏi trong batch này sẽ được gán chương này.</p>
           </div>
 
           {/* Format hint */}
           <div className="rounded-xl p-3" style={{ background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
-            <div className="flex items-center gap-1.5 mb-2">
+            <div className="flex items-center gap-1.5 mb-1">
               <BookOpen className="w-3.5 h-3.5" style={{ color: '#6B7CDB' }} />
               <span className="text-[11px] font-semibold" style={{ color: '#6B7CDB' }}>Định dạng chuẩn</span>
+            </div>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Lightbulb className="w-3.5 h-3.5" style={{ color: '#D97706' }} />
+              <span className="text-[10px]" style={{ color: '#D97706' }}>Dòng "Giải thích:" là không bắt buộc</span>
             </div>
             <pre className="text-[11px] leading-relaxed whitespace-pre-wrap" style={{ color: '#57564F', fontFamily: 'monospace' }}>
               {EXAMPLE}
@@ -332,6 +343,11 @@ D. J
               <CheckCircle2 className="w-4 h-4" style={{ color: '#448361' }} />
               <span className="text-sm font-semibold" style={{ color: '#448361' }}>
                 Parse thành công: {parsedQuestions.length} câu hỏi
+                {parsedQuestions.filter(q => q.explanation).length > 0 && (
+                  <span className="ml-2 text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: '#FFFBEB', color: '#D97706' }}>
+                    {parsedQuestions.filter(q => q.explanation).length} có giải thích
+                  </span>
+                )}
               </span>
             </div>
             {showPreview ? <ChevronUp className="w-4 h-4" style={{ color: '#448361' }} /> : <ChevronDown className="w-4 h-4" style={{ color: '#448361' }} />}
@@ -346,7 +362,7 @@ D. J
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium mb-2" style={{ color: '#1A1A1A' }}>{q.question}</p>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-2 gap-1.5 mb-2">
                         {(['A', 'B', 'C', 'D'] as const).map(letter => {
                           const text = letter === 'A' ? q.option_a : letter === 'B' ? q.option_b : letter === 'C' ? q.option_c : q.option_d;
                           const isAnswer = q.answer === letter;
@@ -359,6 +375,12 @@ D. J
                           );
                         })}
                       </div>
+                      {q.explanation && (
+                        <div className="rounded-lg px-2 py-1.5 flex items-start gap-1.5" style={{ background: '#FFFBEB' }}>
+                          <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" style={{ color: '#D97706' }} />
+                          <span className="text-[11px]" style={{ color: '#92400E' }}>{q.explanation}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -411,8 +433,13 @@ D. J
                       </span>
                     )}
                     <p className="text-[11px] mt-1" style={{ color: '#448361' }}>
-                      ✓ {q['answer'] === 'A' ? q.option_a : q['answer'] === 'B' ? q.option_b : q['answer'] === 'C' ? q.option_c : q.option_d}
+                      ✓ {q.answer === 'A' ? q.option_a : q.answer === 'B' ? q.option_b : q.answer === 'C' ? q.option_c : q.option_d}
                     </p>
+                    {q.explanation && (
+                      <p className="text-[10px] mt-0.5 flex items-center gap-1" style={{ color: '#D97706' }}>
+                        <Lightbulb className="w-3 h-3" /> Có giải thích
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => handleDelete(q.id, q.question)}

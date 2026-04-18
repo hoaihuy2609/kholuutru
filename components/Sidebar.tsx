@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield, Search, FileText, Users, FileCheck, CalendarDays, Library, Gamepad2 } from 'lucide-react';
+import { Atom, Home, Settings, BookOpenCheck, Zap, Activity, ClipboardList, Bell, FlaskConical, ChevronDown, Shield, Search, FileText, Users, FileCheck, CalendarDays, Library, BookOpen } from 'lucide-react';
 import { GradeLevel } from '../types';
 
 // ── Hover Prefetch: tải ngầm chunk khi user lướt chuột qua nút ──────────
@@ -338,8 +338,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentGrade, onSelectGrade, onOpenSe
             }}
             onMouseLeave={e => { if (!showGame) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           >
-            <Gamepad2 className="w-4 h-4 shrink-0" style={{ color: showGame ? '#D97706' : '#AEACA8' }} />
-            <span className="flex-1">Game</span>
+            <BookOpen className="w-4 h-4 shrink-0" style={{ color: showGame ? '#D97706' : '#AEACA8' }} />
+            <span className="flex-1">Luyện tập lý thuyết</span>
           </button>
         )}
 

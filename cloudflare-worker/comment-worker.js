@@ -240,16 +240,16 @@ export default {
         let query = "";
         let params = [];
         if (grade > 0 && topic) {
-          query = `SELECT * FROM game_questions WHERE (grade = ? OR grade = 0) AND topic = ? ${orderBy} LIMIT ?`;
+          query = `SELECT id, question, option_a, option_b, option_c, option_d, answer, grade, topic, explanation FROM game_questions WHERE (grade = ? OR grade = 0) AND topic = ? ${orderBy} LIMIT ?`;
           params = [grade, topic, limit];
         } else if (grade > 0) {
-          query = `SELECT * FROM game_questions WHERE (grade = ? OR grade = 0) ${orderBy} LIMIT ?`;
+          query = `SELECT id, question, option_a, option_b, option_c, option_d, answer, grade, topic, explanation FROM game_questions WHERE (grade = ? OR grade = 0) ${orderBy} LIMIT ?`;
           params = [grade, limit];
         } else if (topic) {
-          query = `SELECT * FROM game_questions WHERE topic = ? ${orderBy} LIMIT ?`;
+          query = `SELECT id, question, option_a, option_b, option_c, option_d, answer, grade, topic, explanation FROM game_questions WHERE topic = ? ${orderBy} LIMIT ?`;
           params = [topic, limit];
         } else {
-          query = `SELECT * FROM game_questions ${orderBy} LIMIT ?`;
+          query = `SELECT id, question, option_a, option_b, option_c, option_d, answer, grade, topic, explanation FROM game_questions ${orderBy} LIMIT ?`;
           params = [limit];
         }
         const { results } = await env.DB.prepare(query).bind(...params).all();
@@ -277,12 +277,12 @@ export default {
       try {
         const stmts = questions.map(q =>
           env.DB.prepare(
-            `INSERT OR REPLACE INTO game_questions (id, question, option_a, option_b, option_c, option_d, answer, grade, topic, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            `INSERT OR REPLACE INTO game_questions (id, question, option_a, option_b, option_c, option_d, answer, grade, topic, explanation, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           ).bind(
             q.id || crypto.randomUUID(),
             q.question, q.option_a, q.option_b, q.option_c, q.option_d,
-            q.answer, q.grade || 0, q.topic || null, Date.now()
+            q.answer, q.grade || 0, q.topic || null, q.explanation || null, Date.now()
           )
         );
         await env.DB.batch(stmts);
