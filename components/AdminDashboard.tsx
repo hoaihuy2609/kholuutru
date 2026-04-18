@@ -6,7 +6,7 @@ import {
     ShieldCheck, Monitor, Phone, Mic,
     ShieldAlert, LayoutDashboard,
     UserMinus, RotateCcw, Ban, ArrowLeft, X, CloudUpload, ClipboardList,
-    Edit3, GraduationCap, Building2, Settings2, BarChart2, Gamepad2
+    Edit3, GraduationCap, Building2, Settings2, BarChart2, Gamepad2, BookOpen
 } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 
@@ -336,7 +336,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     { key: 'grader', label: 'Nhập Điểm', icon: <Mic className="w-4 h-4" /> },
                     { key: 'stats', label: 'Thống Kê', icon: <BarChart2 className="w-4 h-4" /> },
                     { key: 'cloud', label: 'Cloud Sync', icon: <CloudUpload className="w-4 h-4" /> },
-                    { key: 'game', label: 'Game', icon: <Gamepad2 className="w-4 h-4" /> },
+                    { key: 'game', label: 'Luyện tập lý thuyết', icon: <BookOpen className="w-4 h-4" /> },
                 ].map(tab => (
                     <button
                         key={tab.key}
