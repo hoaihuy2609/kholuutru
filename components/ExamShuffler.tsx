@@ -94,13 +94,16 @@ const extractRuns = (paragraphXml: string): XmlRun[] => {
     }
     const text = textParts.join('');
 
-    // Check for bold: <w:b/> or <w:b w:val="true"/> or <w:b> (not <w:b w:val="false"/>)
+    // Check for bold: <w:b/> or <w:b w:val="true"/> — but NOT <w:bCs/> (complex script bold)
     const rPr = raw.match(/<w:rPr>([\s\S]*?)<\/w:rPr>/)?.[1] || '';
-    const bold = /<w:b\s*\/>/.test(rPr) ||
-                 (/<w:b[^\/]*>/.test(rPr) && !/<w:b\s+w:val\s*=\s*"(false|0)"/.test(rPr));
+    // Only match <w:b> tags that are NOT <w:bCs>
+    const boldRaw = rPr.replace(/<w:bCs[^>]*\/?>/g, '').replace(/<\/w:bCs>/g, '');
+    const bold = /<w:b\s*\/>/.test(boldRaw) ||
+                 /<w:b\s+w:val\s*=\s*"(true|1)"/.test(boldRaw) ||
+                 (/<w:b[\s>]/.test(boldRaw) && !/<w:b\s+w:val\s*=\s*"(false|0)"/.test(boldRaw));
 
-    // Check for underline: <w:u/> or <w:u w:val="single"/> etc (not "none")
-    const underline = /<w:u\s/.test(rPr) && !/<w:u\s+w:val\s*=\s*"none"/.test(rPr) ||
+    // Check for underline: <w:u w:val="single"/> etc — but NOT "none"
+    const underline = (/<w:u\s/.test(rPr) && !/<w:u\s+w:val\s*=\s*"none"/.test(rPr)) ||
                       /<w:u\/>/.test(rPr);
 
     runs.push({ raw, text, bold, underline });
@@ -119,15 +122,28 @@ const getAnswerLabel = (text: string): string | null => {
   return m ? m[1].toUpperCase() : null;
 };
 
-/** Detect if a set of runs is bold+underline (correct answer marker) */
+/** Detect if a set of runs is bold+underline (correct answer marker).
+ *
+ *  Strategy (in priority order):
+ *  1. Any run is BOTH bold + underline → definitive correct answer
+ *  2. The FIRST non-empty run (the label, e.g. "A.") is bold+underline → correct
+ *  3. Fallback: any run is underline-only (in case teacher forgot bold) → correct
+ *     but ONLY if there's exactly 1 underlined answer in the whole question (handled upstream)
+ */
 const isCorrectMarker = (runs: XmlRun[]): boolean => {
-  // At least one non-empty run must have BOTH bold AND underline
-  // And the majority of content runs should be bold+underline
   const contentRuns = runs.filter(r => r.text.trim().length > 0);
   if (contentRuns.length === 0) return false;
-  const markedRuns = contentRuns.filter(r => r.bold && r.underline);
-  // At least half of content runs should be bold+underline
-  return markedRuns.length >= contentRuns.length / 2;
+
+  // Priority 1 & 2: any run with BOTH bold+underline → correct
+  const hasBoldUnderline = contentRuns.some(r => r.bold && r.underline);
+  if (hasBoldUnderline) return true;
+
+  // Priority 3: fallback — first run (label) has underline only
+  // This handles cases where teacher only applied underline without bold
+  const firstRun = contentRuns[0];
+  if (firstRun?.underline) return true;
+
+  return false;
 };
 
 // ── Main Parser ────────────────────────────────────────────────────────────
