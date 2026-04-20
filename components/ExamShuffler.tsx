@@ -361,31 +361,44 @@ const splitParagraphByTabs = (paraXml: string): {
   return { pPr, openTag, chunks, tabSeparators };
 };
 
-/** Detect an answer label (A/B/C/D) in a raw XML chunk by scanning <w:t> content */
+/** Detect an answer label (A/B/C/D) in a raw XML chunk.
+ *  Concatenates ALL text from <w:t> elements first, so it works even when
+ *  Word splits the label letter and period into separate runs.
+ *  e.g. <w:t>C</w:t><w:t>. 15A.</w:t> → combined text "C. 15A." → label "C"
+ */
 const detectLabelInChunk = (chunkXml: string): string | null => {
   const tRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+  let allText = '';
   let m;
   while ((m = tRegex.exec(chunkXml)) !== null) {
-    const text = m[1].trim();
-    const labelMatch = text.match(/^([A-Da-d])\s*[.)]/);
-    if (labelMatch) return labelMatch[1].toUpperCase();
+    allText += m[1];
   }
-  return null;
+  const labelMatch = allText.trim().match(/^([A-Da-d])\s*[.)]/);
+  return labelMatch ? labelMatch[1].toUpperCase() : null;
 };
 
-/** Replace an answer label letter in raw XML (inside <w:t> elements) */
+/** Replace an answer label letter in raw XML (inside <w:t> elements).
+ *  Handles two common Word XML patterns:
+ *  Case 1: <w:t>C. 15A</w:t>  — label + period in same text node
+ *  Case 2: <w:t>C</w:t>       — label alone (period in separate run)
+ */
 const replaceLabelInXml = (xml: string, oldLabel: string, newLabel: string): string => {
-  // Match: <w:t...> optional-ws LABEL [.)]  — only first occurrence
-  const regex = new RegExp(
+  if (oldLabel === newLabel) return xml;
+
+  // Case 1: Label + period in same <w:t>
+  const withPeriod = new RegExp(
     `(<w:t[^>]*>[\\s]*)${oldLabel}([\\s]*[.)])`,
-    ''  // no 'g' flag — replace only first occurrence
+    ''
   );
-  if (regex.test(xml)) {
-    return xml.replace(regex, `$1${newLabel}$2`);
-  }
-  // Fallback: label letter at start of <w:t> followed by separator
-  const fallback = new RegExp(`(<w:t[^>]*>)${oldLabel}(?=[\\s.)])`, '');
-  return xml.replace(fallback, `$1${newLabel}`);
+  const replaced1 = xml.replace(withPeriod, `$1${newLabel}$2`);
+  if (replaced1 !== xml) return replaced1;
+
+  // Case 2: Label alone in <w:t> (period is in a separate run)
+  const aloneLetter = new RegExp(
+    `(<w:t[^>]*>\\s*)${oldLabel}(\\s*<\\/w:t>)`,
+    ''
+  );
+  return xml.replace(aloneLetter, `$1${newLabel}$2`);
 };
 
 /** Strip bold and underline formatting from raw XML (works on any XML chunk) */
