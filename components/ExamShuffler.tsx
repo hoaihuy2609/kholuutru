@@ -312,12 +312,104 @@ const generateShuffledExams = (
   return exams;
 };
 
-// ── DOCX Builder ───────────────────────────────────────────────────────────
+// ── DOCX Builder (v2 — preserves original XML) ────────────────────────────
+
+/**
+ * Split a paragraph's XML content into answer chunks separated by tab runs.
+ * Works on raw XML strings, preserving ALL formatting, equations, and structure.
+ */
+const splitParagraphByTabs = (paraXml: string): {
+  pPr: string;
+  openTag: string;
+  chunks: string[];
+  tabSeparators: string[];
+} => {
+  // Extract opening tag
+  const openTagMatch = paraXml.match(/^<w:p[^>]*>/);
+  const openTag = openTagMatch ? openTagMatch[0] : '<w:p>';
+
+  // Extract pPr (paragraph properties — contains tab stop definitions)
+  const pPrMatch = paraXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
+  const pPr = pPrMatch ? pPrMatch[0] : '';
+
+  // Get content between outer tags, excluding pPr
+  let content = paraXml;
+  content = content.replace(/^<w:p[^>]*>/, '');
+  content = content.replace(/<\/w:p>$/, '');
+  if (pPr) {
+    const pPrIdx = content.indexOf(pPr);
+    if (pPrIdx >= 0) {
+      content = content.substring(0, pPrIdx) + content.substring(pPrIdx + pPr.length);
+    }
+  }
+
+  // Split by tab runs: <w:r...>(<w:rPr>...</w:rPr>)?<w:tab/></w:r>
+  const tabPattern = /<w:r(?:\s[^>]*)?>(?:\s*<w:rPr>[\s\S]*?<\/w:rPr>)?\s*<w:tab\/>\s*<\/w:r>/g;
+
+  const chunks: string[] = [];
+  const tabSeparators: string[] = [];
+
+  let lastIdx = 0;
+  let match;
+  while ((match = tabPattern.exec(content)) !== null) {
+    chunks.push(content.substring(lastIdx, match.index));
+    tabSeparators.push(match[0]);
+    lastIdx = match.index + match[0].length;
+  }
+  chunks.push(content.substring(lastIdx)); // last chunk after final tab
+
+  return { pPr, openTag, chunks, tabSeparators };
+};
+
+/** Detect an answer label (A/B/C/D) in a raw XML chunk by scanning <w:t> content */
+const detectLabelInChunk = (chunkXml: string): string | null => {
+  const tRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+  let m;
+  while ((m = tRegex.exec(chunkXml)) !== null) {
+    const text = m[1].trim();
+    const labelMatch = text.match(/^([A-Da-d])\s*[.)]/);
+    if (labelMatch) return labelMatch[1].toUpperCase();
+  }
+  return null;
+};
+
+/** Replace an answer label letter in raw XML (inside <w:t> elements) */
+const replaceLabelInXml = (xml: string, oldLabel: string, newLabel: string): string => {
+  // Match: <w:t...> optional-ws LABEL [.)]  — only first occurrence
+  const regex = new RegExp(
+    `(<w:t[^>]*>[\\s]*)${oldLabel}([\\s]*[.)])`,
+    ''  // no 'g' flag — replace only first occurrence
+  );
+  if (regex.test(xml)) {
+    return xml.replace(regex, `$1${newLabel}$2`);
+  }
+  // Fallback: label letter at start of <w:t> followed by separator
+  const fallback = new RegExp(`(<w:t[^>]*>)${oldLabel}(?=[\\s.)])`, '');
+  return xml.replace(fallback, `$1${newLabel}`);
+};
+
+/** Strip bold and underline formatting from raw XML (works on any XML chunk) */
+const stripBoldUnderline = (xml: string): string => {
+  let result = xml;
+  // Remove <w:b/> (self-closing, no attributes)
+  result = result.replace(/<w:b\s*\/>/g, '');
+  // Remove <w:b .../> (self-closing with attributes)
+  result = result.replace(/<w:b\s+[^>]*\/>/g, '');
+  // Remove <w:b>...</w:b> (rare open/close form)
+  result = result.replace(/<w:b[^\/]*>[\s\S]*?<\/w:b>/g, '');
+  // Remove <w:u/> (self-closing, no attributes)
+  result = result.replace(/<w:u\s*\/>/g, '');
+  // Remove <w:u .../> (self-closing with attributes, but NOT w:val="none")
+  result = result.replace(/<w:u\s+(?!w:val\s*=\s*"none")[^>]*\/>/g, '');
+  // Remove <w:u>...</w:u> (rare open/close form)
+  result = result.replace(/<w:u[^\/]*>[\s\S]*?<\/w:u>/g, '');
+  return result;
+};
 
 /** Build a new document.xml body from shuffled exam data */
 const buildShuffledDocumentXml = (
   originalDocXml: string,
-  originalParagraphs: XmlParagraph[],
+  _originalParagraphs: XmlParagraph[],
   questions: ParsedQuestion[],
   shuffledExam: ShuffledExam,
   examCode: string
@@ -331,7 +423,7 @@ const buildShuffledDocumentXml = (
   const afterBody = originalDocXml.substring(bodyEndIdx);
 
   // Build new body content
-  let newBodyParagraphs: string[] = [];
+  const newBodyParagraphs: string[] = [];
 
   // Add a header paragraph with exam code
   newBodyParagraphs.push(buildExamCodeHeader(examCode));
@@ -340,15 +432,12 @@ const buildShuffledDocumentXml = (
   for (const sq of shuffledExam.questions) {
     const origQ = questions[sq.originalIdx];
 
-    // Renumber the question stem
+    // Renumber the question stem — copy original XML, only change number
     const stemParas = origQ.stemParagraphs.map(p => {
-      let raw = p.raw;
-      // Replace "Câu X:" with new numbering
-      raw = raw.replace(
+      return p.raw.replace(
         /([Cc][aâ]u\s+)\d+/,
         `$1${sq.newIdx + 1}`
       );
-      return raw;
     });
     newBodyParagraphs.push(...stemParas);
 
@@ -365,112 +454,110 @@ const buildExamCodeHeader = (code: string): string => {
   return `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:t xml:space="preserve">Mã đề: ${code}</w:t></w:r></w:p>`;
 };
 
-/** Build shuffled answer paragraphs preserving the original layout */
+/** Build shuffled answer paragraphs — preserves original XML structure */
 const buildShuffledAnswerParagraphs = (
   question: ParsedQuestion,
   answerMapping: { originalLabel: string; newLabel: string }[]
 ): string[] => {
   const { layout, answers, answerParagraphs } = question;
 
-  // Create reordered answers: answerMapping[i] says "new position i gets original label X"
-  const reorderedAnswers = answerMapping.map(m => {
-    const origAnswer = answers.find(a => a.label === m.originalLabel)!;
-    return {
-      ...origAnswer,
-      newLabel: m.newLabel,
-    };
-  });
-
   if (layout === '4-lines') {
-    // Each answer on its own paragraph
-    return reorderedAnswers.map(ans => {
-      return buildAnswerParagraph(ans.newLabel, ans.contentRuns, answerParagraphs[0]?.raw);
+    // ═══ 4-LINE: Each answer has its own <w:p> ═══
+    // Simply reorder the original paragraphs and relabel them
+    return answerMapping.map(m => {
+      const origAnsIdx = answers.findIndex(a => a.label === m.originalLabel);
+      if (origAnsIdx < 0 || origAnsIdx >= answerParagraphs.length) {
+        return answerParagraphs[0]?.raw || '';
+      }
+
+      let xml = answerParagraphs[origAnsIdx].raw;
+      // Replace label letter (e.g. "C." → "A.")
+      xml = replaceLabelInXml(xml, m.originalLabel, m.newLabel);
+      // Strip bold+underline (correct answer marker)
+      xml = stripBoldUnderline(xml);
+      return xml;
     });
-  } else if (layout === '2-lines') {
-    // 2 answers per paragraph
-    const paras: string[] = [];
-    for (let i = 0; i < reorderedAnswers.length; i += 2) {
-      const pair = reorderedAnswers.slice(i, i + 2);
-      paras.push(buildMultiAnswerParagraph(pair, answerParagraphs[Math.floor(i / 2)]?.raw));
-    }
-    return paras;
   } else {
-    // 1-line: all answers in one paragraph
-    return [buildMultiAnswerParagraph(reorderedAnswers, answerParagraphs[0]?.raw)];
-  }
-};
+    // ═══ 1-LINE or 2-LINE: Multiple answers per <w:p> ═══
+    // Split each paragraph by tabs, extract answer chunks, rearrange, reassemble
 
-/** Build a single-answer paragraph */
-const buildAnswerParagraph = (
-  label: string,
-  contentRuns: XmlRun[],
-  templateParaXml?: string
-): string => {
-  // Extract paragraph properties from template if available
-  let pPr = '';
-  if (templateParaXml) {
-    const pPrMatch = templateParaXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
-    if (pPrMatch) pPr = pPrMatch[0];
-  }
+    // Step 1: Extract all answer chunks from all answer paragraphs
+    const allOrigChunks: { chunk: string; label: string }[] = [];
+    const parasInfo: {
+      pPr: string;
+      openTag: string;
+      tabSeparators: string[];
+      numAnswers: number;
+    }[] = [];
 
-  // Build runs: first run has the new label, rest are content (stripped of bold/underline)
-  const labelRun = buildCleanRun(contentRuns[0], label);
-  const otherRuns = contentRuns.slice(1).map(r => stripBoldUnderline(r.raw));
+    for (const para of answerParagraphs) {
+      const split = splitParagraphByTabs(para.raw);
+      let numAnswersInPara = 0;
 
-  return `<w:p>${pPr}${labelRun}${otherRuns.join('')}</w:p>`;
-};
+      for (const chunk of split.chunks) {
+        const label = detectLabelInChunk(chunk);
+        if (label) {
+          allOrigChunks.push({ chunk, label });
+          numAnswersInPara++;
+        } else if (chunk.trim() && allOrigChunks.length > 0) {
+          // Non-empty chunk without a label — likely continuation of previous answer
+          // (happens when tab is in the middle of content, not between answers)
+          allOrigChunks[allOrigChunks.length - 1].chunk += chunk;
+        }
+      }
 
-/** Build a multi-answer paragraph (2 or 4 answers on same line) */
-const buildMultiAnswerParagraph = (
-  answers: { newLabel: string; contentRuns: XmlRun[] }[],
-  templateParaXml?: string
-): string => {
-  let pPr = '';
-  if (templateParaXml) {
-    const pPrMatch = templateParaXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
-    if (pPrMatch) pPr = pPrMatch[0];
-  }
-
-  let allRuns = '';
-  for (let i = 0; i < answers.length; i++) {
-    const ans = answers[i];
-    // Add tab separator between answers (except first)
-    if (i > 0) {
-      allRuns += `<w:r><w:tab/></w:r>`;
+      parasInfo.push({
+        pPr: split.pPr,
+        openTag: split.openTag,
+        tabSeparators: split.tabSeparators,
+        numAnswers: numAnswersInPara || split.chunks.length,
+      });
     }
-    const labelRun = buildCleanRun(ans.contentRuns[0], ans.newLabel);
-    const otherRuns = ans.contentRuns.slice(1).map(r => stripBoldUnderline(r.raw));
-    allRuns += labelRun + otherRuns.join('');
+
+    // Step 2: Reorder chunks according to the shuffle mapping
+    const reorderedChunks = answerMapping.map(m => {
+      const orig = allOrigChunks.find(c => c.label === m.originalLabel);
+      if (!orig) return '';
+
+      let newChunk = orig.chunk;
+      // Replace label letter
+      newChunk = replaceLabelInXml(newChunk, m.originalLabel, m.newLabel);
+      // Strip bold+underline from correct answer marking
+      newChunk = stripBoldUnderline(newChunk);
+      return newChunk;
+    });
+
+    // Step 3: Reassemble paragraphs with original structure
+    const result: string[] = [];
+    let chunkIdx = 0;
+
+    for (const paraInfo of parasInfo) {
+      const numAnswers = paraInfo.numAnswers;
+      const thisParaChunks: string[] = [];
+
+      for (let i = 0; i < numAnswers && chunkIdx < reorderedChunks.length; i++) {
+        thisParaChunks.push(reorderedChunks[chunkIdx]);
+        chunkIdx++;
+      }
+
+      // Reassemble: openTag + pPr + chunk[0] + tab + chunk[1] + tab + ... + </w:p>
+      let xml = paraInfo.openTag + paraInfo.pPr;
+      for (let i = 0; i < thisParaChunks.length; i++) {
+        if (i > 0) {
+          // Use original tab separator (preserves run properties, spacing)
+          const tabIdx = i - 1;
+          xml += tabIdx < paraInfo.tabSeparators.length
+            ? paraInfo.tabSeparators[tabIdx]
+            : '<w:r><w:tab/></w:r>';
+        }
+        xml += thisParaChunks[i];
+      }
+      xml += '</w:p>';
+      result.push(xml);
+    }
+
+    return result;
   }
-
-  return `<w:p>${pPr}${allRuns}</w:p>`;
-};
-
-/** Build a clean run with new label text, stripping bold/underline */
-const buildCleanRun = (templateRun: XmlRun, newLabel: string): string => {
-  let raw = templateRun.raw;
-  // Strip bold and underline from rPr
-  raw = stripBoldUnderline(raw);
-  // Replace the label text (A., B., etc.) with new label
-  raw = raw.replace(
-    /(<w:t[^>]*>)\s*[A-Da-d]\s*([.)]\s*)/,
-    `$1${newLabel}$2`
-  );
-  return raw;
-};
-
-/** Remove bold and underline formatting from a run's XML */
-const stripBoldUnderline = (runXml: string): string => {
-  let result = runXml;
-  // Remove <w:b/> or <w:b .../>
-  result = result.replace(/<w:b\s*\/>/g, '');
-  result = result.replace(/<w:b[^\/]*>[\s\S]*?<\/w:b>/g, '');
-  result = result.replace(/<w:b\s[^>]*\/>/g, '');
-  // Remove <w:u .../> or <w:u/>
-  result = result.replace(/<w:u\s*\/>/g, '');
-  result = result.replace(/<w:u\s[^>]*\/>/g, '');
-  result = result.replace(/<w:u[^\/]*>[\s\S]*?<\/w:u>/g, '');
-  return result;
 };
 
 // ── Answer Key Excel Builder ───────────────────────────────────────────────
