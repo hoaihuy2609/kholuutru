@@ -33,6 +33,8 @@ interface AnswerOption {
   contentRuns: XmlRun[];
   isCorrect: boolean;
   text: string;            // plain text preview
+  /** Index of the answer paragraph this option came from (within answerParagraphs) */
+  paraIndex: number;
 }
 
 /** A fully parsed question */
@@ -87,7 +89,7 @@ const extractRuns = (paragraphXml: string): XmlRun[] => {
     const raw = rMatch[0];
     // Extract text from <w:t>
     const textParts: string[] = [];
-    const tRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+    const tRegex = /<w:t(?!a)[^>]*>([\s\S]*?)<\/w:t>/g;
     let tMatch;
     while ((tMatch = tRegex.exec(raw)) !== null) {
       textParts.push(tMatch[1]);
@@ -116,10 +118,25 @@ const isQuestionStart = (text: string): boolean => {
   return /^[\s]*[Cc][aâ]u\s+\d+/i.test(text.trim());
 };
 
-/** Check if text starts with an answer label (A. B. C. D.) */
-const getAnswerLabel = (text: string): string | null => {
-  const m = text.trim().match(/^([A-Da-d])\s*[.)]\s*/);
-  return m ? m[1].toUpperCase() : null;
+/** Check if text starts with an answer label (A. B. C. D.)
+ *  Also handles the case where the period is in a separate run —
+ *  pass nextRunText to check if the next run starts with ". "
+ */
+const getAnswerLabel = (text: string, nextRunText?: string): string | null => {
+  const trimmed = text.trim();
+  // Case 1: "A." or "A)" in same text
+  const m = trimmed.match(/^([A-Da-d])\s*[.)]\s*/);
+  if (m) return m[1].toUpperCase();
+
+  // Case 2: Lone letter "D" — check if next run starts with "." or ")"
+  if (/^[A-Da-d]$/.test(trimmed) && nextRunText !== undefined) {
+    const nextTrimmed = nextRunText.trim();
+    if (/^[.)]/.test(nextTrimmed)) {
+      return trimmed.toUpperCase();
+    }
+  }
+
+  return null;
 };
 
 /** Detect if a set of runs is bold+underline (correct answer marker).
@@ -185,6 +202,8 @@ const parseDocxQuestions = (paragraphs: XmlParagraph[]): ParsedQuestion[] => {
 
   for (const para of paragraphs) {
     const text = para.text.trim();
+    // Skip empty paragraphs but DON'T break out of question collection
+    // (some docs have empty <w:p> between answer options)
     if (!text) continue;
 
     // Check if this paragraph starts a new question
@@ -202,6 +221,9 @@ const parseDocxQuestions = (paragraphs: XmlParagraph[]): ParsedQuestion[] => {
     const answersInPara = findAnswersInParagraph(para);
 
     if (answersInPara.length > 0) {
+      // Tag each answer with its paragraph index
+      const paraIdx = currentAnswerParagraphs.length;
+      answersInPara.forEach(a => { a.paraIndex = paraIdx; });
       currentAnswerParagraphs.push(para);
       currentAnswers.push(...answersInPara);
     } else if (currentAnswers.length === 0) {
@@ -209,7 +231,7 @@ const parseDocxQuestions = (paragraphs: XmlParagraph[]): ParsedQuestion[] => {
       currentStemParagraphs.push(para);
     }
     // If we already have some answers but this paragraph has no label,
-    // it might be a continuation — treat as stem overflow (rare case)
+    // it might be a continuation — skip (empty paragraphs between answers)
   }
 
   // Finalize last question
@@ -236,13 +258,16 @@ const findAnswersInParagraph = (para: XmlParagraph): AnswerOption[] => {
         contentRuns: [...currentRuns],
         isCorrect,
         text: currentRuns.map(r => r.text).join('').trim(),
+        paraIndex: 0, // Will be set by caller
       });
     }
     currentRuns = [];
   };
 
-  for (const run of runs) {
-    const label = getAnswerLabel(run.text);
+  for (let i = 0; i < runs.length; i++) {
+    const run = runs[i];
+    const nextRunText = i + 1 < runs.length ? runs[i + 1].text : undefined;
+    const label = getAnswerLabel(run.text, nextRunText);
     if (label) {
       // Finalize previous answer if any
       finalizeAnswer();
@@ -367,7 +392,7 @@ const splitParagraphByTabs = (paraXml: string): {
  *  e.g. <w:t>C</w:t><w:t>. 15A.</w:t> → combined text "C. 15A." → label "C"
  */
 const detectLabelInChunk = (chunkXml: string): string | null => {
-  const tRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+  const tRegex = /<w:t(?!a)[^>]*>([\s\S]*?)<\/w:t>/g;
   let allText = '';
   let m;
   while ((m = tRegex.exec(chunkXml)) !== null) {
@@ -375,6 +400,83 @@ const detectLabelInChunk = (chunkXml: string): string | null => {
   }
   const labelMatch = allText.trim().match(/^([A-Da-d])\s*[.)]/);
   return labelMatch ? labelMatch[1].toUpperCase() : null;
+};
+
+/** Split a chunk that may contain multiple answers (without tab separators) into
+ *  individual answer sub-chunks by detecting label patterns at run (<w:r>) boundaries.
+ *
+ *  Example: A chunk containing "B. quang. C. nhiệt. D. từ." as separate <w:r> runs
+ *  gets split into 3 sub-chunks, one for each answer.
+ *
+ *  If the chunk only has one answer label, returns the chunk as-is (in an array).
+ */
+const splitChunkByLabels = (chunkXml: string): string[] => {
+  // Find all <w:r>...</w:r> runs with their positions
+  const runs: { raw: string; text: string; index: number; end: number }[] = [];
+  const rRegex = /<w:r[\s>][\s\S]*?<\/w:r>/g;
+  let rm;
+  while ((rm = rRegex.exec(chunkXml)) !== null) {
+    const raw = rm[0];
+    const textParts: string[] = [];
+    const tRegex2 = /<w:t(?!a)[^>]*>([\s\S]*?)<\/w:t>/g;
+    let tm;
+    while ((tm = tRegex2.exec(raw)) !== null) {
+      textParts.push(tm[1]);
+    }
+    runs.push({
+      raw,
+      text: textParts.join(''),
+      index: rm.index,
+      end: rm.index + rm[0].length,
+    });
+  }
+
+  if (runs.length === 0) return [chunkXml];
+
+  // Find runs that start a new answer label (A. B. C. D.)
+  // Also handles lone letter when period is in next run
+  const labelRunIndices: number[] = [];
+  for (let i = 0; i < runs.length; i++) {
+    const text = runs[i].text.trim();
+    if (/^[A-Da-d]\s*[.)]/.test(text)) {
+      labelRunIndices.push(i);
+    } else if (/^[A-Da-d]$/.test(text) && i + 1 < runs.length) {
+      const nextText = runs[i + 1].text.trim();
+      if (/^[.)]/.test(nextText)) {
+        labelRunIndices.push(i);
+      }
+    }
+  }
+
+  // If 0 or 1 label found, no splitting needed
+  if (labelRunIndices.length <= 1) return [chunkXml];
+
+  // Split the chunk XML at each label run boundary
+  const subChunks: string[] = [];
+  for (let li = 0; li < labelRunIndices.length; li++) {
+    const startRunIdx = labelRunIndices[li];
+    const endRunIdx = li + 1 < labelRunIndices.length
+      ? labelRunIndices[li + 1]
+      : runs.length;
+
+    // Collect XML from startRun to endRun (exclusive)
+    const startPos = runs[startRunIdx].index;
+    const endPos = endRunIdx < runs.length ? runs[endRunIdx].index : undefined;
+    subChunks.push(endPos !== undefined
+      ? chunkXml.substring(startPos, endPos)
+      : chunkXml.substring(startPos));
+  }
+
+  // If there's content before the first label (e.g. whitespace), prepend to first chunk
+  const firstLabelPos = runs[labelRunIndices[0]].index;
+  if (firstLabelPos > 0) {
+    const prefix = chunkXml.substring(0, firstLabelPos);
+    if (prefix.trim()) {
+      subChunks[0] = prefix + subChunks[0];
+    }
+  }
+
+  return subChunks;
 };
 
 /** Replace an answer label letter in raw XML (inside <w:t> elements).
@@ -387,7 +489,8 @@ const replaceLabelInXml = (xml: string, oldLabel: string, newLabel: string): str
 
   // Case 1: Label + period in same <w:t>
   const withPeriod = new RegExp(
-    `(<w:t[^>]*>[\\s]*)${oldLabel}([\\s]*[.)])`,
+    `(<w:t(?!a)[^>]*>[\\s]*)${oldLabel}([\\s]*[.)])`,
+
     ''
   );
   const replaced1 = xml.replace(withPeriod, `$1${newLabel}$2`);
@@ -395,7 +498,8 @@ const replaceLabelInXml = (xml: string, oldLabel: string, newLabel: string): str
 
   // Case 2: Label alone in <w:t> (period is in a separate run)
   const aloneLetter = new RegExp(
-    `(<w:t[^>]*>\\s*)${oldLabel}(\\s*<\\/w:t>)`,
+    `(<w:t(?!a)[^>]*>\\s*)${oldLabel}(\\s*<\\/w:t>)`,
+
     ''
   );
   return xml.replace(aloneLetter, `$1${newLabel}$2`);
@@ -419,10 +523,125 @@ const stripBoldUnderline = (xml: string): string => {
   return result;
 };
 
+/** Renumber a question stem paragraph XML — handles numbers split across XML runs.
+ *
+ *  Word can split "Câu 11:" into ANY number of <w:t> elements, e.g.:
+ *  <w:t>Câu</w:t> <w:t> </w:t> <w:t>1</w:t> <w:t>1</w:t> <w:t>:</w:t>
+ *  This function handles all cases robustly.
+ */
+const renumberQuestionStem = (paraXml: string, newNumber: number): string => {
+  // Case 1: "Câu X" all in one <w:t> — simple regex on raw XML
+  const sameNodeRegex = /(<w:t(?!a)[^>]*>[^<]*?[Cc][aâ]u\s+)\d+/;
+  if (sameNodeRegex.test(paraXml)) {
+    return paraXml.replace(sameNodeRegex, `$1${newNumber}`);
+  }
+
+  // Case 2: "Câu" and number split across multiple <w:t> elements
+  // Strategy: Find all <w:r> runs, locate "Câu", then find & replace digit runs
+
+  // Find all <w:t> elements with their positions
+  const tElements: { fullMatch: string; text: string; index: number }[] = [];
+  const tRegex = /<w:t(?!a)[^>]*>([^<]*)<\/w:t>/g;
+  let m;
+  while ((m = tRegex.exec(paraXml)) !== null) {
+    tElements.push({ fullMatch: m[0], text: m[1], index: m.index });
+  }
+
+  // Find the <w:t> containing "Câu" (end of text, ignoring trailing space)
+  let cauIdx = -1;
+  for (let i = 0; i < tElements.length; i++) {
+    if (/[Cc][aâ]u\s*$/.test(tElements[i].text) ||
+        /^[Cc][aâ]u$/.test(tElements[i].text.trim())) {
+      cauIdx = i;
+      break;
+    }
+  }
+
+  if (cauIdx < 0) {
+    // Fallback: try broad regex across XML tags
+    return paraXml.replace(
+      /([Cc][aâ]u\s*<\/w:t>[\s\S]*?<w:t(?!a)[^>]*>\s*)\d+/,
+      `$1${newNumber}`
+    );
+  }
+
+  // From cauIdx+1, skip whitespace-only <w:t>, then collect all digit-containing <w:t>
+  let firstDigitIdx = -1;
+  let lastDigitIdx = -1;
+
+  for (let j = cauIdx + 1; j < tElements.length; j++) {
+    const txt = tElements[j].text;
+    if (/^\s*$/.test(txt)) continue; // skip whitespace-only
+    if (/^\d+$/.test(txt.trim())) {
+      if (firstDigitIdx < 0) firstDigitIdx = j;
+      lastDigitIdx = j;
+    } else if (firstDigitIdx >= 0) {
+      break; // non-digit after digits — stop
+    } else {
+      // First non-space, non-digit — check if starts with digits (e.g. "3:")
+      const digitStart = txt.match(/^(\s*\d+)(.*)/);
+      if (digitStart) {
+        // Replace digits in this <w:t> and return
+        const newText = `${digitStart[1].replace(/\d+/, String(newNumber))}${digitStart[2]}`;
+        const newFull = tElements[j].fullMatch.replace(tElements[j].text, newText);
+        return paraXml.substring(0, tElements[j].index) + newFull +
+               paraXml.substring(tElements[j].index + tElements[j].fullMatch.length);
+      }
+      break;
+    }
+  }
+
+  if (firstDigitIdx < 0) {
+    // No digits found — shouldn't happen, but return unchanged
+    return paraXml;
+  }
+
+  // Replace: put new number in the first digit <w:t>, remove the rest
+  // Work backwards to not invalidate indices
+  let result = paraXml;
+
+  // Remove subsequent digit-only <w:t> runs (and their parent <w:r> if the run only has that <w:t>)
+  for (let j = lastDigitIdx; j > firstDigitIdx; j--) {
+    const t = tElements[j];
+    // Try to find and remove the entire <w:r>...</w:r> containing this <w:t>
+    // Find the <w:r> that contains this <w:t> by searching backwards from t.index
+    const beforeT = result.substring(0, t.index);
+    const rStartIdx = beforeT.lastIndexOf('<w:r');
+    if (rStartIdx >= 0) {
+      const afterRStart = result.substring(rStartIdx);
+      const rEndMatch = afterRStart.match(/<\/w:r>/);
+      if (rEndMatch) {
+        const rEndPos = rStartIdx + rEndMatch.index! + rEndMatch[0].length;
+        // Only remove the whole <w:r> if it contains ONLY this digit <w:t>
+        const rContent = result.substring(rStartIdx, rEndPos);
+        const tCount = (rContent.match(/<w:t(?!a)[^>]*>/g) || []).length;
+        if (tCount === 1) {
+          result = result.substring(0, rStartIdx) + result.substring(rEndPos);
+          continue;
+        }
+      }
+    }
+    // Fallback: just replace the text content to empty
+    result = result.substring(0, t.index) +
+             t.fullMatch.replace(t.text, '') +
+             result.substring(t.index + t.fullMatch.length);
+  }
+
+  // Replace the first digit <w:t> with the new number
+  // Re-find its position (may have shifted if we removed later elements — but we went backwards)
+  const firstT = tElements[firstDigitIdx];
+  const newText = firstT.text.replace(/\d+/, String(newNumber));
+  const newFull = firstT.fullMatch.replace(firstT.text, newText);
+  result = result.substring(0, firstT.index) + newFull +
+           result.substring(firstT.index + firstT.fullMatch.length);
+
+  return result;
+};
+
 /** Build a new document.xml body from shuffled exam data */
 const buildShuffledDocumentXml = (
   originalDocXml: string,
-  _originalParagraphs: XmlParagraph[],
+  originalParagraphs: XmlParagraph[],
   questions: ParsedQuestion[],
   shuffledExam: ShuffledExam,
   examCode: string
@@ -435,8 +654,27 @@ const buildShuffledDocumentXml = (
   const beforeBody = originalDocXml.substring(0, bodyStartMatch.index! + bodyStartMatch[0].length);
   const afterBody = originalDocXml.substring(bodyEndIdx);
 
+  // Extract <w:sectPr> from original body — MUST be preserved for page layout
+  const bodyContent = originalDocXml.substring(
+    bodyStartMatch.index! + bodyStartMatch[0].length,
+    bodyEndIdx
+  );
+  const sectPrMatch = bodyContent.match(/<w:sectPr[\s\S]*?<\/w:sectPr>/);
+  const sectPr = sectPrMatch ? sectPrMatch[0] : '';
+
   // Build new body content
   const newBodyParagraphs: string[] = [];
+
+  // Preserve all paragraphs before the first question (title, instructions, header)
+  if (questions.length > 0) {
+    const firstQuestionStemRaw = questions[0].stemParagraphs[0]?.raw;
+    if (firstQuestionStemRaw) {
+      for (const p of originalParagraphs) {
+        if (p.raw === firstQuestionStemRaw) break;
+        newBodyParagraphs.push(p.raw);
+      }
+    }
+  }
 
   // Add a header paragraph with exam code
   newBodyParagraphs.push(buildExamCodeHeader(examCode));
@@ -459,7 +697,10 @@ const buildShuffledDocumentXml = (
     newBodyParagraphs.push(...answerParas);
   }
 
-  return beforeBody + '\n' + newBodyParagraphs.join('\n') + '\n' + afterBody;
+  // Append sectPr at the end (inside body) — critical for page layout
+  const sectPrStr = sectPr ? '\n' + sectPr : '';
+
+  return beforeBody + '\n' + newBodyParagraphs.join('\n') + sectPrStr + '\n' + afterBody;
 };
 
 /** Build the exam code header paragraph */
@@ -476,14 +717,17 @@ const buildShuffledAnswerParagraphs = (
 
   if (layout === '4-lines') {
     // ═══ 4-LINE: Each answer has its own <w:p> ═══
-    // Simply reorder the original paragraphs and relabel them
+    // Use the paraIndex stored on each answer to find the correct paragraph
     return answerMapping.map(m => {
-      const origAnsIdx = answers.findIndex(a => a.label === m.originalLabel);
-      if (origAnsIdx < 0 || origAnsIdx >= answerParagraphs.length) {
+      const origAnswer = answers.find(a => a.label === m.originalLabel);
+      if (!origAnswer) return answerParagraphs[0]?.raw || '';
+
+      const paraIdx = origAnswer.paraIndex;
+      if (paraIdx < 0 || paraIdx >= answerParagraphs.length) {
         return answerParagraphs[0]?.raw || '';
       }
 
-      let xml = answerParagraphs[origAnsIdx].raw;
+      let xml = answerParagraphs[paraIdx].raw;
       // Replace label letter (e.g. "C." → "A.")
       xml = replaceLabelInXml(xml, m.originalLabel, m.newLabel);
       // Strip bold+underline (correct answer marker)
@@ -508,14 +752,20 @@ const buildShuffledAnswerParagraphs = (
       let numAnswersInPara = 0;
 
       for (const chunk of split.chunks) {
-        const label = detectLabelInChunk(chunk);
-        if (label) {
-          allOrigChunks.push({ chunk, label });
-          numAnswersInPara++;
-        } else if (chunk.trim() && allOrigChunks.length > 0) {
-          // Non-empty chunk without a label — likely continuation of previous answer
-          // (happens when tab is in the middle of content, not between answers)
-          allOrigChunks[allOrigChunks.length - 1].chunk += chunk;
+        // A single chunk may contain multiple answers without tab separators
+        // (e.g. "B. quang. C. nhiệt. D. từ." all in one chunk)
+        // Split further by answer labels at run boundaries
+        const subChunks = splitChunkByLabels(chunk);
+
+        for (const sc of subChunks) {
+          const label = detectLabelInChunk(sc);
+          if (label) {
+            allOrigChunks.push({ chunk: sc, label });
+            numAnswersInPara++;
+          } else if (sc.trim() && allOrigChunks.length > 0) {
+            // Non-empty chunk without a label — continuation of previous answer
+            allOrigChunks[allOrigChunks.length - 1].chunk += sc;
+          }
         }
       }
 
@@ -523,7 +773,7 @@ const buildShuffledAnswerParagraphs = (
         pPr: split.pPr,
         openTag: split.openTag,
         tabSeparators: split.tabSeparators,
-        numAnswers: numAnswersInPara || split.chunks.length,
+        numAnswers: numAnswersInPara > 0 ? numAnswersInPara : 1,
       });
     }
 
@@ -662,13 +912,14 @@ const ExamShuffler: React.FC<{ onShowToast: (msg: string, type: 'success' | 'err
       setZipData(zip);
       setDocumentXml(docXml);
 
-      // Extract body content
-      const bodyMatch = docXml.match(/<w:body[^>]*>([\s\S]*?)<\/w:body>/);
-      if (!bodyMatch) {
+      // Extract body content — use greedy match to handle large bodies correctly
+      const bodyStartIdx = docXml.indexOf('<w:body');
+      const bodyEndIdx = docXml.lastIndexOf('</w:body>');
+      if (bodyStartIdx === -1 || bodyEndIdx === -1) {
         throw new Error('Không tìm thấy nội dung (body) trong file Word.');
       }
-
-      const bodyXml = bodyMatch[1];
+      const bodyTagEnd = docXml.indexOf('>', bodyStartIdx);
+      const bodyXml = docXml.substring(bodyTagEnd + 1, bodyEndIdx);
       const paragraphs = extractParagraphs(bodyXml);
       const parsed = parseDocxQuestions(paragraphs);
 
@@ -717,9 +968,12 @@ const ExamShuffler: React.FC<{ onShowToast: (msg: string, type: 'success' | 'err
       const exams = generateShuffledExams(questions, numExams, shuffleQ, shuffleA);
 
       // Extract paragraphs from original doc for building
-      const bodyMatch = documentXml.match(/<w:body[^>]*>([\s\S]*?)<\/w:body>/);
-      const bodyXml = bodyMatch?.[1] || '';
-      const originalParagraphs = extractParagraphs(bodyXml);
+      const bStartIdx = documentXml.indexOf('<w:body');
+      const bEndIdx = documentXml.lastIndexOf('</w:body>');
+      const bTagEnd = documentXml.indexOf('>', bStartIdx);
+      const bodyXmlExport = (bStartIdx >= 0 && bEndIdx >= 0 && bTagEnd >= 0)
+        ? documentXml.substring(bTagEnd + 1, bEndIdx) : '';
+      const originalParagraphs = extractParagraphs(bodyXmlExport);
 
       const outputZip = new JSZip();
 
