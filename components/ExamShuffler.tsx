@@ -479,6 +479,22 @@ const splitChunkByLabels = (chunkXml: string): string[] => {
   return subChunks;
 };
 
+/** Strip any leading <w:tab/> from a chunk XML.
+ *  Handles two cases:
+ *  1. Tab in its own <w:r>: <w:r><w:tab/></w:r> → removed entirely
+ *  2. Tab combined with text: <w:r><w:tab/><w:t>B.</w:t></w:r> → <w:r><w:t>B.</w:t></w:r>
+ */
+const stripLeadingTab = (chunkXml: string): string => {
+  // Case 1: First <w:r> is tab-only → remove it
+  const tabOnlyRunPattern = /^\s*<w:r(?:\s[^>]*)?>(?:\s*<w:rPr>[\s\S]*?<\/w:rPr>)?\s*<w:tab\/>\s*<\/w:r>/;
+  const tabOnlyMatch = chunkXml.match(tabOnlyRunPattern);
+  if (tabOnlyMatch) {
+    return chunkXml.substring(tabOnlyMatch[0].length);
+  }
+  // Case 2: First <w:r> has tab + text → remove just the <w:tab/>
+  return chunkXml.replace(/(<w:r[^>]*>(?:\s*<w:rPr>[\s\S]*?<\/w:rPr>)?\s*)<w:tab\/>(\s*<w:t)/, '$1$2');
+};
+
 /** Replace an answer label letter in raw XML (inside <w:t> elements).
  *  Handles two common Word XML patterns:
  *  Case 1: <w:t>C. 15A</w:t>  — label + period in same text node
@@ -758,13 +774,16 @@ const buildShuffledAnswerParagraphs = (
         const subChunks = splitChunkByLabels(chunk);
 
         for (const sc of subChunks) {
-          const label = detectLabelInChunk(sc);
+          // Strip any leading <w:tab/> from the chunk — tabs will be
+          // re-added during reassembly to ensure correct positioning
+          const cleanChunk = stripLeadingTab(sc);
+          const label = detectLabelInChunk(cleanChunk);
           if (label) {
-            allOrigChunks.push({ chunk: sc, label });
+            allOrigChunks.push({ chunk: cleanChunk, label });
             numAnswersInPara++;
-          } else if (sc.trim() && allOrigChunks.length > 0) {
+          } else if (cleanChunk.trim() && allOrigChunks.length > 0) {
             // Non-empty chunk without a label — continuation of previous answer
-            allOrigChunks[allOrigChunks.length - 1].chunk += sc;
+            allOrigChunks[allOrigChunks.length - 1].chunk += cleanChunk;
           }
         }
       }
