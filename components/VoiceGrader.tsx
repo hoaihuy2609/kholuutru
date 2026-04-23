@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import {
   Mic, MicOff, Download, RefreshCw,
@@ -274,7 +274,6 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   const activeCellRef = useRef<ActiveCell | null>(null);
   const importedFileRef = useRef<ImportedFile | null>(null);
   const activeTrRef = useRef<HTMLTableRowElement | null>(null);
-  const pendingCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Distinguishes user-initiated stop from Chrome auto-stopping the engine
   const intentionalStopRef = useRef(false);
 
@@ -310,19 +309,18 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     const colIdx = keys.indexOf(cell.colKey);
     const nextColIdx = colIdx + 1;
 
+    let nextCell: ActiveCell | null = null;
     if (nextColIdx < keys.length) {
-      // Move right within same student
-      setActiveCell({ studentIdx: cell.studentIdx, colKey: keys[nextColIdx] });
+      nextCell = { studentIdx: cell.studentIdx, colKey: keys[nextColIdx] };
     } else {
-      // Move to next student, first column
       const nextStudentIdx = cell.studentIdx + 1;
       if (nextStudentIdx < sts.length) {
-        setActiveCell({ studentIdx: nextStudentIdx, colKey: keys[0] });
-      } else {
-        // All done
-        setActiveCell(null);
+        nextCell = { studentIdx: nextStudentIdx, colKey: keys[0] };
       }
     }
+    // Sync update so rapid commits read the right cell
+    activeCellRef.current = nextCell;
+    setActiveCell(nextCell);
   }, []);
 
   // ── Voice Recognition ──
@@ -364,119 +362,133 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     recognition.maxAlternatives = 1;
     intentionalStopRef.current = false;
 
-    // Track which result indices we've already committed, so one utterance
-    // can never spill into multiple cells (fixes the previous early-commit bug)
-    const committedResultIndices = new Set<number>();
+    // Per-resultIndex: track which scores were already committed
+    // Map<resultIndex, Array<{ studentIdx, colKey, score }>>
+    const committedByIndex = new Map<number, Array<{ studentIdx: number; colKey: string; score: number }>>();
 
-    const commitScore = (score: number) => {
-      const cell = activeCellRef.current;
-      if (!cell) return;
+    // Commit a score to a specific (studentIdx, colKey) cell
+    const writeScoreToCell = (studentIdx: number, colKey: string, score: number) => {
       setStudents(prev => prev.map((s, i) =>
-        i === cell.studentIdx
-          ? { ...s, scores: { ...s.scores, [cell.colKey]: String(score) }, highlight: true }
+        i === studentIdx
+          ? { ...s, scores: { ...s.scores, [colKey]: String(score) }, highlight: true }
           : s
       ));
-      setLastCommand(`✅ ${studentsRef.current[cell.studentIdx]?.name} — ${cell.colKey}: ${score}`);
-      setInterimText('');
-      setTimeout(() => setStudents(prev => prev.map(s => ({ ...s, highlight: false }))), 800);
-      advanceActiveCell();
+      setLastCommand(`✅ ${studentsRef.current[studentIdx]?.name} — ${colKey}: ${score}`);
+      setTimeout(() => setStudents(prev => prev.map((s, i) => i === studentIdx ? { ...s, highlight: false } : s)), 800);
+    };
+
+    // Parse ALL valid scores out of a transcript (handles multi-score utterances)
+    const extractScores = (text: string): number[] => {
+      let t = text.toLowerCase().trim();
+      const reps: [RegExp, string][] = [
+        [/\bmười\b/g, '10'], [/\bchín\b/g, '9'], [/\btám\b/g, '8'],
+        [/\bbảy\b/g, '7'], [/\bsáu\b/g, '6'], [/\bnăm\b/g, '5'],
+        [/\bbốn\b/g, '4'], [/\bba\b/g, '3'], [/\bhai\b/g, '2'],
+        [/\bmột\b/g, '1'], [/\bkhông\b/g, '0'],
+        [/\bphẩy\b|\bphảy\b|\bchấm\b/g, '.'],
+        [/\s*rưỡi\b/g, '.5'],
+        [/\.\s*lăm\b/g, '.5'],
+        [/(\d)\s+lăm\b/g, '$1.5'],
+        [/\.\s*hai\s+lăm\b/g, '.25'],
+        [/\.\s*bảy\s+lăm\b/g, '.75'],
+        [/\bđiểm\b|\bđ\b/g, ''],
+        [/,/g, '.'],
+      ];
+      for (const [p, r] of reps) t = t.replace(p, r);
+      t = t.replace(/\s*\.\s*/g, '.').replace(/\s+/g, ' ').trim();
+
+      const raw = t.match(/\d+(?:\.\d+)?/g);
+      if (!raw) return [];
+      const out: number[] = [];
+      for (const m of raw) {
+        const v = parseFloat(m);
+        if (!isNaN(v) && v >= 0 && v <= 10) {
+          out.push(Math.round(v * 100) / 100);
+        } else if (v > 10 && v < 100) {
+          const s = String(Math.round(v));
+          const ip = parseInt(s[0]), dp = parseInt(s.slice(1));
+          if (!isNaN(ip) && !isNaN(dp) && ip <= 10 && dp <= 9) {
+            const c = parseFloat(`${ip}.${dp}`);
+            if (c >= 0 && c <= 10) out.push(Math.round(c * 100) / 100);
+          }
+        }
+      }
+      return out;
     };
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
-      let interim = '';
-      let activeInterimIndex = -1;
+      let interimText = '';
 
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        // Skip results we already committed from (either via interim or final)
-        if (committedResultIndices.has(i)) continue;
-
         const result = e.results[i];
         const transcript = result[0].transcript.trim();
+        const scores = extractScores(transcript);
+        let committed = committedByIndex.get(i) ?? [];
+
+        for (let j = 0; j < scores.length; j++) {
+          if (j < committed.length) {
+            // Refine existing committed score if value changed
+            if (scores[j] !== committed[j].score) {
+              writeScoreToCell(committed[j].studentIdx, committed[j].colKey, scores[j]);
+              committed[j].score = scores[j];
+            }
+          } else {
+            // New score — commit to current active cell and advance
+            const cell = activeCellRef.current;
+            if (!cell) break;
+            writeScoreToCell(cell.studentIdx, cell.colKey, scores[j]);
+            committed.push({ studentIdx: cell.studentIdx, colKey: cell.colKey, score: scores[j] });
+            advanceActiveCell();
+          }
+        }
+
+        committedByIndex.set(i, committed);
 
         if (result.isFinal) {
-          // isFinal is authoritative — cancel any pending interim timer
-          if (pendingCommitTimerRef.current) {
-            clearTimeout(pendingCommitTimerRef.current);
-            pendingCommitTimerRef.current = null;
-          }
           setInterimText('');
-          committedResultIndices.add(i);
-
-          const score = parseVietnameseScore(transcript);
-          if (score !== null) {
-            commitScore(score);
-          } else if (transcript.length > 2) {
+          if (scores.length === 0 && transcript.length > 2) {
             setLastCommand(`❓ Không nhận ra: "${transcript}"`);
           }
         } else {
-          interim += transcript;
-          activeInterimIndex = i;
+          interimText += transcript;
         }
       }
 
-      // \u26a1 Early-commit on interim with result-index guard
-      if (interim && activeInterimIndex >= 0) {
-        setInterimText(interim);
-        const score = parseVietnameseScore(interim);
-        if (score !== null) {
-          // Debounce 400ms — gives transcript time to stabilize,
-          // but still ~2-3s faster than waiting for isFinal
-          if (pendingCommitTimerRef.current) clearTimeout(pendingCommitTimerRef.current);
-          const capturedIndex = activeInterimIndex;
-          const capturedScore = score;
-          pendingCommitTimerRef.current = setTimeout(() => {
-            pendingCommitTimerRef.current = null;
-            // Guard: only commit if this index hasn't been committed yet
-            if (!committedResultIndices.has(capturedIndex)) {
-              committedResultIndices.add(capturedIndex);
-              commitScore(capturedScore);
-            }
-          }, 400);
-        } else {
-          // No valid score yet — cancel pending timer
-          if (pendingCommitTimerRef.current) {
-            clearTimeout(pendingCommitTimerRef.current);
-            pendingCommitTimerRef.current = null;
-          }
-        }
-      }
+      if (interimText) setInterimText(interimText);
     };
 
     recognition.onerror = (ev: Event) => {
       const error = (ev as any).error;
-      // Recoverable errors — let onend auto-restart silently
-      // 'aborted': normal during restart cycle
-      // 'no-speech': silence between readings (very common!)
-      // 'network': temporary network hiccup
+      // Recoverable — Chrome will call onend and we auto-restart
       if (error === 'aborted' || error === 'no-speech' || error === 'network') return;
-      // Fatal errors — flag so onend won't try to restart
-      // 'not-allowed': user denied mic permission
-      // 'audio-capture': no microphone
-      // 'service-not-available': speech service down
+      // Fatal — stop and notify
       intentionalStopRef.current = true;
       onShowToast('Lỗi micro. Vui lòng thử lại.', 'error');
     };
 
     recognition.onend = () => {
-      // Chrome auto-stopped the engine (silence timeout, no-speech, etc.)
-      // Auto-restart unless user explicitly pressed stop or fatal error occurred
-      if (!intentionalStopRef.current) {
-        // Clear state for fresh session
-        if (pendingCommitTimerRef.current) {
-          clearTimeout(pendingCommitTimerRef.current);
-          pendingCommitTimerRef.current = null;
-        }
-        committedResultIndices.clear();
-        try {
-          recognition.start();
-          return; // Still listening — don't touch UI
-        } catch {
-          // Restart failed — fall through to stop
-        }
+      if (intentionalStopRef.current) {
+        intentionalStopRef.current = false;
+        setIsListening(false);
+        setInterimText('');
+        return;
       }
-      intentionalStopRef.current = false;
-      setIsListening(false);
-      setInterimText('');
+      // Chrome auto-stopped — create a FRESH recognition instance and restart.
+      // Reusing the same stopped instance causes InvalidStateError after 2-3 cycles.
+      committedByIndex.clear();
+      const newRec = new SR();
+      newRec.lang = 'vi-VN';
+      newRec.continuous = true;
+      newRec.interimResults = true;
+      newRec.maxAlternatives = 1;
+      newRec.onresult = recognition.onresult;
+      newRec.onerror = recognition.onerror;
+      newRec.onend = recognition.onend;
+      recognitionRef.current = newRec;
+      setTimeout(() => {
+        if (intentionalStopRef.current) return;
+        try { newRec.start(); } catch { setIsListening(false); setInterimText(''); }
+      }, 100);
     };
 
     recognition.start();
@@ -487,10 +499,6 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   const stopListening = useCallback(() => {
     intentionalStopRef.current = true;
     recognitionRef.current?.stop();
-    if (pendingCommitTimerRef.current) {
-      clearTimeout(pendingCommitTimerRef.current);
-      pendingCommitTimerRef.current = null;
-    }
     setIsListening(false);
     setInterimText('');
   }, []);
