@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
+﻿﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import {
   Mic, MicOff, Download, RefreshCw,
@@ -278,7 +278,8 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   const intentionalStopRef = useRef(false);
 
   studentsRef.current = students;
-  activeCellRef.current = activeCell;
+  // NOTE: activeCellRef is managed manually (not synced from state)
+  // to prevent re-renders from setStudents() overwriting it with stale state.
   importedFileRef.current = importedFile;
 
   // Derived
@@ -510,7 +511,9 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   }, []);
 
   const handleCellClick = useCallback((si: number, k: string) => {
-    setActiveCell({ studentIdx: si, colKey: k });
+    const next = { studentIdx: si, colKey: k };
+    activeCellRef.current = next;
+    setActiveCell(next);
   }, []);
 
   const clearAllScores = () => {
@@ -519,6 +522,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       ...s,
       scores: Object.fromEntries(Object.keys(s.scores).map(k => [k, '']))
     })));
+    activeCellRef.current = null;
     setActiveCell(null);
   };
 
@@ -531,6 +535,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     setRawRows([]);
     setStep('upload');
     setLastCommand('');
+    activeCellRef.current = null;
     setActiveCell(null);
   };
 
@@ -695,6 +700,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     setImportedFile(file);
     setStep('grading');
     setLastCommand('');
+    activeCellRef.current = null;
     setActiveCell(null);
     onShowToast(`Đã tải ${studentList.length} học sinh · ${mapping.scoreColIndices.length} cột điểm!`, 'success');
   };
