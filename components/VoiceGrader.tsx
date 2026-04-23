@@ -183,6 +183,75 @@ const parseCsvLine = (line: string, delimiter: string): string[] => {
 
 const MAPPING_STORAGE_KEY = 'voiceGrader_columnMapping_v2';
 
+// ── Helpers: early-commit guard ────────────────────────────────────────────
+/**
+ * Returns false if the transcript ends with a decimal separator word,
+ * meaning the user is still mid-number (e.g. "bảy phẩy" → wait for digit).
+ */
+const looksComplete = (text: string): boolean =>
+  !/(phẩy|phảy|chấm|điểm)\s*$/i.test(text.trim());
+
+// ── Memoized table row — only re-renders when its own data changes ──────────
+interface GradeTableRowProps {
+  student: StudentRow;
+  si: number;
+  scoreColKeys: string[];
+  isActiveRow: boolean;
+  activeColKey: string | null;
+  activeTrRef: React.RefObject<HTMLTableRowElement | null>;
+  onScoreChange: (si: number, colKey: string, value: string) => void;
+  onCellClick: (si: number, colKey: string) => void;
+}
+
+const GradeTableRow = React.memo((
+  { student, si, scoreColKeys, isActiveRow, activeColKey, activeTrRef, onScoreChange, onCellClick }: GradeTableRowProps
+) => (
+  <tr
+    ref={isActiveRow ? activeTrRef : null}
+    style={{
+      borderBottom: '1px solid #F1F0EC',
+      background: student.highlight ? '#EEF0FB' : isActiveRow ? '#FAFBFF' : 'transparent',
+      transition: 'background 0.3s',
+    }}
+  >
+    <td className="px-4 py-2.5">
+      <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ background: '#F1F0EC', color: '#787774' }}>{student.stt}</span>
+    </td>
+    <td className="px-4 py-2.5 text-sm font-medium" style={{ color: student.highlight ? '#6B7CDB' : '#1A1A1A' }}>
+      {student.name}
+      {student.highlight && <span className="ml-2 text-xs" style={{ color: '#6B7CDB' }}>← vừa điền</span>}
+    </td>
+    {scoreColKeys.map(k => {
+      const isActiveCell = isActiveRow && activeColKey === k;
+      const score = student.scores[k];
+      return (
+        <td key={k} className="px-3 py-2.5 text-center">
+          <input
+            type="number" min="0" max="10" step="0.01"
+            value={score}
+            onChange={e => onScoreChange(si, k, e.target.value)}
+            onClick={() => onCellClick(si, k)}
+            onFocus={() => onCellClick(si, k)}
+            placeholder="—"
+            className="w-20 rounded-lg px-2 py-1.5 text-center text-sm font-semibold transition-all"
+            style={{
+              background: isActiveCell ? '#EEF0FB' : score !== '' ? '#EAF3EE' : '#F7F6F3',
+              border: `2px solid ${isActiveCell ? '#6B7CDB' : score !== '' ? '#B7D9C4' : '#E9E9E7'}`,
+              color: isActiveCell ? '#6B7CDB' : score !== '' ? '#448361' : '#AEACA8',
+              outline: 'none',
+              boxShadow: isActiveCell ? '0 0 0 3px #6B7CDB22' : 'none',
+            }}
+          />
+        </td>
+      );
+    })}
+  </tr>
+), (prev, next) =>
+  prev.student === next.student &&
+  prev.isActiveRow === next.isActiveRow &&
+  prev.activeColKey === next.activeColKey
+);
+
 // ── Main Component ─────────────────────────────────────────────────────────
 const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void }> = ({ onShowToast }) => {
 
@@ -212,6 +281,10 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   const activeCellRef = useRef<ActiveCell | null>(null);
   const importedFileRef = useRef<ImportedFile | null>(null);
   const activeTrRef = useRef<HTMLTableRowElement | null>(null);
+  // Timer for early-commit on interim speech results
+  const pendingCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track last committed key to prevent double-commit when isFinal arrives after interim commit
+  const lastCommittedKeyRef = useRef<string>('');
 
   studentsRef.current = students;
   activeCellRef.current = activeCell;
@@ -274,7 +347,6 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       const sts = studentsRef.current;
       if (file && sts.length > 0) {
         const keys = file.scoreColIndices.map(i => file.allHeaders[i]);
-        // Find first empty cell
         let found = false;
         for (let si = 0; si < sts.length && !found; si++) {
           for (const k of keys) {
@@ -287,7 +359,6 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
           }
         }
         if (!found) {
-          // All filled, start from beginning
           setActiveCell({ studentIdx: 0, colKey: keys[0] });
           activeCellRef.current = { studentIdx: 0, colKey: keys[0] };
         }
@@ -298,36 +369,49 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     recognition.lang = 'vi-VN';
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.maxAlternatives = 3;
+    recognition.maxAlternatives = 1; // ⚡ Was 3 — fewer alternatives = faster engine
 
     let lastFinalTranscript = '';
+
+    // ── Shared commit function ──────────────────────────────────────────────
+    const commitScore = (score: number, sourceTranscript: string) => {
+      const cell = activeCellRef.current;
+      if (!cell) return;
+      // Dedup key: prevent double-commit when isFinal arrives after interim commit
+      const commitKey = `${cell.studentIdx}:${cell.colKey}:${score}`;
+      if (commitKey === lastCommittedKeyRef.current) return;
+      lastCommittedKeyRef.current = commitKey;
+
+      setStudents(prev => prev.map((s, i) =>
+        i === cell.studentIdx
+          ? { ...s, scores: { ...s.scores, [cell.colKey]: String(score) }, highlight: true }
+          : s
+      ));
+      setLastCommand(`✅ ${studentsRef.current[cell.studentIdx]?.name} — ${cell.colKey}: ${score}`);
+      setTimeout(() => setStudents(prev => prev.map(s => ({ ...s, highlight: false }))), 600);
+      advanceActiveCell();
+      void sourceTranscript; // suppress unused warning
+    };
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
       let interim = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const result = e.results[i];
         const transcript = result[0].transcript.trim();
+
         if (result.isFinal) {
+          // Cancel any pending interim commit — isFinal is authoritative
+          if (pendingCommitTimerRef.current) {
+            clearTimeout(pendingCommitTimerRef.current);
+            pendingCommitTimerRef.current = null;
+          }
           setInterimText('');
-          // Deduplicate: skip if same as last final
           if (transcript === lastFinalTranscript) continue;
           lastFinalTranscript = transcript;
 
           const score = parseVietnameseScore(transcript);
           if (score !== null) {
-            const cell = activeCellRef.current;
-            if (!cell) return;
-            setStudents(prev => {
-              const updated = prev.map((s, i) =>
-                i === cell.studentIdx
-                  ? { ...s, scores: { ...s.scores, [cell.colKey]: String(score) }, highlight: true }
-                  : s
-              );
-              return updated;
-            });
-            setLastCommand(`✅ ${studentsRef.current[cell.studentIdx]?.name} — ${cell.colKey}: ${score}`);
-            setTimeout(() => setStudents(prev => prev.map(s => ({ ...s, highlight: false }))), 800);
-            advanceActiveCell();
+            commitScore(score, transcript);
           } else if (transcript.length > 2) {
             setLastCommand(`❓ Không nhận ra: "${transcript}"`);
           }
@@ -335,7 +419,26 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
           interim += transcript;
         }
       }
-      if (interim) setInterimText(interim);
+
+      // ⚡ Early-commit on interim: don't wait for isFinal silence detection
+      if (interim) {
+        setInterimText(interim);
+        const score = parseVietnameseScore(interim);
+        if (score !== null && looksComplete(interim)) {
+          // Debounce 250 ms — if a new interim arrives before then, cancel & restart
+          if (pendingCommitTimerRef.current) clearTimeout(pendingCommitTimerRef.current);
+          pendingCommitTimerRef.current = setTimeout(() => {
+            pendingCommitTimerRef.current = null;
+            commitScore(score, interim);
+          }, 250);
+        } else {
+          // Transcript looks incomplete (e.g. ends with "phẩy") — cancel timer
+          if (pendingCommitTimerRef.current) {
+            clearTimeout(pendingCommitTimerRef.current);
+            pendingCommitTimerRef.current = null;
+          }
+        }
+      }
     };
 
     recognition.onerror = () => {
@@ -350,15 +453,24 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
+    // Also cancel any pending early-commit timer
+    if (pendingCommitTimerRef.current) {
+      clearTimeout(pendingCommitTimerRef.current);
+      pendingCommitTimerRef.current = null;
+    }
     setIsListening(false);
     setInterimText('');
   }, []);
 
-  const updateScore = (studentIdx: number, colKey: string, value: string) => {
+  const updateScore = useCallback((studentIdx: number, colKey: string, value: string) => {
     setStudents(prev => prev.map((s, i) =>
       i === studentIdx ? { ...s, scores: { ...s.scores, [colKey]: value } } : s
     ));
-  };
+  }, []);
+
+  const handleCellClick = useCallback((si: number, k: string) => {
+    setActiveCell({ studentIdx: si, colKey: k });
+  }, []);
 
   const clearAllScores = () => {
     if (!window.confirm('Xóa toàn bộ điểm đã nhập?')) return;
@@ -985,60 +1097,19 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
                   </tr>
                 </thead>
                 <tbody>
-                  {students.map((s, si) => {
-                    const isActiveRow = activeCell?.studentIdx === si;
-                    return (
-                      <tr
-                        key={s.stt}
-                        ref={isActiveRow ? activeTrRef : null}
-                        style={{
-                          borderBottom: '1px solid #F1F0EC',
-                          background: s.highlight ? '#EEF0FB' : isActiveRow ? '#FAFBFF' : 'transparent',
-                          transition: 'background 0.3s',
-                        }}
-                      >
-                        <td className="px-4 py-2.5">
-                          <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ background: '#F1F0EC', color: '#787774' }}>{s.stt}</span>
-                        </td>
-                        <td className="px-4 py-2.5 text-sm font-medium" style={{ color: s.highlight ? '#6B7CDB' : '#1A1A1A' }}>
-                          {s.name}
-                          {s.highlight && <span className="ml-2 text-xs" style={{ color: '#6B7CDB' }}>← vừa điền</span>}
-                        </td>
-                        {scoreColKeys.map(k => {
-                          const isActiveCell = activeCell?.studentIdx === si && activeCell?.colKey === k;
-                          const score = s.scores[k];
-                          return (
-                            <td key={k} className="px-3 py-2.5 text-center">
-                              <input
-                                type="number" min="0" max="10" step="0.01"
-                                value={score}
-                                onChange={e => updateScore(si, k, e.target.value)}
-                                onClick={() => setActiveCell({ studentIdx: si, colKey: k })}
-                                placeholder="—"
-                                className="w-20 rounded-lg px-2 py-1.5 text-center text-sm font-semibold transition-all"
-                                style={{
-                                  background: isActiveCell ? '#EEF0FB' : score !== '' ? '#EAF3EE' : '#F7F6F3',
-                                  border: `2px solid ${isActiveCell ? '#6B7CDB' : score !== '' ? '#B7D9C4' : '#E9E9E7'}`,
-                                  color: isActiveCell ? '#6B7CDB' : score !== '' ? '#448361' : '#AEACA8',
-                                  outline: 'none',
-                                  boxShadow: isActiveCell ? '0 0 0 3px #6B7CDB22' : 'none',
-                                }}
-                                onFocus={e => {
-                                  setActiveCell({ studentIdx: si, colKey: k });
-                                  (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB';
-                                }}
-                                onBlur={e => {
-                                  (e.currentTarget as HTMLElement).style.borderColor =
-                                    activeCell?.studentIdx === si && activeCell?.colKey === k ? '#6B7CDB' :
-                                      score !== '' ? '#B7D9C4' : '#E9E9E7';
-                                }}
-                              />
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
+                  {students.map((s, si) => (
+                    <GradeTableRow
+                      key={s.stt}
+                      student={s}
+                      si={si}
+                      scoreColKeys={scoreColKeys}
+                      isActiveRow={activeCell?.studentIdx === si}
+                      activeColKey={activeCell?.studentIdx === si ? activeCell.colKey : null}
+                      activeTrRef={activeTrRef}
+                      onScoreChange={updateScore}
+                      onCellClick={handleCellClick}
+                    />
+                  ))}
                 </tbody>
               </table>
             </div>
