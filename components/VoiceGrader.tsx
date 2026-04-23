@@ -1,4 +1,4 @@
-﻿﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
+﻿﻿﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import {
   Mic, MicOff, Download, RefreshCw,
@@ -363,95 +363,52 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     recognition.maxAlternatives = 1;
     intentionalStopRef.current = false;
 
-    // Per-resultIndex: track which scores were already committed
-    // Map<resultIndex, Array<{ studentIdx, colKey, score }>>
-    const committedByIndex = new Map<number, Array<{ studentIdx: number; colKey: string; score: number }>>();
+    // Track which result indices already committed a score — once committed, NEVER update.
+    // This prevents Chrome's transcript revisions from corrupting already-filled cells.
+    const committedResults = new Set<number>();
 
-    // Commit a score to a specific (studentIdx, colKey) cell
-    const writeScoreToCell = (studentIdx: number, colKey: string, score: number) => {
+    const commitScore = (score: number) => {
+      const cell = activeCellRef.current;
+      if (!cell) return;
       setStudents(prev => prev.map((s, i) =>
-        i === studentIdx
-          ? { ...s, scores: { ...s.scores, [colKey]: String(score) }, highlight: true }
+        i === cell.studentIdx
+          ? { ...s, scores: { ...s.scores, [cell.colKey]: String(score) }, highlight: true }
           : s
       ));
-      setLastCommand(`✅ ${studentsRef.current[studentIdx]?.name} — ${colKey}: ${score}`);
-      setTimeout(() => setStudents(prev => prev.map((s, i) => i === studentIdx ? { ...s, highlight: false } : s)), 800);
-    };
-
-    // Parse ALL valid scores out of a transcript (handles multi-score utterances)
-    const extractScores = (text: string): number[] => {
-      let t = text.toLowerCase().trim();
-      const reps: [RegExp, string][] = [
-        [/\bmười\b/g, '10'], [/\bchín\b/g, '9'], [/\btám\b/g, '8'],
-        [/\bbảy\b/g, '7'], [/\bsáu\b/g, '6'], [/\bnăm\b/g, '5'],
-        [/\bbốn\b/g, '4'], [/\bba\b/g, '3'], [/\bhai\b/g, '2'],
-        [/\bmột\b/g, '1'], [/\bkhông\b/g, '0'],
-        [/\bphẩy\b|\bphảy\b|\bchấm\b/g, '.'],
-        [/\s*rưỡi\b/g, '.5'],
-        [/\.\s*lăm\b/g, '.5'],
-        [/(\d)\s+lăm\b/g, '$1.5'],
-        [/\.\s*hai\s+lăm\b/g, '.25'],
-        [/\.\s*bảy\s+lăm\b/g, '.75'],
-        [/\bđiểm\b|\bđ\b/g, ''],
-        [/,/g, '.'],
-      ];
-      for (const [p, r] of reps) t = t.replace(p, r);
-      t = t.replace(/\s*\.\s*/g, '.').replace(/\s+/g, ' ').trim();
-
-      const raw = t.match(/\d+(?:\.\d+)?/g);
-      if (!raw) return [];
-      const out: number[] = [];
-      for (const m of raw) {
-        const v = parseFloat(m);
-        if (!isNaN(v) && v >= 0 && v <= 10) {
-          out.push(Math.round(v * 100) / 100);
-        } else if (v > 10 && v < 100) {
-          const s = String(Math.round(v));
-          const ip = parseInt(s[0]), dp = parseInt(s.slice(1));
-          if (!isNaN(ip) && !isNaN(dp) && ip <= 10 && dp <= 9) {
-            const c = parseFloat(`${ip}.${dp}`);
-            if (c >= 0 && c <= 10) out.push(Math.round(c * 100) / 100);
-          }
-        }
-      }
-      return out;
+      setLastCommand(`✅ ${studentsRef.current[cell.studentIdx]?.name} — ${cell.colKey}: ${score}`);
+      setInterimText('');
+      setTimeout(() => setStudents(prev => prev.map(s => ({ ...s, highlight: false }))), 800);
+      advanceActiveCell();
     };
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
       let interimText = '';
 
       for (let i = e.resultIndex; i < e.results.length; i++) {
+        // Once a result index has committed a score, skip it forever
+        if (committedResults.has(i)) continue;
+
         const result = e.results[i];
         const transcript = result[0].transcript.trim();
-        const scores = extractScores(transcript);
-        let committed = committedByIndex.get(i) ?? [];
-
-        for (let j = 0; j < scores.length; j++) {
-          if (j < committed.length) {
-            // Refine existing committed score if value changed
-            if (scores[j] !== committed[j].score) {
-              writeScoreToCell(committed[j].studentIdx, committed[j].colKey, scores[j]);
-              committed[j].score = scores[j];
-            }
-          } else {
-            // New score — commit to current active cell and advance
-            const cell = activeCellRef.current;
-            if (!cell) break;
-            writeScoreToCell(cell.studentIdx, cell.colKey, scores[j]);
-            committed.push({ studentIdx: cell.studentIdx, colKey: cell.colKey, score: scores[j] });
-            advanceActiveCell();
-          }
-        }
-
-        committedByIndex.set(i, committed);
+        const score = parseVietnameseScore(transcript);
 
         if (result.isFinal) {
+          // Final is authoritative — commit if valid, then mark done
+          committedResults.add(i);
           setInterimText('');
-          if (scores.length === 0 && transcript.length > 2) {
+          if (score !== null) {
+            commitScore(score);
+          } else if (transcript.length > 2) {
             setLastCommand(`❓ Không nhận ra: "${transcript}"`);
           }
         } else {
-          interimText += transcript;
+          // Interim — commit immediately if a valid score is detected (fast path)
+          if (score !== null) {
+            committedResults.add(i);
+            commitScore(score);
+          } else {
+            interimText += transcript;
+          }
         }
       }
 
@@ -476,7 +433,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       }
       // Chrome auto-stopped — create a FRESH recognition instance and restart.
       // Reusing the same stopped instance causes InvalidStateError after 2-3 cycles.
-      committedByIndex.clear();
+      committedResults.clear();
       const newRec = new SR();
       newRec.lang = 'vi-VN';
       newRec.continuous = true;
