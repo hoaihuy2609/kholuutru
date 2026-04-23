@@ -1,4 +1,4 @@
-﻿﻿﻿﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
+﻿﻿﻿﻿﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import {
   Mic, MicOff, Download, RefreshCw,
@@ -276,6 +276,9 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   const activeTrRef = useRef<HTMLTableRowElement | null>(null);
   // Distinguishes user-initiated stop from Chrome auto-stopping the engine
   const intentionalStopRef = useRef(false);
+  // Watchdog: force-restart if Chrome freezes without firing onend
+  const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastResultTimeRef = useRef<number>(0);
 
   studentsRef.current = students;
   // NOTE: activeCellRef is managed manually (not synced from state)
@@ -382,6 +385,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     };
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
+      lastResultTimeRef.current = Date.now();
       let interimText = '';
 
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -475,12 +479,52 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
 
     recognition.start();
     recognitionRef.current = recognition;
+    lastResultTimeRef.current = Date.now();
+
+    // Watchdog: every 5s, check if speech results have stalled.
+    // If no result for 8+ seconds while listening, Chrome likely froze — force restart.
+    if (watchdogRef.current) clearInterval(watchdogRef.current);
+    watchdogRef.current = setInterval(() => {
+      if (intentionalStopRef.current) return;
+      const elapsed = Date.now() - lastResultTimeRef.current;
+      if (elapsed > 8000) {
+        console.log('[VoiceGrader] Watchdog: no results for 8s, force-restarting...');
+        lastResultTimeRef.current = Date.now(); // prevent re-trigger
+        try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+        // onend will fire and handle the restart via restartRecognition()
+        // But if onend ALSO doesn't fire (total freeze), force it ourselves:
+        setTimeout(() => {
+          if (intentionalStopRef.current) return;
+          console.log('[VoiceGrader] Watchdog: onend did not fire, forcing restart...');
+          const SR2 = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (!SR2) return;
+          try {
+            const fresh = new SR2();
+            fresh.lang = 'vi-VN';
+            fresh.continuous = true;
+            fresh.interimResults = true;
+            fresh.maxAlternatives = 1;
+            fresh.onresult = recognition.onresult;
+            fresh.onerror = recognition.onerror;
+            fresh.onend = recognition.onend;
+            fresh.start();
+            recognitionRef.current = fresh;
+            lastResultTimeRef.current = Date.now();
+            console.log('[VoiceGrader] Watchdog: force restart SUCCESS');
+          } catch (err) {
+            console.error('[VoiceGrader] Watchdog: force restart FAILED', err);
+          }
+        }, 500);
+      }
+    }, 5000);
+
     setIsListening(true);
   }, [onShowToast, advanceActiveCell]);
 
   const stopListening = useCallback(() => {
     intentionalStopRef.current = true;
     recognitionRef.current?.stop();
+    if (watchdogRef.current) { clearInterval(watchdogRef.current); watchdogRef.current = null; }
     setIsListening(false);
     setInterimText('');
   }, []);
