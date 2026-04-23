@@ -183,13 +183,6 @@ const parseCsvLine = (line: string, delimiter: string): string[] => {
 
 const MAPPING_STORAGE_KEY = 'voiceGrader_columnMapping_v2';
 
-// ── Helpers: early-commit guard ────────────────────────────────────────────
-/**
- * Returns false if the transcript ends with a decimal separator word,
- * meaning the user is still mid-number (e.g. "bảy phẩy" → wait for digit).
- */
-const looksComplete = (text: string): boolean =>
-  !/(phẩy|phảy|chấm|điểm)\s*$/i.test(text.trim());
 
 // ── Memoized table row — only re-renders when its own data changes ──────────
 interface GradeTableRowProps {
@@ -281,10 +274,6 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   const activeCellRef = useRef<ActiveCell | null>(null);
   const importedFileRef = useRef<ImportedFile | null>(null);
   const activeTrRef = useRef<HTMLTableRowElement | null>(null);
-  // Timer for early-commit on interim speech results
-  const pendingCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Track last committed key to prevent double-commit when isFinal arrives after interim commit
-  const lastCommittedKeyRef = useRef<string>('');
 
   studentsRef.current = students;
   activeCellRef.current = activeCell;
@@ -373,24 +362,18 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
 
     let lastFinalTranscript = '';
 
-    // ── Shared commit function ──────────────────────────────────────────────
-    const commitScore = (score: number, sourceTranscript: string) => {
+    // ── Commit a parsed score to the active cell ──
+    const commitScore = (score: number) => {
       const cell = activeCellRef.current;
       if (!cell) return;
-      // Dedup key: prevent double-commit when isFinal arrives after interim commit
-      const commitKey = `${cell.studentIdx}:${cell.colKey}:${score}`;
-      if (commitKey === lastCommittedKeyRef.current) return;
-      lastCommittedKeyRef.current = commitKey;
-
       setStudents(prev => prev.map((s, i) =>
         i === cell.studentIdx
           ? { ...s, scores: { ...s.scores, [cell.colKey]: String(score) }, highlight: true }
           : s
       ));
       setLastCommand(`✅ ${studentsRef.current[cell.studentIdx]?.name} — ${cell.colKey}: ${score}`);
-      setTimeout(() => setStudents(prev => prev.map(s => ({ ...s, highlight: false }))), 600);
+      setTimeout(() => setStudents(prev => prev.map(s => ({ ...s, highlight: false }))), 800);
       advanceActiveCell();
-      void sourceTranscript; // suppress unused warning
     };
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
@@ -400,18 +383,13 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
         const transcript = result[0].transcript.trim();
 
         if (result.isFinal) {
-          // Cancel any pending interim commit — isFinal is authoritative
-          if (pendingCommitTimerRef.current) {
-            clearTimeout(pendingCommitTimerRef.current);
-            pendingCommitTimerRef.current = null;
-          }
           setInterimText('');
           if (transcript === lastFinalTranscript) continue;
           lastFinalTranscript = transcript;
 
           const score = parseVietnameseScore(transcript);
           if (score !== null) {
-            commitScore(score, transcript);
+            commitScore(score);
           } else if (transcript.length > 2) {
             setLastCommand(`❓ Không nhận ra: "${transcript}"`);
           }
@@ -419,26 +397,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
           interim += transcript;
         }
       }
-
-      // ⚡ Early-commit on interim: don't wait for isFinal silence detection
-      if (interim) {
-        setInterimText(interim);
-        const score = parseVietnameseScore(interim);
-        if (score !== null && looksComplete(interim)) {
-          // Debounce 250 ms — if a new interim arrives before then, cancel & restart
-          if (pendingCommitTimerRef.current) clearTimeout(pendingCommitTimerRef.current);
-          pendingCommitTimerRef.current = setTimeout(() => {
-            pendingCommitTimerRef.current = null;
-            commitScore(score, interim);
-          }, 250);
-        } else {
-          // Transcript looks incomplete (e.g. ends with "phẩy") — cancel timer
-          if (pendingCommitTimerRef.current) {
-            clearTimeout(pendingCommitTimerRef.current);
-            pendingCommitTimerRef.current = null;
-          }
-        }
-      }
+      if (interim) setInterimText(interim);
     };
 
     recognition.onerror = () => {
@@ -453,11 +412,6 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
-    // Also cancel any pending early-commit timer
-    if (pendingCommitTimerRef.current) {
-      clearTimeout(pendingCommitTimerRef.current);
-      pendingCommitTimerRef.current = null;
-    }
     setIsListening(false);
     setInterimText('');
   }, []);
