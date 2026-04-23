@@ -1,4 +1,4 @@
-﻿﻿﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
+﻿﻿﻿﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import {
   Mic, MicOff, Download, RefreshCw,
@@ -417,6 +417,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
 
     recognition.onerror = (ev: Event) => {
       const error = (ev as any).error;
+      console.log('[VoiceGrader] onerror:', error);
       // Recoverable — Chrome will call onend and we auto-restart
       if (error === 'aborted' || error === 'no-speech' || error === 'network') return;
       // Fatal — stop and notify
@@ -424,29 +425,52 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       onShowToast('Lỗi micro. Vui lòng thử lại.', 'error');
     };
 
+    // Robust restart: creates a fresh SR instance with retry logic
+    const restartRecognition = (attempt = 0) => {
+      if (intentionalStopRef.current) return;
+      const maxRetries = 5;
+      const delay = Math.min(150 + attempt * 100, 600); // 150, 250, 350, 450, 550ms
+      console.log(`[VoiceGrader] Restart attempt ${attempt + 1}/${maxRetries} in ${delay}ms`);
+
+      setTimeout(() => {
+        if (intentionalStopRef.current) return;
+        try {
+          const fresh = new SR();
+          fresh.lang = 'vi-VN';
+          fresh.continuous = true;
+          fresh.interimResults = true;
+          fresh.maxAlternatives = 1;
+          fresh.onresult = recognition.onresult;
+          fresh.onerror = recognition.onerror;
+          fresh.onend = recognition.onend;
+          fresh.start();
+          recognitionRef.current = fresh;
+          committedResults.clear();
+          console.log('[VoiceGrader] Restart SUCCESS');
+        } catch (err) {
+          console.warn('[VoiceGrader] Restart failed:', err);
+          if (attempt + 1 < maxRetries) {
+            restartRecognition(attempt + 1);
+          } else {
+            console.error('[VoiceGrader] All restart attempts failed');
+            setIsListening(false);
+            setInterimText('');
+            onShowToast('Micro bị ngắt. Bấm lại nút micro để tiếp tục.', 'warning');
+          }
+        }
+      }, delay);
+    };
+
     recognition.onend = () => {
+      console.log('[VoiceGrader] onend fired, intentionalStop:', intentionalStopRef.current);
       if (intentionalStopRef.current) {
         intentionalStopRef.current = false;
         setIsListening(false);
         setInterimText('');
         return;
       }
-      // Chrome auto-stopped — create a FRESH recognition instance and restart.
-      // Reusing the same stopped instance causes InvalidStateError after 2-3 cycles.
-      committedResults.clear();
-      const newRec = new SR();
-      newRec.lang = 'vi-VN';
-      newRec.continuous = true;
-      newRec.interimResults = true;
-      newRec.maxAlternatives = 1;
-      newRec.onresult = recognition.onresult;
-      newRec.onerror = recognition.onerror;
-      newRec.onend = recognition.onend;
-      recognitionRef.current = newRec;
-      setTimeout(() => {
-        if (intentionalStopRef.current) return;
-        try { newRec.start(); } catch { setIsListening(false); setInterimText(''); }
-      }, 100);
+      // Chrome auto-stopped — restart with fresh instance + retry logic
+      restartRecognition(0);
     };
 
     recognition.start();
