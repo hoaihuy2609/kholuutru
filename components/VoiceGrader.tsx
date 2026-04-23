@@ -274,6 +274,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   const activeCellRef = useRef<ActiveCell | null>(null);
   const importedFileRef = useRef<ImportedFile | null>(null);
   const activeTrRef = useRef<HTMLTableRowElement | null>(null);
+  const pendingCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   studentsRef.current = students;
   activeCellRef.current = activeCell;
@@ -358,11 +359,12 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     recognition.lang = 'vi-VN';
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.maxAlternatives = 1; // ⚡ Was 3 — fewer alternatives = faster engine
+    recognition.maxAlternatives = 1;
 
-    let lastFinalTranscript = '';
+    // Track which result indices we've already committed, so one utterance
+    // can never spill into multiple cells (fixes the previous early-commit bug)
+    const committedResultIndices = new Set<number>();
 
-    // ── Commit a parsed score to the active cell ──
     const commitScore = (score: number) => {
       const cell = activeCellRef.current;
       if (!cell) return;
@@ -372,20 +374,30 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
           : s
       ));
       setLastCommand(`✅ ${studentsRef.current[cell.studentIdx]?.name} — ${cell.colKey}: ${score}`);
+      setInterimText('');
       setTimeout(() => setStudents(prev => prev.map(s => ({ ...s, highlight: false }))), 800);
       advanceActiveCell();
     };
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
       let interim = '';
+      let activeInterimIndex = -1;
+
       for (let i = e.resultIndex; i < e.results.length; i++) {
+        // Skip results we already committed from (either via interim or final)
+        if (committedResultIndices.has(i)) continue;
+
         const result = e.results[i];
         const transcript = result[0].transcript.trim();
 
         if (result.isFinal) {
+          // isFinal is authoritative — cancel any pending interim timer
+          if (pendingCommitTimerRef.current) {
+            clearTimeout(pendingCommitTimerRef.current);
+            pendingCommitTimerRef.current = null;
+          }
           setInterimText('');
-          if (transcript === lastFinalTranscript) continue;
-          lastFinalTranscript = transcript;
+          committedResultIndices.add(i);
 
           const score = parseVietnameseScore(transcript);
           if (score !== null) {
@@ -395,9 +407,36 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
           }
         } else {
           interim += transcript;
+          activeInterimIndex = i;
         }
       }
-      if (interim) setInterimText(interim);
+
+      // \u26a1 Early-commit on interim with result-index guard
+      if (interim && activeInterimIndex >= 0) {
+        setInterimText(interim);
+        const score = parseVietnameseScore(interim);
+        if (score !== null) {
+          // Debounce 400ms — gives transcript time to stabilize,
+          // but still ~2-3s faster than waiting for isFinal
+          if (pendingCommitTimerRef.current) clearTimeout(pendingCommitTimerRef.current);
+          const capturedIndex = activeInterimIndex;
+          const capturedScore = score;
+          pendingCommitTimerRef.current = setTimeout(() => {
+            pendingCommitTimerRef.current = null;
+            // Guard: only commit if this index hasn't been committed yet
+            if (!committedResultIndices.has(capturedIndex)) {
+              committedResultIndices.add(capturedIndex);
+              commitScore(capturedScore);
+            }
+          }, 400);
+        } else {
+          // No valid score yet — cancel pending timer
+          if (pendingCommitTimerRef.current) {
+            clearTimeout(pendingCommitTimerRef.current);
+            pendingCommitTimerRef.current = null;
+          }
+        }
+      }
     };
 
     recognition.onerror = () => {
@@ -412,6 +451,10 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
+    if (pendingCommitTimerRef.current) {
+      clearTimeout(pendingCommitTimerRef.current);
+      pendingCommitTimerRef.current = null;
+    }
     setIsListening(false);
     setInterimText('');
   }, []);
