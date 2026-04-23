@@ -443,15 +443,23 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     };
 
     recognition.onerror = (ev: Event) => {
-      // 'aborted' errors happen during auto-restart, ignore them
-      if ((ev as any).error === 'aborted') return;
-      setIsListening(false);
+      const error = (ev as any).error;
+      // Recoverable errors — let onend auto-restart silently
+      // 'aborted': normal during restart cycle
+      // 'no-speech': silence between readings (very common!)
+      // 'network': temporary network hiccup
+      if (error === 'aborted' || error === 'no-speech' || error === 'network') return;
+      // Fatal errors — flag so onend won't try to restart
+      // 'not-allowed': user denied mic permission
+      // 'audio-capture': no microphone
+      // 'service-not-available': speech service down
+      intentionalStopRef.current = true;
       onShowToast('Lỗi micro. Vui lòng thử lại.', 'error');
     };
 
     recognition.onend = () => {
-      // Chrome auto-stopped the engine (silence timeout, etc.)
-      // Auto-restart unless user explicitly pressed stop
+      // Chrome auto-stopped the engine (silence timeout, no-speech, etc.)
+      // Auto-restart unless user explicitly pressed stop or fatal error occurred
       if (!intentionalStopRef.current) {
         // Clear state for fresh session
         if (pendingCommitTimerRef.current) {
@@ -461,13 +469,14 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
         committedResultIndices.clear();
         try {
           recognition.start();
-          return; // Still listening, don't update UI
+          return; // Still listening — don't touch UI
         } catch {
           // Restart failed — fall through to stop
         }
       }
       intentionalStopRef.current = false;
       setIsListening(false);
+      setInterimText('');
     };
 
     recognition.start();
