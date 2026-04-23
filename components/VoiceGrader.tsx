@@ -275,6 +275,8 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   const importedFileRef = useRef<ImportedFile | null>(null);
   const activeTrRef = useRef<HTMLTableRowElement | null>(null);
   const pendingCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Distinguishes user-initiated stop from Chrome auto-stopping the engine
+  const intentionalStopRef = useRef(false);
 
   studentsRef.current = students;
   activeCellRef.current = activeCell;
@@ -360,6 +362,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
+    intentionalStopRef.current = false;
 
     // Track which result indices we've already committed, so one utterance
     // can never spill into multiple cells (fixes the previous early-commit bug)
@@ -439,17 +442,41 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       }
     };
 
-    recognition.onerror = () => {
+    recognition.onerror = (ev: Event) => {
+      // 'aborted' errors happen during auto-restart, ignore them
+      if ((ev as any).error === 'aborted') return;
       setIsListening(false);
       onShowToast('Lỗi micro. Vui lòng thử lại.', 'error');
     };
-    recognition.onend = () => setIsListening(false);
+
+    recognition.onend = () => {
+      // Chrome auto-stopped the engine (silence timeout, etc.)
+      // Auto-restart unless user explicitly pressed stop
+      if (!intentionalStopRef.current) {
+        // Clear state for fresh session
+        if (pendingCommitTimerRef.current) {
+          clearTimeout(pendingCommitTimerRef.current);
+          pendingCommitTimerRef.current = null;
+        }
+        committedResultIndices.clear();
+        try {
+          recognition.start();
+          return; // Still listening, don't update UI
+        } catch {
+          // Restart failed — fall through to stop
+        }
+      }
+      intentionalStopRef.current = false;
+      setIsListening(false);
+    };
+
     recognition.start();
     recognitionRef.current = recognition;
     setIsListening(true);
   }, [onShowToast, advanceActiveCell]);
 
   const stopListening = useCallback(() => {
+    intentionalStopRef.current = true;
     recognitionRef.current?.stop();
     if (pendingCommitTimerRef.current) {
       clearTimeout(pendingCommitTimerRef.current);
