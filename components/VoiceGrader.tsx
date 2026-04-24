@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
+﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import {
   Mic, MicOff, Download, RefreshCw,
@@ -242,7 +242,9 @@ const GradeTableRow = React.memo((
 ), (prev, next) =>
   prev.student === next.student &&
   prev.isActiveRow === next.isActiveRow &&
-  prev.activeColKey === next.activeColKey
+  prev.activeColKey === next.activeColKey &&
+  prev.onScoreChange === next.onScoreChange &&
+  prev.onCellClick === next.onCellClick
 );
 
 // ── Main Component ─────────────────────────────────────────────────────────
@@ -279,6 +281,8 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   // Watchdog: force-restart if Chrome freezes without firing onend
   const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastResultTimeRef = useRef<number>(0);
+  // Race-condition guard: ignore stale file reads when user drops a new file
+  const fileReadIdRef = useRef(0);
 
   studentsRef.current = students;
   // NOTE: activeCellRef is managed manually (not synced from state)
@@ -302,30 +306,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     }
   }, [activeCell]);
 
-  // ── Advance active cell (right → down, wrapping) ──
-  const advanceActiveCell = useCallback(() => {
-    const file = importedFileRef.current;
-    const cell = activeCellRef.current;
-    const sts = studentsRef.current;
-    if (!file || !cell || sts.length === 0) return;
-
-    const keys = file.scoreColIndices.map(i => file.allHeaders[i]);
-    const colIdx = keys.indexOf(cell.colKey);
-    const nextColIdx = colIdx + 1;
-
-    let nextCell: ActiveCell | null = null;
-    if (nextColIdx < keys.length) {
-      nextCell = { studentIdx: cell.studentIdx, colKey: keys[nextColIdx] };
-    } else {
-      const nextStudentIdx = cell.studentIdx + 1;
-      if (nextStudentIdx < sts.length) {
-        nextCell = { studentIdx: nextStudentIdx, colKey: keys[0] };
-      }
-    }
-    // Sync update so rapid commits read the right cell
-    activeCellRef.current = nextCell;
-    setActiveCell(nextCell);
-  }, []);
+  // advanceActiveCell is now inlined into commitScore for atomicity
 
   // ── Voice Recognition ──
   const startListening = useCallback(() => {
@@ -366,39 +347,69 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     recognition.maxAlternatives = 1;
     intentionalStopRef.current = false;
 
-    // Track which result indices already committed a score — once committed, NEVER update.
-    // This prevents Chrome's transcript revisions from corrupting already-filled cells.
+    // ── Committed-result tracking with restart-safe offsets ──
+    // Instead of clearing the Set on restart (which causes Chrome's buffered
+    // results to be re-processed into wrong cells), we use a resultOffset that
+    // increments after each restart.  Each result gets a globally-unique
+    // adjustedIdx = rawIndex + currentOffset, so indices never collide.
     const committedResults = new Set<number>();
+    let resultOffset = 0;
+    let lastResultCount = 0;
 
     const commitScore = (score: number) => {
       const cell = activeCellRef.current;
       if (!cell) return;
+
+      // ── Compute next cell SYNCHRONOUSLY before any async setState ──
+      // This prevents rapid results (interim+final) from both reading the same cell.
+      const file = importedFileRef.current;
+      const sts = studentsRef.current;
+      let nextCell: ActiveCell | null = null;
+      if (file && sts.length > 0) {
+        const keys = file.scoreColIndices.map(i => file.allHeaders[i]);
+        const colIdx = keys.indexOf(cell.colKey);
+        if (colIdx + 1 < keys.length) {
+          nextCell = { studentIdx: cell.studentIdx, colKey: keys[colIdx + 1] };
+        } else if (cell.studentIdx + 1 < sts.length) {
+          nextCell = { studentIdx: cell.studentIdx + 1, colKey: keys[0] };
+        }
+      }
+
+      // Update ref FIRST — any subsequent commitScore call reads the new cell
+      activeCellRef.current = nextCell;
+
       setStudents(prev => prev.map((s, i) =>
         i === cell.studentIdx
           ? { ...s, scores: { ...s.scores, [cell.colKey]: String(score) }, highlight: true }
           : s
       ));
-      setLastCommand(`✅ ${studentsRef.current[cell.studentIdx]?.name} — ${cell.colKey}: ${score}`);
+      setActiveCell(nextCell);
+      setLastCommand(`✅ ${sts[cell.studentIdx]?.name} — ${cell.colKey}: ${score}`);
       setInterimText('');
       setTimeout(() => setStudents(prev => prev.map(s => ({ ...s, highlight: false }))), 800);
-      advanceActiveCell();
     };
 
-    recognition.onresult = (e: SpeechRecognitionEvent) => {
+    // Factory: creates an onresult handler bound to a specific offset.
+    // Each fresh SR instance gets its own handler so stale closures can't
+    // reference the wrong offset.
+    const makeOnResult = (currentOffset: number) => (e: SpeechRecognitionEvent) => {
       lastResultTimeRef.current = Date.now();
-      let interimText = '';
+      let interimTranscript = '';
 
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        // Once a result index has committed a score, skip it forever
-        if (committedResults.has(i)) continue;
+        const adjustedIdx = i + currentOffset;
+        lastResultCount = Math.max(lastResultCount, i + 1);
+
+        // Once a result has committed a score, skip it forever
+        // (prevents interim→final double-commit within the same instance)
+        if (committedResults.has(adjustedIdx)) continue;
 
         const result = e.results[i];
         const transcript = result[0].transcript.trim();
         const score = parseVietnameseScore(transcript);
 
         if (result.isFinal) {
-          // Final is authoritative — commit if valid, then mark done
-          committedResults.add(i);
+          committedResults.add(adjustedIdx);
           setInterimText('');
           if (score !== null) {
             commitScore(score);
@@ -408,16 +419,18 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
         } else {
           // Interim — commit immediately if a valid score is detected (fast path)
           if (score !== null) {
-            committedResults.add(i);
+            committedResults.add(adjustedIdx);
             commitScore(score);
           } else {
-            interimText += transcript;
+            interimTranscript += transcript;
           }
         }
       }
 
-      if (interimText) setInterimText(interimText);
+      if (interimTranscript) setInterimText(interimTranscript);
     };
+
+    recognition.onresult = makeOnResult(0);
 
     recognition.onerror = (ev: Event) => {
       const error = (ev as any).error;
@@ -439,18 +452,21 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       setTimeout(() => {
         if (intentionalStopRef.current) return;
         try {
+          // Bump offset so new instance's indices never collide with old ones
+          resultOffset += lastResultCount;
+          lastResultCount = 0;
+
           const fresh = new SR();
           fresh.lang = 'vi-VN';
           fresh.continuous = true;
           fresh.interimResults = true;
           fresh.maxAlternatives = 1;
-          fresh.onresult = recognition.onresult;
+          fresh.onresult = makeOnResult(resultOffset); // fresh handler, fresh offset
           fresh.onerror = recognition.onerror;
           fresh.onend = recognition.onend;
           fresh.start();
           recognitionRef.current = fresh;
-          committedResults.clear();
-          console.log('[VoiceGrader] Restart SUCCESS');
+          console.log('[VoiceGrader] Restart SUCCESS (offset:', resultOffset, ')');
         } catch (err) {
           console.warn('[VoiceGrader] Restart failed:', err);
           if (attempt + 1 < maxRetries) {
@@ -499,18 +515,22 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
           const SR2 = window.SpeechRecognition || window.webkitSpeechRecognition;
           if (!SR2) return;
           try {
+            // Bump offset for watchdog restart too
+            resultOffset += lastResultCount;
+            lastResultCount = 0;
+
             const fresh = new SR2();
             fresh.lang = 'vi-VN';
             fresh.continuous = true;
             fresh.interimResults = true;
             fresh.maxAlternatives = 1;
-            fresh.onresult = recognition.onresult;
+            fresh.onresult = makeOnResult(resultOffset); // fresh handler, fresh offset
             fresh.onerror = recognition.onerror;
             fresh.onend = recognition.onend;
             fresh.start();
             recognitionRef.current = fresh;
             lastResultTimeRef.current = Date.now();
-            console.log('[VoiceGrader] Watchdog: force restart SUCCESS');
+            console.log('[VoiceGrader] Watchdog: force restart SUCCESS (offset:', resultOffset, ')');
           } catch (err) {
             console.error('[VoiceGrader] Watchdog: force restart FAILED', err);
           }
@@ -519,7 +539,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     }, 5000);
 
     setIsListening(true);
-  }, [onShowToast, advanceActiveCell]);
+  }, [onShowToast]);
 
   const stopListening = useCallback(() => {
     intentionalStopRef.current = true;
@@ -527,6 +547,15 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     if (watchdogRef.current) { clearInterval(watchdogRef.current); watchdogRef.current = null; }
     setIsListening(false);
     setInterimText('');
+  }, []);
+
+  // Cleanup on unmount — stop recognition & watchdog to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      intentionalStopRef.current = true;
+      try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+      if (watchdogRef.current) { clearInterval(watchdogRef.current); watchdogRef.current = null; }
+    };
   }, []);
 
   const updateScore = useCallback((studentIdx: number, colKey: string, value: string) => {
@@ -590,15 +619,64 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
     return result;
   };
 
+  const tryLoadMapping = useCallback((allHeaders: string[]): ColumnMapping | null => {
+    try {
+      const saved = localStorage.getItem(MAPPING_STORAGE_KEY);
+      if (!saved) return null;
+      const parsed = JSON.parse(saved) as { headers: string[]; mapping: ColumnMapping };
+      // Check if headers match (same set, same order)
+      if (JSON.stringify(parsed.headers) === JSON.stringify(allHeaders)) {
+        return parsed.mapping;
+      }
+    } catch { }
+    return null;
+  }, []);
+
+  const applyMappingAndFinish = useCallback((
+    rows: string[][],
+    headerRowIdx: number,
+    allHeaders: string[],
+    mapping: ColumnMapping,
+    fileInfo: typeof rawFile
+  ) => {
+    if (!fileInfo) return;
+    const studentList = buildStudentList(rows, headerRowIdx, mapping.nameColIdx, mapping.scoreColIndices, allHeaders);
+    if (studentList.length === 0) {
+      onShowToast('Không đọc được danh sách học sinh từ file.', 'error');
+      return;
+    }
+    setStudents(studentList);
+    const file: ImportedFile = {
+      type: fileInfo.type,
+      csvLines: fileInfo.csvLines,
+      csvDelimiter: fileInfo.csvDelimiter,
+      xlsxWorkbook: fileInfo.xlsxWorkbook,
+      xlsxSheetName: fileInfo.xlsxSheetName,
+      headerRowIdx,
+      nameColIdx: mapping.nameColIdx,
+      allHeaders,
+      scoreColIndices: mapping.scoreColIndices,
+      originalFileName: fileInfo.fileName,
+    } as ImportedFile;
+    setImportedFile(file);
+    setStep('grading');
+    setLastCommand('');
+    activeCellRef.current = null;
+    setActiveCell(null);
+    onShowToast(`Đã tải ${studentList.length} học sinh · ${mapping.scoreColIndices.length} cột điểm!`, 'success');
+  }, [onShowToast]);
+
   // ── Read file → determine headers → go to mapping step ──
   const importVnEduFile = useCallback((file: File) => {
     if (!file) return;
+    const readId = ++fileReadIdRef.current; // race-condition guard
     const ext = file.name.split('.').pop()?.toLowerCase();
     const isXlsx = ext === 'xlsx' || ext === 'xls';
     const reader = new FileReader();
 
     if (isXlsx) {
       reader.onload = (e) => {
+        if (readId !== fileReadIdRef.current) return; // stale read — ignore
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const wb = XLSX.read(data, { type: 'array' });
@@ -641,6 +719,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       reader.readAsArrayBuffer(file);
     } else {
       reader.onload = (e) => {
+        if (readId !== fileReadIdRef.current) return; // stale read — ignore
         try {
           const raw = e.target?.result as string;
           const text = raw.startsWith('\uFEFF') ? raw.slice(1) : raw;
@@ -680,55 +759,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       };
       reader.readAsText(file, 'utf-8');
     }
-  }, [onShowToast]);
-
-  const tryLoadMapping = (allHeaders: string[]): ColumnMapping | null => {
-    try {
-      const saved = localStorage.getItem(MAPPING_STORAGE_KEY);
-      if (!saved) return null;
-      const parsed = JSON.parse(saved) as { headers: string[]; mapping: ColumnMapping };
-      // Check if headers match (same set, same order)
-      if (JSON.stringify(parsed.headers) === JSON.stringify(allHeaders)) {
-        return parsed.mapping;
-      }
-    } catch { }
-    return null;
-  };
-
-  const applyMappingAndFinish = (
-    rows: string[][],
-    headerRowIdx: number,
-    allHeaders: string[],
-    mapping: ColumnMapping,
-    fileInfo: typeof rawFile
-  ) => {
-    if (!fileInfo) return;
-    const studentList = buildStudentList(rows, headerRowIdx, mapping.nameColIdx, mapping.scoreColIndices, allHeaders);
-    if (studentList.length === 0) {
-      onShowToast('Không đọc được danh sách học sinh từ file.', 'error');
-      return;
-    }
-    setStudents(studentList);
-    const file: ImportedFile = {
-      type: fileInfo.type,
-      fileName: fileInfo.fileName,
-      csvLines: fileInfo.csvLines,
-      csvDelimiter: fileInfo.csvDelimiter,
-      xlsxWorkbook: fileInfo.xlsxWorkbook,
-      xlsxSheetName: fileInfo.xlsxSheetName,
-      headerRowIdx,
-      nameColIdx: mapping.nameColIdx,
-      allHeaders,
-      scoreColIndices: mapping.scoreColIndices,
-      originalFileName: fileInfo.fileName,
-    } as any;
-    setImportedFile(file);
-    setStep('grading');
-    setLastCommand('');
-    activeCellRef.current = null;
-    setActiveCell(null);
-    onShowToast(`Đã tải ${studentList.length} học sinh · ${mapping.scoreColIndices.length} cột điểm!`, 'success');
-  };
+  }, [onShowToast, tryLoadMapping, applyMappingAndFinish]);
 
   const confirmMapping = () => {
     if (nameColIdx < 0) { onShowToast('Vui lòng chọn cột Họ tên.', 'warning'); return; }
@@ -753,36 +784,54 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   const exportToOriginalFormat = () => {
     if (!importedFile) return;
 
-    const scoreMap = new Map<string, Record<string, string>>();
+    // Build score map: exact name first, normalized fallback
+    const exactScoreMap = new Map<string, Record<string, string>>();
+    const normScoreMap = new Map<string, Record<string, string>>();
     for (const s of students) {
-      scoreMap.set(normalize(s.name), s.scores);
+      const exact = s.name.trim();
+      const norm = normalize(s.name);
+      exactScoreMap.set(exact, s.scores);
+      if (!normScoreMap.has(norm)) normScoreMap.set(norm, s.scores);
     }
+    const findScores = (name: string) =>
+      exactScoreMap.get(name.trim()) ?? normScoreMap.get(normalize(name));
 
     if (importedFile.type === 'xlsx' && importedFile.xlsxWorkbook) {
       const wb = importedFile.xlsxWorkbook;
-      const ws = wb.Sheets[importedFile.xlsxSheetName!];
+      const wsName = importedFile.xlsxSheetName!;
+      const ws = wb.Sheets[wsName];
       const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as any[][];
 
+      // Write scores directly into worksheet cells to preserve merges/styles/formats
       for (let r = importedFile.headerRowIdx + 1; r < rows.length; r++) {
         const row = rows[r];
         const name = String(row[importedFile.nameColIdx] || '');
         if (!name) continue;
-        const scores = scoreMap.get(normalize(name));
+        const scores = findScores(name);
         if (!scores) continue;
         for (const colIdx of importedFile.scoreColIndices) {
           const key = importedFile.allHeaders[colIdx];
           const score = scores[key];
           if (score !== undefined && score !== '') {
-            row[colIdx] = parseFloat(score);
+            const cellAddr = XLSX.utils.encode_cell({ r, c: colIdx });
+            // Preserve existing cell style if present, just update value
+            const existing = ws[cellAddr];
+            ws[cellAddr] = existing
+              ? { ...existing, v: parseFloat(score), t: 'n' }
+              : { v: parseFloat(score), t: 'n' };
           }
         }
       }
 
-      const newWs = XLSX.utils.aoa_to_sheet(rows);
-      newWs['!merges'] = ws['!merges'];
-      newWs['!cols'] = ws['!cols'];
+      // Clone workbook keeping original ws (with merges, cols, styles intact)
       const newWb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(newWb, newWs, importedFile.xlsxSheetName);
+      XLSX.utils.book_append_sheet(newWb, ws, wsName);
+      // Copy any other sheets from original workbook
+      for (const name of wb.SheetNames) {
+        if (name !== wsName) {
+          XLSX.utils.book_append_sheet(newWb, wb.Sheets[name], name);
+        }
+      }
       XLSX.writeFile(newWb, importedFile.originalFileName);
       onShowToast('Đã xuất file Excel! Upload lên vnEdu ngay được.', 'success');
 
@@ -795,7 +844,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
         const cols = parseCsvLine(lines[i], delimiter);
         const name = cols[importedFile.nameColIdx];
         if (!name) continue;
-        const scores = scoreMap.get(normalize(name));
+        const scores = findScores(name);
         if (!scores) continue;
         for (const colIdx of importedFile.scoreColIndices) {
           const key = importedFile.allHeaders[colIdx];
