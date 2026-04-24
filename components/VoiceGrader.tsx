@@ -439,7 +439,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       if (error === 'aborted' || error === 'no-speech' || error === 'network') return;
       // Fatal — stop and notify
       intentionalStopRef.current = true;
-      onShowToast('Lỗi micro. Vui lòng thử lại.', 'error');
+      onShowToast(`Lỗi micro: ${error}`, 'error');
     };
 
     // Robust restart: creates a fresh SR instance with retry logic
