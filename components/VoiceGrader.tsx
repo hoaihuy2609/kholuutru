@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+﻿import React, { useState, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import {
   Mic, MicOff, Download, RefreshCw,
@@ -84,6 +84,32 @@ const parseVietnameseScore = (text: string): number | null => {
   return Math.round(val * 100) / 100;
 };
 
+/**
+ * Tiền xử lý transcript: tách trường hợp speech recognizer gộp số thứ tự
+ * và phần nguyên của điểm thành một số.
+ * VD: "số 88,75"  → "số 8 8,75"  (HS 8, điểm 8,75)
+ *     "số 38,5"   → "số 3 8,5"   (HS 3, điểm 8,5)
+ *     "số 108,5"  → "số 10 8,5"  (HS 10, điểm 8,5)
+ * Duyệt từ vị trí cắt dài nhất → ngắn nhất để ưu tiên số thứ tự lớn hơn.
+ */
+const preprocessVoiceTranscript = (t: string): string => {
+  return t.replace(/số\s*(\d{2,})[,.](\d+)/gi, (match, intPart, decPart) => {
+    const n = parseInt(intPart);
+    if (n <= 10) return match; // số nguyên hợp lệ, không cần tách
+    for (let cut = intPart.length - 1; cut >= 1; cut--) {
+      const studentStr = intPart.slice(0, cut);
+      const scoreIntStr = intPart.slice(cut);
+      const scoreInt = parseInt(scoreIntStr);
+      if (scoreInt > 10) continue;
+      const score = parseFloat(`${scoreIntStr}.${decPart}`);
+      if (score >= 0 && score <= 10) {
+        return `số ${studentStr} ${scoreIntStr},${decPart}`;
+      }
+    }
+    return match;
+  });
+};
+
 const trySplitAmbiguousNumber = (n: number): { index: number; score: number } | null => {
   const s = String(n);
   if (s.length < 2) return null;
@@ -99,7 +125,7 @@ const trySplitAmbiguousNumber = (n: number): { index: number; score: number } | 
 };
 
 const parseAllVoiceCommands = (transcript: string): { index: number; score: number }[] => {
-  const t = transcript.toLowerCase().trim();
+  const t = preprocessVoiceTranscript(transcript.toLowerCase().trim());
   const results: { index: number; score: number }[] = [];
   const segmentRegex = /(?:số\s*(\d+)|(?:^|[,;\s])(\d+)\s*[:.]) \s*(.*?)(?=\s*(?:số\s*\d+|(?:^|[,;\s])\d+\s*[:.])|$)/g;
   let match;
