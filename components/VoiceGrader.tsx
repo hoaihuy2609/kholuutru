@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import {
   Mic, MicOff, Download, RefreshCw,
@@ -398,7 +398,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
 
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const adjustedIdx = i + currentOffset;
-        lastResultCount = Math.max(lastResultCount, i + 1);
+        lastResultCount = Math.max(lastResultCount, e.results.length);
 
         // Once a result has committed a score, skip it forever
         // (prevents interim→final double-commit within the same instance)
@@ -481,8 +481,13 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       }, delay);
     };
 
+    // restartPending prevents the watchdog 600ms fallback from creating a 2nd instance
+    // if onend already fired and restartRecognition() already handled the restart.
+    let restartPending = false;
+
     recognition.onend = () => {
       console.log('[VoiceGrader] onend fired, intentionalStop:', intentionalStopRef.current);
+      restartPending = false; // onend fired — cancel watchdog fallback
       if (intentionalStopRef.current) {
         intentionalStopRef.current = false;
         setIsListening(false);
@@ -506,25 +511,25 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       if (elapsed > 8000) {
         console.log('[VoiceGrader] Watchdog: no results for 8s, force-restarting...');
         lastResultTimeRef.current = Date.now(); // prevent re-trigger
+        restartPending = true;
         try { recognitionRef.current?.stop(); } catch { /* ignore */ }
-        // onend will fire and handle the restart via restartRecognition()
-        // But if onend ALSO doesn't fire (total freeze), force it ourselves:
+        // onend will fire and handle the restart via restartRecognition().
+        // If onend ALSO doesn't fire (total Chrome freeze), force it ourselves after 600ms.
         setTimeout(() => {
-          if (intentionalStopRef.current) return;
+          if (intentionalStopRef.current || !restartPending) return;
+          restartPending = false;
           console.log('[VoiceGrader] Watchdog: onend did not fire, forcing restart...');
           const SR2 = window.SpeechRecognition || window.webkitSpeechRecognition;
           if (!SR2) return;
           try {
-            // Bump offset for watchdog restart too
             resultOffset += lastResultCount;
             lastResultCount = 0;
-
             const fresh = new SR2();
             fresh.lang = 'vi-VN';
             fresh.continuous = true;
             fresh.interimResults = true;
             fresh.maxAlternatives = 1;
-            fresh.onresult = makeOnResult(resultOffset); // fresh handler, fresh offset
+            fresh.onresult = makeOnResult(resultOffset);
             fresh.onerror = recognition.onerror;
             fresh.onend = recognition.onend;
             fresh.start();
@@ -534,7 +539,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
           } catch (err) {
             console.error('[VoiceGrader] Watchdog: force restart FAILED', err);
           }
-        }, 500);
+        }, 600);
       }
     }, 5000);
 
