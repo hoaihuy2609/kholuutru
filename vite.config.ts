@@ -26,8 +26,8 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, '.'),
       }
     },
-    // Strip console.log / debugger from production builds
-    esbuild: isProd ? { drop: ['console', 'debugger'] } : {},
+    // Keep console.log in production so voice-grader [VG] logs are visible in DevTools
+    esbuild: isProd ? { drop: ['debugger'] } : {},
     build: {
       target: 'es2020',
       sourcemap: false,
