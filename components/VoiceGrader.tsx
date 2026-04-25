@@ -907,6 +907,8 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       scoreColIndices: mapping.scoreColIndices,
       originalFileName: fileInfo.fileName,
     } as ImportedFile;
+    setRawRows(rows);
+    setRawFile(fileInfo);
     setImportedFile(file);
     setStep('grading');
     setLastCommand('');
