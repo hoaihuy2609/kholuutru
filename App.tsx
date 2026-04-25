@@ -36,8 +36,6 @@ const GlobalSearch = React.lazy(() => import('./components/GlobalSearch'));
 const SolutionEditor = React.lazy(() => import('./components/SolutionEditor'));
 const CommunityPage = React.lazy(() => import('./components/CommunityPage'));
 const TheoryKing = React.lazy(() => import('./components/TheoryKing'));
-// DEV-ONLY test route — không ảnh hưởng production, xóa sau khi test xong
-const VoiceGraderTest = React.lazy(() => import('./.agent/VoiceGrader_multicol_backup_best'));
 
 const LazyFallback = () => (
   <div className="flex items-center justify-center h-[40vh]">
@@ -535,8 +533,6 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
               </Suspense></ErrorBoundary>
             } />
             <Route path="/admin/editor" element={effectiveIsAdmin ? <ErrorBoundary><Suspense fallback={<LazyFallback />}><SolutionEditor /></Suspense></ErrorBoundary> : <Navigate to="/" replace />} />
-            {/* DEV-ONLY: xóa route này sau khi test xong */}
-            <Route path="/voice-test" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><VoiceGraderTest onShowToast={useUIStore.getState().showToast} /></Suspense></ErrorBoundary>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
