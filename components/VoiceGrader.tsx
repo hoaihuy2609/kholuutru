@@ -640,9 +640,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       // Chrome in continuous mode APPENDS new speech to the same slot rather than
       // creating a new slot — so we must process only the NEW (delta) portion.
       const processedLengths = new Map<number, number>();
-      // Once a slot commits a score, block all future events for that slot.
-      // Chrome can append new speech to old slots, causing double-commits.
-      const committedSlots = new Set<number>();
+      let sessionClosed = false;
       const isCurrentSession = () => recognitionSessionRef.current === sessionId;
 
       recognition.lang = 'vi-VN';
@@ -655,8 +653,24 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       const hasEndSignal = (t: string) =>
         /điểm\s*$/i.test(t.toLowerCase());
 
+      const commitAndRotateSession = (score: number, slotIdx: number, fullTranscript: string) => {
+        if (sessionClosed || !isCurrentSession() || intentionalStopRef.current) return;
+
+        sessionClosed = true;
+        processedLengths.set(slotIdx, fullTranscript.length);
+        setInterimText('');
+        commitScore(score);
+
+        try {
+          recognition.stop();
+        } catch {
+          recognitionRef.current = null;
+          createRecognitionSession(0);
+        }
+      };
+
       recognition.onresult = (e: SpeechRecognitionEvent) => {
-        if (!isCurrentSession() || intentionalStopRef.current) return;
+        if (!isCurrentSession() || intentionalStopRef.current || sessionClosed) return;
 
         lastResultTimeRef.current = Date.now();
         let interimTranscript = '';
@@ -677,37 +691,27 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
           if (!result.isFinal) {
             // ── Fast path: delta ends with "điểm" → commit immediately ──
             if (hasEndSignal(delta)) {
-              const score = parseVietnameseScore(delta);
+              const score = parseVietnameseScore(fullTranscript) ?? parseVietnameseScore(delta);
               if (score !== null) {
-                if (committedSlots.has(i)) {
-                  processedLengths.set(i, fullTranscript.length);
-                  interimTranscript = '';
-                  continue;
-                }
                 console.log(`[VG] session=${sessionId} slot=${i} FAST-PATH score=${score}`);
-                committedSlots.add(i);
-                processedLengths.set(i, fullTranscript.length);
-                setInterimText('');
-                commitScore(score);
-                interimTranscript = '';
-                continue;
+                commitAndRotateSession(score, i, fullTranscript);
+                return;
               }
             }
             // No score yet → show delta in orange interim box
-            interimTranscript = delta;
+            interimTranscript = fullTranscript;
             continue;
           }
 
           // ── Standard path: final result, process unprocessed delta ──
           processedLengths.set(i, fullTranscript.length);
-          if (committedSlots.has(i)) continue;
-          const score = parseVietnameseScore(delta);
+          const score = parseVietnameseScore(fullTranscript) ?? parseVietnameseScore(delta);
           console.log(`[VG] session=${sessionId} slot=${i} STANDARD-PATH score=${score} delta="${delta}"`);
           setInterimText('');
           if (score !== null) {
-            committedSlots.add(i);
-            commitScore(score);
-          } else if (delta.length > 2) {
+            commitAndRotateSession(score, i, fullTranscript);
+            return;
+          } else if (fullTranscript.length > 2) {
             setLastCommand(`❓ Không nhận ra: "${delta}"`);
           }
         }
@@ -730,7 +734,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       };
 
       recognition.onend = () => {
-        console.log(`[VG] onend session=${sessionId} isCurrent=${isCurrentSession()} intentionalStop=${intentionalStopRef.current}`);
+        console.log(`[VG] onend session=${sessionId} isCurrent=${isCurrentSession()} intentionalStop=${intentionalStopRef.current} sessionClosed=${sessionClosed}`);
         if (!isCurrentSession()) return;
 
         recognitionRef.current = null;
