@@ -211,8 +211,19 @@ const GradeTableRow = React.memo((
       <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ background: '#F1F0EC', color: '#787774' }}>{student.stt}</span>
     </td>
     <td className="px-4 py-2.5 text-sm font-medium" style={{ color: student.highlight ? '#6B7CDB' : '#1A1A1A' }}>
-      {student.name}
-      {student.highlight && <span className="ml-2 text-xs" style={{ color: '#6B7CDB' }}>← vừa điền</span>}
+      <div className="flex items-center gap-2">
+        <span>{student.name}</span>
+        <span
+          className="text-xs shrink-0"
+          style={{
+            width: '72px',
+            color: '#6B7CDB',
+            visibility: student.highlight ? 'visible' : 'hidden',
+          }}
+        >
+          ← vừa điền
+        </span>
+      </div>
     </td>
     {scoreColKeys.map(k => {
       const isActiveCell = isActiveRow && activeColKey === k;
@@ -276,6 +287,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
   const activeCellRef = useRef<ActiveCell | null>(null);
   const importedFileRef = useRef<ImportedFile | null>(null);
   const activeTrRef = useRef<HTMLTableRowElement | null>(null);
+  const lastScrolledRowRef = useRef<number | null>(null);
   // Distinguishes user-initiated stop from Chrome auto-stopping the engine
   const intentionalStopRef = useRef(false);
   // Watchdog: force-restart if Chrome freezes without firing onend
@@ -308,8 +320,14 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
 
   // Auto-scroll active row into view
   useEffect(() => {
+    if (!activeCell) {
+      lastScrolledRowRef.current = null;
+      return;
+    }
+    if (lastScrolledRowRef.current === activeCell.studentIdx) return;
     if (activeTrRef.current) {
-      activeTrRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      activeTrRef.current.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+      lastScrolledRowRef.current = activeCell.studentIdx;
     }
   }, [activeCell]);
 
