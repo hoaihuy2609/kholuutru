@@ -640,6 +640,9 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       // Chrome in continuous mode APPENDS new speech to the same slot rather than
       // creating a new slot — so we must process only the NEW (delta) portion.
       const processedLengths = new Map<number, number>();
+      // Once a slot commits a score, block all future events for that slot.
+      // Chrome can append new speech to old slots, causing double-commits.
+      const committedSlots = new Set<number>();
       const isCurrentSession = () => recognitionSessionRef.current === sessionId;
 
       recognition.lang = 'vi-VN';
@@ -676,7 +679,13 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
             if (hasEndSignal(delta)) {
               const score = parseVietnameseScore(delta);
               if (score !== null) {
+                if (committedSlots.has(i)) {
+                  processedLengths.set(i, fullTranscript.length);
+                  interimTranscript = '';
+                  continue;
+                }
                 console.log(`[VG] session=${sessionId} slot=${i} FAST-PATH score=${score}`);
+                committedSlots.add(i);
                 processedLengths.set(i, fullTranscript.length);
                 setInterimText('');
                 commitScore(score);
@@ -691,10 +700,12 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
 
           // ── Standard path: final result, process unprocessed delta ──
           processedLengths.set(i, fullTranscript.length);
+          if (committedSlots.has(i)) continue;
           const score = parseVietnameseScore(delta);
           console.log(`[VG] session=${sessionId} slot=${i} STANDARD-PATH score=${score} delta="${delta}"`);
           setInterimText('');
           if (score !== null) {
+            committedSlots.add(i);
             commitScore(score);
           } else if (delta.length > 2) {
             setLastCommand(`❓ Không nhận ra: "${delta}"`);
@@ -719,7 +730,7 @@ const VoiceGrader: React.FC<{ onShowToast: (msg: string, type: 'success' | 'erro
       };
 
       recognition.onend = () => {
-        console.log(`[VG] onend session=${sessionId} isCurrent=${isCurrentSession()} intentionalStop=${intentionalStopRef.current} seenSlots=[${[...seenFinalIndices].join(',')}]`);
+        console.log(`[VG] onend session=${sessionId} isCurrent=${isCurrentSession()} intentionalStop=${intentionalStopRef.current}`);
         if (!isCurrentSession()) return;
 
         recognitionRef.current = null;
