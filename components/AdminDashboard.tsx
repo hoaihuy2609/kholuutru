@@ -3,7 +3,7 @@ import { supabase } from '../src/lib/supabase';
 import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import {
     Users, UserPlus, Trash2, Search, RefreshCw,
-    ShieldCheck, Monitor, Phone, Mic, Shuffle,
+    ShieldCheck, Monitor, Phone, Mic,
     ShieldAlert, LayoutDashboard,
     UserMinus, RotateCcw, Ban, ArrowLeft, X, CloudUpload, ClipboardList,
     Edit3, GraduationCap, Building2, Settings2, BarChart2, Gamepad2, BookOpen
@@ -15,7 +15,6 @@ const ExamManager = React.lazy(() => import('./ExamManager'));
 const AdminGitHubSync = React.lazy(() => import('./AdminGitHubSync'));
 const VoiceGrader = React.lazy(() => import('./VoiceGrader'));
 const AdminGameManager = React.lazy(() => import('./AdminGameManager'));
-const ExamShuffler = React.lazy(() => import('./ExamShuffler'));
 import { Exam, Lesson, FileStorage } from '../types';
 
 interface Student {
@@ -72,7 +71,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onBack, onShowToast, onUploadExamPdf, onSaveExam, onDeleteExam, onLoadExams,
     lessons, storedFiles, onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
 }) => {
-    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats' | 'cloud' | 'grader' | 'game' | 'shuffler'>('students');
+    const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats' | 'cloud' | 'grader' | 'game'>('students');
 
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -337,7 +336,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     { key: 'grader', label: 'Nhập Điểm', icon: <Mic className="w-4 h-4" /> },
                     { key: 'stats', label: 'Thống Kê', icon: <BarChart2 className="w-4 h-4" /> },
                     { key: 'cloud', label: 'Cloud Sync', icon: <CloudUpload className="w-4 h-4" /> },
-                    { key: 'shuffler', label: 'Trộn Đề', icon: <Shuffle className="w-4 h-4" /> },
                     { key: 'game', label: 'Luyện tập lý thuyết', icon: <BookOpen className="w-4 h-4" /> },
                 ].map(tab => (
                     <button
@@ -357,12 +355,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {/* ── Main scroll area ── */}
             <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6 custom-scrollbar">
 
-                {/* ── Exam Shuffler Tab ── */}
-                {activeTab === 'shuffler' && (
-                    <Suspense fallback={<div className="flex items-center justify-center py-24"><RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} /></div>}>
-                        <ExamShuffler onShowToast={onShowToast} />
-                    </Suspense>
-                )}
 
                 {/* ── Voice Grader Tab ── */}
                 {activeTab === 'grader' && (
