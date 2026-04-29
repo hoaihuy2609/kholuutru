@@ -111,11 +111,27 @@ const ExamDetailModal: React.FC<{ paper: ExamPaperData; title: string; gradeColo
 
               {/* Statements for đúng/sai */}
               {q.type === 'dung_sai' && q.statements && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '2px' }}>
                   {q.statements.map(stmt => (
-                    <div key={stmt.label} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', borderRadius: '10px', background: '#fff', border: '1px solid #E9E9E7' }}>
-                      <span style={{ fontWeight: 700, fontSize: '14px', color: gradeColor, minWidth: '20px' }}>{stmt.label.toUpperCase()}.</span>
-                      <span style={{ fontSize: '14px', lineHeight: 1.7, color: '#1A1A1A' }}>{renderMath(stmt.text)}</span>
+                    <div key={stmt.label} style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '12px',
+                      padding: '12px 16px', borderRadius: '10px',
+                      background: '#fff', border: '1px solid #E9E9E7',
+                    }}>
+                      {/* Badge label */}
+                      <div style={{
+                        width: '26px', height: '26px', borderRadius: '8px', flexShrink: 0,
+                        background: gradeColor, display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', marginTop: '1px',
+                      }}>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#fff', lineHeight: 1 }}>
+                          {stmt.label.toUpperCase()}
+                        </span>
+                      </div>
+                      {/* Statement text + KaTeX */}
+                      <div style={{ flex: 1, fontSize: '14px', lineHeight: '26px', color: '#1A1A1A', wordBreak: 'break-word' }}>
+                        {renderMath(stmt.text)}
+                      </div>
                     </div>
                   ))}
                 </div>
