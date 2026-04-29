@@ -12,6 +12,7 @@ import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import SolutionEditor from './SolutionEditor';
+import ExamPaperEditor from './ExamPaperEditor';
 
 interface AdminBlogEditorProps {
     blog: BlogPost | null;
@@ -25,7 +26,7 @@ interface AdminBlogEditorProps {
 const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
 const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
-    const [editorMode, setEditorMode] = useState<'markdown' | 'solution'>('markdown');
+    const [editorMode, setEditorMode] = useState<'markdown' | 'solution' | 'exam_paper'>('markdown');
     const [pendingSync, setPendingSync] = useState(false); // flag cần sync lên Telegram
     const [isSyncingBlog, setIsSyncingBlog] = useState(false);
 
@@ -55,6 +56,8 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                 const parsed = JSON.parse(blog.content || '{}');
                 if (parsed.type === 'physics_solution') {
                     setEditorMode('solution');
+                } else if (parsed.type === 'exam_paper') {
+                    setEditorMode('exam_paper');
                 }
             } catch (e) {
                 setEditorMode('markdown');
@@ -209,6 +212,29 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         />;
     }
 
+    if (editorMode === 'exam_paper') {
+        return (
+            <div className="max-w-[1920px] w-full mx-auto p-4 md:p-8 animate-fade-in">
+                <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                    <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium hover:text-indigo-600 transition-colors" style={{ color: '#787774' }}>
+                        <ChevronLeft className="w-4 h-4" /> Quay lại
+                    </button>
+                    <div className="flex items-center gap-3 bg-white p-1 rounded-xl border border-[#E9E9E7]">
+                        <button onClick={() => setEditorMode('markdown')} className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-[#787774] hover:bg-gray-50">Markdown</button>
+                        <button onClick={() => setEditorMode('solution')} className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-[#787774] hover:bg-gray-50">Lời Giải (LaTeX)</button>
+                        <button className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all bg-[#F3ECF8] text-[#9065B0]">Soạn Đề</button>
+                    </div>
+                </div>
+                <ExamPaperEditor
+                    saveBlog={saveBlog}
+                    syncBlogs={syncBlogs}
+                    existingBlog={blog}
+                    onSaved={() => { onBack(); }}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="max-w-[1920px] w-full mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20">
             {/* Toast */}
@@ -260,6 +286,12 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                         className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-[#787774] hover:bg-gray-50"
                     >
                         Lời Giải (LaTeX)
+                    </button>
+                    <button
+                        onClick={() => setEditorMode('exam_paper')}
+                        className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-[#787774] hover:bg-gray-50"
+                    >
+                        Soạn Đề
                     </button>
                 </div>
 

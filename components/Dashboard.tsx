@@ -3,6 +3,8 @@ import { GradeLevel } from '../types';
 import { CURRICULUM } from '../constants';
 import { FileText, Folder, Quote, Atom, Zap, Activity, Trophy, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import CountdownTimer from './CountdownTimer';
+import WeeklyExamViewer from './WeeklyExamViewer';
+import { BlogPost } from '../types';
 
 interface LeaderEntry {
   name: string;
@@ -20,6 +22,7 @@ interface DashboardProps {
   onLoadLeaderboard: () => Promise<LeaderEntry[][]>;
   previewMode?: GradeLevel | null;
   studentGrade?: number | null;
+  getBlogs: (isAdmin: boolean) => Promise<BlogPost[]>;
 }
 
 const EinsteinQuotes = [
@@ -340,7 +343,7 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────
 
-const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard, previewMode, studentGrade }) => {
+const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard, previewMode, studentGrade, getBlogs }) => {
   const [quote, setQuote] = useState('');
 
   useEffect(() => {
@@ -445,6 +448,14 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCou
       {/* ── Countdown Timer ── */}
       <CountdownTimer isAdmin={isAdmin} />
 
+      {/* ── Đề Cuối Tuần ── */}
+      {(isAdmin || studentGrade) && (
+        <WeeklyExamViewer
+          getBlogs={getBlogs}
+          studentGrade={studentGrade ?? null}
+          isAdmin={isAdmin}
+        />
+      )}
 
 
       {/* ── Grade Selection ── */}
