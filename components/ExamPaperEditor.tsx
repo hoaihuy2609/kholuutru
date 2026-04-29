@@ -1,5 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { BlogPost } from '../types';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 import { Plus, Trash2, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, ChevronUp, ChevronDown, Save, Upload, X, CheckCircle, AlertCircle } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -29,13 +31,11 @@ function renderMath(text: string): React.ReactNode {
     if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
       const math = part.slice(1, -1);
       try {
-        const katex = (window as any).katex;
-        if (katex) {
-          const html = katex.renderToString(math, { throwOnError: false });
-          return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
-        }
-      } catch { /* fallback */ }
-      return <span key={i} style={{ color: '#9065B0', fontStyle: 'italic' }}>{part}</span>;
+        const html = katex.renderToString(math, { throwOnError: false });
+        return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
+      } catch {
+        return <span key={i} style={{ color: '#9065B0', fontStyle: 'italic' }}>{part}</span>;
+      }
     }
     return <span key={i}>{part}</span>;
   });
