@@ -255,6 +255,30 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
   };
 
   const handleSync = async () => {
+    // Luôn lưu trước khi sync để đảm bảo nội dung hiện tại được đẩy lên
+    setSaving(true);
+    const data: ExamPaperData = { type: 'exam_paper', grade, week, questions };
+    const title = `Đề cuối tuần ${week} – Lớp ${grade}`;
+    const blog: Partial<BlogPost> = {
+      ...(existingBlog?.id ? { id: existingBlog.id } : {}),
+      title,
+      summary: `1 câu tự luận + 1 câu đúng/sai – Lớp ${grade}`,
+      content: JSON.stringify(data),
+      category: 'exam_paper',
+      tags: [`lop-${grade}`, 'de-cuoi-tuan'],
+      grade,
+      is_published: true,
+      cover_image: '',
+    };
+    const saved = await saveBlog(blog);
+    setSaving(false);
+    if (!saved) {
+      showToast('Lưu thất bại, không thể sync!', false);
+      return;
+    }
+    // Xóa cache 15 phút để học sinh thấy ngay sau sync
+    localStorage.removeItem('pv_blog_last_fetch');
+
     setSyncing(true);
     setSyncPct(0);
     const result = await syncBlogs((pct) => setSyncPct(pct));
