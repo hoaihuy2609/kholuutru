@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { BlogPost } from '../types';
 import { FileText, ChevronRight, X, BookOpen, CheckSquare, ChevronLeft } from 'lucide-react';
 import katex from 'katex';
@@ -81,12 +82,19 @@ const ExamDetailModal: React.FC<{
   const q = paper.questions[activeQ];
   const total = paper.questions.length;
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   // Scroll content to top whenever question changes
   useEffect(() => {
     if (contentRef.current) contentRef.current.scrollTop = 0;
   }, [activeQ]);
 
-  // Close on Escape key
+  // Close on Escape key + arrow nav
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -97,7 +105,7 @@ const ExamDetailModal: React.FC<{
     return () => window.removeEventListener('keydown', handler);
   }, [activeQ, total, onClose]);
 
-  return (
+  return ReactDOM.createPortal(
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 999,
@@ -355,7 +363,8 @@ const ExamDetailModal: React.FC<{
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
