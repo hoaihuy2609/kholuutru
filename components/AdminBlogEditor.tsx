@@ -200,42 +200,6 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         { icon: <AlignJustify className="w-4 h-4" />, tip: 'Căn đều', action: () => insertTextAtCursor('<div align="justify">\n\n', '\n\n</div>') },
     ];
 
-    if (editorMode === 'solution') {
-        return <SolutionEditor
-            blog={blog}
-            onBack={onBack}
-            onSaved={onSaved}
-            saveBlog={saveBlog}
-            syncBlogs={syncBlogs}
-            deleteBlog={deleteBlog}
-            switchToMarkdown={() => setEditorMode('markdown')}
-            switchToExamPaper={() => setEditorMode('exam_paper')}
-        />;
-    }
-
-    if (editorMode === 'exam_paper') {
-        return (
-            <div className="max-w-[1920px] w-full mx-auto p-4 md:p-8 animate-fade-in">
-                <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-                    <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium hover:text-indigo-600 transition-colors" style={{ color: '#787774' }}>
-                        <ChevronLeft className="w-4 h-4" /> Quay lại
-                    </button>
-                    <div className="flex items-center gap-3 bg-white p-1 rounded-xl border border-[#E9E9E7]">
-                        <button onClick={() => setEditorMode('markdown')} className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-[#787774] hover:bg-gray-50">Markdown</button>
-                        <button onClick={() => setEditorMode('solution')} className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-[#787774] hover:bg-gray-50">Lời Giải (LaTeX)</button>
-                        <button className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all bg-[#F3ECF8] text-[#9065B0]">Soạn Đề</button>
-                    </div>
-                </div>
-                <ExamPaperEditor
-                    saveBlog={saveBlog}
-                    syncBlogs={syncBlogs}
-                    existingBlog={blog}
-                    onSaved={() => { onBack(); }}
-                />
-            </div>
-        );
-    }
-
     return (
         <div className="max-w-[1920px] w-full mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20">
             {/* Toast */}
@@ -264,67 +228,92 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                 </div>
             )}
 
-
-            {/* Top Bar */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-1.5 text-sm font-medium hover:text-indigo-600 transition-colors"
-                    style={{ color: '#787774' }}
-                >
-                    <ChevronLeft className="w-4 h-4" /> Quay lại
-                </button>
-
-                <div className="flex items-center gap-3 bg-white p-1 rounded-xl border border-[#E9E9E7]">
+            {/* ═══ UNIFIED Top Bar ═══ */}
+            <div className="flex items-center" style={{ gap: '12px' }}>
+                <div style={{ flex: 1 }}>
                     <button
-                        onClick={() => setEditorMode('markdown')}
-                        className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all bg-[#EEF0FB] text-[#6B7CDB]"
+                        onClick={onBack}
+                        className="flex items-center gap-1.5 text-sm font-medium hover:text-indigo-600 transition-colors"
+                        style={{ color: '#787774' }}
                     >
-                        Markdown
-                    </button>
-                    <button
-                        onClick={() => setEditorMode('solution')}
-                        className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-[#787774] hover:bg-gray-50"
-                    >
-                        Lời Giải (LaTeX)
-                    </button>
-                    <button
-                        onClick={() => setEditorMode('exam_paper')}
-                        className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all text-[#787774] hover:bg-gray-50"
-                    >
-                        Soạn Đề
+                        <ChevronLeft className="w-4 h-4" /> Quay lại
                     </button>
                 </div>
 
-                <div className="flex items-center gap-3 flex-wrap">
-                    {blog && (
+                <div className="flex items-center bg-white p-1 rounded-xl border border-[#E9E9E7]">
+                    {([
+                        { key: 'markdown' as const, label: 'Markdown' },
+                        { key: 'solution' as const, label: 'Lời Giải (LaTeX)' },
+                        { key: 'exam_paper' as const, label: 'Soạn Đề' },
+                    ]).map(tab => (
                         <button
-                            onClick={handleDelete}
-                            disabled={isSaving || isSyncingBlog}
-                            className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-red-50 text-red-600 transition-colors disabled:opacity-50"
+                            key={tab.key}
+                            onClick={() => setEditorMode(tab.key)}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                                editorMode === tab.key
+                                    ? 'bg-[#EEF0FB] text-[#6B7CDB]'
+                                    : 'text-[#787774] hover:bg-gray-50'
+                            }`}
                         >
-                            <Trash2 className="w-4 h-4" /> Xóa bài
+                            {tab.label}
                         </button>
+                    ))}
+                </div>
+
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' as const }}>
+                    {editorMode === 'markdown' && (
+                        <>
+                            {blog && (
+                                <button
+                                    onClick={handleDelete}
+                                    disabled={isSaving || isSyncingBlog}
+                                    className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-red-50 text-red-600 transition-colors disabled:opacity-50"
+                                >
+                                    <Trash2 className="w-4 h-4" /> Xóa bài
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setIsPreview(!isPreview)}
+                                className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all"
+                                style={{ background: '#F1F0EC', color: '#1A1A1A' }}
+                            >
+                                {isPreview ? <><PenTool className="w-4 h-4" /> Chỉnh sửa</> : <><Eye className="w-4 h-4" /> Xem trước</>}
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={isSaving || isSyncingBlog}
+                                className="px-6 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60"
+                            >
+                                <Save className="w-4 h-4" />
+                                {isSaving ? 'Đang lưu...' : isSyncingBlog ? 'Đang sync...' : blog ? 'Cập nhật' : 'Đăng bài'}
+                            </button>
+                        </>
                     )}
-
-                    <button
-                        onClick={() => setIsPreview(!isPreview)}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all"
-                        style={{ background: '#F1F0EC', color: '#1A1A1A' }}
-                    >
-                        {isPreview ? <><PenTool className="w-4 h-4" /> Chỉnh sửa</> : <><Eye className="w-4 h-4" /> Xem trước</>}
-                    </button>
-
-                    <button
-                        onClick={handleSave}
-                        disabled={isSaving || isSyncingBlog}
-                        className="px-6 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60"
-                    >
-                        <Save className="w-4 h-4" />
-                        {isSaving ? 'Đang lưu...' : isSyncingBlog ? 'Đang sync...' : blog ? 'Cập nhật' : 'Đăng bài'}
-                    </button>
                 </div>
             </div>
+
+            {/* ═══ CONTENT ═══ */}
+            {editorMode === 'solution' && (
+                <SolutionEditor
+                    blog={blog}
+                    onSaved={onSaved}
+                    saveBlog={saveBlog}
+                    syncBlogs={syncBlogs}
+                    deleteBlog={deleteBlog}
+                    hideTopBar
+                />
+            )}
+
+            {editorMode === 'exam_paper' && (
+                <ExamPaperEditor
+                    saveBlog={saveBlog}
+                    syncBlogs={syncBlogs}
+                    existingBlog={blog}
+                    onSaved={() => { onBack(); }}
+                />
+            )}
+
+            {editorMode === 'markdown' && (
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Editor Area */}
@@ -563,6 +552,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                 </div>
 
             </div>
+            )}
         </div>
     );
 };

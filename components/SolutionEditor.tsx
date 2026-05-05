@@ -336,10 +336,11 @@ interface SolutionEditorProps {
   onBack?: () => void;
   switchToMarkdown?: () => void;
   switchToExamPaper?: () => void;
+  hideTopBar?: boolean;
 }
 
 export default function SolutionEditor({
-  blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper
+  blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar
 }: SolutionEditorProps) {
   const [examName,   setExamName]   = useState("");
   const [questions,  setQuestions]  = useState<Question[]>([emptyQuestion()]);
@@ -514,10 +515,11 @@ export default function SolutionEditor({
   // RENDER
   // ─────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-[1920px] w-full mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20 font-sans">
+    <div className={hideTopBar ? "space-y-6 font-sans" : "max-w-[1920px] w-full mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20 font-sans"}>
       <style>{`.katex { color: #1A1A1A !important; }`}</style>
 
-      {/* ── Top Bar ── */}
+      {/* ── Top Bar ── (hidden when parent manages it) */}
+      {!hideTopBar && (
       <div className="flex items-center justify-between flex-wrap gap-3">
         {onBack && (
           <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium text-[#787774] hover:text-indigo-600 transition-colors">
@@ -552,6 +554,7 @@ export default function SolutionEditor({
           </button>
         </div>
       </div>
+      )}
 
       {/* ── Publish settings ── */}
       <div className="bg-white p-4 rounded-2xl border border-[#E9E9E7] shadow-sm flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 relative z-10">
