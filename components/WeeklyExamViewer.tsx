@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BlogPost } from '../types';
-import { FileText, ChevronRight, X, BookOpen, CheckSquare } from 'lucide-react';
+import { FileText, ChevronRight, X, BookOpen, CheckSquare, ChevronLeft } from 'lucide-react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
@@ -45,7 +45,7 @@ function renderMath(text: string): React.ReactNode {
 function RenderBlock({ block }: { block: ContentBlock }) {
   if (block.kind === 'image') {
     return (
-      <div style={{ margin: '8px 0', textAlign: block.align }}>
+      <div style={{ margin: '10px 0', textAlign: block.align }}>
         <img
           src={block.url}
           alt=""
@@ -60,84 +60,299 @@ function RenderBlock({ block }: { block: ContentBlock }) {
     );
   }
   return (
-    <p style={{ margin: '6px 0', fontSize: '14px', lineHeight: 1.8, color: '#1A1A1A' }}>
+    <p style={{ margin: '6px 0', fontSize: '14.5px', lineHeight: 1.85, color: '#1A1A1A' }}>
       {renderMath(block.value)}
     </p>
   );
 }
 
 // ── Full exam detail modal ─────────────────────────────────────────
-const ExamDetailModal: React.FC<{ paper: ExamPaperData; title: string; gradeColor: string; onClose: () => void }> = ({ paper, title, gradeColor, onClose }) => {
+const ExamDetailModal: React.FC<{
+  paper: ExamPaperData;
+  title: string;
+  gradeColor: string;
+  gradeBg: string;
+  gradeBorder: string;
+  onClose: () => void;
+}> = ({ paper, title, gradeColor, gradeBg, gradeBorder, onClose }) => {
+  const [activeQ, setActiveQ] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const q = paper.questions[activeQ];
+  const total = paper.questions.length;
+
+  // Scroll content to top whenever question changes
+  useEffect(() => {
+    if (contentRef.current) contentRef.current.scrollTop = 0;
+  }, [activeQ]);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft' && activeQ > 0) setActiveQ(p => p - 1);
+      if (e.key === 'ArrowRight' && activeQ < total - 1) setActiveQ(p => p + 1);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [activeQ, total, onClose]);
+
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '720px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 16px 48px rgba(0,0,0,0.18)' }}>
-        {/* Modal header */}
-        <div style={{ position: 'sticky', top: 0, background: '#fff', borderBottom: '1px solid #E9E9E7', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1, borderRadius: '16px 16px 0 0' }}>
-          <div>
-            <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#1A1A1A', margin: 0 }}>{title}</h2>
-            <p style={{ fontSize: '12px', color: '#AEACA8', margin: '2px 0 0' }}>
-              Lớp {paper.grade} · {paper.week}
-            </p>
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 999,
+        background: 'rgba(26,26,26,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '20px',
+        backdropFilter: 'blur(2px)',
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        style={{
+          background: '#FFFFFF',
+          border: '1px solid #E9E9E7',
+          borderRadius: '14px',
+          boxShadow: '0 16px 48px rgba(0,0,0,0.15)',
+          width: '100%',
+          maxWidth: '960px',
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: '88vh',
+          overflow: 'hidden',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ── Modal Header ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 20px',
+          borderBottom: '1px solid #E9E9E7',
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '28px', height: '28px', borderRadius: '8px',
+              background: gradeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <FileText style={{ width: '14px', height: '14px', color: '#fff' }} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#1A1A1A', margin: 0, lineHeight: 1.3 }}>{title}</h2>
+              <p style={{ fontSize: '11px', color: '#AEACA8', margin: 0 }}>
+                Lớp {paper.grade} · {paper.week} · {total} câu
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} style={{ padding: '6px', borderRadius: '8px', border: 'none', background: '#F1F0EC', cursor: 'pointer', color: '#787774', display: 'flex' }}>
-            <X className="w-4 h-4" />
+          <button
+            onClick={onClose}
+            style={{
+              padding: '7px', borderRadius: '8px', border: 'none',
+              background: 'transparent', cursor: 'pointer', color: '#787774',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#F1F0EC')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            title="Đóng (Esc)"
+          >
+            <X style={{ width: '16px', height: '16px' }} />
           </button>
         </div>
 
-        {/* Questions */}
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {paper.questions.map((q, qi) => (
-            <div key={qi}>
-              {/* Question label */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: gradeColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {q.type === 'tu_luan'
-                    ? <BookOpen className="w-4 h-4 text-white" style={{ color: '#fff' }} />
-                    : <CheckSquare className="w-4 h-4" style={{ color: '#fff' }} />}
-                </div>
-                <div>
-                  <span style={{ fontWeight: 700, fontSize: '14px', color: '#1A1A1A' }}>Câu {qi + 1}: </span>
-                  <span style={{ fontSize: '13px', color: gradeColor, fontWeight: 600 }}>
-                    {q.type === 'tu_luan' ? 'Tự Luận' : 'Đúng / Sai'}
-                  </span>
-                </div>
-              </div>
+        {/* ── Modal Body: Sidebar + Content ── */}
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
 
-              {/* Content blocks */}
-              <div style={{ padding: '14px 16px', background: '#F7F6F3', borderRadius: '10px', marginBottom: q.type === 'dung_sai' ? '12px' : 0 }}>
-                {q.content.map(block => <RenderBlock key={block.id} block={block} />)}
-              </div>
-
-              {/* Statements for đúng/sai */}
-              {q.type === 'dung_sai' && q.statements && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '2px' }}>
-                  {q.statements.map(stmt => (
-                    <div key={stmt.label} style={{
-                      display: 'flex', alignItems: 'flex-start', gap: '12px',
-                      padding: '12px 16px', borderRadius: '10px',
-                      background: '#fff', border: '1px solid #E9E9E7',
-                    }}>
-                      {/* Badge label */}
-                      <div style={{
-                        width: '26px', height: '26px', borderRadius: '8px', flexShrink: 0,
-                        background: gradeColor, display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', marginTop: '1px',
-                      }}>
-                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#fff', lineHeight: 1 }}>
-                          {stmt.label.toUpperCase()}
-                        </span>
-                      </div>
-                      {/* Statement text + KaTeX */}
-                      <div style={{ flex: 1, fontSize: '14px', lineHeight: '26px', color: '#1A1A1A', wordBreak: 'break-word' }}>
-                        {renderMath(stmt.text)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {/* Sidebar - Question List */}
+          <div style={{
+            width: '170px', flexShrink: 0,
+            borderRight: '1px solid #E9E9E7',
+            background: '#FAFAF9',
+            overflowY: 'auto',
+            padding: '10px 8px',
+            display: 'flex', flexDirection: 'column', gap: '4px',
+          }}>
+            <div style={{
+              fontSize: '10px', fontWeight: 700, color: '#AEACA8',
+              textTransform: 'uppercase', letterSpacing: '0.06em',
+              padding: '0 6px 6px',
+            }}>
+              Danh sách câu
             </div>
-          ))}
+            {paper.questions.map((q, qi) => {
+              const isActive = qi === activeQ;
+              return (
+                <button
+                  key={qi}
+                  onClick={() => setActiveQ(qi)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '8px 10px', borderRadius: '8px',
+                    border: `1px solid ${isActive ? gradeColor : 'transparent'}`,
+                    background: isActive ? gradeBg : 'transparent',
+                    cursor: 'pointer', textAlign: 'left',
+                    transition: 'all 0.15s',
+                    width: '100%',
+                  }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#F1F0EC'; }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <div style={{
+                    width: '24px', height: '24px', borderRadius: '6px', flexShrink: 0,
+                    background: isActive ? gradeColor : '#E9E9E7',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {q.type === 'tu_luan'
+                      ? <BookOpen style={{ width: '12px', height: '12px', color: isActive ? '#fff' : '#787774' }} />
+                      : <CheckSquare style={{ width: '12px', height: '12px', color: isActive ? '#fff' : '#787774' }} />}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '12px', fontWeight: 600,
+                      color: isActive ? gradeColor : '#1A1A1A',
+                      lineHeight: 1.2,
+                    }}>
+                      Câu {qi + 1}
+                    </div>
+                    <div style={{ fontSize: '10px', color: isActive ? gradeColor : '#AEACA8', opacity: 0.85 }}>
+                      {q.type === 'tu_luan' ? 'Tự luận' : 'Đúng / Sai'}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Question Content */}
+          <div
+            ref={contentRef}
+            style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', minWidth: 0 }}
+          >
+            {/* Question header badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '9px',
+                background: gradeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                {q.type === 'tu_luan'
+                  ? <BookOpen style={{ width: '16px', height: '16px', color: '#fff' }} />
+                  : <CheckSquare style={{ width: '16px', height: '16px', color: '#fff' }} />}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                <span style={{ fontWeight: 700, fontSize: '16px', color: '#1A1A1A' }}>
+                  Câu {activeQ + 1}
+                </span>
+                <span style={{
+                  fontSize: '12px', fontWeight: 600, color: gradeColor,
+                  padding: '2px 8px', borderRadius: '6px', background: gradeBg,
+                  border: `1px solid ${gradeBorder}`,
+                }}>
+                  {q.type === 'tu_luan' ? 'Tự Luận' : 'Đúng / Sai'}
+                </span>
+              </div>
+            </div>
+
+            {/* Content blocks */}
+            <div style={{
+              padding: '16px 18px', background: '#F7F6F3',
+              borderRadius: '10px',
+              marginBottom: q.type === 'dung_sai' && q.statements?.length ? '14px' : 0,
+            }}>
+              {q.content.map(block => <RenderBlock key={block.id} block={block} />)}
+            </div>
+
+            {/* Statements for đúng/sai */}
+            {q.type === 'dung_sai' && q.statements && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {q.statements.map(stmt => (
+                  <div key={stmt.label} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '12px',
+                    padding: '12px 16px', borderRadius: '10px',
+                    background: '#fff', border: '1px solid #E9E9E7',
+                  }}>
+                    <div style={{
+                      width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
+                      background: gradeColor, display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', marginTop: '1px',
+                    }}>
+                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#fff', lineHeight: 1 }}>
+                        {stmt.label.toUpperCase()}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1, fontSize: '14.5px', lineHeight: '26px', color: '#1A1A1A', wordBreak: 'break-word' }}>
+                      {renderMath(stmt.text)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Modal Footer: Navigation ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 20px',
+          borderTop: '1px solid #E9E9E7',
+          flexShrink: 0,
+          background: '#FAFAF9',
+        }}>
+          {/* Câu trước */}
+          <button
+            onClick={() => setActiveQ(p => Math.max(0, p - 1))}
+            disabled={activeQ === 0}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '8px 16px', borderRadius: '8px',
+              border: '1px solid #E9E9E7',
+              background: activeQ === 0 ? '#F7F6F3' : '#fff',
+              color: activeQ === 0 ? '#CFCFCB' : '#1A1A1A',
+              fontSize: '13px', fontWeight: 600, cursor: activeQ === 0 ? 'default' : 'pointer',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { if (activeQ > 0) e.currentTarget.style.background = '#F1F0EC'; }}
+            onMouseLeave={e => { if (activeQ > 0) e.currentTarget.style.background = '#fff'; }}
+          >
+            <ChevronLeft style={{ width: '15px', height: '15px' }} />
+            Câu trước
+          </button>
+
+          {/* Dot indicators */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {paper.questions.map((_, qi) => (
+              <button
+                key={qi}
+                onClick={() => setActiveQ(qi)}
+                style={{
+                  width: qi === activeQ ? '20px' : '7px',
+                  height: '7px', borderRadius: '4px', border: 'none',
+                  background: qi === activeQ ? gradeColor : '#D9D9D4',
+                  cursor: 'pointer', padding: 0,
+                  transition: 'all 0.2s ease',
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Câu sau */}
+          <button
+            onClick={() => setActiveQ(p => Math.min(total - 1, p + 1))}
+            disabled={activeQ === total - 1}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '8px 16px', borderRadius: '8px',
+              border: '1px solid #E9E9E7',
+              background: activeQ === total - 1 ? '#F7F6F3' : '#fff',
+              color: activeQ === total - 1 ? '#CFCFCB' : '#1A1A1A',
+              fontSize: '13px', fontWeight: 600, cursor: activeQ === total - 1 ? 'default' : 'pointer',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { if (activeQ < total - 1) e.currentTarget.style.background = '#F1F0EC'; }}
+            onMouseLeave={e => { if (activeQ < total - 1) e.currentTarget.style.background = '#fff'; }}
+          >
+            Câu sau
+            <ChevronRight style={{ width: '15px', height: '15px' }} />
+          </button>
         </div>
       </div>
     </div>
@@ -212,7 +427,7 @@ const WeeklyExamViewer: React.FC<WeeklyExamViewerProps> = ({ getBlogs, studentGr
             <FileText className="w-4 h-4" style={{ color: '#6B7CDB' }} />
             <span style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A1A' }}>Đề Cuối Tuần</span>
           </div>
-          {/* Grade tabs — admin sees all, student locked to their grade */}
+          {/* Grade tabs */}
           <div style={{ display: 'flex', gap: '6px' }}>
             {(isAdmin ? [10, 11, 12] : [studentGrade ?? 12]).map(g => {
               const c = GRADE_COLORS[g] ?? GRADE_COLORS[12];
@@ -245,7 +460,8 @@ const WeeklyExamViewer: React.FC<WeeklyExamViewerProps> = ({ getBlogs, studentGr
                 style={{
                   width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px',
                   padding: '12px 16px', borderBottom: '1px solid #F1F0EC', background: 'transparent',
-                  border: 'none', cursor: 'pointer', transition: 'background 0.15s',
+                  border: 'none', borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: '#F1F0EC',
+                  cursor: 'pointer', transition: 'background 0.15s',
                 }}
                 onMouseEnter={e => (e.currentTarget.style.background = gc.bg)}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -262,7 +478,7 @@ const WeeklyExamViewer: React.FC<WeeklyExamViewerProps> = ({ getBlogs, studentGr
                     {blog.title}
                   </p>
                   <p style={{ fontSize: '11px', color: '#AEACA8', margin: '2px 0 0' }}>
-                    1 tự luận · 1 đúng/sai
+                    {data.questions.filter(q => q.type === 'tu_luan').length} tự luận · {data.questions.filter(q => q.type === 'dung_sai').length} đúng/sai
                   </p>
                 </div>
                 <ChevronRight className="w-4 h-4" style={{ color: '#CFCFCB', flexShrink: 0 }} />
@@ -278,6 +494,8 @@ const WeeklyExamViewer: React.FC<WeeklyExamViewerProps> = ({ getBlogs, studentGr
           paper={selected.data}
           title={selected.blog.title}
           gradeColor={GRADE_COLORS[selected.data.grade]?.color ?? '#6B7CDB'}
+          gradeBg={GRADE_COLORS[selected.data.grade]?.bg ?? '#EEF0FB'}
+          gradeBorder={GRADE_COLORS[selected.data.grade]?.border ?? '#B8C1EF'}
           onClose={() => setSelected(null)}
         />
       )}
