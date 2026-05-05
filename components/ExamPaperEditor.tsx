@@ -91,7 +91,7 @@ const BlockEditor: React.FC<{
           {/* Block toolbar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', background: '#F7F6F3', borderBottom: '1px solid #E9E9E7' }}>
             <span style={{ fontSize: '10px', fontWeight: 700, color: '#AEACA8', textTransform: 'uppercase', flex: 1 }}>
-              {block.kind === 'text' ? '✏️ Văn bản / LaTeX' : '🖼 Ảnh'}
+              {block.kind === 'text' ? 'Văn bản / LaTeX' : 'Ảnh'}
             </span>
             <button onClick={() => move(block.id, -1)} disabled={idx === 0} title="Lên" style={iconBtn}><ChevronUp className="w-3 h-3" /></button>
             <button onClick={() => move(block.id, 1)} disabled={idx === blocks.length - 1} title="Xuống" style={iconBtn}><ChevronDown className="w-3 h-3" /></button>
@@ -300,7 +300,7 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1A1A', margin: 0 }}>📝 Soạn Đề Cuối Tuần</h2>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1A1A', margin: 0 }}>Soạn Đề Cuối Tuần</h2>
           {/* Grade selector */}
           <div style={{ display: 'flex', gap: '6px' }}>
             {[10, 11, 12].map(g => (

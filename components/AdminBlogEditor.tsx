@@ -128,10 +128,10 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         const result = await syncBlogs();
         setIsSyncingBlog(false);
         if (result.success) {
-            showToast(`🚀 Sync xong! ${result.blogCount} bài viết đã lên Telegram.`);
+            showToast(`Sync xong! ${result.blogCount} bài viết đã lên Telegram.`);
             setPendingSync(false);
         } else {
-            showToast('❌ Sync thất bại! Kiểm tra kết nối.', 'error');
+            showToast('Sync thất bại! Kiểm tra kết nối.', 'error');
         }
     };
 
@@ -142,20 +142,20 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         const ok = await deleteBlog(blog.id);
         if (!ok) {
             setIsSaving(false);
-            showToast('❌ Lỗi khi xóa!', 'error');
+            showToast('Lỗi khi xóa!', 'error');
             return;
         }
         // Sync lên Telegram NGAY để Telegram cũng phản ánh bài đã xóa
         // Nếu không sync trước, BlogList sẽ kéo lại bài cũ từ Telegram khi re-mount
-        showToast('🗑️ Đã xóa! Đang sync lên Telegram...');
+        showToast('Đã xóa! Đang sync lên Telegram...');
         setIsSyncingBlog(true);
         const result = await syncBlogs();
         setIsSyncingBlog(false);
         setIsSaving(false);
         if (result.success) {
-            showToast('✅ Đã xóa và sync xong!');
+            showToast('Đã xóa và sync xong!');
         } else {
-            showToast('⚠️ Đã xóa local. Sync thất bại — Telegram chưa cập nhật.', 'error');
+            showToast('Đã xóa local. Sync thất bại — Telegram chưa cập nhật.', 'error');
         }
         onBack();
     };
@@ -209,6 +209,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
             syncBlogs={syncBlogs}
             deleteBlog={deleteBlog}
             switchToMarkdown={() => setEditorMode('markdown')}
+            switchToExamPaper={() => setEditorMode('exam_paper')}
         />;
     }
 
@@ -403,7 +404,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                                     className="text-xs p-3 border border-t-0 mb-0 leading-relaxed"
                                     style={{ background: '#EEF0FB', color: '#3D3D8D', borderColor: '#C5CAFA' }}
                                 >
-                                    <strong>📖 Mẹo nhanh:</strong> <code className="bg-white/60 px-1 rounded">**đậm**</code> · <code className="bg-white/60 px-1 rounded">*nghiêng*</code> · <code className="bg-white/60 px-1 rounded">## Tiêu đề</code> · <code className="bg-white/60 px-1 rounded">$$E=mc^2$$</code> (LaTeX) · <code className="bg-white/60 px-1 rounded">&gt; trích dẫn</code> · <code className="bg-white/60 px-1 rounded">`code`</code>
+                                    <strong>Mẹo nhanh:</strong> <code className="bg-white/60 px-1 rounded">**đậm**</code> · <code className="bg-white/60 px-1 rounded">*nghiêng*</code> · <code className="bg-white/60 px-1 rounded">## Tiêu đề</code> · <code className="bg-white/60 px-1 rounded">$$E=mc^2$$</code> (LaTeX) · <code className="bg-white/60 px-1 rounded">&gt; trích dẫn</code> · <code className="bg-white/60 px-1 rounded">`code`</code>
                                 </div>
                             )}
 

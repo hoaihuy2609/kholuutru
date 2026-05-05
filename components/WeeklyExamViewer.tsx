@@ -460,7 +460,7 @@ const WeeklyExamViewer: React.FC<WeeklyExamViewerProps> = ({ getBlogs, studentGr
         <div style={{ maxHeight: '260px', overflowY: 'auto' }}>
           {visible.length === 0 ? (
             <div style={{ padding: '28px', textAlign: 'center' }}>
-              <p style={{ fontSize: '13px', color: '#AEACA8' }}>Chưa có đề tuần nào cho Lớp {gradeTab} 📭</p>
+              <p style={{ fontSize: '13px', color: '#AEACA8' }}>Chưa có đề tuần nào cho Lớp {gradeTab}</p>
             </div>
           ) : (
             visible.map(({ blog, data }) => (

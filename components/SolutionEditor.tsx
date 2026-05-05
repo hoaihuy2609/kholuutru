@@ -335,10 +335,11 @@ interface SolutionEditorProps {
   onSaved?: (blog: any) => void;
   onBack?: () => void;
   switchToMarkdown?: () => void;
+  switchToExamPaper?: () => void;
 }
 
 export default function SolutionEditor({
-  blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown
+  blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper
 }: SolutionEditorProps) {
   const [examName,   setExamName]   = useState("");
   const [questions,  setQuestions]  = useState<Question[]>([emptyQuestion()]);
@@ -528,6 +529,9 @@ export default function SolutionEditor({
             <button onClick={switchToMarkdown} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-[#787774] hover:bg-gray-50">Markdown</button>
           )}
           <button className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-[#EEF0FB] text-[#6B7CDB]">Lời Giải (LaTeX)</button>
+          {switchToExamPaper && (
+            <button onClick={switchToExamPaper} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-[#787774] hover:bg-gray-50">Soạn Đề</button>
+          )}
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {blog && deleteBlog && (
