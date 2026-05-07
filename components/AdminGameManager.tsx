@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Zap, Plus, Trash2, RefreshCw, CheckCircle2, AlertCircle, BookOpen, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
+import { Zap, Plus, Trash2, RefreshCw, CheckCircle2, AlertCircle, BookOpen, ChevronDown, ChevronUp, Lightbulb, Edit2, X as XIcon } from 'lucide-react';
 import { CURRICULUM } from '../constants';
 
 interface GameQuestion {
@@ -74,6 +74,9 @@ const AdminGameManager: React.FC<AdminGameManagerProps> = ({ onShowToast, worker
   const [parseError, setParseError] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [showExisting, setShowExisting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<GameQuestion | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const authHeader = { Authorization: `Bearer ${adminKey}`, 'Content-Type': 'application/json', Referer: window.location.origin };
 
@@ -163,6 +166,36 @@ const AdminGameManager: React.FC<AdminGameManagerProps> = ({ onShowToast, worker
       setExistingQuestions(prev => prev.filter(q => q.id !== qId));
     } catch (e: any) {
       onShowToast('Lỗi xóa: ' + e.message, 'error');
+    }
+  };
+
+  const openEdit = (q: GameQuestion) => {
+    setEditingId(q.id);
+    setEditDraft({ ...q });
+  };
+
+  const cancelEdit = () => { setEditingId(null); setEditDraft(null); };
+
+  const handleSaveEdit = async () => {
+    if (!editDraft || !editingId) return;
+    setIsSavingEdit(true);
+    try {
+      const res = await fetch(`${workerUrl}/game/questions/${editingId}`, {
+        method: 'PUT',
+        headers: authHeader,
+        body: JSON.stringify(editDraft),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).error || 'HTTP ' + res.status);
+      }
+      onShowToast('✅ Đã cập nhật câu hỏi!', 'success');
+      setExistingQuestions(prev => prev.map(q => q.id === editingId ? { ...editDraft } : q));
+      cancelEdit();
+    } catch (e: any) {
+      onShowToast('Lỗi lưu: ' + e.message, 'error');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -418,39 +451,168 @@ D. J
           ) : (
             <div className="divide-y" style={{ borderColor: '#E9E9E7', maxHeight: '480px', overflowY: 'auto' }}>
               {existingQuestions.map((q, i) => (
-                <div key={q.id} className="p-4 flex items-start gap-3 group/qrow hover:bg-[#FAFAF9] transition-colors">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded shrink-0 mt-0.5" style={{ background: gradeBg(q.grade), color: gradeColor(q.grade) }}>
-                    {gradeName(q.grade)}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm" style={{ color: '#1A1A1A' }}>
-                      <span className="font-medium text-[#AEACA8] mr-1">{i + 1}.</span>
-                      {q.question}
-                    </p>
-                    {q.topic && (
-                      <span className="inline-block text-[10px] mt-1 px-1.5 py-0.5 rounded" style={{ background: '#F3ECF8', color: '#9065B0' }}>
-                        {q.topic}
-                      </span>
-                    )}
-                    <p className="text-[11px] mt-1" style={{ color: '#448361' }}>
-                      ✓ {q.answer === 'A' ? q.option_a : q.answer === 'B' ? q.option_b : q.answer === 'C' ? q.option_c : q.option_d}
-                    </p>
-                    {q.explanation && (
-                      <p className="text-[10px] mt-0.5 flex items-center gap-1" style={{ color: '#D97706' }}>
-                        <Lightbulb className="w-3 h-3" /> Có giải thích
+                <div key={q.id}>
+                  {/* ── View row ── */}
+                  <div className="p-4 flex items-start gap-3 group/qrow hover:bg-[#FAFAF9] transition-colors">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded shrink-0 mt-0.5" style={{ background: gradeBg(q.grade), color: gradeColor(q.grade) }}>
+                      {gradeName(q.grade)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm" style={{ color: '#1A1A1A' }}>
+                        <span className="font-medium text-[#AEACA8] mr-1">{i + 1}.</span>
+                        {q.question}
                       </p>
-                    )}
+                      {q.topic && (
+                        <span className="inline-block text-[10px] mt-1 px-1.5 py-0.5 rounded" style={{ background: '#F3ECF8', color: '#9065B0' }}>
+                          {q.topic}
+                        </span>
+                      )}
+                      <p className="text-[11px] mt-1" style={{ color: '#448361' }}>
+                        ✓ {q.answer === 'A' ? q.option_a : q.answer === 'B' ? q.option_b : q.answer === 'C' ? q.option_c : q.option_d}
+                      </p>
+                      {q.explanation && (
+                        <p className="text-[10px] mt-0.5 flex items-center gap-1" style={{ color: '#D97706' }}>
+                          <Lightbulb className="w-3 h-3" /> Có giải thích
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => openEdit(q)}
+                        className="p-2 rounded-lg transition-colors opacity-0 group-hover/qrow:opacity-100"
+                        style={{ color: '#6B7CDB' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EEF0FB'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                        title="Chỉnh sửa câu hỏi"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(q.id, q.question)}
+                        className="p-2 rounded-lg transition-colors opacity-0 group-hover/qrow:opacity-100"
+                        style={{ color: '#E03E3E' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FEF2F2'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                        title="Xóa câu hỏi"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleDelete(q.id, q.question)}
-                    className="p-2 rounded-lg transition-colors opacity-0 group-hover/qrow:opacity-100 shrink-0"
-                    style={{ color: '#E03E3E' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#FEF2F2'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                    title="Xóa câu hỏi"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+
+                  {/* ── Inline edit form ── */}
+                  {editingId === q.id && editDraft && (
+                    <div className="px-4 pb-5 pt-2 border-t" style={{ background: '#F7F6F3', borderColor: '#E9E9E7' }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#6B7CDB' }}>✏️ Đang chỉnh sửa câu {i + 1}</span>
+                        <button onClick={cancelEdit} className="p-1 rounded" style={{ color: '#AEACA8' }}><XIcon className="w-4 h-4" /></button>
+                      </div>
+
+                      {/* Question */}
+                      <div className="space-y-2 mb-3">
+                        <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Câu hỏi</label>
+                        <textarea
+                          rows={3}
+                          value={editDraft.question}
+                          onChange={e => setEditDraft(d => d ? { ...d, question: e.target.value } : d)}
+                          className="w-full text-sm p-2.5 rounded-lg outline-none resize-y"
+                          style={{ border: '1px solid #E9E9E7', background: '#fff', color: '#1A1A1A' }}
+                          onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+                          onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
+                        />
+                      </div>
+
+                      {/* Options grid */}
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        {(['A', 'B', 'C', 'D'] as const).map(letter => {
+                          const fieldKey = `option_${letter.toLowerCase()}` as 'option_a' | 'option_b' | 'option_c' | 'option_d';
+                          const isAnswer = editDraft.answer === letter;
+                          return (
+                            <div key={letter} className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: isAnswer ? '#448361' : '#AEACA8' }}>
+                                {letter}
+                                {isAnswer && <span className="text-[9px] px-1 rounded" style={{ background: '#EAF3EE', color: '#448361' }}>✓ Đúng</span>}
+                              </label>
+                              <input
+                                type="text"
+                                value={editDraft[fieldKey]}
+                                onChange={e => setEditDraft(d => d ? { ...d, [fieldKey]: e.target.value } : d)}
+                                className="w-full text-sm px-2.5 py-1.5 rounded-lg outline-none"
+                                style={{
+                                  border: `1px solid ${isAnswer ? '#44836155' : '#E9E9E7'}`,
+                                  background: isAnswer ? '#EAF3EE' : '#fff',
+                                  color: '#1A1A1A',
+                                }}
+                                onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+                                onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = isAnswer ? '#44836155' : '#E9E9E7'}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Answer selector + explanation */}
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Đáp án đúng</label>
+                          <div className="flex gap-2">
+                            {(['A', 'B', 'C', 'D'] as const).map(letter => (
+                              <button
+                                key={letter}
+                                type="button"
+                                onClick={() => setEditDraft(d => d ? { ...d, answer: letter } : d)}
+                                className="w-9 h-9 rounded-lg text-sm font-bold transition-all"
+                                style={{
+                                  background: editDraft.answer === letter ? '#448361' : '#F1F0EC',
+                                  color: editDraft.answer === letter ? '#fff' : '#787774',
+                                  border: `1px solid ${editDraft.answer === letter ? '#448361' : '#E9E9E7'}`,
+                                }}
+                              >
+                                {letter}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#AEACA8' }}>Giải thích (tuỳ chọn)</label>
+                          <input
+                            type="text"
+                            placeholder="Giải thích đáp án..."
+                            value={editDraft.explanation || ''}
+                            onChange={e => setEditDraft(d => d ? { ...d, explanation: e.target.value || undefined } : d)}
+                            className="w-full text-sm px-2.5 py-1.5 rounded-lg outline-none"
+                            style={{ border: '1px solid #E9E9E7', background: '#fff', color: '#1A1A1A' }}
+                            onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+                            onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Save / Cancel */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveEdit}
+                          disabled={isSavingEdit}
+                          className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white transition-all disabled:opacity-60"
+                          style={{ background: '#448361' }}
+                          onMouseEnter={e => { if (!isSavingEdit) (e.currentTarget as HTMLElement).style.background = '#3A7254'; }}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#448361'}
+                        >
+                          {isSavingEdit ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                          {isSavingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                          style={{ background: '#F1F0EC', color: '#57564F', border: '1px solid #E9E9E7' }}
+                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E9E9E7'}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
+                        >
+                          Hủy
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -33,7 +33,7 @@ function corsHeaders(origin) {
   const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": allowed,
-    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, x-file-name",
   };
 }
@@ -290,6 +290,44 @@ export default {
       } catch (err) {
         console.error("[POST /game/questions]", err);
         return json({ error: "Lỗi lưu câu hỏi" }, 500, origin);
+      }
+    }
+
+    // ── PUT /game/questions/:id (Admin only) ─────────────────────
+    if (url.pathname.startsWith("/game/questions/") && request.method === "PUT") {
+      const auth = request.headers.get("Authorization") || "";
+      if (!env.ADMIN_KEY || auth !== `Bearer ${env.ADMIN_KEY}`) {
+        return json({ error: "Không có quyền" }, 401, origin);
+      }
+      const qId = url.pathname.replace("/game/questions/", "");
+      if (!qId) return json({ error: "Thiếu ID" }, 400, origin);
+      let body = {};
+      try { body = await request.json(); } catch {
+        return json({ error: "Body không hợp lệ" }, 400, origin);
+      }
+      const { question, option_a, option_b, option_c, option_d, answer, grade, topic, explanation } = body;
+      if (!question || !option_a || !option_b || !option_c || !option_d || !answer) {
+        return json({ error: "Thiếu thông tin bắt buộc" }, 400, origin);
+      }
+      if (!["A", "B", "C", "D"].includes(answer)) {
+        return json({ error: "Đáp án phải là A, B, C hoặc D" }, 400, origin);
+      }
+      try {
+        const info = await env.DB.prepare(
+          `UPDATE game_questions
+           SET question = ?, option_a = ?, option_b = ?, option_c = ?, option_d = ?,
+               answer = ?, grade = ?, topic = ?, explanation = ?
+           WHERE id = ?`
+        ).bind(
+          question, option_a, option_b, option_c, option_d,
+          answer, grade || 0, topic || null, explanation || null,
+          qId
+        ).run();
+        if (info.changes === 0) return json({ error: "Không tìm thấy câu hỏi" }, 404, origin);
+        return json({ success: true, id: qId }, 200, origin);
+      } catch (err) {
+        console.error("[PUT /game/questions]", err);
+        return json({ error: "Lỗi cập nhật câu hỏi" }, 500, origin);
       }
     }
 
