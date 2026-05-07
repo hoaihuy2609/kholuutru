@@ -4,8 +4,8 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import {
   Plus, Trash2, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
-  ChevronUp, ChevronDown, Save, Upload, CheckCircle, AlertCircle, RefreshCw,
-  FileText, ToggleLeft, ToggleRight,
+  ChevronUp, ChevronDown, Save, CheckCircle, AlertCircle, RefreshCw,
+  ToggleLeft, ToggleRight,
 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -218,11 +218,12 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
   const [questions, setQuestions] = useState<ExamQuestion[]>(
     existing?.questions ?? [emptyQuestion('tu_luan'), emptyQuestion('dung_sai')]
   );
+  const [isPublished, setIsPublished] = useState<boolean>(existingBlog?.is_published ?? false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncPct, setSyncPct] = useState(0);
 
-  // Toast — kiểu giống SolutionEditor (3 loại: success/error/warning)
+  // Toast — 3 loại giống SolutionEditor
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -248,31 +249,30 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
       category: 'exam_paper',
       tags: [`lop-${grade}`, 'de-cuoi-tuan'],
       grade,
-      is_published: true,
+      is_published: isPublished,
       cover_image: '',
     };
   };
 
-  const handleSave = async () => {
+  // Nút duy nhất — giống SolutionEditor:
+  // Nháp → chỉ lưu vào DB, không sync
+  // Công khai → lưu rồi sync lên Telegram ngay
+  const handleSubmit = async () => {
     setSaving(true);
-    const saved = await saveBlog(buildBlogPayload());
-    setSaving(false);
-    if (saved) {
-      showToast('Đã lưu đề! Nhấn "Lưu & Sync" để học sinh thấy ngay.', 'success');
-    } else {
-      showToast('Lưu thất bại, thử lại!', 'error');
+    if (isPublished) {
+      showToast('Đang lưu & sync lên Telegram...', 'warning');
     }
-  };
-
-  const handleSync = async () => {
-    setSaving(true);
-    showToast('Đang lưu & sync lên Telegram...', 'warning');
     const saved = await saveBlog(buildBlogPayload());
     setSaving(false);
     if (!saved) {
-      showToast('Lưu thất bại, không thể sync!', 'error');
+      showToast('Lưu thất bại, thử lại!', 'error');
       return;
     }
+    if (!isPublished) {
+      showToast('Đã lưu bản nháp. Bật "Công khai" khi sẵn sàng đăng.', 'success');
+      return;
+    }
+    // Công khai → sync luôn
     localStorage.removeItem('pv_blog_last_fetch');
     setSyncing(true);
     setSyncPct(0);
@@ -313,15 +313,21 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
 
       {/* ── Publish settings bar — giống SolutionEditor ── */}
       <div className="bg-white p-4 rounded-2xl border border-[#E9E9E7] shadow-sm flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
-        {/* Tiêu đề */}
-        <div className="flex items-center gap-2 shrink-0">
-          <FileText className="w-5 h-5 text-indigo-500" />
-          <span className="text-sm font-bold text-[#1A1A1A]">Soạn Đề Cuối Tuần</span>
+
+        {/* Toggle Nháp / Công khai — giống SolutionEditor */}
+        <div className="flex items-center gap-3 shrink-0">
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" className="sr-only peer" checked={isPublished} onChange={e => setIsPublished(e.target.checked)} />
+            <div className="w-[34px] h-[20px] bg-[#CFCFCB] rounded-full peer peer-checked:after:translate-x-[14px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600" />
+          </label>
+          <span className="text-xs font-semibold" style={{ color: isPublished ? '#448361' : '#787774' }}>
+            {isPublished ? '✓ Công khai' : '✎ Nháp'}
+          </span>
         </div>
 
         <div className="hidden lg:block w-px h-6 bg-[#E9E9E7]" />
 
-        {/* Grade selector — giống SolutionEditor */}
+        {/* Grade selector */}
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs font-bold text-[#AEACA8] uppercase shrink-0">Khối</span>
           <div className="flex bg-[#F7F6F3] p-1 rounded-lg border border-[#E9E9E7]">
@@ -461,17 +467,18 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
           </div>
         )}
 
-        {/* Buttons — giống SolutionEditor action bar */}
+        {/* Nút duy nhất — giống SolutionEditor */}
         <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={handleSave} disabled={saving || syncing}
-            className="px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 border border-[#E9E9E7] bg-white text-[#1A1A1A] hover:bg-[#F7F6F3] transition-colors disabled:opacity-50">
-            <Save className="w-4 h-4" />
-            {saving ? 'Đang lưu...' : 'Lưu đề'}
-          </button>
-          <button onClick={handleSync} disabled={saving || syncing}
+          <button onClick={handleSubmit} disabled={saving || syncing}
             className="px-8 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60 shadow-sm">
-            <Upload className="w-4 h-4" />
-            {syncing ? `Đang sync... ${syncPct}%` : 'Lưu & Sync lên Telegram'}
+            <Save className="w-4 h-4" />
+            {saving
+              ? 'Đang lưu...'
+              : syncing
+              ? `Đang sync... ${syncPct}%`
+              : isPublished
+              ? (existingBlog ? 'Cập nhật Đề Thi' : 'Đăng Đề Thi')
+              : (existingBlog ? 'Lưu Nháp' : 'Lưu Nháp')}
           </button>
         </div>
       </div>
