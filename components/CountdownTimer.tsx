@@ -82,6 +82,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin, studentGrade }
     const [activeGradeTab, setActiveGradeTab] = useState<number>(studentGrade ?? 12);
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState(false);
     const [tempDate, setTempDate] = useState(getDefaultDate());
     const [tempName, setTempName] = useState(DEFAULT_NAME);
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -124,6 +125,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin, studentGrade }
         setTempDate(s?.date || getDefaultDate());
         setTempName(s?.name || DEFAULT_NAME);
         setActiveGradeTab(grade);
+        setSaveError(false);
         setIsEditing(true);
     };
 
@@ -131,13 +133,17 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin, studentGrade }
     const handleSave = async () => {
         if (!tempDate) return;
         setIsSaving(true);
+        setSaveError(false);
         const newSetting: ExamSetting = { date: tempDate, name: tempName || DEFAULT_NAME };
         const ok = await saveSettingToDB(activeGradeTab, newSetting);
+        setIsSaving(false);
         if (ok) {
             setSettings(prev => ({ ...prev, [activeGradeTab]: newSetting }));
+            setIsEditing(false);
+        } else {
+            // Giữ dialog mở và báo lỗi
+            setSaveError(true);
         }
-        setIsSaving(false);
-        setIsEditing(false);
     };
 
     const hasDate = !!currentSetting?.date;
@@ -404,6 +410,20 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin, studentGrade }
                                     onBlur={e => { (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'; (e.currentTarget as HTMLElement).style.background = '#F7F6F3'; }}
                                 />
                             </div>
+
+                            {/* Error banner */}
+                            {saveError && (
+                                <div className="md:col-span-2 flex items-start gap-2.5 px-4 py-3 rounded-xl text-sm"
+                                    style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C' }}>
+                                    <span className="shrink-0 mt-0.5">⚠️</span>
+                                    <div>
+                                        <p className="font-semibold">Lưu thất bại!</p>
+                                        <p className="text-xs mt-0.5" style={{ color: '#DC2626' }}>
+                                            Không thể gọi RPC. Hãy chắc chắn bạn đã chạy file SQL migration <strong>app_settings.sql</strong> trên Supabase Dashboard (bao gồm lệnh GRANT).
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="md:col-span-2 flex gap-3 pt-2">
                                 <button

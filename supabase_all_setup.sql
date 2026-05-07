@@ -742,3 +742,6 @@ begin
   do update set value = excluded.value, updated_at = now();
 end;
 $$;
+
+grant execute on function public.admin_upsert_app_setting(text, text) to anon;
+grant execute on function public.admin_upsert_app_setting(text, text) to authenticated;

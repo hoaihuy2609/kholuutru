@@ -37,5 +37,7 @@ begin
 end;
 $$;
 
--- Chỉ admin (service_role) mới được gọi RPC này từ phía backend.
--- Từ frontend, ta sẽ bảo vệ bằng cách kiểm tra isAdmin trước khi gọi.
+-- Cấp quyền execute cho anon role để frontend gọi được qua Supabase JS client
+-- (Bảo mật được đảm bảo bởi isAdmin check ở tầng UI)
+grant execute on function public.admin_upsert_app_setting(text, text) to anon;
+grant execute on function public.admin_upsert_app_setting(text, text) to authenticated;
