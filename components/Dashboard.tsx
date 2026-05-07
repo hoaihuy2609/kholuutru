@@ -448,72 +448,102 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCou
       {/* ── Countdown Timer ── */}
       <CountdownTimer isAdmin={isAdmin} />
 
-      {/* ── Đề Cuối Tuần ── */}
-      {(isAdmin || studentGrade) && (
-        <WeeklyExamViewer
-          getBlogs={getBlogs}
-          studentGrade={studentGrade ?? null}
-          isAdmin={isAdmin}
-        />
-      )}
+      {/* ── Grade Selection + Đề Cuối Tuần (student: 2-col grid) ── */}
+      {(() => {
+        // Student mode: 1 lớp → 2 cột ngang nhau
+        const isStudentMode = !isAdmin && !!studentGrade && !previewMode;
+        const gradeList = previewMode
+          ? CURRICULUM.filter(g => g.level === previewMode)
+          : !isAdmin && studentGrade
+            ? CURRICULUM.filter(g => g.level === studentGrade)
+            : CURRICULUM;
 
+        const gradeCards = (
+          <div>
+            <div className="flex items-center gap-2 mb-5">
+              <h2 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Khối Lớp</h2>
+              <div className="flex-1 h-px" style={{ background: '#E9E9E7' }} />
+            </div>
+            <div className={`grid grid-cols-1 ${!isStudentMode && !previewMode ? 'sm:grid-cols-3' : ''} gap-3 md:gap-4`}>
+              {gradeList.map((grade) => {
+                const config = gradeConfig[grade.level] ?? { icon: FileText, dot: '#AEACA8', label: grade.title };
+                const { icon: Icon, dot } = config;
+                return (
+                  <button
+                    key={grade.level}
+                    onClick={() => onSelectGrade(grade.level)}
+                    className="group text-left rounded-xl p-5 transition-all"
+                    style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', borderTop: `3px solid ${dot}` }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
+                      (e.currentTarget as HTMLElement).style.borderTopColor = dot;
+                      (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.border = `1px solid #E9E9E7`;
+                      (e.currentTarget as HTMLElement).style.borderTopColor = dot;
+                      (e.currentTarget as HTMLElement).style.borderTop = `3px solid ${dot}`;
+                      (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: `${dot}15` }}>
+                        <Icon className="w-5 h-5" style={{ color: dot }} />
+                      </div>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded"
+                        style={{ background: '#F1F0EC', color: '#787774' }}>
+                        {fileCounts[grade.level] || 0} file
+                      </span>
+                    </div>
+                    <h3 className="font-semibold mb-1" style={{ color: '#1A1A1A' }}>{grade.title}</h3>
+                    <p className="text-sm leading-relaxed mb-4" style={{ color: '#787774' }}>
+                      Khám phá kho tàng kiến thức {grade.title.toLowerCase()}.
+                    </p>
+                    <div className="flex items-center gap-1.5 text-sm font-medium" style={{ color: dot }}>
+                      Truy cập
+                      <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
 
-      {/* ── Grade Selection ── */}
-      <div>
-        <div className="flex items-center gap-2 mb-5">
-          <h2 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Khối Lớp</h2>
-          <div className="flex-1 h-px" style={{ background: '#E9E9E7' }} />
-        </div>
-
-        <div className={`grid grid-cols-1 ${(previewMode || (!isAdmin && studentGrade)) ? 'sm:grid-cols-1 max-w-sm' : 'sm:grid-cols-3'} gap-3 md:gap-4`}>
-          {(previewMode
-            ? CURRICULUM.filter(g => g.level === previewMode)
-            : !isAdmin && studentGrade
-              ? CURRICULUM.filter(g => g.level === studentGrade)
-              : CURRICULUM
-          ).map((grade) => {
-            const config = gradeConfig[grade.level] ?? { icon: FileText, dot: '#AEACA8', label: grade.title };
-            const { icon: Icon, dot } = config;
-            return (
-              <button
-                key={grade.level}
-                onClick={() => onSelectGrade(grade.level)}
-                className="group text-left rounded-xl p-5 transition-all"
-                style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', borderTop: `3px solid ${dot}` }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
-                  (e.currentTarget as HTMLElement).style.borderTopColor = dot;
-                  (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.border = `1px solid #E9E9E7`;
-                  (e.currentTarget as HTMLElement).style.borderTopColor = dot;
-                  (e.currentTarget as HTMLElement).style.borderTop = `3px solid ${dot}`;
-                  (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-                }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: `${dot}15` }}>
-                    <Icon className="w-5 h-5" style={{ color: dot }} />
-                  </div>
-                  <span className="text-xs font-medium px-2 py-0.5 rounded"
-                    style={{ background: '#F1F0EC', color: '#787774' }}>
-                    {fileCounts[grade.level] || 0} file
-                  </span>
+        if (isStudentMode) {
+          // 2-col: trái = Khối Lớp, phải = Đề Cuối Tuần
+          return (
+            <div className="grid md:grid-cols-2 gap-4 md:gap-6 items-start">
+              <div>{gradeCards}</div>
+              <div>
+                <div className="flex items-center gap-2 mb-5">
+                  <h2 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Đề Cuối Tuần</h2>
+                  <div className="flex-1 h-px" style={{ background: '#E9E9E7' }} />
                 </div>
-                <h3 className="font-semibold mb-1" style={{ color: '#1A1A1A' }}>{grade.title}</h3>
-                <p className="text-sm leading-relaxed mb-4" style={{ color: '#787774' }}>
-                  Khám phá kho tàng kiến thức {grade.title.toLowerCase()}.
-                </p>
-                <div className="flex items-center gap-1.5 text-sm font-medium" style={{ color: dot }}>
-                  Truy cập
-                  <span className="transition-transform group-hover:translate-x-0.5">→</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+                <WeeklyExamViewer
+                  getBlogs={getBlogs}
+                  studentGrade={studentGrade ?? null}
+                  isAdmin={false}
+                />
+              </div>
+            </div>
+          );
+        }
+
+        // Admin / preview mode: layout dọc giữ nguyên
+        return (
+          <>
+            {(isAdmin || studentGrade) && (
+              <WeeklyExamViewer
+                getBlogs={getBlogs}
+                studentGrade={studentGrade ?? null}
+                isAdmin={isAdmin}
+              />
+            )}
+            {gradeCards}
+          </>
+        );
+      })()}
     </div>
   );
 });
