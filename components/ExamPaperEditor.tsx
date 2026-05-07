@@ -2,7 +2,11 @@ import React, { useState, useRef, useCallback } from 'react';
 import { BlogPost } from '../types';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { Plus, Trash2, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, ChevronUp, ChevronDown, Save, Upload, X, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  Plus, Trash2, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
+  ChevronUp, ChevronDown, Save, Upload, CheckCircle, AlertCircle, RefreshCw,
+  FileText, ToggleLeft, ToggleRight,
+} from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────
 type ContentBlock =
@@ -14,13 +18,13 @@ interface Statement { label: string; text: string }
 interface ExamQuestion {
   type: 'tu_luan' | 'dung_sai';
   content: ContentBlock[];
-  statements?: Statement[]; // chỉ dùng cho đúng/sai
+  statements?: Statement[];
 }
 
 interface ExamPaperData {
   type: 'exam_paper';
   grade: number;
-  week: string; // ISO week, e.g. "2026-W18"
+  week: string;
   questions: ExamQuestion[];
 }
 
@@ -34,7 +38,7 @@ function renderMath(text: string): React.ReactNode {
         const html = katex.renderToString(math, { throwOnError: false });
         return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
       } catch {
-        return <span key={i} style={{ color: '#9065B0', fontStyle: 'italic' }}>{part}</span>;
+        return <span key={i} className="text-indigo-500 italic">{part}</span>;
       }
     }
     return <span key={i}>{part}</span>;
@@ -52,7 +56,6 @@ const BlockEditor: React.FC<{
   const fileRef = useRef<HTMLInputElement>(null);
 
   const uid = () => Math.random().toString(36).slice(2);
-
   const addText = () => onChange([...blocks, { kind: 'text', id: uid(), value: '' }]);
 
   const uploadImage = async (file: File) => {
@@ -74,7 +77,6 @@ const BlockEditor: React.FC<{
 
   const update = (id: string, patch: Partial<ContentBlock>) =>
     onChange(blocks.map(b => b.id === id ? { ...b, ...patch } as ContentBlock : b));
-
   const remove = (id: string) => onChange(blocks.filter(b => b.id !== id));
   const move = (id: string, dir: -1 | 1) => {
     const idx = blocks.findIndex(b => b.id === id);
@@ -85,51 +87,64 @@ const BlockEditor: React.FC<{
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div className="flex flex-col gap-3">
       {blocks.map((block, idx) => (
-        <div key={block.id} style={{ border: '1px solid #E9E9E7', borderRadius: '10px', overflow: 'hidden', background: '#fff' }}>
+        /* Block card — matches StepEditor in SolutionEditor */
+        <div key={block.id} className="bg-white border border-[#E9E9E7] rounded-xl overflow-hidden shadow-sm transition-all focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-50">
           {/* Block toolbar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', background: '#F7F6F3', borderBottom: '1px solid #E9E9E7' }}>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#AEACA8', textTransform: 'uppercase', flex: 1 }}>
+          <div className="flex items-center justify-between px-4 py-2.5 bg-[#FCFCFA] border-b border-[#E9E9E7]">
+            <span className="text-[10px] font-bold text-[#AEACA8] uppercase tracking-wider">
               {block.kind === 'text' ? 'Văn bản / LaTeX' : 'Ảnh'}
             </span>
-            <button onClick={() => move(block.id, -1)} disabled={idx === 0} title="Lên" style={iconBtn}><ChevronUp className="w-3 h-3" /></button>
-            <button onClick={() => move(block.id, 1)} disabled={idx === blocks.length - 1} title="Xuống" style={iconBtn}><ChevronDown className="w-3 h-3" /></button>
-            <button onClick={() => remove(block.id)} title="Xóa block" style={{ ...iconBtn, color: '#E03E3E' }}><Trash2 className="w-3 h-3" /></button>
+            <div className="flex items-center gap-1">
+              <button onClick={() => move(block.id, -1)} disabled={idx === 0}
+                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded disabled:opacity-30 transition-colors">
+                <ChevronUp className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => move(block.id, 1)} disabled={idx === blocks.length - 1}
+                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded disabled:opacity-30 transition-colors">
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => remove(block.id)}
+                className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded ml-1 transition-colors">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Block content */}
-          <div style={{ padding: '10px' }}>
+          <div className="p-4">
             {block.kind === 'text' ? (
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="flex gap-3">
                 <textarea
                   value={block.value}
                   onChange={e => update(block.id, { value: e.target.value })}
                   placeholder="Nhập text hoặc LaTeX inline: $E = mc^2$"
                   rows={3}
-                  style={{ flex: 1, border: 'none', outline: 'none', resize: 'vertical', fontSize: '13px', fontFamily: 'monospace', color: '#1A1A1A', background: 'transparent', lineHeight: 1.6 }}
+                  className="flex-1 outline-none resize-vertical text-sm font-mono text-[#1A1A1A] bg-transparent leading-relaxed"
                 />
                 {block.value.includes('$') && (
-                  <div style={{ flex: 1, fontSize: '13px', lineHeight: 1.8, borderLeft: '2px solid #EEF0FB', paddingLeft: '8px', color: '#1A1A1A' }}>
+                  <div className="flex-1 text-sm leading-relaxed border-l-2 border-[#EEF0FB] pl-3 text-[#1A1A1A]">
                     {renderMath(block.value)}
                   </div>
                 )}
               </div>
             ) : (
               <div>
-                <img src={block.url} alt="" style={{ display: 'block', width: `${block.widthPct}%`, margin: block.align === 'center' ? '0 auto' : block.align === 'right' ? '0 0 0 auto' : '0', borderRadius: '6px' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '11px', color: '#787774' }}>Căn:</span>
+                <img src={block.url} alt="" className="block rounded-lg"
+                  style={{ width: `${block.widthPct}%`, margin: block.align === 'center' ? '0 auto' : block.align === 'right' ? '0 0 0 auto' : '0' }} />
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  <span className="text-xs text-[#787774]">Căn:</span>
                   {(['left', 'center', 'right'] as const).map(a => (
                     <button key={a} onClick={() => update(block.id, { align: a })}
-                      style={{ ...iconBtn, background: block.align === a ? '#6B7CDB' : '#F1F0EC', color: block.align === a ? '#fff' : '#787774' }}>
+                      className={`p-1.5 rounded flex items-center justify-center transition-colors ${block.align === a ? 'bg-[#6B7CDB] text-white' : 'bg-[#F1F0EC] text-[#787774] hover:bg-[#E9E9E7]'}`}>
                       {a === 'left' ? <AlignLeft className="w-3 h-3" /> : a === 'center' ? <AlignCenter className="w-3 h-3" /> : <AlignRight className="w-3 h-3" />}
                     </button>
                   ))}
-                  <span style={{ fontSize: '11px', color: '#787774', marginLeft: '8px' }}>Kích thước: {block.widthPct}%</span>
+                  <span className="text-xs text-[#787774] ml-2">Kích thước: {block.widthPct}%</span>
                   <input type="range" min={20} max={100} step={5} value={block.widthPct}
                     onChange={e => update(block.id, { widthPct: Number(e.target.value) })}
-                    style={{ width: '100px' }} />
+                    className="w-24" />
                 </div>
               </div>
             )}
@@ -137,34 +152,24 @@ const BlockEditor: React.FC<{
         </div>
       ))}
 
-      {/* Add block buttons */}
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <button onClick={addText} style={addBtn}>
+      {/* Add block buttons — matches "Thêm bước tiếp theo" style */}
+      <div className="flex gap-2 flex-wrap">
+        <button onClick={addText}
+          className="flex items-center gap-1.5 py-2.5 px-4 rounded-xl border-2 border-dashed border-[#DCDCDA] text-[#787774] text-xs font-semibold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all">
           <Plus className="w-3.5 h-3.5" /> Thêm đoạn văn bản / LaTeX
         </button>
         {allowImages && (
-          <button onClick={() => fileRef.current?.click()} disabled={uploading} style={addBtn}>
+          <button onClick={() => fileRef.current?.click()} disabled={uploading}
+            className="flex items-center gap-1.5 py-2.5 px-4 rounded-xl border-2 border-dashed border-[#DCDCDA] text-[#787774] text-xs font-semibold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all disabled:opacity-50">
             {uploading ? <Upload className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
             {uploading ? 'Đang upload...' : 'Chèn ảnh'}
           </button>
         )}
-        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+        <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); e.target.value = ''; }} />
       </div>
     </div>
   );
-};
-
-// ── Styles ─────────────────────────────────────────────────────────
-const iconBtn: React.CSSProperties = {
-  padding: '4px', borderRadius: '5px', border: 'none', background: '#F1F0EC',
-  cursor: 'pointer', color: '#787774', display: 'flex', alignItems: 'center', justifyContent: 'center',
-};
-const addBtn: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: '6px',
-  padding: '7px 14px', borderRadius: '8px', border: '1.5px dashed #CFCFCB',
-  background: 'transparent', cursor: 'pointer', fontSize: '12px', color: '#787774',
-  transition: 'all 0.15s',
 };
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -190,16 +195,13 @@ function emptyQuestion(type: ExamQuestion['type']): ExamQuestion {
 interface ExamPaperEditorProps {
   saveBlog: (blog: Partial<BlogPost>) => Promise<BlogPost | null>;
   syncBlogs: (onProgress?: (pct: number) => void) => Promise<{ success: boolean; fileId?: string; blogCount: number }>;
-  existingBlog?: BlogPost | null; // dùng khi edit bài cũ
+  existingBlog?: BlogPost | null;
   onSaved?: () => void;
 }
-
-const GRADE_COLORS: Record<number, string> = { 10: '#448361', 11: '#6B7CDB', 12: '#9065B0' };
 
 const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, existingBlog, onSaved }) => {
   const WORKER_URL = import.meta.env.VITE_COMMENT_WORKER_URL || '';
 
-  // ── Parse existing data ──
   const parseExisting = (): ExamPaperData | null => {
     if (!existingBlog) return null;
     try {
@@ -219,25 +221,29 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncPct, setSyncPct] = useState(0);
-  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
-  const showToast = (msg: string, ok: boolean) => {
-    setToast({ msg, ok });
-    setTimeout(() => setToast(null), 4000);
+  // Toast — kiểu giống SolutionEditor (3 loại: success/error/warning)
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (msg: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ msg, type });
+    if (type !== 'warning') {
+      toastTimer.current = setTimeout(() => setToast(null), 5000);
+    }
   };
 
   const updateQ = useCallback((idx: number, patch: Partial<ExamQuestion>) => {
     setQuestions(prev => prev.map((q, i) => i === idx ? { ...q, ...patch } : q));
   }, []);
 
-  const handleSave = async () => {
-    setSaving(true);
+  const buildBlogPayload = (): Partial<BlogPost> => {
     const data: ExamPaperData = { type: 'exam_paper', grade, week, questions };
-    const title = `Đề cuối tuần ${week} – Lớp ${grade}`;
-    const blog: Partial<BlogPost> = {
+    return {
       ...(existingBlog?.id ? { id: existingBlog.id } : {}),
-      title,
-      summary: `1 câu tự luận + 1 câu đúng/sai – Lớp ${grade}`,
+      title: `Đề cuối tuần ${week} – Lớp ${grade}`,
+      summary: `${questions.length} câu – Lớp ${grade}`,
       content: JSON.stringify(data),
       category: 'exam_paper',
       tags: [`lop-${grade}`, 'de-cuoi-tuan'],
@@ -245,135 +251,165 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
       is_published: true,
       cover_image: '',
     };
-    const saved = await saveBlog(blog);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const saved = await saveBlog(buildBlogPayload());
     setSaving(false);
     if (saved) {
-      showToast('Đã lưu đề! Nhấn "Sync" để học sinh thấy ngay.', true);
+      showToast('Đã lưu đề! Nhấn "Lưu & Sync" để học sinh thấy ngay.', 'success');
     } else {
-      showToast('Lưu thất bại, thử lại!', false);
+      showToast('Lưu thất bại, thử lại!', 'error');
     }
   };
 
   const handleSync = async () => {
-    // Luôn lưu trước khi sync để đảm bảo nội dung hiện tại được đẩy lên
     setSaving(true);
-    const data: ExamPaperData = { type: 'exam_paper', grade, week, questions };
-    const title = `Đề cuối tuần ${week} – Lớp ${grade}`;
-    const blog: Partial<BlogPost> = {
-      ...(existingBlog?.id ? { id: existingBlog.id } : {}),
-      title,
-      summary: `1 câu tự luận + 1 câu đúng/sai – Lớp ${grade}`,
-      content: JSON.stringify(data),
-      category: 'exam_paper',
-      tags: [`lop-${grade}`, 'de-cuoi-tuan'],
-      grade,
-      is_published: true,
-      cover_image: '',
-    };
-    const saved = await saveBlog(blog);
+    showToast('Đang lưu & sync lên Telegram...', 'warning');
+    const saved = await saveBlog(buildBlogPayload());
     setSaving(false);
     if (!saved) {
-      showToast('Lưu thất bại, không thể sync!', false);
+      showToast('Lưu thất bại, không thể sync!', 'error');
       return;
     }
-    // Xóa cache 15 phút để học sinh thấy ngay sau sync
     localStorage.removeItem('pv_blog_last_fetch');
-
     setSyncing(true);
     setSyncPct(0);
-    const result = await syncBlogs((pct) => setSyncPct(pct));
+    const result = await syncBlogs(pct => setSyncPct(pct));
     setSyncing(false);
     setSyncPct(0);
     if (result.success) {
-      showToast(`Sync thành công! ${result.blogCount} bài đã lên Telegram.`, true);
+      showToast(`Sync thành công! ${result.blogCount} bài đã lên Telegram.`, 'success');
       onSaved?.();
     } else {
-      showToast('Sync thất bại!', false);
+      showToast('Sync thất bại!', 'error');
     }
   };
 
-  const gradeColor = GRADE_COLORS[grade] ?? '#6B7CDB';
+  const toggleQType = (qi: number) => {
+    const q = questions[qi];
+    const next: ExamQuestion['type'] = q.type === 'tu_luan' ? 'dung_sai' : 'tu_luan';
+    const patch: Partial<ExamQuestion> = { type: next };
+    if (next === 'dung_sai' && !q.statements?.length) {
+      patch.statements = [
+        { label: 'a', text: '' }, { label: 'b', text: '' },
+        { label: 'c', text: '' }, { label: 'd', text: '' },
+      ];
+    }
+    updateQ(qi, patch);
+  };
+
+  const addQuestion = () => setQuestions(prev => [...prev, emptyQuestion('tu_luan')]);
+  const removeQuestion = (qi: number) => {
+    if (questions.length <= 1) return;
+    if (!window.confirm('Xóa câu hỏi này?')) return;
+    setQuestions(prev => prev.filter((_, i) => i !== qi));
+  };
 
   return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '16px', fontFamily: "'Inter', sans-serif" }}>
+    <div className="space-y-6 font-sans">
+      <style>{`.katex { color: #1A1A1A !important; }`}</style>
 
-      {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1A1A', margin: 0 }}>Soạn Đề Cuối Tuần</h2>
-          {/* Grade selector */}
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {[10, 11, 12].map(g => (
-              <button key={g} onClick={() => setGrade(g)}
-                style={{
-                  padding: '5px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, border: 'none', cursor: 'pointer',
-                  background: grade === g ? GRADE_COLORS[g] : '#F1F0EC',
-                  color: grade === g ? '#fff' : '#787774',
-                  transition: 'all 0.15s',
-                }}>
-                Lớp {g}
+      {/* ── Publish settings bar — giống SolutionEditor ── */}
+      <div className="bg-white p-4 rounded-2xl border border-[#E9E9E7] shadow-sm flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
+        {/* Tiêu đề */}
+        <div className="flex items-center gap-2 shrink-0">
+          <FileText className="w-5 h-5 text-indigo-500" />
+          <span className="text-sm font-bold text-[#1A1A1A]">Soạn Đề Cuối Tuần</span>
+        </div>
+
+        <div className="hidden lg:block w-px h-6 bg-[#E9E9E7]" />
+
+        {/* Grade selector — giống SolutionEditor */}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs font-bold text-[#AEACA8] uppercase shrink-0">Khối</span>
+          <div className="flex bg-[#F7F6F3] p-1 rounded-lg border border-[#E9E9E7]">
+            {[{ lab: 'Tất cả', val: 0 }, { lab: '12', val: 12 }, { lab: '11', val: 11 }, { lab: '10', val: 10 }].map(g => (
+              <button key={g.val} type="button" onClick={() => setGrade(g.val)}
+                className="px-3 py-1.5 text-xs font-semibold rounded-md transition-all"
+                style={{ background: grade === g.val ? '#6B7CDB' : 'transparent', color: grade === g.val ? '#fff' : '#787774' }}>
+                {g.lab === 'Tất cả' ? 'Tất cả' : `Lớp ${g.lab}`}
               </button>
             ))}
           </div>
-          {/* Week */}
-          <input type="week" value={week} onChange={e => setWeek(e.target.value)}
-            style={{ padding: '5px 10px', borderRadius: '8px', border: '1px solid #E9E9E7', fontSize: '12px', color: '#1A1A1A' }} />
         </div>
-        <div style={{ height: '3px', borderRadius: '2px', background: `linear-gradient(90deg, ${gradeColor}, ${gradeColor}88)` }} />
+
+        <div className="hidden lg:block w-px h-6 bg-[#E9E9E7]" />
+
+        {/* Week picker */}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs font-bold text-[#AEACA8] uppercase shrink-0">Tuần</span>
+          <input type="week" value={week} onChange={e => setWeek(e.target.value)}
+            className="p-2.5 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm text-[#1A1A1A]" />
+        </div>
       </div>
 
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '10px', marginBottom: '16px',
-          background: toast.ok ? '#EAF3EE' : '#FEF2F2', border: `1px solid ${toast.ok ? '#B7D9C4' : '#FECACA'}`,
-          color: toast.ok ? '#448361' : '#E03E3E', fontSize: '13px', fontWeight: 500,
-        }}>
-          {toast.ok ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-          {toast.msg}
-        </div>
-      )}
+      {/* ── Questions ── */}
+      <div className="space-y-6">
+        {questions.map((q, qi) => (
+          <div key={qi} className="p-6 rounded-2xl bg-white border border-[#E9E9E7] shadow-sm space-y-5">
 
-      {/* Questions */}
-      {questions.map((q, qi) => (
-        <div key={qi} style={{ marginBottom: '24px', border: '1px solid #E9E9E7', borderRadius: '14px', overflow: 'hidden', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-          {/* Question header */}
-          <div style={{ padding: '12px 16px', background: '#F7F6F3', borderBottom: '1px solid #E9E9E7', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: gradeColor }}>
-              Câu {qi + 1}: {q.type === 'tu_luan' ? 'Tự Luận' : 'Đúng / Sai'}
-            </span>
-            <span style={{
-              fontSize: '10px', padding: '2px 8px', borderRadius: '5px', fontWeight: 600,
-              background: q.type === 'tu_luan' ? '#EEF0FB' : '#F3ECF8',
-              color: q.type === 'tu_luan' ? '#6B7CDB' : '#9065B0',
-            }}>
-              {q.type === 'tu_luan' ? 'Tự luận (mở)' : 'Mệnh đề đúng/sai'}
-            </span>
-          </div>
+            {/* Question header — giống card "Thông tin đề thi" */}
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2 text-lg">
+                <span className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600 shrink-0">
+                  {qi + 1}
+                </span>
+                {q.type === 'tu_luan' ? 'Câu Tự Luận' : 'Câu Đúng / Sai'}
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ml-1 ${q.type === 'tu_luan' ? 'bg-[#EEF0FB] text-[#6B7CDB]' : 'bg-amber-100 text-amber-700'}`}>
+                  {q.type === 'tu_luan' ? 'Tự luận (mở)' : 'Mệnh đề đúng/sai'}
+                </span>
+              </h3>
+              <div className="flex items-center gap-2">
+                {/* Toggle type — giống SolutionEditor */}
+                <button onClick={() => toggleQType(qi)}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${q.type === 'dung_sai' ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}>
+                  {q.type === 'dung_sai'
+                    ? <><ToggleRight className="w-4 h-4" /> Đúng / Sai</>
+                    : <><ToggleLeft className="w-4 h-4" /> Tự luận</>}
+                </button>
+                {questions.length > 1 && (
+                  <button onClick={() => removeQuestion(qi)}
+                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
 
-          <div style={{ padding: '16px' }}>
-            {/* Context / Problem description */}
-            <p style={{ fontSize: '11px', fontWeight: 700, color: '#AEACA8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
-              Mô tả đề bài
-            </p>
-            <BlockEditor
-              blocks={q.content}
-              onChange={blocks => updateQ(qi, { content: blocks })}
-              allowImages={true}
-              workerUrl={WORKER_URL}
-            />
+            {/* Divider */}
+            <div className="border-t border-[#E9E9E7]" />
+
+            {/* Mô tả đề bài */}
+            <div>
+              <label className="block text-[10px] font-bold mb-3 text-[#787774] uppercase tracking-wider">
+                Mô tả đề bài
+              </label>
+              <BlockEditor
+                blocks={q.content}
+                onChange={blocks => updateQ(qi, { content: blocks })}
+                allowImages={true}
+                workerUrl={WORKER_URL}
+              />
+            </div>
 
             {/* Đúng/Sai statements */}
             {q.type === 'dung_sai' && q.statements && (
-              <div style={{ marginTop: '20px' }}>
-                <p style={{ fontSize: '11px', fontWeight: 700, color: '#AEACA8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
-                  Các mệnh đề (a, b, c, d)
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="pt-2 border-t border-[#E9E9E7]">
+                <label className="block text-[10px] font-bold mb-3 text-[#787774] uppercase tracking-wider">
+                  Các mệnh đề (A, B, C, D)
+                </label>
+                <div className="space-y-3">
                   {q.statements.map((stmt, si) => (
-                    <div key={stmt.label} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', borderRadius: '10px', background: '#F7F6F3', border: '1px solid #E9E9E7' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13px', color: gradeColor, minWidth: '18px' }}>{stmt.label.toUpperCase()}.</span>
-                      <div style={{ flex: 1 }}>
+                    /* Statement card — giống StatementEditor trong SolutionEditor */
+                    <div key={stmt.label} className="bg-white border border-[#E9E9E7] rounded-xl overflow-hidden shadow-sm">
+                      <div className="flex items-center px-4 py-2.5 bg-[#FCFCFA] border-b border-[#E9E9E7]">
+                        <span className="font-bold text-sm text-indigo-700 tracking-wide">
+                          Mệnh đề {stmt.label.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="p-4">
                         <textarea
                           value={stmt.text}
                           onChange={e => {
@@ -382,10 +418,10 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
                           }}
                           placeholder={`Mệnh đề ${stmt.label.toUpperCase()} — hỗ trợ LaTeX: $...$`}
                           rows={2}
-                          style={{ width: '100%', border: 'none', outline: 'none', resize: 'vertical', fontSize: '13px', fontFamily: 'monospace', background: 'transparent', color: '#1A1A1A' }}
+                          className="w-full outline-none resize-vertical text-sm font-mono text-[#1A1A1A] bg-transparent leading-relaxed"
                         />
                         {stmt.text.includes('$') && (
-                          <div style={{ fontSize: '13px', lineHeight: 1.8, color: '#1A1A1A', marginTop: '4px', paddingTop: '4px', borderTop: '1px solid #E9E9E7' }}>
+                          <div className="text-sm leading-relaxed text-[#1A1A1A] mt-2 pt-2 border-t border-[#E9E9E7]">
                             {renderMath(stmt.text)}
                           </div>
                         )}
@@ -396,20 +432,48 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
               </div>
             )}
           </div>
-        </div>
-      ))}
+        ))}
 
-      {/* Action bar */}
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', paddingTop: '8px' }}>
-        <button onClick={handleSave} disabled={saving}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 22px', borderRadius: '10px', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', background: '#1A1A1A', color: '#fff', fontSize: '13px', fontWeight: 600, opacity: saving ? 0.6 : 1 }}>
-          <Save className="w-4 h-4" /> {saving ? 'Đang lưu...' : 'Lưu đề'}
+        {/* Add question — giống "Thêm câu" trong SolutionEditor */}
+        <button onClick={addQuestion}
+          className="w-full py-3 rounded-2xl border-2 border-dashed border-[#DCDCDA] text-[#787774] font-semibold text-sm hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-2">
+          <Plus className="w-4 h-4" /> Thêm câu hỏi
         </button>
-        <button onClick={handleSync} disabled={syncing}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 22px', borderRadius: '10px', border: 'none', cursor: syncing ? 'not-allowed' : 'pointer', background: gradeColor, color: '#fff', fontSize: '13px', fontWeight: 600, opacity: syncing ? 0.7 : 1 }}>
-          <Upload className="w-4 h-4" />
-          {syncing ? `Sync... ${syncPct}%` : 'Lưu & Sync lên Telegram'}
-        </button>
+      </div>
+
+      {/* ── Action bar + Toast — giống SolutionEditor ── */}
+      <div className="mt-6 pt-5 border-t border-[#E9E9E7] space-y-3">
+
+        {/* Toast */}
+        {toast && (
+          <div
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium"
+            style={{
+              background: toast.type === 'success' ? '#EAF3EE' : toast.type === 'error' ? '#FEE2E2' : '#EEF0FB',
+              border: `1px solid ${toast.type === 'success' ? '#B7D9C4' : toast.type === 'error' ? '#FECACA' : '#C5CAFA'}`,
+              color: toast.type === 'success' ? '#448361' : toast.type === 'error' ? '#E03E3E' : '#3D3D8D',
+            }}
+          >
+            {toast.type === 'success' && <CheckCircle className="w-4 h-4 shrink-0" />}
+            {toast.type === 'error'   && <AlertCircle className="w-4 h-4 shrink-0" />}
+            {toast.type === 'warning' && <RefreshCw className="w-4 h-4 shrink-0 animate-spin" />}
+            {toast.msg}
+          </div>
+        )}
+
+        {/* Buttons — giống SolutionEditor action bar */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <button onClick={handleSave} disabled={saving || syncing}
+            className="px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 border border-[#E9E9E7] bg-white text-[#1A1A1A] hover:bg-[#F7F6F3] transition-colors disabled:opacity-50">
+            <Save className="w-4 h-4" />
+            {saving ? 'Đang lưu...' : 'Lưu đề'}
+          </button>
+          <button onClick={handleSync} disabled={saving || syncing}
+            className="px-8 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60 shadow-sm">
+            <Upload className="w-4 h-4" />
+            {syncing ? `Đang sync... ${syncPct}%` : 'Lưu & Sync lên Telegram'}
+          </button>
+        </div>
       </div>
     </div>
   );
