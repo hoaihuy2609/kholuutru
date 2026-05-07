@@ -1,25 +1,45 @@
 -- ── app_settings: lưu cấu hình hệ thống dùng chung ─────────────────────────
--- Dùng cho: deadline kỳ thi theo khối lớp (và bất kỳ config toàn hệ thống nào về sau)
 -- Key convention: exam_deadline_{grade}  (grade = 10 | 11 | 12)
 -- Value: JSON string, ví dụ: { "date": "2026-05-11T08:00", "name": "Thi Cuối Kì" }
+-- Lưu ý: đọc/ghi đều qua RPC (không query table trực tiếp) để tránh lỗi
+--         PostgREST với cột tên 'key' (reserved keyword).
 
 create table if not exists public.app_settings (
-  key   text primary key,
-  value text not null default '',
+  key        text primary key,
+  value      text not null default '',
   updated_at timestamptz not null default now()
 );
 
--- Cho phép mọi người đọc (học sinh không cần auth)
 alter table public.app_settings enable row level security;
 
+-- DROP trước khi CREATE để tránh lỗi "already exists" khi chạy lại
+drop policy if exists "public_read_app_settings" on public.app_settings;
 create policy "public_read_app_settings"
   on public.app_settings for select
   using (true);
 
--- Admin ghi thông qua RPC (xem bên dưới) — không cho phép INSERT/UPDATE trực tiếp từ anon
--- (Nếu project chưa có role admin riêng thì dùng RPC với secret check)
+-- ── RPC: READ ─────────────────────────────────────────────────────────────────
+-- security definer để bypass RLS + tránh lỗi 400 từ REST API
+create or replace function public.get_app_setting(p_key text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_value text;
+begin
+  select value into v_value
+  from public.app_settings
+  where key = p_key;
+  return v_value;
+end;
+$$;
 
--- ── RPC: admin đặt/cập nhật một setting ──────────────────────────────────────
+grant execute on function public.get_app_setting(text) to anon;
+grant execute on function public.get_app_setting(text) to authenticated;
+
+-- ── RPC: WRITE ────────────────────────────────────────────────────────────────
 create or replace function public.admin_upsert_app_setting(
   p_key   text,
   p_value text
@@ -37,7 +57,5 @@ begin
 end;
 $$;
 
--- Cấp quyền execute cho anon role để frontend gọi được qua Supabase JS client
--- (Bảo mật được đảm bảo bởi isAdmin check ở tầng UI)
 grant execute on function public.admin_upsert_app_setting(text, text) to anon;
 grant execute on function public.admin_upsert_app_setting(text, text) to authenticated;

@@ -28,13 +28,11 @@ const SETTING_KEY = (grade: number) => `exam_deadline_${grade}`;
 // ── Supabase helpers ──────────────────────────────────────────────
 async function fetchSettingFromDB(grade: number): Promise<ExamSetting | null> {
     try {
-        const { data, error } = await supabase
-            .from('app_settings')
-            .select('value')
-            .eq('key', SETTING_KEY(grade))
-            .maybeSingle();
+        const { data, error } = await supabase.rpc('get_app_setting', {
+            p_key: SETTING_KEY(grade),
+        });
         if (error || !data) return null;
-        return JSON.parse(data.value) as ExamSetting;
+        return JSON.parse(data as string) as ExamSetting;
     } catch {
         return null;
     }
