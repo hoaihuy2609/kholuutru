@@ -1,4 +1,4 @@
--- ═══════════════════════════════════════════════════════════════════════════
+﻿-- ═══════════════════════════════════════════════════════════════════════════
 -- PHYSIVAULT — SUPABASE COMPLETE SETUP SCRIPT
 -- Gom toàn bộ SQL cấu hình vào 1 file duy nhất để tham khảo sau này
 -- Chạy trong Supabase Dashboard → SQL Editor → New Query → Run
@@ -708,40 +708,63 @@ FOR EACH ROW
 EXECUTE FUNCTION trigger_update_single_leaderboard();
 
 
--- ----------------------------------------------------------------
--- app_settings: luu c?u h�nh h? th?ng (deadline k? thi theo kh?i)
+-- ── app_settings: lưu cấu hình hệ thống (deadline kỳ thi theo khối) ──────────
 -- Key convention: exam_deadline_{grade}  (grade = 10 | 11 | 12)
--- Value: JSON string, v� d?: { "date": "2026-05-11T08:00", "name": "Thi Cu?i K�" }
--- ----------------------------------------------------------------
+-- Value: JSON string, ví dụ: { "date": "2026-05-11T08:00", "name": "Thi Cuối Kì" }
+-- Lưu ý: "key" phải được quote vì là reserved keyword trong PostgreSQL.
 
-create table if not exists public.app_settings (
-  key   text primary key,
-  value text not null default '',
+DROP TABLE IF EXISTS public.app_settings CASCADE;
+
+CREATE TABLE public.app_settings (
+  key        text primary key,
+  value      text not null default '',
   updated_at timestamptz not null default now()
 );
 
-alter table public.app_settings enable row level security;
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 
-create policy "public_read_app_settings"
-  on public.app_settings for select
-  using (true);
+DROP POLICY IF EXISTS "public_read_app_settings" ON public.app_settings;
+CREATE POLICY "public_read_app_settings"
+  ON public.app_settings FOR SELECT
+  USING (true);
 
-create or replace function public.admin_upsert_app_setting(
+-- ── RPC: READ ──────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.get_app_setting(p_key text)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_value text;
+BEGIN
+  SELECT value INTO v_value
+  FROM public.app_settings
+  WHERE "key" = p_key;
+  RETURN v_value;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_app_setting(text) TO anon;
+GRANT EXECUTE ON FUNCTION public.get_app_setting(text) TO authenticated;
+
+-- ── RPC: WRITE ─────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.admin_upsert_app_setting(
   p_key   text,
   p_value text
 )
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.app_settings (key, value, updated_at)
-  values (p_key, p_value, now())
-  on conflict (key)
-  do update set value = excluded.value, updated_at = now();
-end;
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.app_settings ("key", value, updated_at)
+  VALUES (p_key, p_value, now())
+  ON CONFLICT ("key")
+  DO UPDATE SET value = excluded.value, updated_at = now();
+END;
 $$;
 
-grant execute on function public.admin_upsert_app_setting(text, text) to anon;
-grant execute on function public.admin_upsert_app_setting(text, text) to authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_upsert_app_setting(text, text) TO anon;
+GRANT EXECUTE ON FUNCTION public.admin_upsert_app_setting(text, text) TO authenticated;

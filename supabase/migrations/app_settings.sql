@@ -31,7 +31,7 @@ declare
 begin
   select value into v_value
   from public.app_settings
-  where key = p_key;
+  where "key" = p_key;
   return v_value;
 end;
 $$;
@@ -50,9 +50,9 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.app_settings (key, value, updated_at)
+  insert into public.app_settings ("key", value, updated_at)
   values (p_key, p_value, now())
-  on conflict (key)
+  on conflict ("key")
   do update set value = excluded.value, updated_at = now();
 end;
 $$;
