@@ -195,11 +195,13 @@ function emptyQuestion(type: ExamQuestion['type']): ExamQuestion {
 interface ExamPaperEditorProps {
   saveBlog: (blog: Partial<BlogPost>) => Promise<BlogPost | null>;
   syncBlogs: (onProgress?: (pct: number) => void) => Promise<{ success: boolean; fileId?: string; blogCount: number }>;
+  deleteBlog?: (id: string) => Promise<boolean>;
   existingBlog?: BlogPost | null;
   onSaved?: () => void;
+  onBack?: () => void;
 }
 
-const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, existingBlog, onSaved }) => {
+const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, deleteBlog, existingBlog, onSaved, onBack }) => {
   const WORKER_URL = import.meta.env.VITE_COMMENT_WORKER_URL || '';
 
   const parseExisting = (): ExamPaperData | null => {
@@ -252,6 +254,22 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
       is_published: isPublished,
       cover_image: '',
     };
+  };
+
+  const handleDelete = async () => {
+    if (!existingBlog?.id || !deleteBlog) return;
+    if (!window.confirm('Xóa đề thi này? Hành động không thể hoàn tác!')) return;
+    setSaving(true);
+    showToast('Đang xóa & sync...', 'warning');
+    const ok = await deleteBlog(existingBlog.id);
+    if (!ok) {
+      setSaving(false);
+      showToast('Xóa thất bại, thử lại!', 'error');
+      return;
+    }
+    await syncBlogs();
+    setSaving(false);
+    if (onBack) onBack();
   };
 
   // Nút duy nhất — giống SolutionEditor:
@@ -467,8 +485,16 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
           </div>
         )}
 
-        {/* Nút duy nhất — giống SolutionEditor */}
+        {/* Buttons — giống SolutionEditor action bar */}
         <div className="flex items-center gap-3 flex-wrap">
+          {existingBlog && deleteBlog && (
+            <button
+              onClick={handleDelete}
+              disabled={saving || syncing}
+              className="px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-red-50 text-red-600 border border-red-200 transition-colors disabled:opacity-50">
+              <Trash2 className="w-4 h-4" /> Xóa đề
+            </button>
+          )}
           <button onClick={handleSubmit} disabled={saving || syncing}
             className="px-8 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60 shadow-sm">
             <Save className="w-4 h-4" />

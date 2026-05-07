@@ -308,8 +308,10 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                 <ExamPaperEditor
                     saveBlog={saveBlog}
                     syncBlogs={syncBlogs}
+                    deleteBlog={deleteBlog}
                     existingBlog={blog}
                     onSaved={() => { onBack(); }}
+                    onBack={onBack}
                 />
             )}
 
