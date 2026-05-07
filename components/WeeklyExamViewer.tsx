@@ -107,16 +107,17 @@ const ExamDetailModal: React.FC<{
 
   return ReactDOM.createPortal(
     <div
+      className="animate-fade-in"
       style={{
         position: 'fixed', inset: 0, zIndex: 999,
-        background: 'rgba(26,26,26,0.5)',
+        background: 'rgba(26,26,26,0.45)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '20px',
-        backdropFilter: 'blur(2px)',
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
+        className="animate-scale-in"
         style={{
           background: '#FFFFFF',
           border: '1px solid #E9E9E7',
