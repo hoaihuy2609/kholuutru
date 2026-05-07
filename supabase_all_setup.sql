@@ -706,3 +706,39 @@ CREATE TRIGGER trg_refresh_leaderboard_on_insert
 AFTER INSERT OR UPDATE ON exam_results
 FOR EACH ROW
 EXECUTE FUNCTION trigger_update_single_leaderboard();
+
+
+-- ----------------------------------------------------------------
+-- app_settings: luu c?u hình h? th?ng (deadline k? thi theo kh?i)
+-- Key convention: exam_deadline_{grade}  (grade = 10 | 11 | 12)
+-- Value: JSON string, ví d?: { "date": "2026-05-11T08:00", "name": "Thi Cu?i Kì" }
+-- ----------------------------------------------------------------
+
+create table if not exists public.app_settings (
+  key   text primary key,
+  value text not null default '',
+  updated_at timestamptz not null default now()
+);
+
+alter table public.app_settings enable row level security;
+
+create policy "public_read_app_settings"
+  on public.app_settings for select
+  using (true);
+
+create or replace function public.admin_upsert_app_setting(
+  p_key   text,
+  p_value text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.app_settings (key, value, updated_at)
+  values (p_key, p_value, now())
+  on conflict (key)
+  do update set value = excluded.value, updated_at = now();
+end;
+$$;
