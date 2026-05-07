@@ -459,12 +459,12 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCou
             : CURRICULUM;
 
         const gradeCards = (
-          <div>
+          <div className="h-full flex flex-col">
             <div className="flex items-center gap-2 mb-5">
               <h2 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Khối Lớp</h2>
               <div className="flex-1 h-px" style={{ background: '#E9E9E7' }} />
             </div>
-            <div className={`grid grid-cols-1 ${!isStudentMode && !previewMode ? 'sm:grid-cols-3' : ''} gap-3 md:gap-4`}>
+            <div className={`grid grid-cols-1 ${!isStudentMode && !previewMode ? 'sm:grid-cols-3' : ''} gap-3 md:gap-4 flex-1`}>
               {gradeList.map((grade) => {
                 const config = gradeConfig[grade.level] ?? { icon: FileText, dot: '#AEACA8', label: grade.title };
                 const { icon: Icon, dot } = config;
@@ -472,7 +472,7 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCou
                   <button
                     key={grade.level}
                     onClick={() => onSelectGrade(grade.level)}
-                    className="group text-left rounded-xl p-5 transition-all"
+                    className="group text-left rounded-xl p-5 transition-all h-full flex flex-col"
                     style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', borderTop: `3px solid ${dot}` }}
                     onMouseEnter={e => {
                       (e.currentTarget as HTMLElement).style.borderColor = '#CFCFCB';
@@ -486,22 +486,24 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCou
                       (e.currentTarget as HTMLElement).style.boxShadow = 'none';
                     }}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: `${dot}15` }}>
+                    <div className="flex items-center justify-between mb-3 w-full">
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${dot}15` }}>
                         <Icon className="w-5 h-5" style={{ color: dot }} />
                       </div>
-                      <span className="text-xs font-medium px-2 py-0.5 rounded"
+                      <span className="text-xs font-medium px-2 py-0.5 rounded shrink-0"
                         style={{ background: '#F1F0EC', color: '#787774' }}>
                         {fileCounts[grade.level] || 0} file
                       </span>
                     </div>
-                    <h3 className="font-semibold mb-1" style={{ color: '#1A1A1A' }}>{grade.title}</h3>
-                    <p className="text-sm leading-relaxed mb-4" style={{ color: '#787774' }}>
-                      Khám phá kho tàng kiến thức {grade.title.toLowerCase()}.
-                    </p>
-                    <div className="flex items-center gap-1.5 text-sm font-medium" style={{ color: dot }}>
-                      Truy cập
-                      <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                    <div className="flex flex-col flex-1">
+                      <h3 className="font-semibold mb-1" style={{ color: '#1A1A1A' }}>{grade.title}</h3>
+                      <p className="text-sm leading-relaxed mb-4 flex-1" style={{ color: '#787774' }}>
+                        Khám phá kho tàng kiến thức {grade.title.toLowerCase()}.
+                      </p>
+                      <div className="flex items-center gap-1.5 text-sm font-medium mt-auto" style={{ color: dot }}>
+                        Truy cập
+                        <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                      </div>
                     </div>
                   </button>
                 );
@@ -513,18 +515,21 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCou
         if (isStudentMode) {
           // 2-col: trái = Khối Lớp, phải = Đề Cuối Tuần
           return (
-            <div className="grid md:grid-cols-2 gap-4 md:gap-6 items-start">
+            <div className="grid md:grid-cols-2 gap-4 md:gap-6 items-stretch">
               <div>{gradeCards}</div>
-              <div>
+              <div className="h-full flex flex-col">
                 <div className="flex items-center gap-2 mb-5">
                   <h2 className="text-base font-semibold" style={{ color: '#1A1A1A' }}>Đề Cuối Tuần</h2>
                   <div className="flex-1 h-px" style={{ background: '#E9E9E7' }} />
                 </div>
-                <WeeklyExamViewer
-                  getBlogs={getBlogs}
-                  studentGrade={studentGrade ?? null}
-                  isAdmin={false}
-                />
+                <div className="flex-1 min-h-0">
+                  <WeeklyExamViewer
+                    getBlogs={getBlogs}
+                    studentGrade={studentGrade ?? null}
+                    isAdmin={false}
+                    className="h-full flex flex-col"
+                  />
+                </div>
               </div>
             </div>
           );

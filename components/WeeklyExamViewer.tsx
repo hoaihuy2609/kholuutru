@@ -381,9 +381,10 @@ interface WeeklyExamViewerProps {
   getBlogs: (isAdmin: boolean) => Promise<BlogPost[]>;
   studentGrade: number | null; // null = admin (thấy tất cả)
   isAdmin?: boolean;
+  className?: string;
 }
 
-const WeeklyExamViewer: React.FC<WeeklyExamViewerProps> = ({ getBlogs, studentGrade, isAdmin = false }) => {
+const WeeklyExamViewer: React.FC<WeeklyExamViewerProps> = ({ getBlogs, studentGrade, isAdmin = false, className = '' }) => {
   const [papers, setPapers] = useState<{ blog: BlogPost; data: ExamPaperData }[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<{ blog: BlogPost; data: ExamPaperData } | null>(null);
@@ -419,7 +420,7 @@ const WeeklyExamViewer: React.FC<WeeklyExamViewerProps> = ({ getBlogs, studentGr
 
   if (loading) {
     return (
-      <div style={{ padding: '20px', borderRadius: '14px', background: '#fff', border: '1px solid #E9E9E7' }}>
+      <div className={className} style={{ padding: '20px', borderRadius: '14px', background: '#fff', border: '1px solid #E9E9E7' }}>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid #EEF0FB', borderTopColor: '#6B7CDB', animation: 'spin 0.8s linear infinite' }} />
           <span style={{ fontSize: '13px', color: '#AEACA8' }}>Đang tải đề thi...</span>
@@ -430,7 +431,7 @@ const WeeklyExamViewer: React.FC<WeeklyExamViewerProps> = ({ getBlogs, studentGr
 
   return (
     <>
-      <div style={{ borderRadius: '14px', background: '#fff', border: '1px solid #E9E9E7', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+      <div className={className} style={{ borderRadius: '14px', background: '#fff', border: '1px solid #E9E9E7', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
         {/* Header */}
         <div style={{ padding: '14px 16px', borderBottom: '1px solid #E9E9E7', background: '#F7F6F3' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
@@ -458,7 +459,7 @@ const WeeklyExamViewer: React.FC<WeeklyExamViewerProps> = ({ getBlogs, studentGr
         </div>
 
         {/* Paper list */}
-        <div style={{ maxHeight: '260px', overflowY: 'auto' }}>
+        <div className="flex-1 min-h-0" style={{ maxHeight: '260px', overflowY: 'auto' }}>
           {visible.length === 0 ? (
             <div style={{ padding: '28px', textAlign: 'center' }}>
               <p style={{ fontSize: '13px', color: '#AEACA8' }}>Chưa có đề tuần nào cho Lớp {gradeTab}</p>
