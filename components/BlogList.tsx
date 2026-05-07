@@ -51,13 +51,15 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
     const allTags = useMemo(() => [...new Set(blogs.flatMap(b => b.tags || []))], [blogs]);
 
     const filteredBlogs = useMemo(() => blogs.filter(b => {
+        // Ẩn đề thi (exam_paper) khỏi Góc học tập của học sinh — chỉ admin mới thấy để quản lý
+        if (!isAdmin && b.category === 'exam_paper') return false;
         const q = debouncedSearch.toLowerCase();
         const matchSearch = !q || b.title.toLowerCase().includes(q) || b.summary.toLowerCase().includes(q) || (b.tags || []).some(t => t.toLowerCase().includes(q));
         const matchCat = !selectedCategory || b.category === selectedCategory;
         const matchTag = !selectedTag || (b.tags || []).includes(selectedTag);
         const matchGrade = gradeFilter === 0 || (b.grade || 0) === gradeFilter || (b.grade || 0) === 0;
         return matchSearch && matchCat && matchTag && matchGrade;
-    }), [blogs, debouncedSearch, selectedCategory, selectedTag, gradeFilter]);
+    }), [blogs, debouncedSearch, selectedCategory, selectedTag, gradeFilter, isAdmin]);
 
     const gradeTabs = [
         { label: 'Tất cả', value: 0, color: '#787774' },
