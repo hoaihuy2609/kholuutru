@@ -446,7 +446,7 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCou
       </div>
 
       {/* ── Countdown Timer ── */}
-      <CountdownTimer isAdmin={isAdmin} />
+      <CountdownTimer isAdmin={isAdmin} studentGrade={studentGrade ?? null} />
 
       {/* ── Grade Selection + Đề Cuối Tuần (student: 2-col grid) ── */}
       {(() => {
