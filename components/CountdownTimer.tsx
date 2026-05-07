@@ -91,11 +91,12 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ isAdmin, studentGrade }
 
     // ── Load settings từ Supabase ──
     const loadSettings = useCallback(async () => {
-        const results = await Promise.all(gradesToLoad.map(async g => ({ g, s: await fetchSettingFromDB(g) })));
+        const grades = isAdmin ? [10, 11, 12] : [studentGrade ?? 12];
+        const results = await Promise.all(grades.map(async g => ({ g, s: await fetchSettingFromDB(g) })));
         const map: GradeSettings = {};
         results.forEach(({ g, s }) => { if (s) map[g] = s; });
         setSettings(map);
-    }, []);
+    }, [isAdmin, studentGrade]);
 
     useEffect(() => { loadSettings(); }, [loadSettings]);
 
