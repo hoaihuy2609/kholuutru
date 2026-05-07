@@ -352,9 +352,23 @@ export default function SolutionEditor({
   const [isPublished,  setIsPublished]  = useState(false);
   const [grade,        setGrade]        = useState(0);
 
+  // Local toast (dùng khi hideTopBar=true, vì global toast có thể không render trong context này)
+  const [localToast, setLocalToast] = useState<{ msg: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const localToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const activeRef   = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const activeField = useRef<string>("");
-  const showToast   = useUIStore(state => state.showToast);
+  const showGlobalToast = useUIStore(state => state.showToast);
+
+  // Wrapper: hiển thị cả local toast (luôn) và global toast
+  const showToast = (msg: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    showGlobalToast(msg, type);
+    if (localToastTimer.current) clearTimeout(localToastTimer.current);
+    setLocalToast({ msg, type });
+    if (type !== 'warning') {
+      localToastTimer.current = setTimeout(() => setLocalToast(null), 5000);
+    }
+  };
 
   const activeQuestion = questions[activeQIdx] ?? emptyQuestion();
 
@@ -773,6 +787,56 @@ export default function SolutionEditor({
         </div>
 
       </div>
+
+      {/* ── Action bar + Local Toast (khi hideTopBar=true, parent không render nút lưu) ── */}
+      {hideTopBar && (
+        <div className="mt-6 pt-5 border-t border-[#E9E9E7] space-y-3">
+
+          {/* Local toast */}
+          {localToast && (
+            <div
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium"
+              style={{
+                background: localToast.type === 'success' ? '#EAF3EE' : localToast.type === 'error' ? '#FEE2E2' : '#EEF0FB',
+                border: `1px solid ${localToast.type === 'success' ? '#B7D9C4' : localToast.type === 'error' ? '#FECACA' : '#C5CAFA'}`,
+                color: localToast.type === 'success' ? '#448361' : localToast.type === 'error' ? '#E03E3E' : '#3D3D8D',
+              }}
+            >
+              {localToast.type === 'success' && <span>✓</span>}
+              {localToast.type === 'error'   && <span>✗</span>}
+              {localToast.type === 'warning' && <span className="animate-spin inline-block">↻</span>}
+              {localToast.msg}
+            </div>
+          )}
+
+          {/* Nút lưu */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {blog && deleteBlog && (
+              <button
+                onClick={async () => {
+                  if (!window.confirm('Xóa bài viết này?')) return;
+                  setSaving(true);
+                  const ok = await deleteBlog(blog.id);
+                  setSaving(false);
+                  if (ok && onBack) onBack();
+                }}
+                disabled={saving}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-red-50 text-red-600 border border-red-200 transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" /> Xóa bài
+              </button>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-8 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60 shadow-sm"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'Đang lưu & sync...' : (blog ? 'Cập nhật Lời Giải' : 'Đăng bài Lời Giải')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
