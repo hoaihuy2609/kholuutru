@@ -76,6 +76,60 @@ const AdminLiveManager: React.FC<AdminLiveManagerProps> = ({ onShowToast }) => {
   const [videoModal, setVideoModal] = useState<{ mode: 'add' | 'edit'; chapterId: string; data?: LectureVideo } | null>(null);
   const [videoForm, setVideoForm] = useState({ title: '', description: '', youtube_url: '', duration_seconds: 0, order: 0 });
   const [videoSaving, setVideoSaving] = useState(false);
+  const [durationLoading, setDurationLoading] = useState(false);
+
+  /* Tách video ID từ YouTube URL */
+  const extractVideoId = (url: string): string | null => {
+    const patterns = [
+      /youtube\.com\/watch\?v=([^&\s]+)/,
+      /youtu\.be\/([^?\s]+)/,
+      /youtube\.com\/embed\/([^?\s]+)/,
+    ];
+    for (const p of patterns) {
+      const m = url.match(p);
+      if (m) return m[1];
+    }
+    return null;
+  };
+
+  /* Tự động lấy thời lượng khi paste YouTube URL */
+  const handleYoutubeUrlChange = (url: string) => {
+    setVideoForm(f => ({ ...f, youtube_url: url }));
+    const videoId = extractVideoId(url);
+    if (!videoId) return;
+    setDurationLoading(true);
+    const container = document.createElement('div');
+    container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;';
+    document.body.appendChild(container);
+    const tryCreate = () => {
+      const YT = (window as any).YT;
+      if (YT?.Player) {
+        const player = new YT.Player(container, {
+          videoId,
+          playerVars: { autoplay: 0 },
+          events: {
+            onReady: (e: any) => {
+              const dur = Math.round(e.target.getDuration());
+              if (dur > 0) setVideoForm(f => ({ ...f, duration_seconds: dur }));
+              setDurationLoading(false);
+              try { player.destroy(); } catch {}
+              document.body.removeChild(container);
+            },
+          },
+        });
+      } else {
+        setTimeout(tryCreate, 200);
+      }
+    };
+    if (!(window as any).YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+      (window as any).onYouTubeIframeAPIReady = tryCreate;
+    } else {
+      tryCreate();
+    }
+  };
 
   /* Load live config */
   useEffect(() => {
@@ -404,10 +458,7 @@ const AdminLiveManager: React.FC<AdminLiveManagerProps> = ({ onShowToast }) => {
                 <label style={{ fontSize: '12px', fontWeight: 500, color: '#57564F', display: 'block', marginBottom: 4 }}>Tên chương *</label>
                 <input style={inputSt} value={chapterForm.title} onChange={e => setChapterForm(f => ({ ...f, title: e.target.value }))} placeholder="VD: Chương 1 — Dao động cơ" />
               </div>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 500, color: '#57564F', display: 'block', marginBottom: 4 }}>Mô tả</label>
-                <input style={inputSt} value={chapterForm.description} onChange={e => setChapterForm(f => ({ ...f, description: e.target.value }))} placeholder="Mô tả ngắn (tuỳ chọn)" />
-              </div>
+
               <div style={{ display: 'flex', gap: '10px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '12px', fontWeight: 500, color: '#57564F', display: 'block', marginBottom: 4 }}>Thứ tự</label>
@@ -448,19 +499,17 @@ const AdminLiveManager: React.FC<AdminLiveManagerProps> = ({ onShowToast }) => {
                 <input style={inputSt} value={videoForm.title} onChange={e => setVideoForm(f => ({ ...f, title: e.target.value }))} placeholder="VD: Buổi 1 — Dao động điều hòa" />
               </div>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 500, color: '#57564F', display: 'block', marginBottom: 4 }}>Mô tả</label>
-                <input style={inputSt} value={videoForm.description} onChange={e => setVideoForm(f => ({ ...f, description: e.target.value }))} placeholder="Nội dung ngắn (tuỳ chọn)" />
-              </div>
-              <div>
                 <label style={{ fontSize: '12px', fontWeight: 500, color: '#57564F', display: 'block', marginBottom: 4 }}>YouTube URL / iframe src *</label>
-                <input style={inputSt} value={videoForm.youtube_url} onChange={e => setVideoForm(f => ({ ...f, youtube_url: e.target.value }))} placeholder="https://www.youtube.com/embed/VIDEO_ID hoặc paste link YouTube" />
-                <p style={{ fontSize: '11px', color: '#AEACA8', marginTop: 3 }}>Paste URL embed hoặc link YouTube thường đều được</p>
+                <input style={inputSt} value={videoForm.youtube_url} onChange={e => handleYoutubeUrlChange(e.target.value)} placeholder="https://www.youtube.com/watch?v=... hoặc link YouTube" />
+                <p style={{ fontSize: '11px', color: '#AEACA8', marginTop: 3 }}>Paste link YouTube → thời lượng tự tính tự động</p>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '12px', fontWeight: 500, color: '#57564F', display: 'block', marginBottom: 4 }}>Thời lượng (giây)</label>
-                  <input style={inputSt} type="number" min={0} value={videoForm.duration_seconds} onChange={e => setVideoForm(f => ({ ...f, duration_seconds: Number(e.target.value) }))} placeholder="VD: 3600 = 1 giờ" />
-                  <p style={{ fontSize: '11px', color: '#AEACA8', marginTop: 3 }}>Dùng để tính % tiến độ. 1 phút = 60 giây.</p>
+                  <label style={{ fontSize: '12px', fontWeight: 500, color: '#57564F', display: 'block', marginBottom: 4 }}>
+                    Thời lượng (giây) {durationLoading && <span style={{ color: '#6B7CDB', fontWeight: 400 }}>⏳ Đang tự tính...</span>}
+                  </label>
+                  <input style={{ ...inputSt, background: durationLoading ? '#EEF0FB' : '#F7F6F3' }} type="number" min={0} value={videoForm.duration_seconds} onChange={e => setVideoForm(f => ({ ...f, duration_seconds: Number(e.target.value) }))} placeholder="Tự động sau khi paste URL" />
+                  <p style={{ fontSize: '11px', color: '#AEACA8', marginTop: 3 }}>Paste YouTube URL → tự tính. Hoặc nhập tay.</p>
                 </div>
                 <div style={{ flex: 0.5 }}>
                   <label style={{ fontSize: '12px', fontWeight: 500, color: '#57564F', display: 'block', marginBottom: 4 }}>Thứ tự</label>
