@@ -184,17 +184,15 @@ const LivePage: React.FC<LivePageProps> = ({ studentPhone, studentGrade, isAdmin
                 )}
               </div>
 
-              {/* Video + Chat layout — full viewport height */}
+              {/* Video + Chat layout */}
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: liveConfig.chat_url ? '1fr 380px' : '1fr',
                 gap: '20px',
                 alignItems: 'stretch',
-                height: 'calc(100vh - 220px)',
-                minHeight: '500px',
               }}>
-                {/* Player */}
-                <div style={{ position: 'relative', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
+                {/* Player — aspect-ratio 16:9 để không bị viền đen */}
+                <div style={{ aspectRatio: '16/9', position: 'relative', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
                   <iframe
                     src={buildEmbedUrl(liveConfig.youtube_url, true)}
                     title={liveConfig.title || 'Live Stream'}
