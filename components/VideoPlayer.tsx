@@ -95,9 +95,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, studentPhone, progress
       player = new window.YT.Player(iframeId, {
         events: {
           onReady: () => {
-            playerRef.current = player;
-            pollRef.current = setInterval(handlePoll, POLL_INTERVAL);
-          },
+              playerRef.current = player;
+              // Tiếp tục từ vị trí đã xem lần trước
+              if (lastSavedRef.current > 0) {
+                player.seekTo(lastSavedRef.current, true);
+              }
+              pollRef.current = setInterval(handlePoll, POLL_INTERVAL);
+            },
           onStateChange: (e: any) => {
             if (e.data === 1) {
               // Bắt đầu play — nếu chưa có interval thì tạo
