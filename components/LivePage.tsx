@@ -184,12 +184,15 @@ const LivePage: React.FC<LivePageProps> = ({ studentPhone, studentGrade, isAdmin
                 )}
               </div>
 
-              {/* Video + Chat layout */}
+              {/* Video + Chat layout — max-width khớp YouTube.com (951px video + 410px chat) */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: liveConfig.chat_url ? '1fr 380px' : '1fr',
+                gridTemplateColumns: liveConfig.chat_url ? '1fr 410px' : '1fr',
                 gap: '20px',
                 alignItems: 'stretch',
+                maxWidth: '1380px',
+                margin: '0 auto',
+                width: '100%',
               }}>
                 {/* Player — aspect-ratio 16:9 để không bị viền đen */}
                 <div style={{ aspectRatio: '16/9', position: 'relative', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
