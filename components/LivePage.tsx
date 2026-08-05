@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Tv2, BookOpen, RefreshCw, ChevronDown, ChevronRight, Play, CheckCircle2, Clock } from 'lucide-react';
+import { Tv2, BookOpen, RefreshCw, ChevronDown, ChevronRight, Play, CheckCircle2, Clock, ChevronLeft } from 'lucide-react';
 import {
   getLiveConfig, getChapters, getVideos, getProgress, buildEmbedUrl,
 } from '../src/services/liveService';
@@ -20,9 +20,10 @@ interface LivePageProps {
   studentPhone: string | null;
   studentGrade: number | null;
   isAdmin?: boolean;
+  onBack?: () => void;
 }
 
-const LivePage: React.FC<LivePageProps> = ({ studentPhone, studentGrade, isAdmin }) => {
+const LivePage: React.FC<LivePageProps> = ({ studentPhone, studentGrade, isAdmin, onBack }) => {
   const [activeTab, setActiveTab] = useState<'live' | 'lectures'>('live');
   const [liveConfig, setLiveConfig] = useState<LiveConfig | null>(null);
   const [chapters, setChapters] = useState<LectureChapter[]>([]);
@@ -118,6 +119,19 @@ const LivePage: React.FC<LivePageProps> = ({ studentPhone, studentGrade, isAdmin
 
   return (
     <div className="animate-fade-in">
+      {/* Back button */}
+      {onBack && (
+        <div style={{ marginBottom: '12px' }}>
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-sm font-medium hover:text-indigo-600 transition-colors"
+            style={{ color: '#787774' }}
+          >
+            <ChevronLeft className="w-4 h-4" /> Quay lại
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ marginBottom: '20px' }}>
         <h1 className="text-2xl font-semibold mb-1" style={{ color: '#1A1A1A' }}>

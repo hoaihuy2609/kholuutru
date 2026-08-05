@@ -538,7 +538,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
             } />
             <Route path="/live" element={
               <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-                <LivePage studentPhone={getActivatedPhone()} studentGrade={studentGradeValue} isAdmin={effectiveIsAdmin} />
+                <LivePage studentPhone={getActivatedPhone()} studentGrade={studentGradeValue} isAdmin={effectiveIsAdmin} onBack={() => navigate('/')} />
               </Suspense></ErrorBoundary>
             } />
             <Route path="/admin/editor" element={effectiveIsAdmin ? <ErrorBoundary><Suspense fallback={<LazyFallback />}><SolutionEditor /></Suspense></ErrorBoundary> : <Navigate to="/" replace />} />
