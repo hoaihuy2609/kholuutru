@@ -36,6 +36,7 @@ const GlobalSearch = React.lazy(() => import('./components/GlobalSearch'));
 const SolutionEditor = React.lazy(() => import('./components/SolutionEditor'));
 const CommunityPage = React.lazy(() => import('./components/CommunityPage'));
 const TheoryKing = React.lazy(() => import('./components/TheoryKing'));
+const LivePage = React.lazy(() => import('./components/LivePage'));
 
 const LazyFallback = () => (
   <div className="flex items-center justify-center h-[40vh]">
@@ -404,6 +405,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const isOnSimLab = path === '/lab';
   const isOnCommunity = path.startsWith('/community');
   const isOnGame = path.startsWith('/game');
+  const isOnLive = path === '/live';
 
   // Game sub-state (only TheoryKing remains)
   const resetGames = useCallback(() => {}, []);
@@ -424,6 +426,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     onOpenBlog: (isActivated || isAdmin) ? () => navigate('/blog') : undefined,
     onOpenCommunity: (isActivated || isAdmin) ? () => navigate('/community') : undefined,
     onOpenGame: (isActivated || isAdmin) ? () => { navigate('/game'); resetGames(); } : undefined,
+    onOpenLive: (isActivated || isAdmin) ? () => navigate('/live') : undefined,
     showExamList: isOnExams,
     showContactBook: path === '/contact-book',
     showStudyPlanner: path === '/planner',
@@ -433,6 +436,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     showBlog: path.startsWith('/blog'),
     showCommunity: isOnCommunity,
     showGame: isOnGame,
+    showLive: isOnLive,
     isAdmin,
     previewMode,
     onSetPreviewMode: handlePreviewMode,
@@ -447,7 +451,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 
       {/* Mobile Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 shadow-xl transform transition-transform duration-300 ease-out md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: '#F1F0EC', borderRight: '1px solid #E9E9E7' }}>
-        <Sidebar {...sidebarCommonProps} onSelectGrade={(g) => { navigate(g ? `/grade/${g}` : '/'); setMobileMenuOpen(false); }} onOpenSettings={() => { setSettingsOpen(true); setMobileMenuOpen(false); }} onOpenExamList={(isActivated || isAdmin) ? () => { navigate('/exams'); setMobileMenuOpen(false); } : undefined} onOpenContactBook={(isActivated || isAdmin) ? () => { navigate('/contact-book'); setMobileMenuOpen(false); } : undefined} onOpenStudyPlanner={(isActivated || isAdmin) ? () => { navigate('/planner'); setMobileMenuOpen(false); } : undefined} onOpenNotification={(isActivated || isAdmin) ? () => { navigate('/notifications'); setMobileMenuOpen(false); } : undefined} onOpenSimLab={(isActivated || isAdmin) ? () => { navigate('/lab'); setMobileMenuOpen(false); } : undefined} onOpenBlog={(isActivated || isAdmin) ? () => { navigate('/blog'); setMobileMenuOpen(false); } : undefined} onOpenCommunity={(isActivated || isAdmin) ? () => { navigate('/community'); setMobileMenuOpen(false); } : undefined} onOpenGame={(isActivated || isAdmin) ? () => { navigate('/game'); setMobileMenuOpen(false); resetGames(); } : undefined} className="w-full" />
+        <Sidebar {...sidebarCommonProps} onSelectGrade={(g) => { navigate(g ? `/grade/${g}` : '/'); setMobileMenuOpen(false); }} onOpenSettings={() => { setSettingsOpen(true); setMobileMenuOpen(false); }} onOpenExamList={(isActivated || isAdmin) ? () => { navigate('/exams'); setMobileMenuOpen(false); } : undefined} onOpenContactBook={(isActivated || isAdmin) ? () => { navigate('/contact-book'); setMobileMenuOpen(false); } : undefined} onOpenStudyPlanner={(isActivated || isAdmin) ? () => { navigate('/planner'); setMobileMenuOpen(false); } : undefined} onOpenNotification={(isActivated || isAdmin) ? () => { navigate('/notifications'); setMobileMenuOpen(false); } : undefined} onOpenSimLab={(isActivated || isAdmin) ? () => { navigate('/lab'); setMobileMenuOpen(false); } : undefined} onOpenBlog={(isActivated || isAdmin) ? () => { navigate('/blog'); setMobileMenuOpen(false); } : undefined} onOpenCommunity={(isActivated || isAdmin) ? () => { navigate('/community'); setMobileMenuOpen(false); } : undefined} onOpenGame={(isActivated || isAdmin) ? () => { navigate('/game'); setMobileMenuOpen(false); resetGames(); } : undefined} onOpenLive={(isActivated || isAdmin) ? () => { navigate('/live'); setMobileMenuOpen(false); } : undefined} showLive={isOnLive} className="w-full" />
       </div>
 
       {/* Desktop Sidebar */}
@@ -530,6 +534,11 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
             <Route path="/game" element={
               <ErrorBoundary><Suspense fallback={<LazyFallback />}>
                 <TheoryKing onBack={() => navigate('/')} workerUrl={import.meta.env.VITE_COMMENT_WORKER_URL} studentGrade={studentGradeValue} />
+              </Suspense></ErrorBoundary>
+            } />
+            <Route path="/live" element={
+              <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+                <LivePage studentPhone={getActivatedPhone()} studentGrade={studentGradeValue} isAdmin={effectiveIsAdmin} />
               </Suspense></ErrorBoundary>
             } />
             <Route path="/admin/editor" element={effectiveIsAdmin ? <ErrorBoundary><Suspense fallback={<LazyFallback />}><SolutionEditor /></Suspense></ErrorBoundary> : <Navigate to="/" replace />} />

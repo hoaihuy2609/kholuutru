@@ -36,8 +36,7 @@
   <link rel="dns-prefetch" href="https://ndhcwrczwbehyznnxzou.supabase.co" />
 
   <!-- Fonts: load asynchronously (non-render-blocking) -->
-  <link rel="preload" as="style"
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
     onload="this.onload=null;this.rel='stylesheet'" />
   <noscript>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -217,7 +216,7 @@
           observer.disconnect();
         }
       });
-      observer.observe(root, { childList: true, subtree: false });
+      observer.observe(root, {childList: true, subtree: false});
 
       // Fallback: hide after 6s no matter what
       setTimeout(function () {
@@ -230,8 +229,8 @@
   <!-- Cleanup old service workers -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(regs) {
-        regs.forEach(function(sw) {
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        regs.forEach(function (sw) {
           sw.unregister();
         });
       });

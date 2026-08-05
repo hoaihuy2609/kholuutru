@@ -81,10 +81,26 @@ const SCENARIOS = {
 
 export const options = SCENARIOS[__ENV.TYPE] || SCENARIOS.realistic;
 
+// Headers cho Supabase (API key)
 const params = {
     headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+    },
+};
+
+// Headers cho Cloudflare Worker (giả lập trình duyệt thật)
+const workerParams = {
+    headers: {
+        'Referer': 'https://physivault.vercel.app/',
+        'Origin': 'https://physivault.vercel.app',
+    },
+};
+const workerPostParams = {
+    headers: {
+        'Referer': 'https://physivault.vercel.app/',
+        'Origin': 'https://physivault.vercel.app',
         'Content-Type': 'application/json',
     },
 };
@@ -96,9 +112,9 @@ export default function () {
 
     if (type === 'realistic' || type === 'safe_5000') {
         // --- KỊCH BẢN HỌC SINH THẬT ---
-        http.get(`${WORKER_BASE}/vault-index?grade=12`);
+        http.get(`${WORKER_BASE}/vault-index?grade=12`, workerParams);
         sleep(3);
-        http.get(`${WORKER_BASE}/getFile/BQACAgUAAyEGAATn0ptoAAIF_mnBQ9jeGN1RFc6L_enUjpNlVhJUAALBJwACIksRVjF8ovRf6ljOOgQ`);
+        http.get(`${WORKER_BASE}/getFile/BQACAgUAAyEGAATn0ptoAAIF_mnBQ9jeGN1RFc6L_enUjpNlVhJUAALBJwACIksRVjF8ovRf6ljOOgQ`, workerParams);
         sleep(7);
         const payload = JSON.stringify({
             p_exam_id: 'suite-test-realistic',
@@ -107,28 +123,28 @@ export default function () {
             p_raw_results: { q: 'suite' }
         });
         http.post(`${SUPABASE_URL}/rest/v1/rpc/save_student_exam_result`, payload, params);
-        http.get(`${WORKER_BASE}/leaderboard?grade=12`);
+        http.get(`${WORKER_BASE}/leaderboard?grade=12`, workerParams);
         sleep(5);
 
     } else if (type === 'total_war') {
         // --- KỊCH BẢN TỔNG LỰC ---
-        http.get(`${WORKER_BASE}/vault-index?grade=12`);
-        http.get(`${WORKER_BASE}/leaderboard?grade=12`);
-        http.get(`${WORKER_BASE}/getFile/BQACAgUAAyEGAATn0ptoAAIF_mnBQ9jeGN1RFc6L_enUjpNlVhJUAALBJwACIksRVjF8ovRf6ljOOgQ`);
+        http.get(`${WORKER_BASE}/vault-index?grade=12`, workerParams);
+        http.get(`${WORKER_BASE}/leaderboard?grade=12`, workerParams);
+        http.get(`${WORKER_BASE}/getFile/BQACAgUAAyEGAATn0ptoAAIF_mnBQ9jeGN1RFc6L_enUjpNlVhJUAALBJwACIksRVjF8ovRf6ljOOgQ`, workerParams);
         const p = JSON.stringify({ p_exam_id: 'total-war-suite', p_student_phone: mockPhone, p_score: 10 });
         http.post(`${SUPABASE_URL}/rest/v1/rpc/save_student_exam_result`, p, params);
-        http.post(`${WORKER_BASE}/vote`, JSON.stringify({ exam_id: 'total-war', part_name: 'I', question_number: 1, student_phone: mockPhone }), { headers: { 'Content-Type': 'application/json' } });
+        http.post(`${WORKER_BASE}/vote`, JSON.stringify({ exam_id: 'total-war', part_name: 'I', question_number: 1, student_phone: mockPhone }), workerPostParams);
 
     } else if (type === 'leaderboard') {
-        http.get(`${WORKER_BASE}/leaderboard?grade=12`);
+        http.get(`${WORKER_BASE}/leaderboard?grade=12`, workerParams);
 
     } else if (type === 'pdf') {
-        http.get(`${WORKER_BASE}/getFile/BQACAgUAAyEGAATn0ptoAAIF_mnBQ9jeGN1RFc6L_enUjpNlVhJUAALBJwACIksRVjF8ovRf6ljOOgQ`);
+        http.get(`${WORKER_BASE}/getFile/BQACAgUAAyEGAATn0ptoAAIF_mnBQ9jeGN1RFc6L_enUjpNlVhJUAALBJwACIksRVjF8ovRf6ljOOgQ`, workerParams);
 
     } else if (type === 'vote_lock') {
         // Test lock: dùng chung 1 sđt cho tất cả VUs
         const body = JSON.stringify({ exam_id: 'lock-test', part_name: 'I', question_number: 1, student_phone: '0912121212' });
-        http.post(`${WORKER_BASE}/vote`, body, { headers: { 'Content-Type': 'application/json' } });
+        http.post(`${WORKER_BASE}/vote`, body, workerPostParams);
 
     } else if (type === 'exam_storm') {
         // Áp lực lớn nhất vào database nộp bài thi thử (gọi RPC submit_exam_result với logic bảo mật thời gian mới)

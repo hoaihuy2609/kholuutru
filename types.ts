@@ -179,3 +179,41 @@ export interface UserNickname {
   nickname: string;
   updated_at: number;
 }
+
+// ── Live & Bài Giảng Types ────────────────────────────────────────
+
+export interface LiveConfig {
+  id?: number;
+  is_live: boolean;
+  youtube_url: string;
+  chat_url: string;   // YouTube Live Chat embed URL — để sẵn cho nâng cấp sau
+  title: string;
+  updated_at?: string;
+}
+
+export interface LectureChapter {
+  id: string;
+  title: string;
+  description: string;
+  order: number;
+  grade: number;      // 0 = tất cả, 10/11/12 = theo khối lớp
+  created_at: string;
+}
+
+export interface LectureVideo {
+  id: string;
+  chapter_id: string;
+  title: string;
+  description: string;
+  youtube_url: string;
+  duration_seconds: number;
+  order: number;
+  created_at: string;
+}
+
+export interface LectureProgress {
+  video_id: string;
+  watched_seconds: number;
+  completed: boolean;
+  updated_at?: string;
+}
