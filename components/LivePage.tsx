@@ -117,7 +117,7 @@ const LivePage: React.FC<LivePageProps> = ({ studentPhone, studentGrade, isAdmin
   });
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '960px' }}>
+    <div className="animate-fade-in">
       {/* Header */}
       <div style={{ marginBottom: '20px' }}>
         <h1 className="text-2xl font-semibold mb-1" style={{ color: '#1A1A1A' }}>
@@ -170,15 +170,17 @@ const LivePage: React.FC<LivePageProps> = ({ studentPhone, studentGrade, isAdmin
                 )}
               </div>
 
-              {/* Video + Chat layout */}
+              {/* Video + Chat layout — full viewport height */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: liveConfig.chat_url ? '1fr 340px' : '1fr',
-                gap: '16px',
-                alignItems: 'flex-start',
+                gridTemplateColumns: liveConfig.chat_url ? '1fr 380px' : '1fr',
+                gap: '20px',
+                alignItems: 'stretch',
+                height: 'calc(100vh - 220px)',
+                minHeight: '500px',
               }}>
                 {/* Player */}
-                <div style={{ position: 'relative', paddingTop: '56.25%', background: '#000', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
                   <iframe
                     src={buildEmbedUrl(liveConfig.youtube_url, true)}
                     title={liveConfig.title || 'Live Stream'}
@@ -190,7 +192,7 @@ const LivePage: React.FC<LivePageProps> = ({ studentPhone, studentGrade, isAdmin
 
                 {/* Chat (YouTube Live Chat embed — bật khi có chat_url) */}
                 {liveConfig.chat_url && (
-                  <div style={{ height: '480px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #E9E9E7' }}>
+                  <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E9E9E7' }}>
                     <iframe
                       src={liveConfig.chat_url}
                       title="Live Chat"
