@@ -254,10 +254,10 @@ const LivePage: React.FC<LivePageProps> = ({ studentPhone, studentGrade, isAdmin
 
       {/* ── Tab: Bài Giảng ── */}
       {activeTab === 'lectures' && (
-        <div style={{ display: 'grid', gridTemplateColumns: selectedVideo ? '320px 1fr' : '1fr', gap: '20px', alignItems: 'flex-start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: selectedVideo ? '320px 1fr' : '1fr', gap: '20px', alignItems: 'stretch' }}>
 
-          {/* Danh sách chương */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Danh sách chương — scroll bên trong, ngang bằng khung video */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: '100%' }}>
             {chapters.length === 0 ? (
               <div style={{
                 textAlign: 'center', padding: '48px 24px',
