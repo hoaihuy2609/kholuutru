@@ -334,7 +334,7 @@ const AdminLiveManager: React.FC<AdminLiveManagerProps> = ({ onShowToast }) => {
                     setLiveForm(f => ({
                       ...f,
                       youtube_url: `https://www.youtube.com/embed/${videoId}`,
-                      chat_url: `https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${domain}`,
+                      chat_url: `https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${domain}&dark_theme=1`,
                     }));
                   }
                 }}
