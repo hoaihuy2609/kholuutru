@@ -169,13 +169,7 @@ const LivePage: React.FC<LivePageProps> = ({ studentPhone, studentGrade, isAdmin
             const canView = isAdmin || liveGrade === 0 || (studentGrade !== null && studentGrade === liveGrade);
 
             if (liveConfig?.is_live && liveConfig.youtube_url && !canView) {
-              return (
-                <div style={{ textAlign: 'center', padding: '64px 24px', background: '#fff', borderRadius: '12px', border: '1px solid #E9E9E7' }}>
-                  <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔒</div>
-                  <p style={{ fontSize: '15px', fontWeight: 600, color: '#1A1A1A', marginBottom: '6px' }}>Buổi live này dành cho Lớp {liveGrade}</p>
-                  <p style={{ fontSize: '13px', color: '#787774' }}>Tài khoản của bạn không có quyền xem buổi học này.</p>
-                </div>
-              );
+              return null; // Coi như không có live — không thông báo gì
             }
 
             return liveConfig?.is_live && liveConfig.youtube_url ? (
