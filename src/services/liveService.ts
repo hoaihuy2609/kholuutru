@@ -38,9 +38,12 @@ export async function getChapters(grade?: number): Promise<LectureChapter[]> {
     .order('order', { ascending: true })
     .order('created_at', { ascending: true });
 
-  // grade 0 = tất cả, hoặc lọc theo khối
+  // Nếu có grade cụ thể (10/11/12): hiện grade=0 (tất cả lớp) VÀ grade khớp
+  // Nếu grade null/undefined: chỉ hiện grade=0 (tránh lộ chapters riêng)
   if (grade && grade > 0) {
     query = query.or(`grade.eq.0,grade.eq.${grade}`);
+  } else {
+    query = query.eq('grade', 0);
   }
 
   const { data, error } = await query;
