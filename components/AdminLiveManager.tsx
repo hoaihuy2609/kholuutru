@@ -57,8 +57,8 @@ const AdminLiveManager: React.FC<AdminLiveManagerProps> = ({ onShowToast }) => {
   const [section, setSection] = useState<'live' | 'lectures'>('live');
 
   // ── Live Config state ──
-  const [liveConfig, setLiveConfig] = useState<LiveConfig>({ is_live: false, youtube_url: '', chat_url: '', title: '' });
-  const [liveForm, setLiveForm] = useState<LiveConfig>({ is_live: false, youtube_url: '', chat_url: '', title: '' });
+  const [liveConfig, setLiveConfig] = useState<LiveConfig>({ is_live: false, youtube_url: '', chat_url: '', title: '', grade: 0 });
+  const [liveForm, setLiveForm] = useState<LiveConfig>({ is_live: false, youtube_url: '', chat_url: '', title: '', grade: 0 });
   const [liveSaving, setLiveSaving] = useState(false);
 
   // ── Chapters state ──
@@ -368,6 +368,23 @@ const AdminLiveManager: React.FC<AdminLiveManagerProps> = ({ onShowToast }) => {
                 value={liveForm.chat_url}
                 onChange={e => setLiveForm(f => ({ ...f, chat_url: e.target.value }))}
               />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 500, color: '#57564F', display: 'block', marginBottom: '5px' }}>
+                Khối được xem live
+              </label>
+              <select
+                style={{ ...inputSt }}
+                value={liveForm.grade}
+                onChange={e => setLiveForm(f => ({ ...f, grade: Number(e.target.value) }))}
+              >
+                <option value={0}>Tất cả lớp</option>
+                <option value={10}>Chỉ Lớp 10</option>
+                <option value={11}>Chỉ Lớp 11</option>
+                <option value={12}>Chỉ Lớp 12</option>
+              </select>
+              <p style={{ fontSize: '11px', color: '#AEACA8', marginTop: '4px' }}>Học sinh khối khác sẽ không thấy tab Live</p>
             </div>
           </div>
 

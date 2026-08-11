@@ -186,8 +186,9 @@ export interface LiveConfig {
   id?: number;
   is_live: boolean;
   youtube_url: string;
-  chat_url: string;   // YouTube Live Chat embed URL — để sẵn cho nâng cấp sau
+  chat_url: string;
   title: string;
+  grade: number;  // 0 = tất cả lớp, 10/11/12 = chỉ khối đó
   updated_at?: string;
 }
 

@@ -12,8 +12,9 @@ CREATE TABLE IF NOT EXISTS live_config (
   id           int PRIMARY KEY DEFAULT 1,
   is_live      boolean DEFAULT false,
   youtube_url  text DEFAULT '',
-  chat_url     text DEFAULT '',     -- YouTube Live Chat embed URL (để sẵn cho nâng cấp sau)
+  chat_url     text DEFAULT '',
   title        text DEFAULT '',
+  grade        int DEFAULT 0,          -- 0 = tất cả lớp, 10/11/12 = chỉ khối đó
   updated_at   timestamptz DEFAULT now()
 );
 
@@ -99,17 +100,19 @@ CREATE OR REPLACE FUNCTION admin_update_live_config(
   p_is_live     boolean,
   p_youtube_url text,
   p_chat_url    text,
-  p_title       text
+  p_title       text,
+  p_grade       int DEFAULT 0
 ) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
-  INSERT INTO live_config (id, is_live, youtube_url, chat_url, title, updated_at)
-  VALUES (1, p_is_live, p_youtube_url, p_chat_url, p_title, now())
+  INSERT INTO live_config (id, is_live, youtube_url, chat_url, title, grade, updated_at)
+  VALUES (1, p_is_live, p_youtube_url, p_chat_url, p_title, p_grade, now())
   ON CONFLICT (id) DO UPDATE
     SET is_live      = EXCLUDED.is_live,
         youtube_url  = EXCLUDED.youtube_url,
         chat_url     = EXCLUDED.chat_url,
         title        = EXCLUDED.title,
+        grade        = EXCLUDED.grade,
         updated_at   = now();
 END;
 $$;

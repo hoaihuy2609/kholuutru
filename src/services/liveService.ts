@@ -16,7 +16,7 @@ export async function getLiveConfig(): Promise<LiveConfig> {
     .maybeSingle();
 
   if (error) throw error;
-  return data ?? { is_live: false, youtube_url: '', chat_url: '', title: '' };
+  return data ?? { is_live: false, youtube_url: '', chat_url: '', title: '', grade: 0 };
 }
 
 export async function updateLiveConfig(config: Partial<Omit<LiveConfig, 'id' | 'updated_at'>>): Promise<void> {
@@ -25,6 +25,7 @@ export async function updateLiveConfig(config: Partial<Omit<LiveConfig, 'id' | '
     p_youtube_url: config.youtube_url ?? '',
     p_chat_url:    config.chat_url    ?? '',
     p_title:       config.title       ?? '',
+    p_grade:       config.grade       ?? 0,
   });
   if (error) throw error;
 }
