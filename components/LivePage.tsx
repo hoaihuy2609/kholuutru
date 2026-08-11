@@ -215,15 +215,21 @@ const LivePage: React.FC<LivePageProps> = ({ studentPhone, studentGrade, isAdmin
                 </div>
 
                 {/* Chat (YouTube Live Chat embed — bật khi có chat_url) */}
-                {liveConfig.chat_url && (
-                  <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E9E9E7' }}>
-                    <iframe
-                      src={liveConfig.chat_url}
-                      title="Live Chat"
-                      style={{ width: '100%', height: '100%', border: 'none' }}
-                    />
-                  </div>
-                )}
+                {liveConfig.chat_url && (() => {
+                  // Luôn force dark_theme=1 dù URL trong DB có hay không
+                  const chatSrc = liveConfig.chat_url.includes('dark_theme')
+                    ? liveConfig.chat_url
+                    : liveConfig.chat_url + '&dark_theme=1';
+                  return (
+                    <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #E9E9E7', background: '#0f0f0f', colorScheme: 'dark' }}>
+                      <iframe
+                        src={chatSrc}
+                        title="Live Chat"
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                      />
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           ) : (
