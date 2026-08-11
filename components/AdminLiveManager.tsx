@@ -77,13 +77,16 @@ const AdminLiveManager: React.FC<AdminLiveManagerProps> = ({ onShowToast }) => {
   const [videoForm, setVideoForm] = useState({ title: '', description: '', youtube_url: '', duration_seconds: 0, order: 0 });
   const [videoSaving, setVideoSaving] = useState(false);
   const [durationLoading, setDurationLoading] = useState(false);
+  const [quickPasteUrl, setQuickPasteUrl] = useState('');
 
-  /* Tách video ID từ YouTube URL */
+  /* Tách video ID từ YouTube URL (cả studio link) */
   const extractVideoId = (url: string): string | null => {
     const patterns = [
       /youtube\.com\/watch\?v=([^&\s]+)/,
       /youtu\.be\/([^?\s]+)/,
       /youtube\.com\/embed\/([^?\s]+)/,
+      /studio\.youtube\.com\/video\/([^/\s]+)/,
+      /youtube\.com\/live\/([^?\s]+)/,
     ];
     for (const p of patterns) {
       const m = url.match(p);
@@ -314,19 +317,45 @@ const AdminLiveManager: React.FC<AdminLiveManagerProps> = ({ onShowToast }) => {
               />
             </div>
 
+            <div style={{ background: '#EEF0FB', borderRadius: '10px', padding: '12px 14px', marginBottom: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#6B7CDB', display: 'block', marginBottom: '6px' }}>
+                ⚡ Quick Paste — Dán link YouTube bất kỳ là xong!
+              </label>
+              <input
+                style={{ ...inputSt, background: '#fff' }}
+                placeholder="Paste https://www.youtube.com/watch?v=... hoặc link studio..."
+                value={quickPasteUrl}
+                onChange={e => {
+                  const url = e.target.value;
+                  setQuickPasteUrl(url);
+                  const videoId = extractVideoId(url);
+                  if (videoId) {
+                    const domain = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
+                    setLiveForm(f => ({
+                      ...f,
+                      youtube_url: `https://www.youtube.com/embed/${videoId}`,
+                      chat_url: `https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${domain}`,
+                    }));
+                  }
+                }}
+              />
+              {extractVideoId(quickPasteUrl) && (
+                <p style={{ fontSize: '11px', color: '#448361', marginTop: '4px', fontWeight: 500 }}>
+                  ✅ Đã tự điền YouTube URL và Chat URL!
+                </p>
+              )}
+            </div>
+
             <div>
               <label style={{ fontSize: '12px', fontWeight: 500, color: '#57564F', display: 'block', marginBottom: '5px' }}>
                 YouTube URL / iframe src <span style={{ color: '#E03E3E' }}>*</span>
               </label>
               <input
                 style={inputSt}
-                placeholder="https://www.youtube.com/embed/VIDEO_ID hoặc paste iframe src"
+                placeholder="https://www.youtube.com/embed/VIDEO_ID"
                 value={liveForm.youtube_url}
                 onChange={e => setLiveForm(f => ({ ...f, youtube_url: e.target.value }))}
               />
-              <p style={{ fontSize: '11px', color: '#AEACA8', marginTop: '4px' }}>
-                Dán URL embed hoặc toàn bộ thẻ &lt;iframe&gt; từ YouTube đều được
-              </p>
             </div>
 
             <div>
