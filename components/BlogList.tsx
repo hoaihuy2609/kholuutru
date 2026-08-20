@@ -77,12 +77,17 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     }), [blogs, debouncedSearch, selectedCategory, selectedTag, gradeFilter, isAdmin, studentGrade]);
 
 
-    const gradeTabs = [
+    const allGradeTabs = [
         { label: 'Tất cả', value: 0, color: '#787774' },
         { label: 'Lớp 12', value: 12, color: '#9065B0' },
         { label: 'Lớp 11', value: 11, color: '#6B7CDB' },
         { label: 'Lớp 10', value: 10, color: '#448361' },
     ];
+    // Học sinh chỉ thấy "Tất cả" + tab đúng khối của mình
+    // Admin thấy đủ 4 tab
+    const gradeTabs = (!isAdmin && studentGrade)
+        ? allGradeTabs.filter(t => t.value === 0 || t.value === studentGrade)
+        : allGradeTabs;
 
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-8 animate-fade-in relative pb-20" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
