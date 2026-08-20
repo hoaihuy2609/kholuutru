@@ -57,7 +57,10 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
         const matchSearch = !q || b.title.toLowerCase().includes(q) || b.summary.toLowerCase().includes(q) || (b.tags || []).some(t => t.toLowerCase().includes(q));
         const matchCat = !selectedCategory || b.category === selectedCategory;
         const matchTag = !selectedTag || (b.tags || []).includes(selectedTag);
-        const matchGrade = gradeFilter === 0 || (b.grade || 0) === gradeFilter || (b.grade || 0) === 0;
+        // grade=0 → "Chung" → hiện ở tất cả các lớp
+        // grade>0 → chỉ hiện khi "Tất cả" (gradeFilter=0) hoặc đúng khối
+        const postGrade = b.grade || 0;
+        const matchGrade = gradeFilter === 0 || postGrade === 0 || postGrade === gradeFilter;
         return matchSearch && matchCat && matchTag && matchGrade;
     }), [blogs, debouncedSearch, selectedCategory, selectedTag, gradeFilter, isAdmin]);
 
