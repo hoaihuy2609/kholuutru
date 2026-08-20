@@ -146,7 +146,7 @@ const AdminLiveManager: React.FC<AdminLiveManagerProps> = ({ onShowToast }) => {
   const loadChapters = useCallback(async () => {
     setLoadingChapters(true);
     try {
-      const chs = await getChapters();
+      const chs = await getChapters(undefined, true); // Admin: xem tất cả khối
       setChapters(chs);
       const map: Record<string, LectureVideo[]> = {};
       await Promise.all(chs.map(async ch => {
