@@ -4,6 +4,7 @@ import { BookOpen, Calendar, ChevronRight, Edit3, Plus, Search, Clock, Filter, A
 
 interface BlogListProps {
     isAdmin: boolean;
+    studentGrade?: number | null; // grade của học sinh đang đăng nhập (10/11/12), null nếu chưa biết
     onReadBlog: (blog: BlogPost) => void;
     onEditBlog?: (blog: BlogPost) => void;
     onCreateBlog?: () => void;
@@ -21,7 +22,7 @@ const GRADE_COLORS: Record<number, { bg: string; text: string; dot: string }> = 
     0: { bg: '#F1F0EC', text: '#787774', dot: '#AEACA8' },
 };
 
-const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, onCreateBlog, onBlogsLoaded, getBlogs }) => {
+const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, onEditBlog, onCreateBlog, onBlogsLoaded, getBlogs }) => {
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -53,16 +54,28 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, onReadBlog, onEditBlog, on
     const filteredBlogs = useMemo(() => blogs.filter(b => {
         // Ẩn đề thi (exam_paper) khỏi Góc học tập của học sinh — chỉ admin mới thấy để quản lý
         if (!isAdmin && b.category === 'exam_paper') return false;
+
+        // ── Lọc theo khối lớp học sinh ──────────────────────────────────
+        // Admin thấy tất cả. Học sinh chỉ thấy bài "Chung" (grade=0)
+        // hoặc đúng khối của mình. Không cho học sinh xem lén bài lớp khác.
+        const postGrade = b.grade || 0;
+        if (!isAdmin && studentGrade) {
+            // Bài grade>0 mà không khớp khối học sinh → ẩn hoàn toàn
+            if (postGrade !== 0 && postGrade !== studentGrade) return false;
+        }
+
+        // ── Tab filter (trong tập bài đã được phép xem) ─────────────────
+        // gradeFilter=0 → "Tất cả" → hiện cả "Chung" lẫn bài đúng khối
+        // gradeFilter=N → chỉ hiện bài grade=N (không hiện "Chung")
+        const matchGrade = gradeFilter === 0 || postGrade === gradeFilter;
+
         const q = debouncedSearch.toLowerCase();
         const matchSearch = !q || b.title.toLowerCase().includes(q) || b.summary.toLowerCase().includes(q) || (b.tags || []).some(t => t.toLowerCase().includes(q));
         const matchCat = !selectedCategory || b.category === selectedCategory;
         const matchTag = !selectedTag || (b.tags || []).includes(selectedTag);
-        // grade=0 → "Chung" → hiện ở tất cả các lớp
-        // grade>0 → chỉ hiện khi "Tất cả" (gradeFilter=0) hoặc đúng khối
-        const postGrade = b.grade || 0;
-        const matchGrade = gradeFilter === 0 || postGrade === 0 || postGrade === gradeFilter;
         return matchSearch && matchCat && matchTag && matchGrade;
-    }), [blogs, debouncedSearch, selectedCategory, selectedTag, gradeFilter, isAdmin]);
+    }), [blogs, debouncedSearch, selectedCategory, selectedTag, gradeFilter, isAdmin, studentGrade]);
+
 
     const gradeTabs = [
         { label: 'Tất cả', value: 0, color: '#787774' },

@@ -294,6 +294,11 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const isAdmin = useUIStore(state => state.isAdmin);
   const previewMode = useUIStore(state => state.previewMode);
   const effectiveIsAdmin = isAdmin && !previewMode;
+  // Lấy grade học sinh từ localStorage để filter bài theo khối
+  const studentGrade = useMemo(() => {
+    const g = parseInt(localStorage.getItem('physivault_grade') || '0', 10);
+    return (g === 10 || g === 11 || g === 12) ? g : null;
+  }, []);
   const { activeBlog, activeAdminBlog, isCreatingBlog, allBlogs, setActiveBlog, setActiveAdminBlog, setIsCreatingBlog, setAllBlogs } = useBlogStore(useShallow(state => ({
     activeBlog: state.activeBlog,
     activeAdminBlog: state.activeAdminBlog,
@@ -322,10 +327,11 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   }
   return (
     <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-      <BlogList isAdmin={effectiveIsAdmin} onReadBlog={setActiveBlog} onEditBlog={effectiveIsAdmin ? setActiveAdminBlog : undefined} onCreateBlog={effectiveIsAdmin ? () => setIsCreatingBlog(true) : undefined} onBlogsLoaded={setAllBlogs} getBlogs={cloud.getBlogs} />
+      <BlogList isAdmin={effectiveIsAdmin} studentGrade={effectiveIsAdmin ? null : studentGrade} onReadBlog={setActiveBlog} onEditBlog={effectiveIsAdmin ? setActiveAdminBlog : undefined} onCreateBlog={effectiveIsAdmin ? () => setIsCreatingBlog(true) : undefined} onBlogsLoaded={setAllBlogs} getBlogs={cloud.getBlogs} />
     </Suspense></ErrorBoundary>
   );
 }
+
 
 // ──────────────────────────────────────────────────────────────────
 // AppShell: layout (sidebar + mobile nav + modals)

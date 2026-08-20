@@ -5,7 +5,7 @@ import 'katex/dist/katex.min.css';
 import {
   Plus, Trash2, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
   ChevronUp, ChevronDown, Save, CheckCircle, AlertCircle, RefreshCw,
-  ToggleLeft, ToggleRight,
+  ToggleLeft, ToggleRight, Upload,
 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────
