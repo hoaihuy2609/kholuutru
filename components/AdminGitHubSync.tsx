@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
     CloudUpload, Send, CheckCircle2, RefreshCw, AlertCircle,
     FileText, Trash2, Upload,
@@ -105,15 +106,39 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     const [selectedUploadCategory, setSelectedUploadCategory] = useState<string>(LESSON_CATEGORIES[0]);
     const [pendingUploadLessonId, setPendingUploadLessonId] = useState<string | null>(null);
 
-    // Khóa cuộn trang khi Modal chọn loại tài liệu mở
+    // Khóa cuộn trang triệt để khi Modal chọn loại tài liệu mở
     useEffect(() => {
-        if (showCategoryModal) {
-            const originalOverflow = document.body.style.overflow;
-            document.body.style.overflow = 'hidden';
-            return () => {
-                document.body.style.overflow = originalOverflow;
-            };
-        }
+        if (!showCategoryModal) return;
+
+        const originalBodyOverflow = document.body.style.overflow;
+        const originalHtmlOverflow = document.documentElement.style.overflow;
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+
+        // Khóa tất cả scroll containers (VD: div.overflow-y-auto trong AdminDashboard)
+        const scrollContainers = document.querySelectorAll<HTMLElement>('.overflow-y-auto, .overflow-auto');
+        const originalContainerOverflows: Map<HTMLElement, string> = new Map();
+        scrollContainers.forEach(el => {
+            originalContainerOverflows.set(el, el.style.overflow);
+            el.style.overflow = 'hidden';
+        });
+
+        const preventScroll = (e: Event) => {
+            e.preventDefault();
+        };
+
+        window.addEventListener('wheel', preventScroll, { passive: false });
+        window.addEventListener('touchmove', preventScroll, { passive: false });
+
+        return () => {
+            document.body.style.overflow = originalBodyOverflow;
+            document.documentElement.style.overflow = originalHtmlOverflow;
+            originalContainerOverflows.forEach((val, el) => {
+                el.style.overflow = val;
+            });
+            window.removeEventListener('wheel', preventScroll);
+            window.removeEventListener('touchmove', preventScroll);
+        };
     }, [showCategoryModal]);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -806,22 +831,32 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                 </div>
 
             {/* ── Category Picker Modal (cho Bài học) ── */}
-            {showCategoryModal && (
+            {showCategoryModal && typeof document !== 'undefined' && createPortal(
                 <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 select-none animate-fade-in"
+                    className="fixed inset-0 select-none animate-fade-in flex items-center justify-center p-4"
                     style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: '100vw',
+                        height: '100vh',
+                        zIndex: 99999,
                         backgroundColor: 'rgba(0, 0, 0, 0.45)',
-                        backdropFilter: 'blur(4px)',
-                        WebkitBackdropFilter: 'blur(4px)',
+                        backdropFilter: 'blur(5px)',
+                        WebkitBackdropFilter: 'blur(5px)',
                     }}
                     onClick={() => setShowCategoryModal(false)}
+                    onWheel={e => e.stopPropagation()}
+                    onTouchMove={e => e.stopPropagation()}
                 >
                     <div
                         className="w-full max-w-[440px] rounded-2xl overflow-hidden animate-fade-in"
                         style={{
                             background: '#FFFFFF',
                             border: '1px solid #E9E9E7',
-                            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0,0,0,0.05)',
+                            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0,0,0,0.05)',
                         }}
                         onClick={e => e.stopPropagation()}
                     >
@@ -896,7 +931,8 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Hidden file input */}
