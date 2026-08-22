@@ -171,6 +171,21 @@ export const useCloudStorage = () => {
         ));
     };
 
+    const deleteChapter = async (grade: GradeLevel, chapterId: string) => {
+        const lessonIds = lessons.filter(lesson => lesson.chapterId === chapterId).map(lesson => lesson.id);
+        setCurriculum(current => current.map(item => item.level === grade
+            ? { ...item, chapters: item.chapters.filter(chapter => chapter.id !== chapterId) }
+            : item
+        ));
+        setLessons(current => current.filter(lesson => lesson.chapterId !== chapterId));
+        setStoredFiles(current => {
+            const next = { ...current };
+            delete next[chapterId];
+            lessonIds.forEach(lessonId => delete next[lessonId]);
+            return next;
+        });
+    };
+
     const uploadFiles = async (files: File[], targetId: string, category?: string) => {
         const filePromises = files.map(file => new Promise<StoredFile>((resolve, reject) => {
             const reader = new FileReader();
@@ -656,7 +671,7 @@ export const useCloudStorage = () => {
 
     return {
         curriculum, lessons, storedFiles, loading, isActivated, syncProgress,
-        addChapter, addLesson, deleteLesson, uploadFiles, deleteFile,
+        addChapter, deleteChapter, addLesson, deleteLesson, uploadFiles, deleteFile,
         activateSystem, verifyAccess,
         fetchLessonsFromCloud, syncToCloud,
         // Re-exported from services (backward compatible API)

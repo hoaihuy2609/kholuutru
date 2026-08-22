@@ -7,7 +7,7 @@ import Toast from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useCloudStorage } from './src/hooks/useCloudStorage';
 import { getActivatedPhone } from './src/utils/phone';
-import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Bell, Menu } from 'lucide-react';
+import { FileText, ChevronRight, FolderOpen, RefreshCw, Atom, Bell, Menu, Plus, X } from 'lucide-react';
 import KickedScreen from './components/auth/KickedScreen';
 import { useUIStore } from './src/stores/useUIStore';
 import { useDataStore } from './src/stores/useDataStore';
@@ -169,8 +169,39 @@ function GradeOverviewPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage
   const storedFiles = useDataStore(state => state.storedFiles);
   const grade = Number(level) as GradeLevel;
   const curriculum = useDataStore(state => state.curriculum);
+  const isAdmin = useUIStore(state => state.isAdmin);
+  const previewMode = useUIStore(state => state.previewMode);
+  const showToast = useUIStore(state => state.showToast);
+  const effectiveIsAdmin = isAdmin && !previewMode;
+
+  const [isAddingChapter, setIsAddingChapter] = useState(false);
+  const [newChapterName, setNewChapterName] = useState('');
+  const [newChapterDescription, setNewChapterDescription] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
   const gradeData = useMemo(() => curriculum.find(g => g.level === grade), [curriculum, grade]);
   if (!gradeData) return <Navigate to="/" replace />;
+
+  const handleCreateChapter = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newChapterName.trim()) {
+      showToast('Vui lòng nhập tên chương!', 'warning');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await cloud.addChapter(grade, newChapterName.trim(), newChapterDescription.trim());
+      showToast(`Đã thêm chương: ${newChapterName.trim()}`, 'success');
+      setNewChapterName('');
+      setNewChapterDescription('');
+      setIsAddingChapter(false);
+    } catch {
+      showToast('Không thể tạo chương mới.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center gap-1.5 text-sm" style={{ color: '#787774' }}>
@@ -178,10 +209,78 @@ function GradeOverviewPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage
         <ChevronRight className="w-3.5 h-3.5" style={{ color: '#CFCFCB' }} />
         <span className="font-medium" style={{ color: '#1A1A1A' }}>{gradeData.title}</span>
       </div>
-      <div>
-        <h1 className="text-2xl font-semibold mb-1" style={{ color: '#1A1A1A' }}>{gradeData.title}</h1>
-        <p className="text-sm" style={{ color: '#787774' }}>Quản lý và theo dõi tiến độ học tập</p>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold mb-1" style={{ color: '#1A1A1A' }}>{gradeData.title}</h1>
+          <p className="text-sm" style={{ color: '#787774' }}>Quản lý và theo dõi tiến độ học tập</p>
+        </div>
+
+        {effectiveIsAdmin && !isAddingChapter && (
+          <button
+            onClick={() => setIsAddingChapter(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all active:scale-[0.98] self-start sm:self-auto shrink-0 shadow-sm"
+            style={{ background: '#EEF0FB', color: '#6B7CDB', border: '1px solid #6B7CDB30' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#E0E4F9'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#EEF0FB'; }}
+          >
+            <Plus className="w-4 h-4" />
+            <span>Thêm chương mới</span>
+          </button>
+        )}
       </div>
+
+      {/* Add Chapter Form (Admin only) */}
+      {effectiveIsAdmin && isAddingChapter && (
+        <div className="p-4 rounded-xl animate-fade-in" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <div className="flex items-center justify-between mb-3 pb-2" style={{ borderBottom: '1px solid #F1F0EC' }}>
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#6B7CDB' }}>Thêm chương mới cho {gradeData.title}</span>
+            <button onClick={() => setIsAddingChapter(false)} className="p-1 rounded-md text-gray-400 hover:text-gray-600 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <form onSubmit={handleCreateChapter} className="grid grid-cols-1 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.8fr)_auto_auto] gap-2.5 items-center">
+            <input
+              type="text"
+              value={newChapterName}
+              onChange={e => setNewChapterName(e.target.value)}
+              placeholder="Tên chương (VD: Chương 5: Điện động lực học vĩ mô)"
+              className="text-sm rounded-lg px-3 py-2 outline-none transition-colors"
+              style={{ background: '#FBFBFA', border: '1px solid #E9E9E7', color: '#1A1A1A' }}
+              onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+              onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
+              autoFocus
+            />
+            <input
+              type="text"
+              value={newChapterDescription}
+              onChange={e => setNewChapterDescription(e.target.value)}
+              placeholder="Mô tả ngắn kiến thức cốt lõi (tùy chọn)"
+              className="text-sm rounded-lg px-3 py-2 outline-none transition-colors"
+              style={{ background: '#FBFBFA', border: '1px solid #E9E9E7', color: '#1A1A1A' }}
+              onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = '#6B7CDB'}
+              onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
+            />
+            <button
+              type="submit"
+              disabled={isSaving || !newChapterName.trim()}
+              className="text-sm font-semibold text-white rounded-lg px-4 py-2 transition-all active:scale-[0.98] disabled:opacity-50"
+              style={{ background: '#6B7CDB' }}
+            >
+              {isSaving ? 'Đang tạo...' : 'Tạo chương'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAddingChapter(false)}
+              className="text-sm font-medium rounded-lg px-3 py-2 transition-colors"
+              style={{ background: '#F1F0EC', color: '#57564F', border: '1px solid #E9E9E7' }}
+            >
+              Hủy
+            </button>
+          </form>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {gradeData.chapters.map((chapter) => {
           const cl = lessons.filter(l => l.chapterId === chapter.id);
@@ -526,7 +625,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
               effectiveIsAdmin ? (
                 <ErrorBoundary>
                   <Suspense fallback={<LazyFallback />}>
-                    <AdminDashboard onBack={() => navigate('/')} onShowToast={useUIStore.getState().showToast} onUploadExamPdf={cloud.uploadExamPdf} onSaveExam={cloud.saveExam} onDeleteExam={cloud.deleteExam} onLoadExams={cloud.loadExams} curriculum={curriculum} lessons={lessons} storedFiles={storedFiles} onAddChapter={cloud.addChapter} onAddLesson={cloud.addLesson} onDeleteLesson={cloud.deleteLesson} onUploadFiles={cloud.uploadFiles} onDeleteFile={cloud.deleteFile} onSyncToGitHub={cloud.syncToCloud} syncProgress={cloud.syncProgress} />
+                    <AdminDashboard onBack={() => navigate('/')} onShowToast={useUIStore.getState().showToast} onUploadExamPdf={cloud.uploadExamPdf} onSaveExam={cloud.saveExam} onDeleteExam={cloud.deleteExam} onLoadExams={cloud.loadExams} curriculum={curriculum} lessons={lessons} storedFiles={storedFiles} onDeleteChapter={async (grade, chapter) => cloud.deleteChapter(grade, chapter.id)} onAddLesson={cloud.addLesson} onDeleteLesson={cloud.deleteLesson} onUploadFiles={cloud.uploadFiles} onDeleteFile={cloud.deleteFile} onSyncToGitHub={cloud.syncToCloud} syncProgress={cloud.syncProgress} />
                   </Suspense>
                 </ErrorBoundary>
               ) : <Navigate to="/" replace />

@@ -11,7 +11,7 @@ const Loader2 = ({ className, style }: { className?: string; style?: React.CSSPr
     <RefreshCw className={`${className} animate-spin`} style={style} />
 );
 
-import { GradeData, GradeLevel, Lesson, StoredFile, FileStorage } from '../types';
+import { Chapter, GradeData, GradeLevel, Lesson, StoredFile, FileStorage } from '../types';
 
 
 const LESSON_CATEGORIES = [
@@ -31,7 +31,7 @@ interface AdminGitHubSyncProps {
     curriculum: GradeData[];
     lessons: Lesson[];
     storedFiles: FileStorage;
-    onAddChapter: (grade: GradeLevel, name: string, description: string) => Promise<void>;
+    onDeleteChapter: (grade: GradeLevel, chapter: Chapter) => Promise<void>;
     onAddLesson: (name: string, chapterId: string) => Promise<void>;
     onDeleteLesson: (id: string) => Promise<void>;
     onUploadFiles: (files: File[], targetId: string, category?: string) => Promise<void>;
@@ -49,7 +49,7 @@ const GRADE_COLORS: Record<number, { accent: string; bg: string; label: string }
 };
 
 const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
-    onShowToast, curriculum, lessons, storedFiles, onAddChapter,
+    onShowToast, curriculum, lessons, storedFiles, onDeleteChapter,
     onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
 }) => {
 
@@ -61,10 +61,6 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     const [newLessonName, setNewLessonName] = useState('');
     const [newLessonChapter, setNewLessonChapter] = useState('');
     const [showAddLesson, setShowAddLesson] = useState(false);
-    const [newChapterName, setNewChapterName] = useState('');
-    const [newChapterDescription, setNewChapterDescription] = useState('');
-    const [showAddChapter, setShowAddChapter] = useState(false);
-    const [isAddingChapter, setIsAddingChapter] = useState(false);
     const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
     const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
     const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -174,19 +170,16 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
         setNewLessonName(''); setNewLessonChapter(''); setShowAddLesson(false);
     };
 
-    const handleAddChapter = async () => {
-        if (!newChapterName.trim()) { onShowToast('Vui lòng nhập tên chương!', 'warning'); return; }
-        setIsAddingChapter(true);
+    const handleDeleteChapter = async (chapter: Chapter, lessonCount: number, fileCount: number) => {
+        const detail = lessonCount || fileCount
+            ? `\n\nChương này có ${lessonCount} bài học và ${fileCount} tài liệu; toàn bộ dữ liệu đó sẽ bị xóa.`
+            : '';
+        if (!window.confirm(`Xóa chương "${chapter.name}"?${detail}\n\nThao tác này không thể hoàn tác.`)) return;
         try {
-            await onAddChapter(selectedGrade as GradeLevel, newChapterName.trim(), newChapterDescription.trim());
-            onShowToast(`Đã thêm chương: ${newChapterName.trim()}`, 'success');
-            setNewChapterName('');
-            setNewChapterDescription('');
-            setShowAddChapter(false);
+            await onDeleteChapter(selectedGrade as GradeLevel, chapter);
+            onShowToast(`Đã xóa chương: ${chapter.name}. Hãy bấm Đồng bộ để cập nhật cho học viên.`, 'warning');
         } catch {
-            onShowToast('Không thể tạo chương mới.', 'error');
-        } finally {
-            setIsAddingChapter(false);
+            onShowToast('Không thể xóa chương.', 'error');
         }
     };
 
@@ -392,12 +385,6 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                             <button onClick={collapseAll} className="text-[11px] px-2 py-1 rounded transition-colors" style={{ color: '#787774' }}
                                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
                                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>Thu gọn</button>
-                            <button onClick={() => { setShowAddChapter(!showAddChapter); setShowAddLesson(false); }}
-                                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                                style={{ background: showAddChapter ? color.bg : '#F1F0EC', color: showAddChapter ? color.accent : '#57564F', border: '1px solid #E9E9E7' }}>
-                                {showAddChapter ? <X className="w-3 h-3" /> : <BookOpen className="w-3 h-3" />}
-                                {showAddChapter ? 'Đóng' : 'Thêm chương'}
-                            </button>
                             <button onClick={() => setShowAddLesson(!showAddLesson)}
                                 className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                                 style={{ background: showAddLesson ? color.bg : '#F1F0EC', color: showAddLesson ? color.accent : '#57564F', border: '1px solid #E9E9E7' }}>
@@ -406,24 +393,6 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                             </button>
                         </div>
                     </div>
-
-                    {/* Add Chapter Form */}
-                    {showAddChapter && (
-                        <div className="px-5 py-3 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-2 animate-fade-in" style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAF9' }}>
-                            <input value={newChapterName} onChange={e => setNewChapterName(e.target.value)}
-                                placeholder="Tên chương, VD: Chương 10: ..."
-                                onKeyDown={e => e.key === 'Enter' && handleAddChapter()}
-                                className="text-sm rounded-lg px-3 py-2 outline-none" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#1A1A1A' }} />
-                            <input value={newChapterDescription} onChange={e => setNewChapterDescription(e.target.value)}
-                                placeholder="Mô tả ngắn (không bắt buộc)"
-                                onKeyDown={e => e.key === 'Enter' && handleAddChapter()}
-                                className="text-sm rounded-lg px-3 py-2 outline-none" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#1A1A1A' }} />
-                            <button onClick={handleAddChapter} disabled={isAddingChapter}
-                                className="text-sm font-semibold text-white rounded-lg px-4 py-2 transition-colors active:scale-[0.98] disabled:opacity-60"
-                                style={{ background: color.accent }}>{isAddingChapter ? 'Đang tạo...' : '＋ Tạo chương'}</button>
-                            <p className="md:col-span-3 text-[11px]" style={{ color: '#AEACA8' }}>Tạo xong, bấm “Đồng bộ” để chương mới xuất hiện cho học viên.</p>
-                        </div>
-                    )}
 
                     {/* Add Lesson Form */}
                     {showAddLesson && (
@@ -446,7 +415,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                         <div className="py-12 text-center">
                             <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
                             <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có chương nào</p>
-                            <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Bấm “Thêm chương” để bắt đầu.</p>
+                            <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Thêm chương mới tại trang Tổng quan khối lớp.</p>
                         </div>
                     ) : (
                         <div>
@@ -501,7 +470,18 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="text-gray-400 shrink-0 ml-2">
+                                            <div className="flex items-center gap-1 shrink-0 ml-2">
+                                                <button
+                                                    onClick={event => { event.stopPropagation(); handleDeleteChapter(chapter, chapterLessons.length, chFileCount); }}
+                                                    className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-all"
+                                                    style={{ color: '#AEACA8' }}
+                                                    onMouseEnter={event => { (event.currentTarget as HTMLElement).style.color = '#E03E3E'; (event.currentTarget as HTMLElement).style.background = '#FEF0F0'; }}
+                                                    onMouseLeave={event => { (event.currentTarget as HTMLElement).style.color = '#AEACA8'; (event.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                                    title="Xóa chương"
+                                                    aria-label={`Xóa chương ${chapter.name}`}
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
                                                 {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                             </div>
                                         </div>

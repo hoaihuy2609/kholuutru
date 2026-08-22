@@ -16,7 +16,7 @@ const AdminGitHubSync = React.lazy(() => import('./AdminGitHubSync'));
 const VoiceGrader = React.lazy(() => import('./VoiceGrader'));
 const AdminGameManager = React.lazy(() => import('./AdminGameManager'));
 const AdminLiveManager = React.lazy(() => import('./AdminLiveManager'));
-import { Exam, GradeData, GradeLevel, Lesson, FileStorage } from '../types';
+import { Chapter, Exam, GradeData, GradeLevel, Lesson, FileStorage } from '../types';
 
 interface Student {
     sdt: string;
@@ -45,7 +45,7 @@ interface AdminDashboardProps {
     curriculum: GradeData[];
     lessons: Lesson[];
     storedFiles: FileStorage;
-    onAddChapter: (grade: GradeLevel, name: string, description: string) => Promise<void>;
+    onDeleteChapter: (grade: GradeLevel, chapter: Chapter) => Promise<void>;
     onAddLesson: (name: string, chapterId: string) => Promise<void>;
     onDeleteLesson: (id: string) => Promise<void>;
     onUploadFiles: (files: File[], targetId: string, category?: string) => Promise<void>;
@@ -72,7 +72,7 @@ const Loader2 = ({ className, style }: { className?: string; style?: React.CSSPr
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
     onBack, onShowToast, onUploadExamPdf, onSaveExam, onDeleteExam, onLoadExams,
-    curriculum, lessons, storedFiles, onAddChapter, onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
+    curriculum, lessons, storedFiles, onDeleteChapter, onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
 }) => {
     const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats' | 'cloud' | 'grader' | 'game' | 'live'>('students');
 
@@ -435,7 +435,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             curriculum={curriculum}
                             lessons={lessons}
                             storedFiles={storedFiles}
-                            onAddChapter={onAddChapter}
+                            onDeleteChapter={onDeleteChapter}
                             onAddLesson={onAddLesson}
                             onDeleteLesson={onDeleteLesson}
                             onUploadFiles={onUploadFiles}
