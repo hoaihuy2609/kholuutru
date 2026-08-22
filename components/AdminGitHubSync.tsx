@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import {
     CloudUpload, Send, CheckCircle2, RefreshCw, AlertCircle,
     FileText, Trash2, Upload,
@@ -104,6 +104,17 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [selectedUploadCategory, setSelectedUploadCategory] = useState<string>(LESSON_CATEGORIES[0]);
     const [pendingUploadLessonId, setPendingUploadLessonId] = useState<string | null>(null);
+
+    // Khóa cuộn trang khi Modal chọn loại tài liệu mở
+    useEffect(() => {
+        if (showCategoryModal) {
+            const originalOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.body.style.overflow = originalOverflow;
+            };
+        }
+    }, [showCategoryModal]);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const uploadTargetRef = useRef<string | null>(null);
@@ -796,50 +807,91 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
 
             {/* ── Category Picker Modal (cho Bài học) ── */}
             {showCategoryModal && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4"
-                    style={{ background: 'rgba(26,26,26,0.5)' }}
-                    onClick={() => setShowCategoryModal(false)}>
-                    <div className="w-full max-w-sm rounded-2xl overflow-hidden animate-fade-in"
-                        style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
-                        onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E9E9E7' }}>
-                            <div className="flex items-center gap-2">
-                                <div className="p-1.5 rounded-lg" style={{ background: color.bg }}>
-                                    <Tag className="w-4 h-4" style={{ color: color.accent }} />
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 select-none animate-fade-in"
+                    style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+                        backdropFilter: 'blur(4px)',
+                        WebkitBackdropFilter: 'blur(4px)',
+                    }}
+                    onClick={() => setShowCategoryModal(false)}
+                >
+                    <div
+                        className="w-full max-w-[440px] rounded-2xl overflow-hidden animate-fade-in"
+                        style={{
+                            background: '#FFFFFF',
+                            border: '1px solid #E9E9E7',
+                            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0,0,0,0.05)',
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #F1F0EC' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-xl" style={{ background: '#F3ECF8' }}>
+                                    <Tag className="w-4 h-4" style={{ color: '#9065B0' }} />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Chọn loại tài liệu</h3>
-                                    <p className="text-[10px]" style={{ color: '#AEACA8' }}>File sẽ hiển thị trong tab tương ứng</p>
+                                    <h3 className="text-base font-bold" style={{ color: '#1A1A1A' }}>Chọn loại tài liệu</h3>
+                                    <p className="text-xs mt-0.5" style={{ color: '#787774' }}>File sẽ hiển thị trong tab tương ứng</p>
                                 </div>
                             </div>
-                            <button onClick={() => setShowCategoryModal(false)} className="p-1.5 rounded-lg transition-colors"
-                                style={{ color: '#787774' }}
-                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
-                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+                            <button
+                                onClick={() => setShowCategoryModal(false)}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-[#F1F0EC] transition-colors"
+                            >
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        <div className="p-4 space-y-2">
+
+                        {/* Options List */}
+                        <div className="p-5 space-y-2.5">
                             {LESSON_CATEGORIES.map(cat => {
                                 const cfg = CAT_CONFIG[cat];
                                 const isSelected = selectedUploadCategory === cat;
                                 return (
-                                    <button key={cat} onClick={() => setSelectedUploadCategory(cat)}
-                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-all"
-                                        style={{ background: isSelected ? cfg.bg : '#F7F6F3', border: `1.5px solid ${isSelected ? cfg.color : 'transparent'}`, color: isSelected ? cfg.color : '#57564F', fontWeight: isSelected ? 600 : 400 }}>
-                                        <div className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center"
-                                            style={{ border: `2px solid ${isSelected ? cfg.color : '#CFCFCB'}`, background: isSelected ? cfg.color : 'transparent' }}>
-                                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                    <button
+                                        key={cat}
+                                        onClick={() => setSelectedUploadCategory(cat)}
+                                        className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm text-left transition-all cursor-pointer"
+                                        style={{
+                                            background: isSelected ? '#EEF0FB' : '#F7F6F3',
+                                            border: `1.5px solid ${isSelected ? '#6B7CDB' : 'transparent'}`,
+                                            color: isSelected ? '#3B49A2' : '#57564F',
+                                            fontWeight: isSelected ? 600 : 500,
+                                        }}
+                                        onMouseEnter={e => {
+                                            if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#EFEFEA';
+                                        }}
+                                        onMouseLeave={e => {
+                                            if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#F7F6F3';
+                                        }}
+                                    >
+                                        {/* Radio Circle */}
+                                        <div
+                                            className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center transition-all"
+                                            style={{
+                                                border: `2px solid ${isSelected ? '#4F5FBE' : '#CFCFCB'}`,
+                                                background: '#FFFFFF',
+                                            }}
+                                        >
+                                            {isSelected && (
+                                                <div className="w-2 h-2 rounded-full" style={{ background: '#4F5FBE' }} />
+                                            )}
                                         </div>
-                                        {cat}
+                                        <span className="flex-1">{cat}</span>
                                     </button>
                                 );
                             })}
                         </div>
-                        <div className="px-4 pb-4">
-                            <button onClick={handleCategoryConfirm}
-                                className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all active:scale-[0.98]"
-                                style={{ background: color.accent }}>
+
+                        {/* Footer Action Button */}
+                        <div className="px-5 pb-5">
+                            <button
+                                onClick={handleCategoryConfirm}
+                                className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all active:scale-[0.98] shadow-sm hover:opacity-95"
+                                style={{ background: color.accent }}
+                            >
                                 Chọn file →
                             </button>
                         </div>
