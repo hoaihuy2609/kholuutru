@@ -381,13 +381,13 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
 
                                 {/* Tooltip khi hover */}
                                 {isHovered && (
-                                    <div className="absolute left-0 bottom-full mb-2 z-50 min-w-[190px] rounded-xl shadow-xl"
+                                    <div className="absolute left-0 top-full mt-2 z-50 min-w-[190px] rounded-xl shadow-xl"
                                         style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', padding: '12px 14px' }}>
                                         {/* Mũi tên */}
                                         <div style={{
-                                            position: 'absolute', bottom: -6, left: 18,
+                                            position: 'absolute', top: -6, left: 18,
                                             width: 12, height: 12, background: '#FFFFFF',
-                                            border: '1px solid #E9E9E7', borderTop: 'none', borderLeft: 'none',
+                                            border: '1px solid #E9E9E7', borderBottom: 'none', borderRight: 'none',
                                             transform: 'rotate(45deg)',
                                         }} />
                                         <div className="text-[10px] font-bold uppercase tracking-wider mb-2.5" style={{ color: '#AEACA8' }}>Chi tiết Bài học</div>
