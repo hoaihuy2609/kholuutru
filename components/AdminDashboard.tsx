@@ -215,17 +215,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         }
     };
 
-    const handleDeleteStudent = async (sdt: string) => {
-        if (!window.confirm(`Bạn có chắc muốn xóa học viên ${sdt} không?`)) return;
-        try {
-            // ✅ Admin Ops Fix: dùng RPC
-            const { error } = await supabase.rpc('admin_delete_student', { p_phone: sdt });
-            if (error) throw error;
-            onShowToast('Đã xóa học viên!', 'warning');
-            setTimeout(refreshStudents, 500);
-        } catch (e: any) { onShowToast('Lỗi khi xóa học viên: ' + e.message, 'error'); }
-    };
-
     const toggleStudentSelection = (phone: string) => {
         setSelectedStudentPhones(current => {
             const next = new Set(current);
@@ -246,16 +235,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         });
     };
 
-    const handleBulkDeleteStudents = async (phones: string[], deleteAll = false) => {
+    const handleBulkDeleteStudents = async (phones: string[]) => {
         const uniquePhones = [...new Set(phones.filter(Boolean))];
         if (uniquePhones.length === 0) {
             onShowToast('Hãy chọn ít nhất một học viên để xóa.', 'warning');
             return;
         }
 
-        const confirmation = deleteAll
-            ? `Bạn có chắc muốn xóa TẤT CẢ ${uniquePhones.length} học viên?\n\nThao tác này không thể hoàn tác.`
-            : `Bạn có chắc muốn xóa ${uniquePhones.length} học viên đã chọn?\n\nThao tác này không thể hoàn tác.`;
+        const confirmation = `Bạn có chắc muốn xóa ${uniquePhones.length} học viên đã chọn?\n\nThao tác này không thể hoàn tác.`;
         if (!window.confirm(confirmation)) return;
 
         setIsDeletingStudents(true);
@@ -264,7 +251,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             if (error) throw error;
             setSelectedStudentPhones(new Set());
             setIsSelectionMode(false);
-            onShowToast(deleteAll ? `Đã xóa tất cả ${uniquePhones.length} học viên!` : `Đã xóa ${uniquePhones.length} học viên!`, 'warning');
+            onShowToast(`Đã xóa ${uniquePhones.length} học viên!`, 'warning');
             await refreshStudents();
         } catch (e: any) {
             onShowToast('Lỗi khi xóa học viên: ' + e.message, 'error');
@@ -643,22 +630,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 ) : (
                                     <>
                                         <button
-                                            onClick={() => handleBulkDeleteStudents(students.map(student => student.sdt), true)}
-                                            disabled={students.length === 0 || isDeletingStudents}
-                                            className="flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                                            style={{ color: '#E03E3E', border: '1px solid #E03E3E44', background: '#FEF0F0' }}
-                                            title="Xóa toàn bộ học viên trong hệ thống"
-                                        >
-                                            {isDeletingStudents ? <Loader2 className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
-                                            Xóa tất cả
-                                        </button>
-                                        <button
                                             onClick={() => setIsSelectionMode(true)}
                                             className="flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                                            style={{ color: '#57564F', border: '1px solid #E9E9E7', background: '#FFFFFF' }}
+                                            style={{ color: '#E03E3E', border: '1px solid #E03E3E44', background: '#FEF0F0' }}
                                         >
-                                            <Users className="w-4 h-4" />
-                                            Chọn để xóa
+                                            <Trash2 className="w-4 h-4" />
+                                            Xóa
                                         </button>
                                         <button
                                             onClick={() => setIsAddModalOpen(true)}
@@ -851,18 +828,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                                     title="Kick học viên"
                                                                 >
                                                                     <UserMinus className="w-4 h-4" />
-                                                                </button>
-                                                            )}
-                                                            {!isSelectionMode && (
-                                                                <button
-                                                                    onClick={() => handleDeleteStudent(s.sdt)}
-                                                                    className="p-2 rounded-lg transition-colors"
-                                                                    style={{ color: '#CFCFCB' }}
-                                                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#E03E3E'; (e.currentTarget as HTMLElement).style.background = '#FEF0F0'; }}
-                                                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                                                                    title="Xóa học viên"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
                                                                 </button>
                                                             )}
                                                         </div>
