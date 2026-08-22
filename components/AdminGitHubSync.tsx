@@ -102,6 +102,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [selectedUploadCategory, setSelectedUploadCategory] = useState<string>(LESSON_CATEGORIES[0]);
     const [pendingUploadLessonId, setPendingUploadLessonId] = useState<string | null>(null);
+    const [hoveredSummaryCard, setHoveredSummaryCard] = useState<string | null>(null);
 
     // Khóa cuộn trang triệt để khi Modal chọn loại tài liệu mở
     useEffect(() => {
@@ -146,19 +147,32 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     const gradeData = curriculum.find(g => g.level === selectedGrade);
     const gradeLessons = lessons.filter(l => gradeData?.chapters.map(c => c.id).includes(l.chapterId));
 
-    // Category summary — chỉ tính file cấp bài (lesson)
+    // Category summary — tính cả file cấp chương lẫn cấp bài
     const categorySummary = useMemo(() => {
-        const counts: Record<string, number> = {};
+        // Cấp bài học
+        const lessonCounts: Record<string, number> = {};
         let uncategorized = 0;
-        LESSON_CATEGORIES.forEach(cat => counts[cat] = 0);
+        LESSON_CATEGORIES.forEach(cat => lessonCounts[cat] = 0);
         gradeLessons.forEach(l => {
             (storedFiles[l.id] || []).forEach(f => {
-                if (f.category && LESSON_CATEGORIES.includes(f.category)) counts[f.category]++;
+                if (f.category && LESSON_CATEGORIES.includes(f.category)) lessonCounts[f.category]++;
                 else uncategorized++;
             });
         });
-        return { counts, uncategorized };
-    }, [gradeLessons, storedFiles]);
+        const totalLessonFiles = Object.values(lessonCounts).reduce((a, b) => a + b, 0) + uncategorized;
+
+        // Cấp chương
+        const chapterCounts: Record<string, number> = {};
+        CHAPTER_CATEGORIES.forEach(cat => chapterCounts[cat] = 0);
+        (gradeData?.chapters ?? []).forEach(ch => {
+            (storedFiles[ch.id] || []).forEach(f => {
+                const cat = f.category as ChapterCategory;
+                if (cat && CHAPTER_CATEGORIES.includes(cat)) chapterCounts[cat]++;
+            });
+        });
+
+        return { lessonCounts, uncategorized, totalLessonFiles, chapterCounts };
+    }, [gradeLessons, gradeData, storedFiles]);
 
     const gradeFiles: FileStorage = {};
     gradeLessons.forEach(l => { if (storedFiles[l.id]) gradeFiles[l.id] = storedFiles[l.id]; });
@@ -314,40 +328,136 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                     })}
                 </div>
 
-                {/* Category Summary Bar */}
-                <div className="rounded-xl px-4 py-3 flex items-center gap-3"
+
+                {/* Category Summary Bar — 4 thẻ khớp 4 mục bên dưới */}
+                <div className="rounded-xl px-4 py-3 flex items-center gap-2"
                     style={{ background: '#FFFFFF', border: '1px solid #E9E9E7' }}>
+
+                    {/* Label */}
                     <div className="flex items-center gap-1.5 shrink-0 pr-3" style={{ borderRight: '1px solid #E9E9E7' }}>
                         <BarChart3 className="w-3.5 h-3.5 shrink-0" style={{ color: '#AEACA8' }} />
-                        <span className="text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: '#AEACA8' }}>Phân loại</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: '#AEACA8' }}>Tổng quan</span>
                     </div>
-                    {LESSON_CATEGORIES.map(cat => {
-                        const cfg = CAT_CONFIG[cat];
-                        const count = categorySummary.counts[cat] || 0;
+
+                    {/* ── Thẻ 1: Lý thuyết (Chương) — Cam ── */}
+                    {(() => {
+                        const cfg = CH_CAT_CONFIG['Lý thuyết trọng tâm (Chương)'];
+                        const count = categorySummary.chapterCounts['Lý thuyết trọng tâm (Chương)'] || 0;
                         return (
-                            <div key={cat} className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg min-w-0"
+                            <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg min-w-0"
                                 style={{ background: cfg.bg, border: `1px solid ${cfg.color}30` }}>
-                                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cfg.color }} />
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color }} />
                                 <div className="min-w-0">
-                                    <div className="text-[10px] font-semibold leading-tight truncate" style={{ color: cfg.color }}>{cfg.short}</div>
+                                    <div className="text-[10px] font-semibold leading-tight truncate" style={{ color: cfg.color }}>Lý thuyết</div>
                                     <div className="text-sm font-bold leading-tight tabular-nums" style={{ color: '#1A1A1A' }}>{count}</div>
                                 </div>
                             </div>
                         );
-                    })}
-                    <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg min-w-0"
-                        style={{
-                            background: categorySummary.uncategorized > 0 ? '#FDE68A' : '#F7F6F3',
-                            border: categorySummary.uncategorized > 0 ? '1px solid #F59E0B40' : '1px solid transparent',
-                            opacity: categorySummary.uncategorized > 0 ? 1 : 0.5,
-                        }}>
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" style={{ color: categorySummary.uncategorized > 0 ? '#D97706' : '#CFCFCB' }} />
-                        <div className="min-w-0">
-                            <div className="text-[10px] font-semibold leading-tight truncate" style={{ color: categorySummary.uncategorized > 0 ? '#B45309' : '#AEACA8' }}>Chưa PL</div>
-                            <div className="text-sm font-bold leading-tight tabular-nums" style={{ color: '#1A1A1A' }}>{categorySummary.uncategorized}</div>
-                        </div>
-                    </div>
+                    })()}
+
+                    {/* ── Thẻ 2: Bài học (Lesson) — Xanh biển + Hover Tooltip ── */}
+                    {(() => {
+                        const lessonColor = '#6B7CDB';
+                        const lessonBg = '#EEF0FB';
+                        const total = categorySummary.totalLessonFiles;
+                        const isHovered = hoveredSummaryCard === 'lesson';
+                        return (
+                            <div className="flex-1 relative min-w-0"
+                                onMouseEnter={() => setHoveredSummaryCard('lesson')}
+                                onMouseLeave={() => setHoveredSummaryCard(null)}>
+                                {/* Thẻ chính */}
+                                <div className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-default"
+                                    style={{
+                                        background: lessonBg,
+                                        border: `1px solid ${lessonColor}30`,
+                                        outline: isHovered ? `2px solid ${lessonColor}55` : 'none',
+                                    }}>
+                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: lessonColor }} />
+                                    <div className="min-w-0">
+                                        <div className="text-[10px] font-semibold leading-tight truncate" style={{ color: lessonColor }}>Bài học</div>
+                                        <div className="text-sm font-bold leading-tight tabular-nums" style={{ color: '#1A1A1A' }}>{total}</div>
+                                    </div>
+                                </div>
+
+                                {/* Tooltip khi hover */}
+                                {isHovered && (
+                                    <div className="absolute left-0 bottom-full mb-2 z-50 min-w-[190px] rounded-xl shadow-xl"
+                                        style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', padding: '12px 14px' }}>
+                                        {/* Mũi tên */}
+                                        <div style={{
+                                            position: 'absolute', bottom: -6, left: 18,
+                                            width: 12, height: 12, background: '#FFFFFF',
+                                            border: '1px solid #E9E9E7', borderTop: 'none', borderLeft: 'none',
+                                            transform: 'rotate(45deg)',
+                                        }} />
+                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-2.5" style={{ color: '#AEACA8' }}>Chi tiết Bài học</div>
+                                        <div className="flex flex-col gap-1.5">
+                                            {LESSON_CATEGORIES.map(cat => {
+                                                const cfg = CAT_CONFIG[cat];
+                                                const cnt = categorySummary.lessonCounts[cat] || 0;
+                                                return (
+                                                    <div key={cat} className="flex items-center justify-between gap-3">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color }} />
+                                                            <span className="text-xs" style={{ color: '#555452' }}>{cfg.short}</span>
+                                                        </div>
+                                                        <span className="text-xs font-bold tabular-nums" style={{ color: cfg.color }}>{cnt} file</span>
+                                                    </div>
+                                                );
+                                            })}
+                                            {categorySummary.uncategorized > 0 && (
+                                                <div className="flex items-center justify-between gap-3 pt-1.5 mt-1" style={{ borderTop: '1px solid #F1F0EC' }}>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <AlertTriangle className="w-2.5 h-2.5 shrink-0" style={{ color: '#D97706' }} />
+                                                        <span className="text-xs" style={{ color: '#B45309' }}>Chưa PL</span>
+                                                    </div>
+                                                    <span className="text-xs font-bold tabular-nums" style={{ color: '#D97706' }}>{categorySummary.uncategorized} file</span>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center justify-between gap-3 pt-1.5 mt-0.5" style={{ borderTop: '1px solid #F1F0EC' }}>
+                                                <span className="text-xs font-semibold" style={{ color: '#1A1A1A' }}>Tổng</span>
+                                                <span className="text-xs font-bold tabular-nums" style={{ color: lessonColor }}>{total} file</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
+
+                    {/* ── Thẻ 3: Đúng/Sai (Chương) — Xanh lá ── */}
+                    {(() => {
+                        const cfg = CH_CAT_CONFIG['Trắc nghiệm Đúng/Sai (Chương)'];
+                        const count = categorySummary.chapterCounts['Trắc nghiệm Đúng/Sai (Chương)'] || 0;
+                        return (
+                            <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg min-w-0"
+                                style={{ background: cfg.bg, border: `1px solid ${cfg.color}30` }}>
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color }} />
+                                <div className="min-w-0">
+                                    <div className="text-[10px] font-semibold leading-tight truncate" style={{ color: cfg.color }}>Đúng/Sai</div>
+                                    <div className="text-sm font-bold leading-tight tabular-nums" style={{ color: '#1A1A1A' }}>{count}</div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* ── Thẻ 4: Nâng cao (Chương) — Tím ── */}
+                    {(() => {
+                        const cfg = CH_CAT_CONFIG['Bài tập Tính toán Nâng cao'];
+                        const count = categorySummary.chapterCounts['Bài tập Tính toán Nâng cao'] || 0;
+                        return (
+                            <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg min-w-0"
+                                style={{ background: cfg.bg, border: `1px solid ${cfg.color}30` }}>
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color }} />
+                                <div className="min-w-0">
+                                    <div className="text-[10px] font-semibold leading-tight truncate" style={{ color: cfg.color }}>Nâng cao</div>
+                                    <div className="text-sm font-bold leading-tight tabular-nums" style={{ color: '#1A1A1A' }}>{count}</div>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
+
 
                 {/* Sync Card */}
                 <div className="rounded-xl overflow-hidden"
