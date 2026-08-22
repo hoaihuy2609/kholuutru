@@ -97,9 +97,6 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     const [syncStatus, setSyncStatus] = useState<Record<number, SyncStatus>>({ 10: 'idle', 11: 'idle', 12: 'idle' });
     const [syncMsg, setSyncMsg] = useState<Record<number, string>>({});
     const [uploadingTarget, setUploadingTarget] = useState<string | null>(null);
-    const [newLessonName, setNewLessonName] = useState('');
-    const [newLessonChapter, setNewLessonChapter] = useState('');
-    const [showAddLesson, setShowAddLesson] = useState(false);
     const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
     const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
     const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -231,13 +228,6 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
             setPendingUploadLessonId(null);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
-    };
-
-    const handleAddLesson = async () => {
-        if (!newLessonName.trim() || !newLessonChapter) { onShowToast('Vui lòng nhập tên bài và chọn chương!', 'warning'); return; }
-        await onAddLesson(newLessonName.trim(), newLessonChapter);
-        onShowToast(`Đã thêm: ${newLessonName}`, 'success');
-        setNewLessonName(''); setNewLessonChapter(''); setShowAddLesson(false);
     };
 
     const handleDeleteChapter = async (chapter: Chapter, lessonCount: number, fileCount: number) => {
@@ -438,36 +428,14 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: color.bg, color: color.accent }}>{gradeLessons.length}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button onClick={expandAll} className="text-[11px] px-2 py-1 rounded transition-colors" style={{ color: '#787774' }}
-                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
-                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>Mở tất cả</button>
-                            <button onClick={collapseAll} className="text-[11px] px-2 py-1 rounded transition-colors" style={{ color: '#787774' }}
-                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
-                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>Thu gọn</button>
-                            <button onClick={() => setShowAddLesson(!showAddLesson)}
-                                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                                style={{ background: showAddLesson ? color.bg : '#F1F0EC', color: showAddLesson ? color.accent : '#57564F', border: '1px solid #E9E9E7' }}>
-                                {showAddLesson ? <X className="w-3 h-3" /> : <Upload className="w-3 h-3" />}
-                                {showAddLesson ? 'Đóng' : 'Thêm bài'}
-                            </button>
+                            <button onClick={expandAll} className="text-[11px] px-2.5 py-1 rounded-md transition-colors" style={{ color: '#787774', background: '#F1F0EC', border: '1px solid #E9E9E7' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E5E4DE'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}>Mở tất cả</button>
+                            <button onClick={collapseAll} className="text-[11px] px-2.5 py-1 rounded-md transition-colors" style={{ color: '#787774', background: '#F1F0EC', border: '1px solid #E9E9E7' }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#E5E4DE'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}>Thu gọn</button>
                         </div>
                     </div>
-
-                    {/* Add Lesson Form */}
-                    {showAddLesson && (
-                        <div className="px-5 py-3 grid grid-cols-1 md:grid-cols-3 gap-2 animate-fade-in" style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAF9' }}>
-                            <select value={newLessonChapter} onChange={e => setNewLessonChapter(e.target.value)}
-                                className="text-sm rounded-lg px-3 py-2 outline-none" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#1A1A1A' }}>
-                                <option value="">-- Chọn chương --</option>
-                                {gradeData?.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.name}</option>)}
-                            </select>
-                            <input value={newLessonName} onChange={e => setNewLessonName(e.target.value)}
-                                placeholder="Tên bài giảng..." onKeyDown={e => e.key === 'Enter' && handleAddLesson()}
-                                className="text-sm rounded-lg px-3 py-2 outline-none" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#1A1A1A' }} />
-                            <button onClick={handleAddLesson} className="text-sm font-semibold text-white rounded-lg px-4 py-2 transition-colors active:scale-[0.98]"
-                                style={{ background: color.accent }}>＋ Tạo bài giảng</button>
-                        </div>
-                    )}
 
                     {/* Chapters */}
                     {!gradeData?.chapters.length ? (
