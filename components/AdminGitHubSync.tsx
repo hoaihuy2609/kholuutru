@@ -547,7 +547,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                                                         const isUploadingThis = uploadingTarget === chapter.id + '_' + cat;
 
                                                         return (
-                                                            <div key={cat} style={{ borderBottom: '1px solid #F1F0EC', background: cfg.bg }}>
+                                                            <div key={cat} style={{ borderBottom: '1px solid #F1F0EC', background: cfg.bg, borderLeft: `3px solid ${cfg.color}` }}>
                                                                 {/* Tiêu đề nhóm */}
                                                                 <div className="flex items-center justify-between px-5 py-2.5"
                                                                     style={{ borderBottom: catFiles.length > 0 ? '1px solid ' + cfg.border : 'none' }}>
@@ -614,7 +614,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                                                             {renderChapterCategory('Lý thuyết trọng tâm (Chương)')}
 
                                                             {/* ── 2. Bài học trong Chương (Màu Xanh biển full khung #6B7CDB / #EEF0FB) ── */}
-                                                            <div style={{ borderBottom: '1px solid #F1F0EC', background: '#EEF0FB' }}>
+                                                            <div style={{ borderBottom: '1px solid #F1F0EC', background: '#EEF0FB', borderLeft: '3px solid #6B7CDB' }}>
                                                                 {/* Header nhóm Bài học */}
                                                                 <div className="flex items-center justify-between px-5 py-2.5"
                                                                     style={{ borderBottom: chapterLessons.length > 0 ? '1px solid #6B7CDB22' : 'none' }}>
