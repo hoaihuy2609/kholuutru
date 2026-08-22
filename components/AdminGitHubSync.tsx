@@ -534,195 +534,223 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                                         {isExpanded && (
                                             <div style={{ borderTop: '1px solid #F1F0EC' }}>
 
-                                                {/* ── 3 Nhóm file cấp Chương ────────────────────────── */}
-                                                {CHAPTER_CATEGORIES.map(cat => {
-                                                    const cfg = CH_CAT_CONFIG[cat];
-                                                    const catFiles = chCatFiles[cat];
-                                                    const IconComp = cfg.icon;
-                                                    const isUploadingThis = uploadingTarget === chapter.id + '_' + cat;
+                                                {/* ── Helper render cho 1 mục Cấp Chương ── */}
+                                                {(() => {
+                                                    const renderChapterCategory = (cat: ChapterCategory) => {
+                                                        const cfg = CH_CAT_CONFIG[cat];
+                                                        const catFiles = chCatFiles[cat];
+                                                        const IconComp = cfg.icon;
+                                                        const isUploadingThis = uploadingTarget === chapter.id + '_' + cat;
+
+                                                        return (
+                                                            <div key={cat} style={{ borderBottom: '1px solid #F1F0EC', background: cfg.bg + '55' }}>
+                                                                {/* Tiêu đề nhóm */}
+                                                                <div className="flex items-center justify-between px-5 py-2.5"
+                                                                    style={{ borderBottom: catFiles.length > 0 ? '1px solid ' + cfg.border : 'none' }}>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <IconComp className="w-3.5 h-3.5 shrink-0" style={{ color: cfg.color }} />
+                                                                        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: cfg.color }}>
+                                                                            {cfg.label}
+                                                                        </span>
+                                                                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                                                                            style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
+                                                                            {catFiles.length}
+                                                                        </span>
+                                                                    </div>
+                                                                    {/* Nút Upload trực tiếp */}
+                                                                    <button
+                                                                        onClick={e => { e.stopPropagation(); triggerDirectUpload(chapter.id, cat); }}
+                                                                        className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition-all active:scale-95"
+                                                                        style={{
+                                                                            border: `1.5px dashed ${cfg.color}88`,
+                                                                            color: cfg.color,
+                                                                            background: 'transparent',
+                                                                        }}
+                                                                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = cfg.bg}
+                                                                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                                                                        title={cfg.uploadLabel}
+                                                                    >
+                                                                        {isUploadingThis
+                                                                            ? <Loader2 className="w-3 h-3" />
+                                                                            : <Upload className="w-3 h-3" />}
+                                                                        {cfg.uploadLabel}
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Danh sách file (Natural Sort) */}
+                                                                {catFiles.length > 0 && (
+                                                                    <div className="py-1">
+                                                                        {catFiles.map(file => (
+                                                                            <div
+                                                                                key={file.id}
+                                                                                className="flex items-center gap-2 group/cf"
+                                                                                style={{ padding: '5px 20px 5px 52px' }}
+                                                                            >
+                                                                                <FileText className="w-3 h-3 shrink-0" style={{ color: cfg.color }} />
+                                                                                <span className="text-[12px] flex-1 truncate" style={{ color: '#57564F' }}>{file.name}</span>
+                                                                                <span className="text-[10px] shrink-0" style={{ color: '#AEACA8' }}>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                                                                                <button
+                                                                                    onClick={() => handleDeleteFile(file.id, chapter.id, file.name)}
+                                                                                    className="opacity-0 group-hover/cf:opacity-100 p-1 rounded hover:text-red-500 transition-all"
+                                                                                    title="Xóa file"
+                                                                                >
+                                                                                    <Trash2 className="w-3 h-3" />
+                                                                                </button>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    };
 
                                                     return (
-                                                        <div key={cat} style={{ borderBottom: '1px solid #F1F0EC', background: cfg.bg + '55' }}>
-                                                            {/* Tiêu đề nhóm */}
-                                                            <div className="flex items-center justify-between px-5 py-2.5"
-                                                                style={{ borderBottom: catFiles.length > 0 ? '1px solid ' + cfg.border : 'none' }}>
-                                                                <div className="flex items-center gap-2">
-                                                                    <IconComp className="w-3.5 h-3.5 shrink-0" style={{ color: cfg.color }} />
-                                                                    <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: cfg.color }}>
-                                                                        {cfg.label}
-                                                                    </span>
-                                                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                                                                        style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
-                                                                        {catFiles.length}
-                                                                    </span>
-                                                                </div>
-                                                                {/* Nút Upload trực tiếp */}
-                                                                <button
-                                                                    onClick={e => { e.stopPropagation(); triggerDirectUpload(chapter.id, cat); }}
-                                                                    className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition-all active:scale-95"
-                                                                    style={{
-                                                                        border: `1.5px dashed ${cfg.color}88`,
-                                                                        color: cfg.color,
-                                                                        background: 'transparent',
-                                                                    }}
-                                                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = cfg.bg}
-                                                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                                                                    title={cfg.uploadLabel}
-                                                                >
-                                                                    {isUploadingThis
-                                                                        ? <Loader2 className="w-3 h-3" />
-                                                                        : <Upload className="w-3 h-3" />}
-                                                                    {cfg.uploadLabel}
-                                                                </button>
-                                                            </div>
+                                                        <>
+                                                            {/* ── 1. Kho Lý thuyết trọng tâm (Màu Cam) ── */}
+                                                            {renderChapterCategory('Lý thuyết trọng tâm (Chương)')}
 
-                                                            {/* Danh sách file (Natural Sort đã áp dụng ở trên) */}
-                                                            {catFiles.length > 0 && (
-                                                                <div className="py-1">
-                                                                    {catFiles.map(file => (
-                                                                        <div
-                                                                            key={file.id}
-                                                                            className="flex items-center gap-2 group/cf"
-                                                                            style={{ padding: '5px 20px 5px 52px' }}
-                                                                        >
-                                                                            <FileText className="w-3 h-3 shrink-0" style={{ color: cfg.color }} />
-                                                                            <span className="text-[12px] flex-1 truncate" style={{ color: '#57564F' }}>{file.name}</span>
-                                                                            <span className="text-[10px] shrink-0" style={{ color: '#AEACA8' }}>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
-                                                                            <button
-                                                                                onClick={() => handleDeleteFile(file.id, chapter.id, file.name)}
-                                                                                className="opacity-0 group-hover/cf:opacity-100 p-1 rounded hover:text-red-500 transition-all"
-                                                                                title="Xóa file"
-                                                                            >
-                                                                                <Trash2 className="w-3 h-3" />
-                                                                            </button>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-
-                                                {/* ── Nhóm 4: Bài học trong Chương ──────────────────── */}
-                                                <div style={{ borderBottom: '1px solid #F1F0EC' }}>
-                                                    {/* Header nhóm Bài học */}
-                                                    <div className="flex items-center justify-between px-5 py-2.5"
-                                                        style={{ background: color.bg + '55', borderBottom: chapterLessons.length > 0 ? '1px solid ' + color.accent + '22' : 'none' }}>
-                                                        <div className="flex items-center gap-2">
-                                                            <GraduationCap className="w-3.5 h-3.5 shrink-0" style={{ color: color.accent }} />
-                                                            <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: color.accent }}>
-                                                                Bài học trong chương
-                                                            </span>
-                                                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                                                                style={{ background: color.bg, color: color.accent, border: `1px solid ${color.accent}33` }}>
-                                                                {chapterLessons.length}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Danh sách từng Bài học */}
-                                                    {chapterLessons.length === 0 ? (
-                                                        <div className="text-[11px] italic px-5 py-3" style={{ color: '#CFCFCB' }}>
-                                                            Chưa có bài học nào — dùng nút "Thêm bài" ở trên để thêm.
-                                                        </div>
-                                                    ) : (
-                                                        chapterLessons.map(lesson => {
-                                                            const lessonFiles = storedFiles[lesson.id] || [];
-                                                            const isLessonExpanded = expandedLessons.has(lesson.id);
-                                                            const isUploading = uploadingTarget === lesson.id + '_' + uploadCategoryRef.current;
-
-                                                            // Phân nhóm file theo category (Natural Sort)
-                                                            const lCatFiles: Record<string, StoredFile[]> = {};
-                                                            let lUncategorized: StoredFile[] = [];
-                                                            LESSON_CATEGORIES.forEach(cat => lCatFiles[cat] = []);
-                                                            lessonFiles.forEach(f => {
-                                                                if (f.category && LESSON_CATEGORIES.includes(f.category)) lCatFiles[f.category].push(f);
-                                                                else lUncategorized.push(f);
-                                                            });
-                                                            LESSON_CATEGORIES.forEach(cat => {
-                                                                lCatFiles[cat] = naturalSort(lCatFiles[cat]);
-                                                            });
-                                                            lUncategorized = naturalSort(lUncategorized);
-
-                                                            return (
-                                                                <div key={lesson.id} style={{ borderBottom: '1px solid #F8F7F5' }}>
-                                                                    {/* Lesson Row */}
-                                                                    <div className="flex items-center gap-3 px-5 py-2.5 group" style={{ paddingLeft: '52px' }}>
-                                                                        <button onClick={() => toggleLesson(lesson.id)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
-                                                                            <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: '#AEACA8' }} />
-                                                                            <span className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }}>{lesson.name}</span>
-                                                                        </button>
-
-                                                                        {/* Category Badges */}
-                                                                        <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
-                                                                            {LESSON_CATEGORIES.map(cat => {
-                                                                                const cfg = CAT_CONFIG[cat];
-                                                                                const cnt = lCatFiles[cat].length;
-                                                                                return (
-                                                                                    <span key={cat}
-                                                                                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap"
-                                                                                        style={{
-                                                                                            background: cnt > 0 ? cfg.bg : '#F1F0EC',
-                                                                                            color: cnt > 0 ? cfg.color : '#CFCFCB',
-                                                                                        }}>
-                                                                                        {cfg.short}: {cnt}
-                                                                                    </span>
-                                                                                );
-                                                                            })}
-                                                                            {lUncategorized.length > 0 && (
-                                                                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-500">
-                                                                                    ⚠{lUncategorized.length}
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-
-                                                                        {/* Actions */}
-                                                                        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                            <button onClick={() => handleUploadTrigger(lesson.id)}
-                                                                                className="p-1.5 rounded-lg hover:bg-[#EEF0FB] text-gray-400 hover:text-[#6B7CDB] transition-colors"
-                                                                                title="Upload file">
-                                                                                {isUploading ? <Loader2 className="w-3.5 h-3.5" /> : <Upload className="w-3.5 h-3.5" />}
-                                                                            </button>
-                                                                            <button onClick={() => handleDeleteLesson(lesson.id, lesson.name)}
-                                                                                className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                                                                                title="Xóa bài">
-                                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                                            </button>
-                                                                            <button onClick={() => toggleLesson(lesson.id)}
-                                                                                className="p-1.5 rounded-lg transition-colors"
-                                                                                style={{ color: '#AEACA8' }}>
-                                                                                {isLessonExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                                                                            </button>
-                                                                        </div>
-                                                                        {/* Toggle mobile */}
-                                                                        <button onClick={() => toggleLesson(lesson.id)} className="p-1.5 rounded-lg md:hidden" style={{ color: '#AEACA8' }}>
-                                                                            {isLessonExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                                                                        </button>
+                                                            {/* ── 2. Bài học trong Chương (Màu Xanh biển #6B7CDB / #EEF0FB) ── */}
+                                                            <div style={{ borderBottom: '1px solid #F1F0EC' }}>
+                                                                {/* Header nhóm Bài học */}
+                                                                <div className="flex items-center justify-between px-5 py-2.5"
+                                                                    style={{ background: '#EEF0FB55', borderBottom: chapterLessons.length > 0 ? '1px solid #6B7CDB22' : 'none' }}>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <GraduationCap className="w-3.5 h-3.5 shrink-0" style={{ color: '#6B7CDB' }} />
+                                                                        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: '#6B7CDB' }}>
+                                                                            Bài học trong chương
+                                                                        </span>
+                                                                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                                                                            style={{ background: '#EEF0FB', color: '#6B7CDB', border: '1px solid #6B7CDB33' }}>
+                                                                            {chapterLessons.length}
+                                                                        </span>
                                                                     </div>
+                                                                </div>
 
-                                                                    {/* Expanded: Files grouped by category */}
-                                                                    {isLessonExpanded && (
-                                                                        <div className="pb-3 space-y-2 animate-fade-in" style={{ paddingLeft: '52px', paddingRight: '16px' }}>
-                                                                            {LESSON_CATEGORIES.map(cat => {
-                                                                                const cfg = CAT_CONFIG[cat];
-                                                                                const catFiles = lCatFiles[cat];
-                                                                                return (
-                                                                                    <div key={cat}>
-                                                                                        <div className="flex items-center gap-1.5 mb-1">
-                                                                                            <div className="w-2 h-2 rounded-full" style={{ background: cfg.color }} />
-                                                                                            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: cfg.color }}>{cfg.short}</span>
-                                                                                            <span className="text-[10px]" style={{ color: '#AEACA8' }}>({catFiles.length})</span>
-                                                                                        </div>
-                                                                                        {catFiles.length === 0 ? (
-                                                                                            <div className="text-[11px] italic px-3 py-1.5 rounded" style={{ color: '#CFCFCB', background: '#FAFAF9' }}>
-                                                                                                Chưa có file — nhấn ↑ để upload
-                                                                                            </div>
-                                                                                        ) : (
-                                                                                            <div className="space-y-1">
-                                                                                                {catFiles.map(file => (
-                                                                                                    <div key={file.id} className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded-lg group/f"
-                                                                                                        style={{ background: cfg.bg + '60', color: '#57564F' }}>
-                                                                                                        <FileText className="w-3 h-3 shrink-0" style={{ color: cfg.color }} />
+                                                                {/* Danh sách từng Bài học */}
+                                                                {chapterLessons.length === 0 ? (
+                                                                    <div className="text-[11px] italic px-5 py-3" style={{ color: '#CFCFCB' }}>
+                                                                        Chưa có bài học nào — dùng nút "Thêm bài" ở trên để thêm.
+                                                                    </div>
+                                                                ) : (
+                                                                    chapterLessons.map(lesson => {
+                                                                        const lessonFiles = storedFiles[lesson.id] || [];
+                                                                        const isLessonExpanded = expandedLessons.has(lesson.id);
+                                                                        const isUploading = uploadingTarget === lesson.id + '_' + uploadCategoryRef.current;
+
+                                                                        // Phân nhóm file theo category (Natural Sort)
+                                                                        const lCatFiles: Record<string, StoredFile[]> = {};
+                                                                        let lUncategorized: StoredFile[] = [];
+                                                                        LESSON_CATEGORIES.forEach(cat => lCatFiles[cat] = []);
+                                                                        lessonFiles.forEach(f => {
+                                                                            if (f.category && LESSON_CATEGORIES.includes(f.category)) lCatFiles[f.category].push(f);
+                                                                            else lUncategorized.push(f);
+                                                                        });
+                                                                        LESSON_CATEGORIES.forEach(cat => {
+                                                                            lCatFiles[cat] = naturalSort(lCatFiles[cat]);
+                                                                        });
+                                                                        lUncategorized = naturalSort(lUncategorized);
+
+                                                                        return (
+                                                                            <div key={lesson.id} style={{ borderBottom: '1px solid #F8F7F5' }}>
+                                                                                {/* Lesson Row */}
+                                                                                <div className="flex items-center gap-3 px-5 py-2.5 group" style={{ paddingLeft: '52px' }}>
+                                                                                    <button onClick={() => toggleLesson(lesson.id)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                                                                                        <FileText className="w-3.5 h-3.5 shrink-0" style={{ color: '#AEACA8' }} />
+                                                                                        <span className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }}>{lesson.name}</span>
+                                                                                    </button>
+
+                                                                                    {/* Category Badges */}
+                                                                                    <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
+                                                                                        {LESSON_CATEGORIES.map(cat => {
+                                                                                            const cfg = CAT_CONFIG[cat];
+                                                                                            const cnt = lCatFiles[cat].length;
+                                                                                            return (
+                                                                                                <span key={cat}
+                                                                                                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap"
+                                                                                                    style={{
+                                                                                                        background: cnt > 0 ? cfg.bg : '#F1F0EC',
+                                                                                                        color: cnt > 0 ? cfg.color : '#CFCFCB',
+                                                                                                    }}>
+                                                                                                    {cfg.short}: {cnt}
+                                                                                                </span>
+                                                                                            );
+                                                                                        })}
+                                                                                        {lUncategorized.length > 0 && (
+                                                                                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-500">
+                                                                                                ⚠{lUncategorized.length}
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+
+                                                                                    {/* Actions */}
+                                                                                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                        <button onClick={() => handleUploadTrigger(lesson.id)}
+                                                                                            className="p-1.5 rounded-lg hover:bg-[#EEF0FB] text-gray-400 hover:text-[#6B7CDB] transition-colors"
+                                                                                            title="Upload file">
+                                                                                            {isUploading ? <Loader2 className="w-3.5 h-3.5" /> : <Upload className="w-3.5 h-3.5" />}
+                                                                                        </button>
+                                                                                        <button onClick={() => handleDeleteLesson(lesson.id, lesson.name)}
+                                                                                            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                                                                                            title="Xóa bài">
+                                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                                        </button>
+                                                                                        <button onClick={() => toggleLesson(lesson.id)}
+                                                                                            className="p-1.5 rounded-lg transition-colors"
+                                                                                            style={{ color: '#AEACA8' }}>
+                                                                                            {isLessonExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                                                                        </button>
+                                                                                    </div>
+                                                                                    {/* Toggle mobile */}
+                                                                                    <button onClick={() => toggleLesson(lesson.id)} className="p-1.5 rounded-lg md:hidden" style={{ color: '#AEACA8' }}>
+                                                                                        {isLessonExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                                                                    </button>
+                                                                                </div>
+
+                                                                                {/* Expanded: Files grouped by category */}
+                                                                                {isLessonExpanded && (
+                                                                                    <div className="pb-3 space-y-2 animate-fade-in" style={{ paddingLeft: '52px', paddingRight: '16px' }}>
+                                                                                        {LESSON_CATEGORIES.map(cat => {
+                                                                                            const cfg = CAT_CONFIG[cat];
+                                                                                            const catFiles = lCatFiles[cat];
+                                                                                            return (
+                                                                                                <div key={cat}>
+                                                                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                                                                        <div className="w-2 h-2 rounded-full" style={{ background: cfg.color }} />
+                                                                                                        <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: cfg.color }}>{cfg.short}</span>
+                                                                                                        <span className="text-[10px]" style={{ color: '#AEACA8' }}>({catFiles.length})</span>
+                                                                                                    </div>
+                                                                                                    {catFiles.length === 0 ? (
+                                                                                                        <div className="text-[11px] italic px-3 py-1.5 rounded" style={{ color: '#CFCFCB', background: '#FAFAF9' }}>
+                                                                                                            Chưa có file — nhấn ↑ để upload
+                                                                                                        </div>
+                                                                                                    ) : (
+                                                                                                        <div className="space-y-1">
+                                                                                                            {catFiles.map(file => (
+                                                                                                                <div key={file.id} className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded-lg group/f"
+                                                                                                                    style={{ background: cfg.bg + '60', color: '#57564F' }}>
+                                                                                                                    <FileText className="w-3 h-3 shrink-0" style={{ color: cfg.color }} />
+                                                                                                                    <span className="flex-1 truncate">{file.name}</span>
+                                                                                                                    <span className="text-[10px] shrink-0" style={{ color: '#AEACA8' }}>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                                                                                                                    <button onClick={() => handleDeleteFile(file.id, lesson.id, file.name)}
+                                                                                                                        className="opacity-0 group-hover/f:opacity-100 p-0.5 hover:text-red-500 transition-all">
+                                                                                                                        <Trash2 className="w-3 h-3" />
+                                                                                                                    </button>
+                                                                                                                </div>
+                                                                                                            ))}
+                                                                                                        </div>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            );
+                                                                                        })}
+                                                                                        {lUncategorized.length > 0 && (
+                                                                                            <div>
+                                                                                                <div className="flex items-center gap-1.5 mb-1">
+                                                                                                    <AlertTriangle className="w-2.5 h-2.5 text-amber-500" />
+                                                                                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600">Chưa phân loại ({lUncategorized.length})</span>
+                                                                                                </div>
+                                                                                                {lUncategorized.map(file => (
+                                                                                                    <div key={file.id} className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded-lg group/f bg-amber-50" style={{ color: '#57564F' }}>
+                                                                                                        <FileText className="w-3 h-3 shrink-0 text-amber-400" />
                                                                                                         <span className="flex-1 truncate">{file.name}</span>
                                                                                                         <span className="text-[10px] shrink-0" style={{ color: '#AEACA8' }}>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
                                                                                                         <button onClick={() => handleDeleteFile(file.id, lesson.id, file.name)}
@@ -733,43 +761,30 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                                                                                                 ))}
                                                                                             </div>
                                                                                         )}
+                                                                                        <button onClick={() => handleUploadTrigger(lesson.id)}
+                                                                                            className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-colors mt-1"
+                                                                                            style={{ border: '1px dashed #6B7CDB66', color: '#6B7CDB', background: '#EEF0FB40' }}
+                                                                                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#EEF0FB'}
+                                                                                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#EEF0FB40'}>
+                                                                                            <Upload className="w-3 h-3" />
+                                                                                            Upload thêm file vào bài này
+                                                                                        </button>
                                                                                     </div>
-                                                                                );
-                                                                            })}
-                                                                            {lUncategorized.length > 0 && (
-                                                                                <div>
-                                                                                    <div className="flex items-center gap-1.5 mb-1">
-                                                                                        <AlertTriangle className="w-2.5 h-2.5 text-amber-500" />
-                                                                                        <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600">Chưa phân loại ({lUncategorized.length})</span>
-                                                                                    </div>
-                                                                                    {lUncategorized.map(file => (
-                                                                                        <div key={file.id} className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded-lg group/f bg-amber-50" style={{ color: '#57564F' }}>
-                                                                                            <FileText className="w-3 h-3 shrink-0 text-amber-400" />
-                                                                                            <span className="flex-1 truncate">{file.name}</span>
-                                                                                            <span className="text-[10px] shrink-0" style={{ color: '#AEACA8' }}>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
-                                                                                            <button onClick={() => handleDeleteFile(file.id, lesson.id, file.name)}
-                                                                                                className="opacity-0 group-hover/f:opacity-100 p-0.5 hover:text-red-500 transition-all">
-                                                                                                <Trash2 className="w-3 h-3" />
-                                                                                            </button>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            )}
-                                                                            <button onClick={() => handleUploadTrigger(lesson.id)}
-                                                                                className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-colors mt-1"
-                                                                                style={{ border: `1px dashed ${color.accent}66`, color: color.accent, background: color.bg + '40' }}
-                                                                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = color.bg}
-                                                                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = color.bg + '40'}>
-                                                                                <Upload className="w-3 h-3" />
-                                                                                Upload thêm file vào bài này
-                                                                            </button>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        })
-                                                    )}
-                                                </div>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    })
+                                                                )}
+                                                            </div>
+
+                                                            {/* ── 3. Trắc nghiệm Đúng/Sai (Màu Xanh lá) ── */}
+                                                            {renderChapterCategory('Trắc nghiệm Đúng/Sai (Chương)')}
+
+                                                            {/* ── 4. Bài tập Tính toán Nâng cao (Màu Tím) ── */}
+                                                            {renderChapterCategory('Bài tập Tính toán Nâng cao')}
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         )}
                                     </div>
