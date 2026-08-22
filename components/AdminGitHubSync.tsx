@@ -379,13 +379,13 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                                     </div>
                                 </div>
 
-                                {/* Tooltip khi hover */}
+                                {/* Tooltip khi hover — canh giữa hoàn toàn so với ô bên trên */}
                                 {isHovered && (
-                                    <div className="absolute left-0 top-full mt-2 z-50 min-w-[190px] rounded-xl shadow-xl"
+                                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 min-w-[200px] rounded-xl shadow-xl"
                                         style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', padding: '12px 14px' }}>
-                                        {/* Mũi tên */}
+                                        {/* Mũi tên canh giữa */}
                                         <div style={{
-                                            position: 'absolute', top: -6, left: 18,
+                                            position: 'absolute', top: -6, left: '50%', marginLeft: -6,
                                             width: 12, height: 12, background: '#FFFFFF',
                                             border: '1px solid #E9E9E7', borderBottom: 'none', borderRight: 'none',
                                             transform: 'rotate(45deg)',
