@@ -331,6 +331,17 @@ END;
 $$;
 GRANT EXECUTE ON FUNCTION admin_delete_student(text) TO anon;
 
+-- [4b] Xóa nhiều học sinh / xóa tất cả (AdminDashboard)
+DROP FUNCTION IF EXISTS admin_delete_students(text[]);
+CREATE OR REPLACE FUNCTION admin_delete_students(p_phones text[])
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    DELETE FROM students
+    WHERE phone = ANY(p_phones);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_delete_students(text[]) TO anon;
+
 -- [5] Kick học sinh (AdminDashboard)
 DROP FUNCTION IF EXISTS admin_kick_student(text);
 CREATE OR REPLACE FUNCTION admin_kick_student(p_phone text)

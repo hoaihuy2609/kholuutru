@@ -81,6 +81,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [newStudent, setNewStudent] = useState({ sdt: '', name: '', grade: 12, class_id: '' });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedStudentPhones, setSelectedStudentPhones] = useState<Set<string>>(new Set());
+    const [isDeletingStudents, setIsDeletingStudents] = useState(false);
 
     // ── Grade & Class filter ──
     const [gradeFilter, setGradeFilter] = useState<number | null>(null);
@@ -119,6 +122,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 class_id: row.class_id || '',
             }));
             setStudents(normalized);
+            setSelectedStudentPhones(current => new Set(
+                [...current].filter(phone => normalized.some(student => student.sdt === phone))
+            ));
         } catch (err) {
             console.error("[Admin] Lỗi kết nối Supabase:", err);
             setStudents([]);
@@ -220,6 +226,53 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         } catch (e: any) { onShowToast('Lỗi khi xóa học viên: ' + e.message, 'error'); }
     };
 
+    const toggleStudentSelection = (phone: string) => {
+        setSelectedStudentPhones(current => {
+            const next = new Set(current);
+            if (next.has(phone)) next.delete(phone);
+            else next.add(phone);
+            return next;
+        });
+    };
+
+    const toggleVisibleStudentSelection = () => {
+        const visiblePhones = filteredStudents.map(student => student.sdt);
+        const areAllVisibleSelected = visiblePhones.length > 0 && visiblePhones.every(phone => selectedStudentPhones.has(phone));
+        setSelectedStudentPhones(current => {
+            const next = new Set(current);
+            if (areAllVisibleSelected) visiblePhones.forEach(phone => next.delete(phone));
+            else visiblePhones.forEach(phone => next.add(phone));
+            return next;
+        });
+    };
+
+    const handleBulkDeleteStudents = async (phones: string[], deleteAll = false) => {
+        const uniquePhones = [...new Set(phones.filter(Boolean))];
+        if (uniquePhones.length === 0) {
+            onShowToast('Hãy chọn ít nhất một học viên để xóa.', 'warning');
+            return;
+        }
+
+        const confirmation = deleteAll
+            ? `Bạn có chắc muốn xóa TẤT CẢ ${uniquePhones.length} học viên?\n\nThao tác này không thể hoàn tác.`
+            : `Bạn có chắc muốn xóa ${uniquePhones.length} học viên đã chọn?\n\nThao tác này không thể hoàn tác.`;
+        if (!window.confirm(confirmation)) return;
+
+        setIsDeletingStudents(true);
+        try {
+            const { error } = await supabase.rpc('admin_delete_students', { p_phones: uniquePhones });
+            if (error) throw error;
+            setSelectedStudentPhones(new Set());
+            setIsSelectionMode(false);
+            onShowToast(deleteAll ? `Đã xóa tất cả ${uniquePhones.length} học viên!` : `Đã xóa ${uniquePhones.length} học viên!`, 'warning');
+            await refreshStudents();
+        } catch (e: any) {
+            onShowToast('Lỗi khi xóa học viên: ' + e.message, 'error');
+        } finally {
+            setIsDeletingStudents(false);
+        }
+    };
+
     const handleKickStudent = async (sdt: string, name: string) => {
         if (!window.confirm(`Bạn có chắc muốn KICK học viên "${name}" (${sdt}) không?\n\nHọc viên sẽ không thể truy cập tài liệu nữa.`)) return;
         try {
@@ -255,6 +308,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }), [students, debouncedSearchTerm, gradeFilter, classFilter]);
 
     const classesForGrade = gradeFilter ? classes.filter(c => c.grade === gradeFilter) : classes;
+    const visibleStudentPhones = filteredStudents.map(student => student.sdt);
+    const areAllVisibleStudentsSelected = visibleStudentPhones.length > 0 && visibleStudentPhones.every(phone => selectedStudentPhones.has(phone));
 
     const stats = {
         total: students.length,
@@ -563,16 +618,61 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = '#E9E9E7'}
                                 />
                             </div>
-                            <button
-                                onClick={() => setIsAddModalOpen(true)}
-                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-colors whitespace-nowrap"
-                                style={{ background: '#6B7CDB' }}
-                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#5a6bc9'}
-                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#6B7CDB'}
-                            >
-                                <UserPlus className="w-4 h-4" />
-                                Thêm học viên mới
-                            </button>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                                {isSelectionMode ? (
+                                    <>
+                                        <button
+                                            onClick={() => handleBulkDeleteStudents([...selectedStudentPhones])}
+                                            disabled={selectedStudentPhones.size === 0 || isDeletingStudents}
+                                            className="flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                                            style={{ color: '#FFFFFF', background: '#E03E3E' }}
+                                            title="Xóa các học viên đã chọn"
+                                        >
+                                            {isDeletingStudents ? <Loader2 className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
+                                            Xóa {selectedStudentPhones.size} đã chọn
+                                        </button>
+                                        <button
+                                            onClick={() => { setSelectedStudentPhones(new Set()); setIsSelectionMode(false); }}
+                                            disabled={isDeletingStudents}
+                                            className="px-3.5 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                                            style={{ color: '#57564F', border: '1px solid #E9E9E7', background: '#FFFFFF' }}
+                                        >
+                                            Hủy chọn
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => handleBulkDeleteStudents(students.map(student => student.sdt), true)}
+                                            disabled={students.length === 0 || isDeletingStudents}
+                                            className="flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                                            style={{ color: '#E03E3E', border: '1px solid #E03E3E44', background: '#FEF0F0' }}
+                                            title="Xóa toàn bộ học viên trong hệ thống"
+                                        >
+                                            {isDeletingStudents ? <Loader2 className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
+                                            Xóa tất cả
+                                        </button>
+                                        <button
+                                            onClick={() => setIsSelectionMode(true)}
+                                            className="flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                                            style={{ color: '#57564F', border: '1px solid #E9E9E7', background: '#FFFFFF' }}
+                                        >
+                                            <Users className="w-4 h-4" />
+                                            Chọn để xóa
+                                        </button>
+                                        <button
+                                            onClick={() => setIsAddModalOpen(true)}
+                                            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-colors whitespace-nowrap"
+                                            style={{ background: '#6B7CDB' }}
+                                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#5a6bc9'}
+                                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#6B7CDB'}
+                                        >
+                                            <UserPlus className="w-4 h-4" />
+                                            Thêm học viên mới
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
 
                         {/* Table */}
@@ -580,6 +680,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr style={{ background: '#FAFAF9' }}>
+                                        {isSelectionMode && (
+                                            <th className="px-3 py-3" style={{ borderBottom: '1px solid #E9E9E7' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={areAllVisibleStudentsSelected}
+                                                    onChange={toggleVisibleStudentSelection}
+                                                    disabled={visibleStudentPhones.length === 0 || isDeletingStudents}
+                                                    aria-label="Chọn tất cả học viên đang hiển thị"
+                                                    className="h-4 w-4 cursor-pointer accent-[#6B7CDB] disabled:cursor-not-allowed"
+                                                />
+                                            </th>
+                                        )}
                                         {['Học viên', 'Lớp', 'Số điện thoại', 'Mã máy', 'Trạng thái', 'Quản lý'].map((h, i) => (
                                             <th
                                                 key={h}
@@ -594,7 +706,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 <tbody>
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={6} className="px-5 py-16 text-center">
+                                            <td colSpan={isSelectionMode ? 7 : 6} className="px-5 py-16 text-center">
                                                 <div className="flex flex-col items-center gap-3">
                                                     <Loader2 className="w-8 h-8" style={{ color: '#6B7CDB' } as React.CSSProperties} />
                                                     <p className="text-sm" style={{ color: '#787774' }}>Đang nạp dữ liệu từ Supabase...</p>
@@ -603,7 +715,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         </tr>
                                     ) : filteredStudents.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-5 py-16 text-center text-sm italic" style={{ color: '#AEACA8' }}>
+                                            <td colSpan={isSelectionMode ? 7 : 6} className="px-5 py-16 text-center text-sm italic" style={{ color: '#AEACA8' }}>
                                                 Không tìm thấy học viên nào phù hợp.
                                             </td>
                                         </tr>
@@ -621,6 +733,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                     onMouseEnter={e => !isKicked && ((e.currentTarget as HTMLElement).style.background = '#FAFAF9')}
                                                     onMouseLeave={e => !isKicked && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
                                                 >
+                                                    {isSelectionMode && (
+                                                        <td className="px-3 py-4">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedStudentPhones.has(s.sdt)}
+                                                                onChange={() => toggleStudentSelection(s.sdt)}
+                                                                disabled={isDeletingStudents}
+                                                                aria-label={`Chọn học viên ${s.name}`}
+                                                                className="h-4 w-4 cursor-pointer accent-[#6B7CDB] disabled:cursor-not-allowed"
+                                                            />
+                                                        </td>
+                                                    )}
                                                     {/* Student name */}
                                                     <td className="px-5 py-4">
                                                         <div className="flex items-center gap-3">
@@ -729,16 +853,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                                                     <UserMinus className="w-4 h-4" />
                                                                 </button>
                                                             )}
-                                                            <button
-                                                                onClick={() => handleDeleteStudent(s.sdt)}
-                                                                className="p-2 rounded-lg transition-colors"
-                                                                style={{ color: '#CFCFCB' }}
-                                                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#E03E3E'; (e.currentTarget as HTMLElement).style.background = '#FEF0F0'; }}
-                                                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                                                                title="Xóa học viên"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
+                                                            {!isSelectionMode && (
+                                                                <button
+                                                                    onClick={() => handleDeleteStudent(s.sdt)}
+                                                                    className="p-2 rounded-lg transition-colors"
+                                                                    style={{ color: '#CFCFCB' }}
+                                                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#E03E3E'; (e.currentTarget as HTMLElement).style.background = '#FEF0F0'; }}
+                                                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CFCFCB'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                                                    title="Xóa học viên"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
