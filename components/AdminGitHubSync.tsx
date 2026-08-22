@@ -547,7 +547,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                                                         const isUploadingThis = uploadingTarget === chapter.id + '_' + cat;
 
                                                         return (
-                                                            <div key={cat} style={{ borderBottom: '1px solid #F1F0EC', background: cfg.bg + '55' }}>
+                                                            <div key={cat} style={{ borderBottom: '1px solid #F1F0EC', background: cfg.bg + '66' }}>
                                                                 {/* Tiêu đề nhóm */}
                                                                 <div className="flex items-center justify-between px-5 py-2.5"
                                                                     style={{ borderBottom: catFiles.length > 0 ? '1px solid ' + cfg.border : 'none' }}>
@@ -610,14 +610,14 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
 
                                                     return (
                                                         <>
-                                                            {/* ── 1. Kho Lý thuyết trọng tâm (Màu Cam) ── */}
+                                                            {/* ── 1. Kho Lý thuyết trọng tâm (Màu Cam full khung) ── */}
                                                             {renderChapterCategory('Lý thuyết trọng tâm (Chương)')}
 
-                                                            {/* ── 2. Bài học trong Chương (Màu Xanh biển #6B7CDB / #EEF0FB) ── */}
-                                                            <div style={{ borderBottom: '1px solid #F1F0EC' }}>
+                                                            {/* ── 2. Bài học trong Chương (Màu Xanh biển full khung #6B7CDB / #EEF0FB) ── */}
+                                                            <div style={{ borderBottom: '1px solid #F1F0EC', background: '#EEF0FB66' }}>
                                                                 {/* Header nhóm Bài học */}
                                                                 <div className="flex items-center justify-between px-5 py-2.5"
-                                                                    style={{ background: '#EEF0FB55', borderBottom: chapterLessons.length > 0 ? '1px solid #6B7CDB22' : 'none' }}>
+                                                                    style={{ borderBottom: chapterLessons.length > 0 ? '1px solid #6B7CDB22' : 'none' }}>
                                                                     <div className="flex items-center gap-2">
                                                                         <GraduationCap className="w-3.5 h-3.5 shrink-0" style={{ color: '#6B7CDB' }} />
                                                                         <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: '#6B7CDB' }}>
