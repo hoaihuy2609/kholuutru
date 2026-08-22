@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Lesson, FileStorage } from '../../types';
+import { Lesson, FileStorage, GradeData } from '../../types';
 
 /**
  * Read-only mirror of the data that lives in useCloudStorage.
@@ -10,6 +10,7 @@ import { Lesson, FileStorage } from '../../types';
  * All IndexedDB / Telegram / GitHub logic remains exclusively in useCloudStorage.
  */
 interface DataStore {
+  curriculum: GradeData[];
   lessons: Lesson[];
   storedFiles: FileStorage;
   loading: boolean;
@@ -17,6 +18,7 @@ interface DataStore {
   studentGradeValue: number | null;
 
   // Setters — called by the root AppDataSync component
+  setCurriculum: (curriculum: GradeData[]) => void;
   setLessons: (lessons: Lesson[]) => void;
   setStoredFiles: (files: FileStorage) => void;
   setLoading: (v: boolean) => void;
@@ -25,12 +27,14 @@ interface DataStore {
 }
 
 export const useDataStore = create<DataStore>((set) => ({
+  curriculum: [],
   lessons: [],
   storedFiles: {},
   loading: true,
   isActivated: false,
   studentGradeValue: null,
 
+  setCurriculum: (curriculum) => set({ curriculum }),
   setLessons: (lessons) => set({ lessons }),
   setStoredFiles: (storedFiles) => set({ storedFiles }),
   setLoading: (loading) => set({ loading }),

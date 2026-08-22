@@ -4,13 +4,13 @@ import {
     ThumbsUp, CheckCircle, Pin, ChevronLeft, RefreshCw, AlertCircle,
     Pencil, X, Image, BookOpen, FlameKindling, Search
 } from 'lucide-react';
-import { ExamComment } from '../types';
+import { ExamComment, GradeData } from '../types';
 import {
     fetchComments, postComment, deleteComment,
     uploadCommentImage, getNickname, saveNickname
 } from '../src/services/commentService';
 import { useUIStore } from '../src/stores/useUIStore';
-import { CURRICULUM } from '../constants';
+import { useDataStore } from '../src/stores/useDataStore';
 
 // ── Constants ──────────────────────────────────────────────────────
 const NAVY = '#23497c';
@@ -81,13 +81,13 @@ const GENERAL_TOPICS = [
 ];
 
 // ── Helper: resolve tag label from tagId ──────────────────────────────
-function resolveTagLabel(tagId: string): string | null {
+function resolveTagLabel(tagId: string, curriculum: GradeData[]): string | null {
     if (!tagId) return null;
     // Check general topics first
     const gen = GENERAL_TOPICS.find(t => t.id === tagId);
     if (gen) return gen.name;
     // Check curriculum chapters
-    for (const grade of CURRICULUM) {
+    for (const grade of curriculum) {
         const ch = grade.chapters.find(c => c.id === tagId);
         if (ch) return ch.name;
     }
@@ -119,7 +119,8 @@ const encodePost = (title: string, content: string, category: string, tag: strin
 
 // ── Tag Badge ─────────────────────────────────────────────────────────
 const TagBadge: React.FC<{ tagId: string }> = ({ tagId }) => {
-    const label = resolveTagLabel(tagId);
+    const curriculum = useDataStore(state => state.curriculum);
+    const label = resolveTagLabel(tagId, curriculum);
     if (!label) return null;
     return (
         <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium shrink-0"
@@ -503,6 +504,7 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showComposer, setShowComposer] = useState(false);
     const setForumTopicActive = useUIStore(state => state.setForumTopicActive);
+    const curriculum = useDataStore(state => state.curriculum);
 
     // New post state
     const [newTitle, setNewTitle] = useState('');
@@ -570,8 +572,8 @@ const ForumFeed: React.FC<ForumFeedProps> = ({ isAdmin, adminKey }) => {
     // Helpers: get available tags for current category in composer
     const getTagsForCategory = (cat: string) => {
         if (cat === 'chung') return GENERAL_TOPICS.map(t => ({ id: t.id, name: t.name }));
-        const catMap: Record<string, string> = { vl10: 'Vật Lý 10', vl11: 'Vật Lý 11', vl12: 'Vật Lý 12' };
-        const grade = CURRICULUM.find(g => g.title === catMap[cat]);
+        const gradeByCategory: Record<string, number> = { vl10: 10, vl11: 11, vl12: 12 };
+        const grade = curriculum.find(g => g.level === gradeByCategory[cat]);
         return grade ? grade.chapters.map(c => ({ id: c.id, name: c.name })) : [];
     };
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, X, FolderOpen, FileText, ClipboardList, BookOpen, ChevronRight, Command, History, ArrowRight, File, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { CURRICULUM } from '../constants';
 import { Lesson } from '../types';
 import { useDataStore } from '../src/stores/useDataStore';
 import { useExamStore } from '../src/stores/useContentStore';
@@ -53,6 +52,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
   const lessons = useDataStore(state => state.lessons);
   const storedFiles = useDataStore(state => state.storedFiles);
   const studentGradeValue = useDataStore(state => state.studentGradeValue);
+  const curriculum = useDataStore(state => state.curriculum);
 
   // Load exams & blogs once when opened; reload blogs if isAdmin changes
   const lastIsAdmin = useRef<boolean | undefined>(undefined);
@@ -77,8 +77,8 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
   // Build static chapter results
   const chapterResults: SearchResult[] = useMemo(() => {
     const allowedCurriculum = isAdmin || !studentGradeValue
-      ? CURRICULUM
-      : CURRICULUM.filter(grade => grade.level === studentGradeValue);
+      ? curriculum
+      : curriculum.filter(grade => grade.level === studentGradeValue);
 
     return allowedCurriculum.flatMap(grade =>
       grade.chapters.map(ch => ({
@@ -90,13 +90,13 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
         grade: grade.level,
       }))
     );
-  }, [isAdmin, studentGradeValue]);
+  }, [curriculum, isAdmin, studentGradeValue]);
 
   // Build lesson results
   const lessonResults: SearchResult[] = useMemo(() => {
     const allowedCurriculum = isAdmin || !studentGradeValue
-      ? CURRICULUM
-      : CURRICULUM.filter(grade => grade.level === studentGradeValue);
+      ? curriculum
+      : curriculum.filter(grade => grade.level === studentGradeValue);
 
     return lessons.map((l: Lesson) => {
       // Find which grade/chapter this lesson belongs to
@@ -124,7 +124,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
         grade: gradeLvl,
       };
     }).filter(Boolean) as SearchResult[];
-  }, [lessons, isAdmin, studentGradeValue]);
+  }, [curriculum, lessons, isAdmin, studentGradeValue]);
 
   // Build exam results
   const examResults: SearchResult[] = useMemo(() => {
@@ -158,8 +158,8 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
     if (!storedFiles) return [];
     
     const allowedCurriculum = isAdmin || !studentGradeValue
-      ? CURRICULUM
-      : CURRICULUM.filter(grade => grade.level === studentGradeValue);
+      ? curriculum
+      : curriculum.filter(grade => grade.level === studentGradeValue);
 
     return Object.entries(storedFiles).flatMap(([parentId, files]) => {
       let path = '/';
@@ -208,7 +208,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose, onLoadExam
         };
       });
     });
-  }, [storedFiles, lessons, isAdmin, studentGradeValue]);
+  }, [curriculum, storedFiles, lessons, isAdmin, studentGradeValue]);
 
   // Filter
   const filtered = useMemo(() => {

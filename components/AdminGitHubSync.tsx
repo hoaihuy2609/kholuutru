@@ -11,8 +11,7 @@ const Loader2 = ({ className, style }: { className?: string; style?: React.CSSPr
     <RefreshCw className={`${className} animate-spin`} style={style} />
 );
 
-import { CURRICULUM } from '../constants';
-import { Lesson, StoredFile, FileStorage } from '../types';
+import { GradeData, GradeLevel, Lesson, StoredFile, FileStorage } from '../types';
 
 
 const LESSON_CATEGORIES = [
@@ -29,8 +28,10 @@ const CAT_CONFIG: Record<string, { short: string; color: string; bg: string }> =
 
 interface AdminGitHubSyncProps {
     onShowToast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+    curriculum: GradeData[];
     lessons: Lesson[];
     storedFiles: FileStorage;
+    onAddChapter: (grade: GradeLevel, name: string, description: string) => Promise<void>;
     onAddLesson: (name: string, chapterId: string) => Promise<void>;
     onDeleteLesson: (id: string) => Promise<void>;
     onUploadFiles: (files: File[], targetId: string, category?: string) => Promise<void>;
@@ -48,7 +49,7 @@ const GRADE_COLORS: Record<number, { accent: string; bg: string; label: string }
 };
 
 const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
-    onShowToast, lessons, storedFiles,
+    onShowToast, curriculum, lessons, storedFiles, onAddChapter,
     onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
 }) => {
 
@@ -60,6 +61,10 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     const [newLessonName, setNewLessonName] = useState('');
     const [newLessonChapter, setNewLessonChapter] = useState('');
     const [showAddLesson, setShowAddLesson] = useState(false);
+    const [newChapterName, setNewChapterName] = useState('');
+    const [newChapterDescription, setNewChapterDescription] = useState('');
+    const [showAddChapter, setShowAddChapter] = useState(false);
+    const [isAddingChapter, setIsAddingChapter] = useState(false);
     const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
     const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
     const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -72,7 +77,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     const uploadCategoryRef = useRef<string>(LESSON_CATEGORIES[0]);
 
     const color = GRADE_COLORS[selectedGrade];
-    const gradeData = CURRICULUM.find(g => g.level === selectedGrade);
+    const gradeData = curriculum.find(g => g.level === selectedGrade);
     const gradeLessons = lessons.filter(l => gradeData?.chapters.map(c => c.id).includes(l.chapterId));
 
     // Tổng hợp số file theo category cho toàn grade (cả file cấp bài và cấp chương)
@@ -105,7 +110,7 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
     const totalSize = Object.values(gradeFiles).flat().reduce((acc, f) => acc + f.size, 0);
 
     const handleSyncGrade = async (grade: number) => {
-        const gData = CURRICULUM.find(g => g.level === grade);
+        const gData = curriculum.find(g => g.level === grade);
         if (!gData) return;
         const gLessons = lessons.filter(l => gData.chapters.map(c => c.id).includes(l.chapterId));
         const gFiles: FileStorage = {};
@@ -169,6 +174,22 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
         setNewLessonName(''); setNewLessonChapter(''); setShowAddLesson(false);
     };
 
+    const handleAddChapter = async () => {
+        if (!newChapterName.trim()) { onShowToast('Vui lòng nhập tên chương!', 'warning'); return; }
+        setIsAddingChapter(true);
+        try {
+            await onAddChapter(selectedGrade as GradeLevel, newChapterName.trim(), newChapterDescription.trim());
+            onShowToast(`Đã thêm chương: ${newChapterName.trim()}`, 'success');
+            setNewChapterName('');
+            setNewChapterDescription('');
+            setShowAddChapter(false);
+        } catch {
+            onShowToast('Không thể tạo chương mới.', 'error');
+        } finally {
+            setIsAddingChapter(false);
+        }
+    };
+
     const handleDeleteLesson = async (lessonId: string, name: string) => {
         if (!window.confirm(`Xóa bài giảng "${name}"?`)) return;
         await onDeleteLesson(lessonId);
@@ -213,9 +234,9 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                 <div className="flex items-center gap-0.5 p-1 rounded-lg" style={{ background: '#EBEBEA', width: 'fit-content' }}>
                     {([12, 11, 10] as const).map(grade => {
                         const c = GRADE_COLORS[grade];
-                        const gLessons = lessons.filter(l => CURRICULUM.find(g => g.level === grade)?.chapters.map(ch => ch.id).includes(l.chapterId));
+                        const gLessons = lessons.filter(l => curriculum.find(g => g.level === grade)?.chapters.map(ch => ch.id).includes(l.chapterId));
                         const gFileCount = gLessons.reduce((s, l) => s + (storedFiles[l.id]?.length || 0), 0)
-                            + (CURRICULUM.find(g => g.level === grade)?.chapters.reduce((s, ch) => s + (storedFiles[ch.id]?.length || 0), 0) ?? 0);
+                            + (curriculum.find(g => g.level === grade)?.chapters.reduce((s, ch) => s + (storedFiles[ch.id]?.length || 0), 0) ?? 0);
                         const isActive = selectedGrade === grade;
                         return (
                             <button key={grade} onClick={() => setSelectedGrade(grade)}
@@ -371,6 +392,12 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                             <button onClick={collapseAll} className="text-[11px] px-2 py-1 rounded transition-colors" style={{ color: '#787774' }}
                                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#F1F0EC'}
                                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>Thu gọn</button>
+                            <button onClick={() => { setShowAddChapter(!showAddChapter); setShowAddLesson(false); }}
+                                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                                style={{ background: showAddChapter ? color.bg : '#F1F0EC', color: showAddChapter ? color.accent : '#57564F', border: '1px solid #E9E9E7' }}>
+                                {showAddChapter ? <X className="w-3 h-3" /> : <BookOpen className="w-3 h-3" />}
+                                {showAddChapter ? 'Đóng' : 'Thêm chương'}
+                            </button>
                             <button onClick={() => setShowAddLesson(!showAddLesson)}
                                 className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                                 style={{ background: showAddLesson ? color.bg : '#F1F0EC', color: showAddLesson ? color.accent : '#57564F', border: '1px solid #E9E9E7' }}>
@@ -379,6 +406,24 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                             </button>
                         </div>
                     </div>
+
+                    {/* Add Chapter Form */}
+                    {showAddChapter && (
+                        <div className="px-5 py-3 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-2 animate-fade-in" style={{ borderBottom: '1px solid #E9E9E7', background: '#FAFAF9' }}>
+                            <input value={newChapterName} onChange={e => setNewChapterName(e.target.value)}
+                                placeholder="Tên chương, VD: Chương 10: ..."
+                                onKeyDown={e => e.key === 'Enter' && handleAddChapter()}
+                                className="text-sm rounded-lg px-3 py-2 outline-none" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#1A1A1A' }} />
+                            <input value={newChapterDescription} onChange={e => setNewChapterDescription(e.target.value)}
+                                placeholder="Mô tả ngắn (không bắt buộc)"
+                                onKeyDown={e => e.key === 'Enter' && handleAddChapter()}
+                                className="text-sm rounded-lg px-3 py-2 outline-none" style={{ background: '#FFFFFF', border: '1px solid #E9E9E7', color: '#1A1A1A' }} />
+                            <button onClick={handleAddChapter} disabled={isAddingChapter}
+                                className="text-sm font-semibold text-white rounded-lg px-4 py-2 transition-colors active:scale-[0.98] disabled:opacity-60"
+                                style={{ background: color.accent }}>{isAddingChapter ? 'Đang tạo...' : '＋ Tạo chương'}</button>
+                            <p className="md:col-span-3 text-[11px]" style={{ color: '#AEACA8' }}>Tạo xong, bấm “Đồng bộ” để chương mới xuất hiện cho học viên.</p>
+                        </div>
+                    )}
 
                     {/* Add Lesson Form */}
                     {showAddLesson && (
@@ -397,10 +442,11 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                     )}
 
                     {/* Chapters */}
-                    {gradeLessons.length === 0 && !gradeData?.chapters.some(ch => (storedFiles[ch.id]?.length ?? 0) > 0) ? (
+                    {!gradeData?.chapters.length ? (
                         <div className="py-12 text-center">
                             <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#CFCFCB' }} />
-                            <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có tài liệu nào</p>
+                            <p className="text-sm font-medium" style={{ color: '#787774' }}>Chưa có chương nào</p>
+                            <p className="text-xs mt-1" style={{ color: '#AEACA8' }}>Bấm “Thêm chương” để bắt đầu.</p>
                         </div>
                     ) : (
                         <div>
@@ -408,7 +454,6 @@ const AdminGitHubSync: React.FC<AdminGitHubSyncProps> = ({
                                 const chapterLessons = gradeLessons.filter(l => l.chapterId === chapter.id)
                                     .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
                                 const chapterDirectFiles = storedFiles[chapter.id] || [];
-                                if (chapterLessons.length === 0 && chapterDirectFiles.length === 0) return null;
                                 const isExpanded = expandedChapters.has(chapter.id);
                                 const chFileCount = chapterLessons.reduce((s, l) => s + (storedFiles[l.id]?.length || 0), 0) + chapterDirectFiles.length;
 

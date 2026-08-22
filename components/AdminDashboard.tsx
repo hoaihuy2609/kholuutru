@@ -16,7 +16,7 @@ const AdminGitHubSync = React.lazy(() => import('./AdminGitHubSync'));
 const VoiceGrader = React.lazy(() => import('./VoiceGrader'));
 const AdminGameManager = React.lazy(() => import('./AdminGameManager'));
 const AdminLiveManager = React.lazy(() => import('./AdminLiveManager'));
-import { Exam, Lesson, FileStorage } from '../types';
+import { Exam, GradeData, GradeLevel, Lesson, FileStorage } from '../types';
 
 interface Student {
     sdt: string;
@@ -42,8 +42,10 @@ interface AdminDashboardProps {
     onSaveExam?: (exams: Exam[]) => Promise<void>;
     onDeleteExam?: (examId: string, allExams: Exam[]) => Promise<void>;
     onLoadExams?: () => Promise<Exam[]>;
+    curriculum: GradeData[];
     lessons: Lesson[];
     storedFiles: FileStorage;
+    onAddChapter: (grade: GradeLevel, name: string, description: string) => Promise<void>;
     onAddLesson: (name: string, chapterId: string) => Promise<void>;
     onDeleteLesson: (id: string) => Promise<void>;
     onUploadFiles: (files: File[], targetId: string, category?: string) => Promise<void>;
@@ -70,7 +72,7 @@ const Loader2 = ({ className, style }: { className?: string; style?: React.CSSPr
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
     onBack, onShowToast, onUploadExamPdf, onSaveExam, onDeleteExam, onLoadExams,
-    lessons, storedFiles, onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
+    curriculum, lessons, storedFiles, onAddChapter, onAddLesson, onDeleteLesson, onUploadFiles, onDeleteFile, onSyncToGitHub, syncProgress
 }) => {
     const [activeTab, setActiveTab] = useState<'students' | 'exams' | 'stats' | 'cloud' | 'grader' | 'game' | 'live'>('students');
 
@@ -430,8 +432,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <Suspense fallback={<div className="flex items-center justify-center py-24"><RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#6B7CDB' }} /></div>}>
                         <AdminGitHubSync
                             onShowToast={onShowToast}
+                            curriculum={curriculum}
                             lessons={lessons}
                             storedFiles={storedFiles}
+                            onAddChapter={onAddChapter}
                             onAddLesson={onAddLesson}
                             onDeleteLesson={onDeleteLesson}
                             onUploadFiles={onUploadFiles}

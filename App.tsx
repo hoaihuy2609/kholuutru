@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useCallback, Suspense, useState, useRef } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate, useLocation } from 'react-router-dom';
 import { GradeLevel, Lesson, Exam } from './types';
-import { CURRICULUM } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Toast from './components/Toast';
@@ -48,6 +47,7 @@ const LazyFallback = () => (
 // AppDataSync: bridges useCloudStorage data → Zustand stores
 // ──────────────────────────────────────────────────────────────────
 function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
+  const setCurriculum = useDataStore(state => state.setCurriculum);
   const setLessons = useDataStore(state => state.setLessons);
   const setStoredFiles = useDataStore(state => state.setStoredFiles);
   const setLoading = useDataStore(state => state.setLoading);
@@ -58,6 +58,7 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const setNotificationUnreadCount = useUIStore(state => state.setNotificationUnreadCount);
   const { getFetchedNotificationIds, getNotifications, verifyAccess } = cloud;
 
+  useEffect(() => { setCurriculum(cloud.curriculum); }, [cloud.curriculum, setCurriculum]);
   useEffect(() => { setLessons(cloud.lessons); }, [cloud.lessons, setLessons]);
   useEffect(() => { setStoredFiles(cloud.storedFiles); }, [cloud.storedFiles, setStoredFiles]);
   useEffect(() => { setLoading(cloud.loading); }, [cloud.loading, setLoading]);
@@ -167,7 +168,8 @@ function GradeOverviewPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage
   const lessons = useDataStore(state => state.lessons);
   const storedFiles = useDataStore(state => state.storedFiles);
   const grade = Number(level) as GradeLevel;
-  const gradeData = useMemo(() => CURRICULUM.find(g => g.level === grade), [grade]);
+  const curriculum = useDataStore(state => state.curriculum);
+  const gradeData = useMemo(() => curriculum.find(g => g.level === grade), [curriculum, grade]);
   if (!gradeData) return <Navigate to="/" replace />;
   return (
     <div className="space-y-6 animate-fade-in">
@@ -209,12 +211,13 @@ function ChapterPage({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const navigate = useNavigate();
   const lessons = useDataStore(state => state.lessons);
   const storedFiles = useDataStore(state => state.storedFiles);
+  const curriculum = useDataStore(state => state.curriculum);
   const isAdmin = useUIStore(state => state.isAdmin);
   const previewMode = useUIStore(state => state.previewMode);
   const showToast = useUIStore(state => state.showToast);
   const effectiveIsAdmin = isAdmin && !previewMode;
   const grade = Number(level) as GradeLevel;
-  const gradeData = useMemo(() => CURRICULUM.find(g => g.level === grade), [grade]);
+  const gradeData = useMemo(() => curriculum.find(g => g.level === grade), [curriculum, grade]);
   const chapter = gradeData?.chapters.find(c => c.id === chapterId);
   const chapterLessons = useMemo(() => lessons.filter(l => l.chapterId === chapterId), [lessons, chapterId]);
   const chapterFiles = storedFiles[chapterId!] || [];
@@ -373,7 +376,8 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     isSimulationFullscreen: state.isSimulationFullscreen,
     isForumTopicActive: state.isForumTopicActive,
   })));
-  const { lessons, storedFiles, loading, isActivated, studentGradeValue } = useDataStore(useShallow(state => ({
+  const { curriculum, lessons, storedFiles, loading, isActivated, studentGradeValue } = useDataStore(useShallow(state => ({
+    curriculum: state.curriculum,
     lessons: state.lessons,
     storedFiles: state.storedFiles,
     loading: state.loading,
@@ -389,13 +393,13 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 
   const fileCounts = useMemo(() => {
     const counts = { [GradeLevel.Grade10]: 0, [GradeLevel.Grade11]: 0, [GradeLevel.Grade12]: 0 };
-    CURRICULUM.forEach(grade => {
+    curriculum.forEach(grade => {
       let c = 0;
       grade.chapters.forEach(ch => { lessons.filter(l => l.chapterId === ch.id).forEach(l => { c += storedFiles[l.id]?.length || 0; }); });
       counts[grade.level] = c;
     });
     return counts;
-  }, [storedFiles, lessons]);
+  }, [curriculum, storedFiles, lessons]);
 
   const handlePreviewMode = useCallback((mode: GradeLevel | null) => {
     setPreviewMode(mode);
@@ -516,13 +520,13 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
             <Route path="/" element={
               loading
                 ? <div className="flex items-center justify-center h-[50vh]"><RefreshCw className="w-10 h-10 animate-spin" style={{ color: '#6B7CDB' }} /><span className="ml-3 text-lg font-medium" style={{ color: '#6B7CDB' }}>từ từ nó đang load...</span></div>
-                : <Dashboard onSelectGrade={(g) => navigate(g ? `/grade/${g}` : '/')} fileCounts={fileCounts} isAdmin={effectiveIsAdmin} onLoadLeaderboard={cloud.getLeaderboard} previewMode={previewMode} studentGrade={studentGradeValue} getBlogs={cloud.getBlogs} />
+                : <Dashboard onSelectGrade={(g) => navigate(g ? `/grade/${g}` : '/')} fileCounts={fileCounts} isAdmin={effectiveIsAdmin} onLoadLeaderboard={cloud.getLeaderboard} previewMode={previewMode} studentGrade={studentGradeValue} getBlogs={cloud.getBlogs} curriculum={curriculum} />
             } />
             <Route path="/admin" element={
               effectiveIsAdmin ? (
                 <ErrorBoundary>
                   <Suspense fallback={<LazyFallback />}>
-                    <AdminDashboard onBack={() => navigate('/')} onShowToast={useUIStore.getState().showToast} onUploadExamPdf={cloud.uploadExamPdf} onSaveExam={cloud.saveExam} onDeleteExam={cloud.deleteExam} onLoadExams={cloud.loadExams} lessons={lessons} storedFiles={storedFiles} onAddLesson={cloud.addLesson} onDeleteLesson={cloud.deleteLesson} onUploadFiles={cloud.uploadFiles} onDeleteFile={cloud.deleteFile} onSyncToGitHub={cloud.syncToCloud} syncProgress={cloud.syncProgress} />
+                    <AdminDashboard onBack={() => navigate('/')} onShowToast={useUIStore.getState().showToast} onUploadExamPdf={cloud.uploadExamPdf} onSaveExam={cloud.saveExam} onDeleteExam={cloud.deleteExam} onLoadExams={cloud.loadExams} curriculum={curriculum} lessons={lessons} storedFiles={storedFiles} onAddChapter={cloud.addChapter} onAddLesson={cloud.addLesson} onDeleteLesson={cloud.deleteLesson} onUploadFiles={cloud.uploadFiles} onDeleteFile={cloud.deleteFile} onSyncToGitHub={cloud.syncToCloud} syncProgress={cloud.syncProgress} />
                   </Suspense>
                 </ErrorBoundary>
               ) : <Navigate to="/" replace />

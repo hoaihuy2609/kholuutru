@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { useState, useEffect, useRef } from 'react';
-import { Lesson, StoredFile, FileStorage } from '../../types';
+import { Chapter, GradeData, GradeLevel, Lesson, StoredFile, FileStorage } from '../../types';
+import { CURRICULUM } from '../../constants';
 import CryptoJS from 'crypto-js';
 
 // Shared utilities (extracted)
@@ -49,11 +50,35 @@ export { exportData, importData } from './exportImport';
 // Storage Keys
 const STORAGE_FILES_KEY = 'physivault_files';
 const STORAGE_LESSONS_KEY = 'physivault_lessons';
+const STORAGE_CURRICULUM_KEY = 'physivault_curriculum';
 const STORAGE_ACTIVATION_KEY = 'physivault_activated';
 const STORAGE_GRADE_KEY = 'physivault_grade';
 
+const defaultCurriculum = (): GradeData[] => CURRICULUM.map(grade => ({
+    ...grade,
+    chapters: grade.chapters.map(chapter => ({ ...chapter })),
+}));
+
+const normalizeCurriculum = (value: unknown): GradeData[] => {
+    if (!Array.isArray(value)) return defaultCurriculum();
+    const byLevel = new Map((value as GradeData[]).map(grade => [grade.level, grade]));
+    return ([GradeLevel.Grade12, GradeLevel.Grade11, GradeLevel.Grade10] as const).map(level => {
+        const fallback = CURRICULUM.find(grade => grade.level === level)!;
+        const stored = byLevel.get(level);
+        if (!stored || !Array.isArray(stored.chapters)) return { ...fallback, chapters: fallback.chapters.map(chapter => ({ ...chapter })) };
+        return {
+            level,
+            title: typeof stored.title === 'string' && stored.title.trim() ? stored.title : fallback.title,
+            chapters: stored.chapters
+                .filter(chapter => chapter && typeof chapter.id === 'string' && typeof chapter.name === 'string')
+                .map(chapter => ({ id: chapter.id, name: chapter.name, description: chapter.description || '' })),
+        };
+    });
+};
+
 
 export const useCloudStorage = () => {
+    const [curriculum, setCurriculum] = useState<GradeData[]>(defaultCurriculum);
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [storedFiles, setStoredFiles] = useState<FileStorage>({});
     const [loading, setLoading] = useState(true);
@@ -67,6 +92,7 @@ export const useCloudStorage = () => {
             try {
                 let savedLessons = await dbGet(STORAGE_LESSONS_KEY);
                 let savedFiles = await dbGet(STORAGE_FILES_KEY);
+                let savedCurriculum = await dbGet(STORAGE_CURRICULUM_KEY);
 
                 if (!savedLessons && !savedFiles) {
                     const localFiles = localStorage.getItem(STORAGE_FILES_KEY);
@@ -81,6 +107,7 @@ export const useCloudStorage = () => {
 
                 setLessons(savedLessons || []);
                 setStoredFiles(savedFiles || {});
+                setCurriculum(normalizeCurriculum(savedCurriculum));
             } catch (e) {
                 console.error("Error initializing persistent storage", e);
             } finally {
@@ -92,6 +119,14 @@ export const useCloudStorage = () => {
 
     // Sync state to IndexedDB (debounced)
     const _dbSyncTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+    useEffect(() => {
+        if (!loading) {
+            clearTimeout(_dbSyncTimers.current[STORAGE_CURRICULUM_KEY]);
+            _dbSyncTimers.current[STORAGE_CURRICULUM_KEY] = setTimeout(() => dbSet(STORAGE_CURRICULUM_KEY, curriculum), 300);
+        }
+        return () => clearTimeout(_dbSyncTimers.current[STORAGE_CURRICULUM_KEY]);
+    }, [curriculum, loading]);
+
     useEffect(() => {
         if (!loading) {
             clearTimeout(_dbSyncTimers.current[STORAGE_LESSONS_KEY]);
@@ -122,6 +157,18 @@ export const useCloudStorage = () => {
     const deleteLesson = async (lessonId: string) => {
         setLessons(prev => prev.filter(l => l.id !== lessonId));
         setStoredFiles(prev => { const newFiles = { ...prev }; delete newFiles[lessonId]; return newFiles; });
+    };
+
+    const addChapter = async (grade: GradeLevel, name: string, description: string) => {
+        const chapter: Chapter = {
+            id: `chapter-${grade}-${crypto.randomUUID()}`,
+            name,
+            description,
+        };
+        setCurriculum(current => current.map(item => item.level === grade
+            ? { ...item, chapters: [...item.chapters, chapter] }
+            : item
+        ));
     };
 
     const uploadFiles = async (files: File[], targetId: string, category?: string) => {
@@ -233,7 +280,11 @@ export const useCloudStorage = () => {
         const t_fetch_total = performance.now();
 
         try {
-            const localDataPromise = Promise.all([dbGet(STORAGE_LESSONS_KEY), dbGet(STORAGE_FILES_KEY)]);
+            const localDataPromise = Promise.all([
+                dbGet(STORAGE_LESSONS_KEY),
+                dbGet(STORAGE_FILES_KEY),
+                dbGet(STORAGE_CURRICULUM_KEY),
+            ]);
 
             const cachedIndexFileId = localStorage.getItem(`pv_sync_file_id_${grade}`);
             let speculativeIndexPromise: Promise<ArrayBuffer> | null = null;
@@ -268,15 +319,17 @@ export const useCloudStorage = () => {
             }
             const indexData = JSON.parse(await smartDecrypt(new Uint8Array(indexRaw)));
 
-            const [rawLessons, rawFiles] = await localDataPromise;
+            const [rawLessons, rawFiles, rawCurriculum] = await localDataPromise;
             const newLessonsMap = new Map();
             (rawLessons || []).forEach((l: Lesson) => newLessonsMap.set(l.id, l));
             const newFiles = { ...(rawFiles || {}) };
+            let syncedChapters: Chapter[] | null = null;
             let totalLessonCount = 0;
             let totalFileCount = 0;
 
             const mergePayload = (data: any) => {
                 if (!data) return;
+                if (Array.isArray(data.chapters)) syncedChapters = data.chapters;
                 (data.lessons || []).forEach((l: Lesson) => newLessonsMap.set(l.id, l));
                 Object.assign(newFiles, data.files || {});
                 totalLessonCount += (data.lessons || []).length;
@@ -368,9 +421,22 @@ export const useCloudStorage = () => {
 
             const t4 = performance.now();
             const uniqueLessons = Array.from(newLessonsMap.values()) as Lesson[];
-            await dbSetBatch([[STORAGE_LESSONS_KEY, uniqueLessons], [STORAGE_FILES_KEY, newFiles]]);
+            const newCurriculum = normalizeCurriculum(rawCurriculum);
+            if (syncedChapters) {
+                const normalizedChapters = syncedChapters
+                    .filter(chapter => chapter && typeof chapter.id === 'string' && typeof chapter.name === 'string')
+                    .map(chapter => ({ id: chapter.id, name: chapter.name, description: chapter.description || '' }));
+                const gradeIndex = newCurriculum.findIndex(item => item.level === grade);
+                if (gradeIndex >= 0) newCurriculum[gradeIndex] = { ...newCurriculum[gradeIndex], chapters: normalizedChapters };
+            }
+            await dbSetBatch([
+                [STORAGE_LESSONS_KEY, uniqueLessons],
+                [STORAGE_FILES_KEY, newFiles],
+                [STORAGE_CURRICULUM_KEY, newCurriculum],
+            ]);
             setLessons(uniqueLessons);
             setStoredFiles(newFiles);
+            setCurriculum(newCurriculum);
             console.log(`[Fetch] Giai đoạn 4: ${(performance.now() - t4).toFixed(0)}ms`);
             console.log(`[Fetch] ✅ Tổng: ${((performance.now() - t_fetch_total) / 1000).toFixed(2)}s | ${totalLessonCount} bài, ${totalFileCount} file`);
 
@@ -389,15 +455,12 @@ export const useCloudStorage = () => {
         _syncLock.current[grade] = true;
         try {
         setSyncProgress(1);
-        if (lessonsToSync.length === 0 && Object.keys(filesToSync).length === 0) {
-            throw new Error('Này bro, chưa có bài giảng hay tài liệu nào để Sync đâu! Hãy thêm ít nhất 1 bài nhé.');
-        }
-
         const lessonIds = new Set(lessonsToSync.map(l => l.id));
         const fileOnlyChapterIds = Object.keys(filesToSync).filter(k => !lessonIds.has(k));
+        const gradeChapters = curriculum.find(item => item.level === grade)?.chapters || [];
 
-        type PayloadEntry = { chapterId: string; lessons: Lesson[]; files: FileStorage };
-        const payloads: PayloadEntry[] = [];
+        type PayloadEntry = { chapterId: string; lessons: Lesson[]; files: FileStorage; chapters?: Chapter[] };
+        const payloads: PayloadEntry[] = [{ chapterId: '__curriculum__', lessons: [], files: {}, chapters: gradeChapters }];
         for (const chId of fileOnlyChapterIds) {
             if (filesToSync[chId]?.length) payloads.push({ chapterId: chId, lessons: [], files: { [chId]: filesToSync[chId] } });
         }
@@ -455,12 +518,17 @@ export const useCloudStorage = () => {
 
         for (let pi = 0; pi < payloads.length; pi++) {
             const p = payloads[pi];
-            const payloadId = p.lessons[0]?.id || `ch_${p.chapterId}`;
-            const vParts = [p.chapterId, ...p.lessons.map(l => `${l.id}:${l.name}:${l.createdAt}`), ...Object.values(p.files).flat().map(f => `${f.id}:${f.size}`)];
+            const payloadId = p.chapters ? `meta_${grade}` : (p.lessons[0]?.id || `ch_${p.chapterId}`);
+            const vParts = [
+                p.chapterId,
+                ...(p.chapters?.map(chapter => `${chapter.id}:${chapter.name}:${chapter.description || ''}`) || []),
+                ...p.lessons.map(l => `${l.id}:${l.name}:${l.createdAt}`),
+                ...Object.values(p.files).flat().map(f => `${f.id}:${f.size}`),
+            ];
             lessonVersions[payloadId] = fnvHash(vParts.join('|'));
 
             const encrypted = encryptedPayloads[pi];
-            const fileName = `g${grade}_${p.chapterId}_${p.lessons[0]?.id || 'ch'}.bin`;
+            const fileName = `g${grade}_${p.chapterId}_${p.chapters ? 'meta' : (p.lessons[0]?.id || 'ch')}.bin`;
             const contentBytes = encrypted.byteLength;
 
             if (currentChunkSize + contentBytes > MAX_CHUNK_SIZE && currentChunkSize > 0) {
@@ -518,7 +586,7 @@ export const useCloudStorage = () => {
 
         setSyncProgress(95);
         const indexPayload = {
-            grade, zipFileIds: finalZipFileIds, totalLessons: lessonsToSync.length, updatedAt: Date.now(),
+            grade, zipFileIds: finalZipFileIds, totalLessons: lessonsToSync.length, totalChapters: gradeChapters.length, updatedAt: Date.now(),
             chunkContents: Object.fromEntries(finalZipFileIds.map((id, i) => [id, chunkPayloadIds[i]])),
             lessonVersions,
         };
@@ -587,8 +655,8 @@ export const useCloudStorage = () => {
     };
 
     return {
-        lessons, storedFiles, loading, isActivated, syncProgress,
-        addLesson, deleteLesson, uploadFiles, deleteFile,
+        curriculum, lessons, storedFiles, loading, isActivated, syncProgress,
+        addChapter, addLesson, deleteLesson, uploadFiles, deleteFile,
         activateSystem, verifyAccess,
         fetchLessonsFromCloud, syncToCloud,
         // Re-exported from services (backward compatible API)

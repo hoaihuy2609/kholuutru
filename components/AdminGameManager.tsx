@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Zap, Plus, Trash2, RefreshCw, CheckCircle2, AlertCircle, BookOpen, ChevronDown, ChevronUp, Lightbulb, Edit2, X as XIcon } from 'lucide-react';
-import { CURRICULUM } from '../constants';
+import { useDataStore } from '../src/stores/useDataStore';
 
 interface GameQuestion {
   id: string;
@@ -64,6 +64,7 @@ function parseQuestions(raw: string, grade: number, topic: string): Omit<GameQue
 
 // ── Main Component ─────────────────────────────────────────────────
 const AdminGameManager: React.FC<AdminGameManagerProps> = ({ onShowToast, workerUrl, adminKey }) => {
+  const curriculum = useDataStore(state => state.curriculum);
   const [rawText, setRawText] = useState('');
   const [parsedQuestions, setParsedQuestions] = useState<Omit<GameQuestion, 'id'>[]>([]);
   const [existingQuestions, setExistingQuestions] = useState<GameQuestion[]>([]);
@@ -290,7 +291,7 @@ D. J
               disabled={selectedGrade === 0}
             >
               <option value="">-- {selectedGrade === 0 ? 'Vui lòng chọn khối trước' : 'Không gán (để trống)'} --</option>
-              {selectedGrade !== 0 && CURRICULUM.find(c => c.level === selectedGrade)?.chapters.map(ch => (
+              {selectedGrade !== 0 && curriculum.find(c => c.level === selectedGrade)?.chapters.map(ch => (
                 <option key={ch.id} value={ch.name}>{ch.name}</option>
               ))}
             </select>

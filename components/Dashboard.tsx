@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { GradeLevel } from '../types';
-import { CURRICULUM } from '../constants';
+import { GradeData, GradeLevel } from '../types';
 import { FileText, Folder, Quote, Atom, Zap, Activity, Trophy, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import CountdownTimer from './CountdownTimer';
 import WeeklyExamViewer from './WeeklyExamViewer';
@@ -23,6 +22,7 @@ interface DashboardProps {
   previewMode?: GradeLevel | null;
   studentGrade?: number | null;
   getBlogs: (isAdmin: boolean) => Promise<BlogPost[]>;
+  curriculum: GradeData[];
 }
 
 const EinsteinQuotes = [
@@ -343,7 +343,7 @@ const LeaderboardSlider: React.FC<LeaderboardSliderProps> = ({ onLoad }) => {
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────
 
-const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard, previewMode, studentGrade, getBlogs }) => {
+const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCounts, isAdmin, onLoadLeaderboard, previewMode, studentGrade, getBlogs, curriculum }) => {
   const [quote, setQuote] = useState('');
 
   useEffect(() => {
@@ -351,7 +351,7 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCou
   }, []);
 
   const totalFiles = useMemo(() => Object.values(fileCounts).reduce((a: number, b: number) => a + b, 0), [fileCounts]);
-  const totalChapters = CURRICULUM.reduce((acc, g) => acc + g.chapters.length, 0);
+  const totalChapters = curriculum.reduce((acc, g) => acc + g.chapters.length, 0);
 
   return (
     <div className="space-y-8 animate-fade-in pb-10">
@@ -453,10 +453,10 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({ onSelectGrade, fileCou
         // Student mode: 1 lớp → 2 cột ngang nhau
         const isStudentMode = !isAdmin && !!studentGrade && !previewMode;
         const gradeList = previewMode
-          ? CURRICULUM.filter(g => g.level === previewMode)
+          ? curriculum.filter(g => g.level === previewMode)
           : !isAdmin && studentGrade
-            ? CURRICULUM.filter(g => g.level === studentGrade)
-            : CURRICULUM;
+            ? curriculum.filter(g => g.level === studentGrade)
+            : curriculum;
 
         const gradeCards = (
           <div className="h-full flex flex-col">
