@@ -947,6 +947,19 @@ export default function SolutionEditor({
                       <span>{tikzError}</span>
                     </div>
                   )}
+
+                  {/* Ảnh render tức thì ngay trong ô nhập */}
+                  {activeQuestion.imageSvg && (
+                    <div className="mt-3 p-3 bg-white border border-indigo-200 rounded-lg flex flex-col items-center shadow-sm">
+                      <div className="text-[11px] text-indigo-600 font-semibold mb-2 flex items-center gap-1.5 self-start">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Ảnh vector SVG đã sẵn sàng:
+                      </div>
+                      <div
+                        className="max-w-full overflow-x-auto flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"
+                        dangerouslySetInnerHTML={{ __html: activeQuestion.imageSvg }}
+                      />
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -1077,7 +1090,7 @@ export default function SolutionEditor({
               <div className="solution-editor-preview space-y-12">
                 {questions.map((q, qIdx) => (
                   <div key={qIdx} className={`space-y-5 ${qIdx !== activeQIdx ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
-                    {(examName || q.questionNo || q.qText || q.qFormula) && (
+                    {(examName || q.questionNo || q.qText || q.qFormula || q.imageSvg || q.tikzCode) && (
                       <div>
                         {examName && <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-1.5">{examName}</div>}
                         <div className="font-bold text-2xl text-indigo-900 mb-1">{q.questionNo || `Câu ${qIdx + 1}`}</div>
@@ -1105,7 +1118,7 @@ export default function SolutionEditor({
                               </div>
                             ) : null;
 
-                            if (hasImg && isRight) {
+                            if (hasImg && isRight && (q.qText || q.qFormula)) {
                               return (
                                 <div className="flex flex-col md:flex-row gap-5 items-start">
                                   <div className="flex-1 min-w-0">
@@ -1123,7 +1136,7 @@ export default function SolutionEditor({
                               <div>
                                 {q.qText && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap"><TextWithMath text={q.qText} /></p>}
                                 {q.qFormula && <KatexSpan tex={q.qFormula} block />}
-                                {hasImg && <div className="mt-4">{imageElem}</div>}
+                                {hasImg && <div className={q.qText || q.qFormula ? "mt-4" : ""}>{imageElem}</div>}
                               </div>
                             );
                           })()}
@@ -1198,7 +1211,7 @@ export default function SolutionEditor({
                   </div>
                 ))}
 
-                {!examName && !activeQuestion.qText && !activeQuestion.qFormula && (
+                {!examName && !activeQuestion.qText && !activeQuestion.qFormula && !activeQuestion.imageSvg && !activeQuestion.tikzCode && (
                   <div className="flex flex-col items-center justify-center text-gray-400 mt-28 opacity-60">
                     <Eye className="w-12 h-12 mb-4" />
                     <p className="text-sm">Bắt đầu nhập liệu để xem trước...</p>

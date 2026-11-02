@@ -21,10 +21,13 @@ export async function renderTikzToSvg(tikzCode: string): Promise<TikzRenderResul
     throw new Error('Mã TikZ đang trống');
   }
 
-  // Đảm bảo code có bọc \begin{tikzpicture} ... \end{tikzpicture}
+  // Đảm bảo code được bọc đầy đủ gói LaTeX standalone và TikZ
   let finalCode = trimmed;
   if (!finalCode.includes('\\begin{tikzpicture}')) {
     finalCode = `\\begin{tikzpicture}\n${finalCode}\n\\end{tikzpicture}`;
+  }
+  if (!finalCode.includes('\\documentclass')) {
+    finalCode = `\\documentclass{standalone}\n\\usepackage{tikz}\n\\usepackage{amsmath,amssymb}\n\\usetikzlibrary{arrows.meta}\n\\begin{document}\n${finalCode}\n\\end{document}`;
   }
 
   // Gọi Kroki API
