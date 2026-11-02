@@ -519,7 +519,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   // Game sub-state (only TheoryKing remains)
   const resetGames = useCallback(() => {}, []);
 
-  const hideSidebar = isSimulationFullscreen || isForumTopicActive || path === '/admin/editor' || path === '/admin' || path === '/live' || (effectiveIsAdmin && (isCreatingBlog || !!activeAdminBlog));
+  const hideSidebar = isSimulationFullscreen || isForumTopicActive || path === '/admin/editor' || path === '/admin' || path === '/live' || path.startsWith('/blog') || (effectiveIsAdmin && (isCreatingBlog || !!activeAdminBlog));
 
   if (isKicked && !isAdmin) return <KickedScreen />;
 

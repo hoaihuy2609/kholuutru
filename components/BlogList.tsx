@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BlogPost } from '../types';
-import { BookOpen, Plus, Search, Filter, FileText, Check, Sparkles } from 'lucide-react';
+import { BookOpen, Plus, Search, Filter, FileText, Check, Sparkles, ChevronLeft } from 'lucide-react';
 import ExamStyleModal from './ExamStyleModal';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
 import katex from 'katex';
@@ -334,6 +335,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     const [showFilters, setShowFilters] = useState(false);
     const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
     const [isExamModalOpen, setIsExamModalOpen] = useState(false);
+    const navigate = useNavigate();
 
     const handleToggleSelect = (id: string) => {
         setSelectedBlogIds(prev =>
@@ -425,7 +427,23 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
         : allGradeTabs;
 
     return (
-        <div className="max-w-6xl mx-auto p-4 md:p-8 animate-fade-in relative pb-20" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
+        <div className="w-full max-w-[1720px] mx-auto p-4 md:p-6 lg:p-8 animate-fade-in relative pb-20" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
+            {/* Nút quay lại trang chủ (khi góc học tập mở full-screen) */}
+            <div style={{ marginBottom: '16px' }}>
+                <button
+                    onClick={() => navigate('/')}
+                    style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        background: '#fff', border: '1px solid #E9E9E7', padding: '7px 16px',
+                        borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#57564F',
+                        cursor: 'pointer', transition: 'all 0.15s', boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#1A1A1A'; e.currentTarget.style.borderColor = '#CFCFCB'; e.currentTarget.style.background = '#F7F6F3'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#57564F'; e.currentTarget.style.borderColor = '#E9E9E7'; e.currentTarget.style.background = '#fff'; }}
+                >
+                    <ChevronLeft style={{ width: '16px', height: '16px' }} /> Quay lại trang chủ
+                </button>
+            </div>
 
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
