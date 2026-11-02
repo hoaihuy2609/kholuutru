@@ -9,8 +9,11 @@ import { useUIStore } from "../src/stores/useUIStore";
 import { SolutionStep as Step, SolutionStatement as Statement } from '../types';
 import {
   ChevronLeft, Save, Trash2, ArrowUp, ArrowDown,
-  Plus, Eye, BookOpen, Layers, X, ToggleLeft, ToggleRight
+  Plus, Eye, BookOpen, Layers, X, ToggleLeft, ToggleRight,
+  Image as ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle
 } from 'lucide-react';
+import { renderTikzToSvg, uploadSvgToTelegram } from "../src/services/tikzService";
+import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -28,6 +31,11 @@ interface Question {
   choices: string[];       // dùng khi type === 'trac_nghiem' (A/B/C/D)
   correctChoice: string;   // 'A' | 'B' | 'C' | 'D'
   solutionSteps: Step[];   // backward compat
+  tikzCode?: string;       // Mã TikZ vẽ hình minh họa
+  imageSvg?: string;       // Chuỗi SVG sau khi render
+  imageUrl?: string;       // URL ảnh (nếu có)
+  imageTelegramFileId?: string; // Telegram file_id
+  imageLayout?: 'auto' | 'right' | 'bottom'; // Bố cục ảnh
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -72,6 +80,11 @@ const emptyQuestion = (): Question => ({
   choices: ['', '', '', ''],
   correctChoice: '',
   solutionSteps: [emptyStep()],
+  tikzCode: '',
+  imageSvg: '',
+  imageUrl: '',
+  imageTelegramFileId: '',
+  imageLayout: 'auto',
 });
 
 // Normalize question từ JSON cũ (backward compat)
@@ -107,6 +120,11 @@ const normalizeQuestion = (q: any): Question => {
     choices: Array.isArray(q.choices) ? [0, 1, 2, 3].map(i => q.choices[i] || '') : ['', '', '', ''],
     correctChoice: q.correctChoice || '',
     solutionSteps: q.solutionSteps?.length > 0 ? q.solutionSteps : [emptyStep()],
+    tikzCode: q.tikz_code || q.tikzCode || '',
+    imageSvg: q.image_svg || q.imageSvg || '',
+    imageUrl: q.image_url || q.imageUrl || '',
+    imageTelegramFileId: q.image_telegram_file_id || q.imageTelegramFileId || '',
+    imageLayout: q.image_layout || q.imageLayout || 'auto',
   };
 };
 
@@ -460,6 +478,31 @@ export default function SolutionEditor({
   };
 
   const activeQuestion = questions[activeQIdx] ?? emptyQuestion();
+  const [renderingTikz, setRenderingTikz] = useState(false);
+  const [tikzError, setTikzError] = useState<string | null>(null);
+
+  const handleRenderTikz = async () => {
+    if (!activeQuestion.tikzCode?.trim()) {
+      showToast("Vui lòng nhập mã TikZ trước khi bấm xem trước", "warning");
+      return;
+    }
+    setRenderingTikz(true);
+    setTikzError(null);
+    try {
+      const res = await renderTikzToSvg(activeQuestion.tikzCode);
+      updateQ('imageSvg', res.svg);
+      if (!activeQuestion.imageLayout || activeQuestion.imageLayout === 'auto') {
+        updateQ('imageLayout', res.recommendedLayout);
+      }
+      showToast(`Đã vẽ hình thành công! Bố cục: ${res.recommendedLayout === 'right' ? 'Cột bên phải' : 'Ở dưới căn giữa'}`, 'success');
+    } catch (err: any) {
+      const msg = err.message || 'Lỗi khi biên dịch mã TikZ';
+      setTikzError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setRenderingTikz(false);
+    }
+  };
 
   // ── Load data ──────────────────────────────────────────────
   useEffect(() => {
@@ -548,13 +591,32 @@ export default function SolutionEditor({
     }
     setSaving(true);
     try {
+      // Upload SVG lên Telegram nếu chưa có file_id
+      const processedQuestions = await Promise.all(questions.map(async (q, idx) => {
+        let tId = q.imageTelegramFileId;
+        if (q.imageSvg && !tId) {
+          try {
+            const uploadedId = await uploadSvgToTelegram(q.imageSvg, `diagram_${idx + 1}.svg`);
+            if (uploadedId) tId = uploadedId;
+          } catch (e) {
+            console.warn('Upload Telegram SVG error:', e);
+          }
+        }
+        return { ...q, imageTelegramFileId: tId };
+      }));
+
       // Serialize mỗi câu hỏi tùy theo type
-      const serializedQuestions = questions.map(q => ({
+      const serializedQuestions = processedQuestions.map(q => ({
         question_no:    q.questionNo,
         question_text:  q.qText,
         question_latex: q.qFormula,
         type:           q.type,
         solution:       q.solution || '',
+        tikz_code:      q.tikzCode || '',
+        image_svg:      q.imageSvg || '',
+        image_url:      q.imageUrl || '',
+        image_telegram_file_id: q.imageTelegramFileId || '',
+        image_layout:   q.imageLayout || 'auto',
         // Tự luận: lưu cả solution và steps tương thích
         steps:         q.type === 'tu_luan'    ? (q.solution ? [{ title: '', text: q.solution, formula: '', formula2: '' }] : q.steps) : [],
         // Đúng/sai: lưu statements
@@ -799,6 +861,94 @@ export default function SolutionEditor({
                     value={activeQuestion.qText} onChange={e => updateQ('qText', e.target.value)} />
                 </div>
 
+                {/* ── Khung vẽ hình TikZ / LaTeX riêng biệt ── */}
+                <div className="p-4 rounded-xl border border-indigo-100 bg-[#F9FAFD] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-md bg-indigo-600 flex items-center justify-center text-white">
+                        <ImageIcon className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-sm font-bold text-gray-900">Hình vẽ minh họa (TikZ / LaTeX)</span>
+                      <span className="text-[11px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">Tùy chọn</span>
+                    </div>
+                    {activeQuestion.imageSvg && (
+                      <span className="flex items-center gap-1 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Đã có hình vẽ
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-gray-500">
+                    Dán mã <code className="bg-white px-1.5 py-0.5 rounded border text-indigo-600 font-mono">\begin&#123;tikzpicture&#125; ... \end&#123;tikzpicture&#125;</code> để hệ thống tự động vẽ sơ đồ vector sắc nét.
+                  </p>
+
+                  <AutoResizeTextarea
+                    rows={3}
+                    className="w-full p-3 rounded-lg border border-[#E9E9E7] bg-white outline-none focus:border-indigo-500 text-xs font-mono text-gray-800 transition-colors"
+                    placeholder={`VD:\n\\begin{tikzpicture}\n  \\draw[thick, ->] (0,0) -- (3,0) node[right] {$x$};\n  \\draw[thick, ->] (0,0) -- (0,3) node[above] {$y$};\n  \\draw[red, thick] (0,0) circle (1.2);\n\\end{tikzpicture}`}
+                    value={activeQuestion.tikzCode || ''}
+                    onChange={e => updateQ('tikzCode', e.target.value)}
+                    onFocus={e => trackFocus(`q-tikz-${activeQIdx}`, e.target)}
+                  />
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleRenderTikz}
+                      disabled={renderingTikz || !activeQuestion.tikzCode?.trim()}
+                      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all shadow-sm ${
+                        renderingTikz || !activeQuestion.tikzCode?.trim()
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer active:scale-95'
+                      }`}
+                    >
+                      {renderingTikz ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Đang vẽ hình qua Kroki...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 text-amber-300" /> ⚡ Xem trước hình vẽ
+                        </>
+                      )}
+                    </button>
+
+                    {activeQuestion.imageSvg && (
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="text-gray-500 font-medium">Bố cục:</span>
+                        {(['auto', 'right', 'bottom'] as const).map(l => (
+                          <button
+                            key={l}
+                            type="button"
+                            onClick={() => updateQ('imageLayout', l)}
+                            className={`px-2 py-1 rounded text-[11px] font-semibold border transition-all ${
+                              (activeQuestion.imageLayout || 'auto') === l
+                                ? 'bg-indigo-600 text-white border-indigo-600'
+                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                            }`}
+                          >
+                            {l === 'auto' ? 'Tự động' : l === 'right' ? 'Cột bên phải' : 'Ở dưới'}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => { updateQ('imageSvg', ''); updateQ('tikzCode', ''); }}
+                          className="ml-2 text-xs text-rose-500 hover:underline"
+                        >
+                          Xóa hình
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {tikzError && (
+                    <div className="flex items-start gap-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{tikzError}</span>
+                    </div>
+                  )}
+                </div>
+
               </div>
             </div>
           </div>
@@ -936,8 +1086,47 @@ export default function SolutionEditor({
                           {q.type === 'dung_sai' ? 'Đúng / Sai' : q.type === 'trac_nghiem' ? 'Trắc nghiệm' : 'Tự luận'}
                         </span>
                         <div className="bg-white border-l-[3px] border-indigo-400 rounded-r-xl p-5 shadow-sm">
-                          {q.qText    && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap"><TextWithMath text={q.qText} /></p>}
-                          {q.qFormula && <KatexSpan tex={q.qFormula} block />}
+                          {(() => {
+                            const hasImg = !!(q.imageSvg || q.imageUrl || q.imageTelegramFileId);
+                            const isRight = (q.imageLayout === 'right') || (q.imageLayout === 'auto');
+
+                            const imageElem = hasImg ? (
+                              <div className="w-full flex justify-center items-center p-3 bg-white rounded-lg border border-[#E9E9E7] shadow-sm overflow-x-auto">
+                                {q.imageSvg ? (
+                                  <div
+                                    className="max-w-full flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"
+                                    dangerouslySetInnerHTML={{ __html: q.imageSvg }}
+                                  />
+                                ) : q.imageUrl ? (
+                                  <img src={q.imageUrl} alt="Sơ đồ" className="max-w-full h-auto" />
+                                ) : q.imageTelegramFileId ? (
+                                  <img src={`${CLOUDFLARE_PROXY_URL}/getFile/${q.imageTelegramFileId}`} alt="Sơ đồ" className="max-w-full h-auto" />
+                                ) : null}
+                              </div>
+                            ) : null;
+
+                            if (hasImg && isRight) {
+                              return (
+                                <div className="flex flex-col md:flex-row gap-5 items-start">
+                                  <div className="flex-1 min-w-0">
+                                    {q.qText && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap"><TextWithMath text={q.qText} /></p>}
+                                    {q.qFormula && <KatexSpan tex={q.qFormula} block />}
+                                  </div>
+                                  <div className="w-full md:w-[42%] max-w-[340px] shrink-0">
+                                    {imageElem}
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div>
+                                {q.qText && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap"><TextWithMath text={q.qText} /></p>}
+                                {q.qFormula && <KatexSpan tex={q.qFormula} block />}
+                                {hasImg && <div className="mt-4">{imageElem}</div>}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     )}

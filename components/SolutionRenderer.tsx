@@ -10,6 +10,7 @@ import React, { useEffect, useRef } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import { SolutionStep as Step, SolutionStatement as Statement } from '../types';
+import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 
 interface Question {
   question_no: string;
@@ -22,6 +23,16 @@ interface Question {
   choices?: string[];
   correctChoice?: string;
   solutionSteps?: Step[];
+  tikz_code?: string;
+  image_svg?: string;
+  image_url?: string;
+  image_telegram_file_id?: string;
+  image_layout?: 'auto' | 'right' | 'bottom';
+  tikzCode?: string;
+  imageSvg?: string;
+  imageUrl?: string;
+  imageTelegramFileId?: string;
+  imageLayout?: 'auto' | 'right' | 'bottom';
 }
 
 interface PhysicsSolutionData {
@@ -61,6 +72,11 @@ function parseContent(content: string): { examName: string; questions: Question[
         correctChoice:  q.correctChoice  || '',
         solutionSteps:  q.solutionSteps  || [],
         solution:       q.solution       || "",
+        tikz_code:      q.tikz_code || q.tikzCode || "",
+        image_svg:      q.image_svg || q.imageSvg || "",
+        image_url:      q.image_url || q.imageUrl || "",
+        image_telegram_file_id: q.image_telegram_file_id || q.imageTelegramFileId || "",
+        image_layout:   q.image_layout || q.imageLayout || "auto",
       }));
     } else {
       // Backward compat: câu duy nhất ở root-level, không có `type`
@@ -425,7 +441,30 @@ function StatementRenderer({ st }: { st: Statement }) {
 function QuestionHeader({ question }: { question: Question }) {
   const isDungSai    = question.type === 'dung_sai';
   const isTracNghiem = question.type === 'trac_nghiem';
-  if (!question.question_text && !question.question_latex) return null;
+  const hasImg = !!(question.image_svg || question.image_url || question.image_telegram_file_id);
+  if (!question.question_text && !question.question_latex && !hasImg) return null;
+
+  const isRight = (question.image_layout === 'right') || (question.image_layout === 'auto');
+
+  const imageElem = hasImg ? (
+    <div className="w-full flex justify-center items-center p-3.5 bg-[#FAF9F6] rounded-xl border border-[#E9E9E7] shadow-sm overflow-x-auto">
+      {question.image_svg ? (
+        <div
+          className="max-w-full flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"
+          dangerouslySetInnerHTML={{ __html: question.image_svg }}
+        />
+      ) : question.image_url ? (
+        <img src={question.image_url} alt="Sơ đồ câu hỏi" className="max-w-full h-auto rounded" />
+      ) : question.image_telegram_file_id ? (
+        <img
+          src={`${CLOUDFLARE_PROXY_URL}/getFile/${question.image_telegram_file_id}`}
+          alt="Sơ đồ câu hỏi"
+          className="max-w-full h-auto rounded"
+        />
+      ) : null}
+    </div>
+  ) : null;
+
   return (
     <div>
       {question.question_no && (
@@ -437,12 +476,31 @@ function QuestionHeader({ question }: { question: Question }) {
         </div>
       )}
       <div className="bg-white border-l-[3px] border-indigo-400 rounded-r-xl p-5 shadow-sm">
-        {question.question_text && (
-          <p className="text-[15px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
-            <TextWithMath text={question.question_text} />
-          </p>
+        {hasImg && isRight ? (
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            <div className="flex-1 min-w-0">
+              {question.question_text && (
+                <p className="text-[15px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
+                  <TextWithMath text={question.question_text} />
+                </p>
+              )}
+              {question.question_latex && <KatexBlock tex={question.question_latex} />}
+            </div>
+            <div className="w-full md:w-[40%] max-w-[360px] shrink-0">
+              {imageElem}
+            </div>
+          </div>
+        ) : (
+          <div>
+            {question.question_text && (
+              <p className="text-[15px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
+                <TextWithMath text={question.question_text} />
+              </p>
+            )}
+            {question.question_latex && <KatexBlock tex={question.question_latex} />}
+            {hasImg && <div className="mt-4">{imageElem}</div>}
+          </div>
         )}
-        {question.question_latex && <KatexBlock tex={question.question_latex} />}
       </div>
     </div>
   );

@@ -364,6 +364,11 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                             solutionSteps: q.solutionSteps || [],
                             steps: q.steps || [],
                             level: b.level || 0,
+                            tikzCode: q.tikz_code || q.tikzCode || '',
+                            imageSvg: q.image_svg || q.imageSvg || '',
+                            imageUrl: q.image_url || q.imageUrl || '',
+                            imageTelegramFileId: q.image_telegram_file_id || q.imageTelegramFileId || '',
+                            imageLayout: q.image_layout || q.imageLayout || 'auto',
                         };
                     }
                 } catch (_) {}
