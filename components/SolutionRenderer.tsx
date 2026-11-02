@@ -447,7 +447,7 @@ function QuestionHeader({ question }: { question: Question }) {
   const isRight = (question.image_layout === 'right') || (question.image_layout === 'auto');
 
   const imageElem = hasImg ? (
-    <div className="w-full flex justify-center items-center p-3.5 bg-[#FAF9F6] rounded-xl border border-[#E9E9E7] shadow-sm overflow-x-auto">
+    <div className="w-full flex justify-center items-center py-1 px-2 bg-transparent overflow-x-auto">
       {question.image_svg ? (
         <div
           className="max-w-full flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"

@@ -1086,7 +1086,7 @@ export default function SolutionEditor({
               </h3>
             </div>
             <div className="p-6 overflow-y-auto flex-1 bg-[#F7F6F3]" style={{ fontFamily: "'KaTeX_Main', 'Computer Modern', serif" }}>
-              <style>{`.solution-editor-preview, .solution-editor-preview * { font-family: 'KaTeX_Main', 'Computer Modern', serif !important; } .solution-editor-preview .font-mono { font-family: monospace !important; }`}</style>
+              <style>{`.solution-editor-preview, .solution-editor-preview *:not(svg):not(svg *) { font-family: 'KaTeX_Main', 'Computer Modern', serif !important; } .solution-editor-preview .font-mono { font-family: monospace !important; }`}</style>
               <div className="solution-editor-preview space-y-12">
                 {questions.map((q, qIdx) => (
                   <div key={qIdx} className={`space-y-5 ${qIdx !== activeQIdx ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
@@ -1104,7 +1104,7 @@ export default function SolutionEditor({
                             const isRight = (q.imageLayout === 'right') || (q.imageLayout === 'auto');
 
                             const imageElem = hasImg ? (
-                              <div className="w-full flex justify-center items-center p-3 bg-white rounded-lg border border-[#E9E9E7] shadow-sm overflow-x-auto">
+                              <div className="w-full flex justify-center items-center py-1 px-2 bg-transparent overflow-x-auto">
                                 {q.imageSvg ? (
                                   <div
                                     className="max-w-full flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"

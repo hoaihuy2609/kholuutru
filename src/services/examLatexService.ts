@@ -462,7 +462,7 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
     } else if (q.imageUrl) {
       inner = `<img src="${q.imageUrl}" style="max-width: 100%; height: auto;" />`;
     }
-    return inner ? `<div style="border: 1px solid #E9E9E7; padding: 6px; border-radius: 6px; background: #fafafa; display: flex; justify-content: center; align-items: center;">${inner}</div>` : '';
+    return inner ? `<div style="display: flex; justify-content: center; align-items: center; background: transparent;">${inner}</div>` : '';
   };
 
   const tracNghiemList = questions.filter(q => q.type === 'trac_nghiem');
