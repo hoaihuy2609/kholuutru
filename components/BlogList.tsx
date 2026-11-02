@@ -4,6 +4,7 @@ import { BlogPost } from '../types';
 import { BookOpen, Plus, Search, Filter, FileText, Check, Sparkles, ChevronLeft } from 'lucide-react';
 import ExamStyleModal from './ExamStyleModal';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
+import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
@@ -64,6 +65,10 @@ interface CardQuestionData {
     questionText: string;
     questionLatex: string;
     type: 'tu_luan' | 'dung_sai' | 'trac_nghiem';
+    imageSvg?: string;
+    imageUrl?: string;
+    imageTelegramFileId?: string;
+    imageLayout?: 'auto' | 'right' | 'bottom';
 }
 
 function parseCardQuestion(content: string): CardQuestionData | null {
@@ -78,6 +83,10 @@ function parseCardQuestion(content: string): CardQuestionData | null {
                 questionText: q.question_text || '',
                 questionLatex: q.question_latex || '',
                 type: q.type === 'dung_sai' ? 'dung_sai' : q.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan',
+                imageSvg: q.image_svg || q.imageSvg || '',
+                imageUrl: q.image_url || q.imageUrl || '',
+                imageTelegramFileId: q.image_telegram_file_id || q.imageTelegramFileId || '',
+                imageLayout: q.image_layout || q.imageLayout || 'auto',
             };
         }
         // Backward compat: root-level single question
@@ -86,6 +95,10 @@ function parseCardQuestion(content: string): CardQuestionData | null {
             questionText: data.question_text || '',
             questionLatex: data.question_latex || '',
             type: 'tu_luan',
+            imageSvg: data.image_svg || data.imageSvg || '',
+            imageUrl: data.image_url || data.imageUrl || '',
+            imageTelegramFileId: data.image_telegram_file_id || data.imageTelegramFileId || '',
+            imageLayout: data.image_layout || data.imageLayout || 'auto',
         };
     } catch {
         return null;
@@ -110,7 +123,44 @@ function QuestionCard({ blog, isAdmin, onEditBlog, onClick, gc, isSelected, onTo
     const q = parseCardQuestion(blog.content);
     const isDungSai    = q?.type === 'dung_sai';
     const isTracNghiem = q?.type === 'trac_nghiem';
-    const hasQuestion = q && (q.questionText || q.questionLatex);
+    const hasImg = !!(q?.imageSvg || q?.imageUrl || q?.imageTelegramFileId);
+    const hasQuestion = q && (q.questionText || q.questionLatex || hasImg);
+    const isRight = (q?.imageLayout === 'right') || (q?.imageLayout === 'auto') || !q?.imageLayout;
+
+    const imageElem = hasImg ? (
+        <div style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
+            padding: '2px',
+        }}>
+            {q?.imageSvg ? (
+                <div
+                    style={{
+                        maxWidth: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                    }}
+                    className="[&>svg]:max-w-full [&>svg]:h-auto [&>svg]:max-h-[190px] [&>svg]:object-contain"
+                    dangerouslySetInnerHTML={{ __html: q.imageSvg }}
+                />
+            ) : q?.imageUrl ? (
+                <img
+                    src={q.imageUrl}
+                    alt="Hình vẽ minh họa"
+                    style={{ maxWidth: '100%', maxHeight: '190px', objectFit: 'contain' }}
+                />
+            ) : q?.imageTelegramFileId ? (
+                <img
+                    src={`${CLOUDFLARE_PROXY_URL}/getFile/${q.imageTelegramFileId}`}
+                    alt="Hình vẽ minh họa"
+                    style={{ maxWidth: '100%', maxHeight: '190px', objectFit: 'contain' }}
+                />
+            ) : null}
+        </div>
+    ) : null;
 
     return (
         <article
@@ -267,7 +317,7 @@ function QuestionCard({ blog, isAdmin, onEditBlog, onClick, gc, isSelected, onTo
             {hasQuestion ? (
                 <div
                     style={{
-                        height: '220px',
+                        height: '240px',
                         overflowY: 'auto',
                         padding: '14px 16px',
                         fontSize: '15px',
@@ -280,17 +330,40 @@ function QuestionCard({ blog, isAdmin, onEditBlog, onClick, gc, isSelected, onTo
                     onWheel={e => e.stopPropagation()}
                 >
                     <style>{`.katex { color: #1A1A1A !important; font-size: 1em !important; }`}</style>
-                    {q!.questionText && (
-                        <div style={{ marginBottom: q!.questionLatex ? '8px' : 0, whiteSpace: 'pre-wrap' }}>
-                            <TextWithMathCard text={q!.questionText} />
+                    {hasImg && isRight ? (
+                        <div className="flex flex-col sm:flex-row gap-4 items-start">
+                            <div className="flex-1 min-w-0">
+                                {q!.questionText && (
+                                    <div style={{ marginBottom: q!.questionLatex ? '8px' : 0, whiteSpace: 'pre-wrap' }}>
+                                        <TextWithMathCard text={q!.questionText} />
+                                    </div>
+                                )}
+                                {q!.questionLatex && <KatexBlockCard tex={q!.questionLatex} />}
+                            </div>
+                            <div className="w-full sm:w-[38%] max-w-[320px] shrink-0 self-center">
+                                {imageElem}
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            {q!.questionText && (
+                                <div style={{ marginBottom: q!.questionLatex ? '8px' : 0, whiteSpace: 'pre-wrap' }}>
+                                    <TextWithMathCard text={q!.questionText} />
+                                </div>
+                            )}
+                            {q!.questionLatex && <KatexBlockCard tex={q!.questionLatex} />}
+                            {hasImg && (
+                                <div style={{ marginTop: '10px' }}>
+                                    {imageElem}
+                                </div>
+                            )}
                         </div>
                     )}
-                    {q!.questionLatex && <KatexBlockCard tex={q!.questionLatex} />}
                 </div>
             ) : (
                 /* Fallback: bài viết thường không phải lời giải */
                 <div style={{
-                    height: '220px', overflowY: 'auto', padding: '14px 16px',
+                    height: '240px', overflowY: 'auto', padding: '14px 16px',
                     fontSize: '15px', color: '#374151', lineHeight: 1.7,
                 }}>
                     <p style={{ margin: 0, color: '#787774' }}>{blog.summary}</p>
@@ -604,8 +677,8 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                     </p>
                 </div>
             ) : (
-                /* ── Grid 2 cột (tối đa), mỗi card tối thiểu 400px ── */
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
+                /* ── Grid: 1 cột trên mobile, đúng 2 cột trên tablet/desktop ── */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {filteredBlogs.map(blog => {
                         const gc = GRADE_COLORS[blog.grade || 0] || GRADE_COLORS[0];
                         return (
