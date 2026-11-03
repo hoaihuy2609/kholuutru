@@ -237,7 +237,7 @@ function StepRenderer({ step, index }: { step: Step; index: number }) {
       </div>
       <div className="p-4 flex flex-col gap-3">
         {step.text    && (
-          <p className="text-[15px] text-[#57564F] leading-relaxed m-0 whitespace-pre-wrap">
+          <p className="text-[17px] text-[#57564F] leading-relaxed m-0 whitespace-pre-wrap">
             <TextWithMath text={step.text} />
           </p>
         )}
@@ -292,7 +292,7 @@ function TracNghiemRenderer({ question }: { question: Question }) {
                 background: correct === lbl ? '#448361' : '#F1F0EC',
                 color:      correct === lbl ? '#fff' : '#787774',
               }}>{lbl}</span>
-            <span className="text-[15px] text-[#1A1A1A] leading-relaxed flex-1">
+            <span className="text-[17px] text-[#1A1A1A] leading-relaxed flex-1">
               <TextWithMath text={choices[ci]} />
             </span>
             {correct === lbl && (
@@ -305,7 +305,7 @@ function TracNghiemRenderer({ question }: { question: Question }) {
       {effectiveSolution && (
         <div>
           <SectionLabel>Lời giải chi tiết</SectionLabel>
-          <div className="bg-white border border-[#E9E9E7] rounded-xl p-5 shadow-sm text-[15px] text-[#1A1A1A] leading-relaxed">
+          <div className="bg-white border border-[#E9E9E7] rounded-xl p-6 shadow-sm text-[17px] text-[#1A1A1A] leading-relaxed">
             <TextWithMath text={effectiveSolution} />
           </div>
         </div>
@@ -326,7 +326,7 @@ function TuLuanRenderer({ question }: { question: Question }) {
       {effectiveSolution && (
         <div>
           <SectionLabel>Lời giải chi tiết</SectionLabel>
-          <div className="bg-white border border-[#E9E9E7] rounded-xl p-5 shadow-sm text-[15px] text-[#1A1A1A] leading-relaxed">
+          <div className="bg-white border border-[#E9E9E7] rounded-xl p-6 shadow-sm text-[17px] text-[#1A1A1A] leading-relaxed">
             <TextWithMath text={effectiveSolution} />
           </div>
         </div>
@@ -391,7 +391,7 @@ function DungSaiRenderer({ question }: { question: Question }) {
       {effectiveSolution && (
         <div className="mt-8">
           <SectionLabel>Hướng dẫn giải chi tiết</SectionLabel>
-          <div className="bg-white border border-[#E9E9E7] rounded-xl p-6 shadow-sm text-[15px] text-[#1A1A1A] leading-relaxed">
+          <div className="bg-white border border-[#E9E9E7] rounded-xl p-6 shadow-sm text-[17px] text-[#1A1A1A] leading-relaxed">
             <TextWithMath text={effectiveSolution} />
           </div>
         </div>
@@ -430,7 +430,7 @@ function StatementRenderer({ st }: { st: Statement }) {
       </div>
 
       {/* Nội dung mệnh đề */}
-      <div className="p-4 text-[15px] text-[#1A1A1A] leading-relaxed">
+      <div className="p-4 text-[17px] text-[#1A1A1A] leading-relaxed">
         {st.claim && <TextWithMath text={st.claim} />}
         {st.claim_latex && <KatexBlock tex={st.claim_latex} />}
       </div>
@@ -480,20 +480,20 @@ function QuestionHeader({ question }: { question: Question }) {
           <div className="flex flex-col md:flex-row gap-6 items-start">
             <div className="flex-1 min-w-0">
               {question.question_text && (
-                <p className="text-[15px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
+                <p className="text-[17px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
                   <TextWithMath text={question.question_text} />
                 </p>
               )}
               {question.question_latex && <KatexBlock tex={question.question_latex} />}
             </div>
-            <div className="w-full md:w-[40%] max-w-[360px] shrink-0">
+            <div className="w-full md:w-[40%] max-w-[400px] shrink-0">
               {imageElem}
             </div>
           </div>
         ) : (
           <div>
             {question.question_text && (
-              <p className="text-[15px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
+              <p className="text-[17px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
                 <TextWithMath text={question.question_text} />
               </p>
             )}
@@ -538,7 +538,7 @@ export default function SolutionRenderer({ content, className = "" }: SolutionRe
 
   return (
     <div className={`solution-renderer space-y-12 font-sans ${className}`} style={{ fontFamily: "'KaTeX_Main', 'Computer Modern', serif" }}>
-      <style>{`.katex { color: #1A1A1A !important; } .solution-renderer, .solution-renderer * { font-family: 'KaTeX_Main', 'Computer Modern', serif !important; } .solution-renderer .font-mono, .solution-renderer span.font-mono { font-family: monospace !important; }`}</style>
+      <style>{`.solution-renderer .katex { color: #1A1A1A !important; font-size: 1.02em !important; } .solution-renderer .katex-display .katex { font-size: 1.15em !important; } .solution-renderer, .solution-renderer *:not(svg):not(svg *) { font-family: 'KaTeX_Main', 'Computer Modern', serif !important; } .solution-renderer .font-mono, .solution-renderer span.font-mono { font-family: monospace !important; }`}</style>
 
       {/* Tên đề thi */}
       {examName && (
