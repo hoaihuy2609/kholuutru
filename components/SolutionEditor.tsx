@@ -827,8 +827,8 @@ export default function SolutionEditor({
                   <span className="text-sm font-semibold text-[#57564F]">Loại câu hỏi</span>
                   <div className="flex gap-1.5">
                     {([
-                      { val: 'tu_luan'     as QuestionType, label: 'Tự luận',      bg: '#6B7CDB', ring: '#EEF0FB' },
-                      { val: 'dung_sai'    as QuestionType, label: 'Đúng / Sai',     bg: '#D9730D', ring: '#FFF3E8' },
+                      { val: 'tu_luan'     as QuestionType, label: 'Trả lời ngắn', bg: '#6B7CDB', ring: '#EEF0FB' },
+                      { val: 'dung_sai'    as QuestionType, label: 'Đúng / Sai',   bg: '#D9730D', ring: '#FFF3E8' },
                       { val: 'trac_nghiem' as QuestionType, label: 'Trắc nghiệm', bg: '#448361', ring: '#EAF3EE' },
                     ] as const).map(opt => (
                       <button key={opt.val}
@@ -1091,7 +1091,7 @@ export default function SolutionEditor({
                         <div className="font-bold text-2xl text-indigo-900 mb-1">{q.questionNo || `Câu ${qIdx + 1}`}</div>
                         {/* Badge loại bài */}
                         <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mb-3 ${q.type === 'dung_sai' ? 'bg-amber-100 text-amber-700 border border-amber-300' : q.type === 'trac_nghiem' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-indigo-100 text-indigo-700 border border-indigo-200'}`}>
-                          {q.type === 'dung_sai' ? 'Đúng / Sai' : q.type === 'trac_nghiem' ? 'Trắc nghiệm' : 'Tự luận'}
+                          {q.type === 'dung_sai' ? 'Đúng / Sai' : q.type === 'trac_nghiem' ? 'Trắc nghiệm' : 'Trả lời ngắn'}
                         </span>
                         <div className="bg-white border-l-[3px] border-indigo-400 rounded-r-xl p-5 shadow-sm">
                           {(() => {

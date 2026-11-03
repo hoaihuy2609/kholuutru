@@ -100,9 +100,9 @@ export const DEFAULT_EXAM_STYLE: ExamStyleConfig = {
   trueFalseTitle: 'PHẦN II. CÂU TRẮC NGHIỆM ĐÚNG SAI',
   trueFalseNote: 'Thí sinh trả lời từ câu 1 đến câu n. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn đúng hoặc sai.',
   shortAnswerTitle: 'PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN',
-  shortAnswerNote: 'Thí sinh trả lời từ câu 1 đến câu n. Thí sinh điền kết quả vào ô tương ứng.',
-  essayTitle: 'PHẦN IV. TỰ LUẬN',
-  essayNote: 'Thí sinh trình bày lời giải chi tiết vào giấy thi.',
+  shortAnswerNote: 'Thí sinh trả lời từ câu 1 đến câu n. Mỗi câu hỏi thí sinh điền kết quả vào ô tương ứng.',
+  essayTitle: 'PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN',
+  essayNote: 'Thí sinh trả lời từ câu 1 đến câu n. Mỗi câu hỏi thí sinh điền kết quả vào ô tương ứng.',
 };
 
 export interface SelectedQuestionItem {
@@ -288,13 +288,13 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
     });
   }
 
-  // 5. PHẦN III & IV: Tự luận / Trả lời ngắn
+  // 5. PHẦN III: Trả lời ngắn
   if (tuLuanList.length > 0) {
     if (config.enableSectionTitles) {
       out += `
 \\vspace{4mm}
-\\noindent\\textbf{\\color{primaryColor} ${config.essayTitle}}\\\\
-\\textit{${config.essayNote}}
+\\noindent\\textbf{\\color{primaryColor} ${config.shortAnswerTitle || config.essayTitle || 'PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN'}}\\\\
+\\textit{${config.shortAnswerNote || config.essayNote || 'Thí sinh trả lời từ câu 1 đến câu n. Mỗi câu hỏi thí sinh điền kết quả vào ô tương ứng.'}}
 \\vspace{3mm}
 `;
     }
@@ -581,13 +581,13 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
     });
   }
 
-  // PHẦN III: TỰ LUẬN
+  // PHẦN III: TRẢ LỜI NGẮN
   if (tuLuanList.length > 0) {
     if (config.enableSectionTitles) {
       bodyHtml += `
         <div style="margin: 20px 0 10px 0;">
-          <div style="font-weight: bold; font-size: 12pt; color: ${primaryColor};">${config.essayTitle}</div>
-          <div style="font-size: 10pt; font-style: italic; color: #555;">${config.essayNote}</div>
+          <div style="font-weight: bold; font-size: 12pt; color: ${primaryColor};">${config.shortAnswerTitle || config.essayTitle || 'PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN'}</div>
+          <div style="font-size: 10pt; font-style: italic; color: #555;">${config.shortAnswerNote || config.essayNote || 'Thí sinh trả lời từ câu 1 đến câu n. Mỗi câu hỏi thí sinh điền kết quả vào ô tương ứng.'}</div>
         </div>
       `;
     }

@@ -472,7 +472,7 @@ function QuestionHeader({ question }: { question: Question }) {
         <div className="flex items-center gap-3 mb-3">
           <h2 className="font-bold text-xl text-indigo-900">{question.question_no}</h2>
           <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${isDungSai ? 'bg-amber-100 text-amber-700 border-amber-300' : isTracNghiem ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-indigo-100 text-indigo-700 border-indigo-200'}`}>
-            {isDungSai ? 'Đúng / Sai' : isTracNghiem ? 'Trắc nghiệm' : 'Tự luận'}
+            {isDungSai ? 'Đúng / Sai' : isTracNghiem ? 'Trắc nghiệm' : 'Trả lời ngắn'}
           </span>
         </div>
       )}

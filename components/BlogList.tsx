@@ -216,7 +216,7 @@ function QuestionCard({ blog, isAdmin, onEditBlog, onClick, gc, isSelected, onTo
                         color: isDungSai ? '#92400E' : isTracNghiem ? '#448361' : '#6B7CDB',
                         border: `1px solid ${isDungSai ? '#FDE68A' : isTracNghiem ? '#44836140' : '#D0D5F5'}`,
                     }}>
-                        {isDungSai ? 'Đúng / Sai' : isTracNghiem ? 'Trắc nghiệm' : q ? 'Tự luận' : 'Bài viết'}
+                        {isDungSai ? 'Đúng / Sai' : isTracNghiem ? 'Trắc nghiệm' : q ? 'Trả lời ngắn' : 'Bài viết'}
                     </span>
                     {/* Grade badge */}
                     <span style={{

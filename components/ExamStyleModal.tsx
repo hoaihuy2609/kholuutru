@@ -485,9 +485,9 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                   />
                 </div>
 
-                {/* Phần Tự luận */}
+                {/* Phần III: Trả lời ngắn */}
                 <div className="p-3 rounded-lg border border-[#E9E9E7] bg-[#FAFAFA] space-y-2">
-                  <label className="block text-xs font-semibold text-[#57564F]">Tiêu đề — Tự luận / Trả lời ngắn</label>
+                  <label className="block text-xs font-semibold text-[#57564F]">Tiêu đề — Phần III (Trả lời ngắn)</label>
                   <input
                     type="text"
                     value={config.essayTitle}
