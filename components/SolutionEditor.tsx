@@ -1148,8 +1148,9 @@ export default function SolutionEditor({
                   </div>
                 </div>
                 <textarea
-                  rows={2}
-                  className="w-full p-2.5 bg-white rounded-lg border border-[#E9E9E7] text-sm text-[#1A1A1A] placeholder:text-[#9B9A97] outline-none focus:border-[#1A1A1A] transition-colors resize-none leading-relaxed"
+                  rows={5}
+                  style={{ minHeight: '125px' }}
+                  className="w-full p-3 bg-white rounded-lg border border-[#E9E9E7] text-sm text-[#1A1A1A] placeholder:text-[#9B9A97] outline-none focus:border-[#1A1A1A] transition-colors resize-y leading-relaxed font-sans"
                   placeholder="Dán cụm 4 mệnh đề vào đây (VD: a) ... b) ... c) ... d) hoặc 4 dòng riêng). Chữ sẽ tự động nhảy vào từng ô bên dưới."
                   value={quickBatchInput}
                   onChange={e => handleBatchStatementsChange(e.target.value)}
@@ -1210,8 +1211,9 @@ export default function SolutionEditor({
                   </div>
                 </div>
                 <textarea
-                  rows={2}
-                  className="w-full p-2.5 bg-white rounded-lg border border-[#E9E9E7] text-sm text-[#1A1A1A] placeholder:text-[#9B9A97] outline-none focus:border-[#1A1A1A] transition-colors resize-none leading-relaxed"
+                  rows={5}
+                  style={{ minHeight: '125px' }}
+                  className="w-full p-3 bg-white rounded-lg border border-[#E9E9E7] text-sm text-[#1A1A1A] placeholder:text-[#9B9A97] outline-none focus:border-[#1A1A1A] transition-colors resize-y leading-relaxed font-sans"
                   placeholder="Dán cụm 4 đáp án vào đây (VD: A. ... B. ... C. ... D. hoặc 4 dòng riêng). Chữ sẽ tự động nhảy vào từng ô bên dưới."
                   value={quickBatchInput}
                   onChange={e => handleBatchChoicesChange(e.target.value)}
