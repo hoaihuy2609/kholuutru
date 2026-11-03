@@ -360,7 +360,7 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
       const prefix = config.questionPrefix || 'Câu';
       const qNum = solIdx++;
       out += `\n\\noindent \\textbf{${prefix} ${qNum}:} ${q.qText || ''}\n`;
-      out += `\n\\noindent \\textbf{\\color{blue} Lời giải:}\\\\[1.5mm]\n`;
+      out += `\n\\begin{center}\\textbf{\\color{blue} Lời giải:}\\end{center}\n`;
 
       if (q.solution) {
         out += `\noindent ${q.solution}\\[2mm]
@@ -638,7 +638,7 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
       bodyHtml += `
         <div style="margin-bottom: 18px; page-break-inside: avoid;">
           <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-bottom: 6px;"><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
-          <div style="color: #0000ff; font-weight: bold; margin-bottom: 6px;">Lời giải:</div>
+          <div style="text-align: center; color: #0000ff; font-weight: bold; margin: 6px 0 8px 0;">Lời giải:</div>
           <div style="padding-left: 12px; font-size: 11pt; text-align: justify; text-justify: inter-word;">
             ${q.solution ? `
               <div style="margin-bottom: 6px; white-space: pre-wrap; line-height: 1.45;">${q.solution}</div>
