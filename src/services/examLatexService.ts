@@ -359,7 +359,7 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
     questions.forEach((q) => {
       const prefix = config.questionPrefix || 'Câu';
       const qNum = solIdx++;
-      out += `\n\\noindent \\textbf{\\color{primaryColor} ${prefix} ${qNum}:} ${q.qText || ''}\n`;
+      out += `\n\\noindent \\textbf{${prefix} ${qNum}:} ${q.qText || ''}\n`;
 
       if (q.solution) {
         out += `\noindent ${q.solution}\\[2mm]
@@ -474,9 +474,9 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
       const before = parts[0] || '';
       const after = parts.slice(1).join('[image]') || '';
       return `
-        <div><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${before}</div>
+        <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${before}</div>
         <div style="margin: 10px 0; text-align: center;">${imgHtml}</div>
-        ${after.trim() ? `<div>${after}</div>` : ''}
+        ${after.trim() ? `<div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-top: 4px;">${after}</div>` : ''}
         ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
       `;
     }
@@ -486,7 +486,7 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
       return `
         <div style="display: flex; gap: 16px; align-items: flex-start;">
           <div style="flex: 1;">
-            <div><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
+            <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
             ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
           </div>
           <div style="width: 38%; max-width: 260px; shrink: 0;">
@@ -497,7 +497,7 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
     }
 
     return `
-      <div><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
+      <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
       ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
       ${imgHtml ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}
     `;
@@ -636,8 +636,8 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
       const qNum = sIdx++;
       bodyHtml += `
         <div style="margin-bottom: 18px; page-break-inside: avoid;">
-          <div style="font-weight: bold; color: ${primaryColor}; margin-bottom: 4px;">${config.questionPrefix || 'Câu'} ${qNum}: ${q.qText || ''}</div>
-          <div style="padding-left: 12px; font-size: 11pt; text-align: justify;">
+          <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-bottom: 6px;"><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
+          <div style="padding-left: 12px; font-size: 11pt; text-align: justify; text-justify: inter-word;">
             ${q.solution ? `
               <div style="margin-bottom: 6px; white-space: pre-wrap; line-height: 1.45;">${q.solution}</div>
             ` : (q.solutionSteps || q.steps || []).map(s => `
