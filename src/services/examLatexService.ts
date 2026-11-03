@@ -465,6 +465,44 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
     return inner ? `<div style="display: flex; justify-content: center; align-items: center; background: transparent;">${inner}</div>` : '';
   };
 
+  const renderQuestionHeaderPdf = (q: SelectedQuestionItem, qNum: number) => {
+    const imgHtml = renderQuestionImageHtml(q);
+    const hasPlaceholder = !!imgHtml && /\[image\]/i.test(q.qText || '');
+
+    if (hasPlaceholder) {
+      const parts = (q.qText || '').split(/\[image\]/i);
+      const before = parts[0] || '';
+      const after = parts.slice(1).join('[image]') || '';
+      return `
+        <div><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${before}</div>
+        <div style="margin: 10px 0; text-align: center;">${imgHtml}</div>
+        ${after.trim() ? `<div>${after}</div>` : ''}
+        ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
+      `;
+    }
+
+    const isRight = (q.imageLayout === 'right' || q.imageLayout === 'auto') && !!imgHtml;
+    if (isRight) {
+      return `
+        <div style="display: flex; gap: 16px; align-items: flex-start;">
+          <div style="flex: 1;">
+            <div><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
+            ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
+          </div>
+          <div style="width: 38%; max-width: 260px; shrink: 0;">
+            ${imgHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
+      ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
+      ${imgHtml ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}
+    `;
+  };
+
   const tracNghiemList = questions.filter(q => q.type === 'trac_nghiem');
   const dungSaiList = questions.filter(q => q.type === 'dung_sai');
   const tuLuanList = questions.filter(q => q.type === 'tu_luan');
@@ -504,26 +542,9 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
       const layout = calculateChoiceLayout(choices);
       const cols = layout === 4 ? '1fr 1fr 1fr 1fr' : layout === 2 ? '1fr 1fr' : '1fr';
 
-      const imgHtml = renderQuestionImageHtml(q);
-      const isRight = (q.imageLayout === 'right' || q.imageLayout === 'auto') && !!imgHtml;
-
       bodyHtml += `
         <div style="margin-bottom: 16px; page-break-inside: avoid; text-align: justify;">
-          ${isRight ? `
-            <div style="display: flex; gap: 16px; align-items: flex-start;">
-              <div style="flex: 1;">
-                <div><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
-                ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
-              </div>
-              <div style="width: 38%; max-width: 260px; shrink: 0;">
-                ${imgHtml}
-              </div>
-            </div>
-          ` : `
-            <div><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
-            ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
-            ${imgHtml ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}
-          `}
+          ${renderQuestionHeaderPdf(q, qNum)}
           <div style="display: grid; grid-template-columns: ${cols}; gap: 6px 16px; margin-top: 8px;">
             <div><b>A.</b> ${choices[0] || ''}</div>
             <div><b>B.</b> ${choices[1] || ''}</div>
@@ -548,26 +569,10 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
 
     dungSaiList.forEach(q => {
       const qNum = qCount++;
-      const imgHtml = renderQuestionImageHtml(q);
-      const isRight = (q.imageLayout === 'right' || q.imageLayout === 'auto') && !!imgHtml;
 
       bodyHtml += `
         <div style="margin-bottom: 16px; page-break-inside: avoid; text-align: justify;">
-          ${isRight ? `
-            <div style="display: flex; gap: 16px; align-items: flex-start;">
-              <div style="flex: 1;">
-                <div><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
-                ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
-              </div>
-              <div style="width: 38%; max-width: 260px; shrink: 0;">
-                ${imgHtml}
-              </div>
-            </div>
-          ` : `
-            <div><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
-            ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
-            ${imgHtml ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}
-          `}
+          ${renderQuestionHeaderPdf(q, qNum)}
           <div style="margin-top: 6px; padding-left: 12px; display: flex; flex-direction: column; gap: 4px;">
             ${(q.statements || []).map(st => `<div><b>${st.label})</b> ${st.claim || ''}</div>`).join('')}
           </div>
@@ -589,26 +594,10 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
 
     tuLuanList.forEach(q => {
       const qNum = qCount++;
-      const imgHtml = renderQuestionImageHtml(q);
-      const isRight = (q.imageLayout === 'right' || q.imageLayout === 'auto') && !!imgHtml;
 
       bodyHtml += `
         <div style="margin-bottom: 16px; page-break-inside: avoid; text-align: justify;">
-          ${isRight ? `
-            <div style="display: flex; gap: 16px; align-items: flex-start;">
-              <div style="flex: 1;">
-                <div><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
-                ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
-              </div>
-              <div style="width: 38%; max-width: 260px; shrink: 0;">
-                ${imgHtml}
-              </div>
-            </div>
-          ` : `
-            <div><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
-            ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
-            ${imgHtml ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}
-          `}
+          ${renderQuestionHeaderPdf(q, qNum)}
         </div>
       `;
     });

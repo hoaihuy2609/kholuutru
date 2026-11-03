@@ -330,35 +330,64 @@ function QuestionCard({ blog, isAdmin, onEditBlog, onClick, gc, isSelected, onTo
                     onWheel={e => e.stopPropagation()}
                 >
                     <style>{`.katex { color: #1A1A1A !important; font-size: 1em !important; }`}</style>
-                    {hasImg && isRight ? (
-                        <div className="flex flex-col sm:flex-row gap-4 items-start">
-                            <div className="flex-1 min-w-0">
+                    {(() => {
+                        const hasPlaceholder = hasImg && /\[image\]/i.test(q!.questionText || '');
+                        if (hasPlaceholder) {
+                            const parts = (q!.questionText || '').split(/\[image\]/i);
+                            const before = parts[0] || '';
+                            const after = parts.slice(1).join('[image]') || '';
+                            return (
+                                <div>
+                                    {before.trim() && (
+                                        <div style={{ marginBottom: '8px', whiteSpace: 'pre-wrap' }}>
+                                            <TextWithMathCard text={before} />
+                                        </div>
+                                    )}
+                                    <div style={{ margin: '8px 0', display: 'flex', justifyContent: 'center' }}>
+                                        {imageElem}
+                                    </div>
+                                    {after.trim() && (
+                                        <div style={{ marginBottom: q!.questionLatex ? '8px' : 0, whiteSpace: 'pre-wrap' }}>
+                                            <TextWithMathCard text={after} />
+                                        </div>
+                                    )}
+                                    {q!.questionLatex && <KatexBlockCard tex={q!.questionLatex} />}
+                                </div>
+                            );
+                        }
+                        if (hasImg && isRight) {
+                            return (
+                                <div className="flex flex-col sm:flex-row gap-4 items-start">
+                                    <div className="flex-1 min-w-0">
+                                        {q!.questionText && (
+                                            <div style={{ marginBottom: q!.questionLatex ? '8px' : 0, whiteSpace: 'pre-wrap' }}>
+                                                <TextWithMathCard text={q!.questionText} />
+                                            </div>
+                                        )}
+                                        {q!.questionLatex && <KatexBlockCard tex={q!.questionLatex} />}
+                                    </div>
+                                    <div className="w-full sm:w-[38%] max-w-[320px] shrink-0 self-center">
+                                        {imageElem}
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return (
+                            <div>
                                 {q!.questionText && (
                                     <div style={{ marginBottom: q!.questionLatex ? '8px' : 0, whiteSpace: 'pre-wrap' }}>
                                         <TextWithMathCard text={q!.questionText} />
                                     </div>
                                 )}
                                 {q!.questionLatex && <KatexBlockCard tex={q!.questionLatex} />}
+                                {hasImg && (
+                                    <div style={{ marginTop: '10px' }}>
+                                        {imageElem}
+                                    </div>
+                                )}
                             </div>
-                            <div className="w-full sm:w-[38%] max-w-[320px] shrink-0 self-center">
-                                {imageElem}
-                            </div>
-                        </div>
-                    ) : (
-                        <div>
-                            {q!.questionText && (
-                                <div style={{ marginBottom: q!.questionLatex ? '8px' : 0, whiteSpace: 'pre-wrap' }}>
-                                    <TextWithMathCard text={q!.questionText} />
-                                </div>
-                            )}
-                            {q!.questionLatex && <KatexBlockCard tex={q!.questionLatex} />}
-                            {hasImg && (
-                                <div style={{ marginTop: '10px' }}>
-                                    {imageElem}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
             ) : (
                 /* Fallback: bài viết thường không phải lời giải */

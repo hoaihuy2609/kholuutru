@@ -444,6 +444,7 @@ function QuestionHeader({ question }: { question: Question }) {
   const hasImg = !!(question.image_svg || question.image_url || question.image_telegram_file_id);
   if (!question.question_text && !question.question_latex && !hasImg) return null;
 
+  const hasImagePlaceholder = hasImg && /\[image\]/i.test(question.question_text || '');
   const isRight = (question.image_layout === 'right') || (question.image_layout === 'auto');
 
   const imageElem = hasImg ? (
@@ -476,7 +477,33 @@ function QuestionHeader({ question }: { question: Question }) {
         </div>
       )}
       <div className="bg-white border-l-[3px] border-indigo-400 rounded-r-xl p-5 shadow-sm">
-        {hasImg && isRight ? (
+        {hasImagePlaceholder ? (
+          <div>
+            {(() => {
+              const parts = (question.question_text || '').split(/\[image\]/i);
+              const beforeText = parts[0] || '';
+              const afterText = parts.slice(1).join('[image]') || '';
+              return (
+                <>
+                  {beforeText.trim() && (
+                    <p className="text-[17px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
+                      <TextWithMath text={beforeText} />
+                    </p>
+                  )}
+                  <div className="my-4">
+                    {imageElem}
+                  </div>
+                  {afterText.trim() && (
+                    <p className="text-[17px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
+                      <TextWithMath text={afterText} />
+                    </p>
+                  )}
+                </>
+              );
+            })()}
+            {question.question_latex && <KatexBlock tex={question.question_latex} />}
+          </div>
+        ) : hasImg && isRight ? (
           <div className="flex flex-col md:flex-row gap-6 items-start">
             <div className="flex-1 min-w-0">
               {question.question_text && (

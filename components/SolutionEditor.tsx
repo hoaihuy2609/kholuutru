@@ -861,79 +861,74 @@ export default function SolutionEditor({
                     value={activeQuestion.qText} onChange={e => updateQ('qText', e.target.value)} />
                 </div>
 
-                {/* ── Khung vẽ hình TikZ / LaTeX riêng biệt ── */}
-                <div className="p-4 rounded-xl border border-indigo-100 bg-[#F9FAFD] space-y-3">
+                {/* ── Khung vẽ hình TikZ / LaTeX tinh gọn, tối giản ── */}
+                <div className="p-3.5 rounded-xl border border-[#E9E9E7] bg-white space-y-2.5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-md bg-indigo-600 flex items-center justify-center text-white">
-                        <ImageIcon className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">Hình vẽ minh họa (TikZ / LaTeX)</span>
-                      <span className="text-[11px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">Tùy chọn</span>
+                      <span className="text-xs font-semibold text-[#1A1A1A]">Hình vẽ minh họa (TikZ)</span>
+                      <span className="text-[11px] text-[#787774] font-normal">(tùy chọn)</span>
                     </div>
                     {activeQuestion.imageSvg && (
-                      <span className="flex items-center gap-1 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Đã có hình vẽ
+                      <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Đã có hình
                       </span>
                     )}
                   </div>
 
-                  <p className="text-xs text-gray-500">
-                    Dán mã <code className="bg-white px-1.5 py-0.5 rounded border text-indigo-600 font-mono">\begin&#123;tikzpicture&#125; ... \end&#123;tikzpicture&#125;</code> để hệ thống tự động vẽ sơ đồ vector sắc nét.
+                  <p className="text-[11px] text-[#787774] leading-relaxed">
+                    Dán mã TikZ để tự động vẽ hình. Gõ <code className="bg-[#F1F0EC] text-[#1A1A1A] px-1 py-0.5 rounded font-mono font-medium">[image]</code> vào đề bài nếu muốn chèn giữa các đoạn.
                   </p>
 
                   <AutoResizeTextarea
                     rows={3}
-                    className="w-full p-3 rounded-lg border border-[#E9E9E7] bg-white outline-none focus:border-indigo-500 text-xs font-mono text-gray-800 transition-colors"
+                    className="w-full p-2.5 rounded-lg border border-[#E9E9E7] bg-[#FAFAFA] focus:bg-white outline-none focus:border-[#1A1A1A] text-xs font-mono text-gray-800 transition-colors"
                     placeholder={`VD:\n\\begin{tikzpicture}\n  \\draw[thick, ->] (0,0) -- (3,0) node[right] {$x$};\n  \\draw[thick, ->] (0,0) -- (0,3) node[above] {$y$};\n  \\draw[red, thick] (0,0) circle (1.2);\n\\end{tikzpicture}`}
                     value={activeQuestion.tikzCode || ''}
                     onChange={e => updateQ('tikzCode', e.target.value)}
                     onFocus={e => trackFocus(`q-tikz-${activeQIdx}`, e.target)}
                   />
 
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
                     <button
                       type="button"
                       onClick={handleRenderTikz}
                       disabled={renderingTikz || !activeQuestion.tikzCode?.trim()}
-                      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all shadow-sm ${
+                      className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                         renderingTikz || !activeQuestion.tikzCode?.trim()
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                          : 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer active:scale-95'
+                          ? 'bg-[#F1F0EC] text-[#AEACA8] cursor-not-allowed border border-[#E2E1DD]'
+                          : 'bg-[#1A1A1A] hover:bg-[#333] text-white cursor-pointer active:scale-95 shadow-sm'
                       }`}
                     >
                       {renderingTikz ? (
                         <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Đang vẽ hình qua Kroki...
+                          <RefreshCw className="w-3 h-3 animate-spin mr-1.5" /> Đang vẽ hình...
                         </>
                       ) : (
-                        <>
-                          <Sparkles className="w-3.5 h-3.5 text-amber-300" /> ⚡ Xem trước hình vẽ
-                        </>
+                        'Xem trước hình vẽ'
                       )}
                     </button>
 
                     {activeQuestion.imageSvg && (
                       <div className="flex items-center gap-1.5 text-xs">
-                        <span className="text-gray-500 font-medium">Bố cục:</span>
+                        <span className="text-[#787774] text-[11px]">Bố cục:</span>
                         {(['auto', 'right', 'bottom'] as const).map(l => (
                           <button
                             key={l}
                             type="button"
                             onClick={() => updateQ('imageLayout', l)}
-                            className={`px-2 py-1 rounded text-[11px] font-semibold border transition-all ${
+                            className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-all ${
                               (activeQuestion.imageLayout || 'auto') === l
-                                ? 'bg-indigo-600 text-white border-indigo-600'
-                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
+                                : 'bg-white text-[#57564F] border-[#E9E9E7] hover:bg-[#F7F6F3]'
                             }`}
                           >
-                            {l === 'auto' ? 'Tự động' : l === 'right' ? 'Cột bên phải' : 'Ở dưới'}
+                            {l === 'auto' ? 'Tự động' : l === 'right' ? 'Cột phải' : 'Ở dưới'}
                           </button>
                         ))}
                         <button
                           type="button"
                           onClick={() => { updateQ('imageSvg', ''); updateQ('tikzCode', ''); }}
-                          className="ml-2 text-xs text-rose-500 hover:underline"
+                          className="ml-2 text-[11px] text-rose-500 hover:underline"
                         >
                           Xóa hình
                         </button>
@@ -1117,6 +1112,22 @@ export default function SolutionEditor({
                                 ) : null}
                               </div>
                             ) : null;
+
+                            const hasImagePlaceholder = hasImg && /\[image\]/i.test(q.qText || '');
+
+                            if (hasImagePlaceholder) {
+                              const parts = (q.qText || '').split(/\[image\]/i);
+                              const beforeText = parts[0] || '';
+                              const afterText = parts.slice(1).join('[image]') || '';
+                              return (
+                                <div>
+                                  {beforeText.trim() && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap"><TextWithMath text={beforeText} /></p>}
+                                  <div className="my-4">{imageElem}</div>
+                                  {afterText.trim() && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap"><TextWithMath text={afterText} /></p>}
+                                  {q.qFormula && <KatexSpan tex={q.qFormula} block />}
+                                </div>
+                              );
+                            }
 
                             if (hasImg && isRight && (q.qText || q.qFormula)) {
                               return (
