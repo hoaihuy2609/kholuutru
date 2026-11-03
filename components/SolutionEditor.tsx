@@ -1,7 +1,8 @@
 // SolutionEditor.tsx — v2 (Merge Tự Luận + Đúng/Sai)
 // Tương thích ngược hoàn toàn với data cũ (không có `type`)
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import { supabase } from "../src/lib/supabase";
@@ -10,7 +11,8 @@ import { SolutionStep as Step, SolutionStatement as Statement } from '../types';
 import {
   ChevronLeft, Save, Trash2, ArrowUp, ArrowDown,
   Plus, Eye, BookOpen, Layers, X, ToggleLeft, ToggleRight,
-  Image as ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle
+  Image as ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle,
+  FileCode, Download
 } from 'lucide-react';
 import { renderTikzToSvg, uploadSvgToTelegram } from "../src/services/tikzService";
 import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
@@ -87,7 +89,7 @@ const emptyQuestion = (): Question => ({
   imageLayout: 'auto',
 });
 
-// Normalize question từ JSON cũ (backward compat)
+// Normalize question từ JSON (backward compat & new format)
 const normalizeQuestion = (q: any): Question => {
   let sol = q.solution || "";
   if (!sol) {
@@ -107,18 +109,44 @@ const normalizeQuestion = (q: any): Question => {
     }
   }
 
+  // Chuẩn hóa loại câu hỏi
+  let qType: QuestionType = 'tu_luan';
+  const rawType = (q.type || '').toString().toLowerCase();
+  if (rawType === 'dung_sai' || rawType === 'true_false') {
+    qType = 'dung_sai';
+  } else if (rawType === 'trac_nghiem' || rawType === 'multiple_choice' || (Array.isArray(q.choices) && q.choices.some((c: any) => Boolean(c)))) {
+    qType = 'trac_nghiem';
+  }
+
+  // Chuẩn hóa 4 mệnh đề đúng sai
+  const normalizedStatements: Statement[] = Array.isArray(q.statements) && q.statements.length > 0
+    ? STMT_LABELS.map((lbl, idx) => {
+        const st = q.statements[idx] || q.statements.find((s: any) => s.label?.toLowerCase() === lbl);
+        if (!st) return emptyStatement(lbl);
+        const v = st.verdict;
+        let verdictVal: boolean | null = null;
+        if (v === true || v === 'true' || v === 'Đúng' || v === 'dung' || v === 'D') verdictVal = true;
+        else if (v === false || v === 'false' || v === 'Sai' || v === 'sai' || v === 'S') verdictVal = false;
+        return {
+          label: lbl,
+          claim: st.claim || '',
+          claim_latex: st.claim_latex || st.claimLatex || '',
+          verdict: verdictVal,
+          steps: Array.isArray(st.steps) && st.steps.length > 0 ? st.steps : [emptyStep()],
+        };
+      })
+    : STMT_LABELS.map(emptyStatement);
+
   return {
     questionNo: q.question_no || q.questionNo || "",
     qText:      q.question_text || q.qText || "",
     qFormula:   q.question_latex || q.qFormula || "",
-    type:       q.type === 'dung_sai' ? 'dung_sai' : q.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan',
+    type:       qType,
     solution:   sol,
     steps:      q.steps?.length > 0 ? q.steps : [emptyStep()],
-    statements: q.statements?.length > 0
-      ? q.statements
-      : STMT_LABELS.map(emptyStatement),
-    choices: Array.isArray(q.choices) ? [0, 1, 2, 3].map(i => q.choices[i] || '') : ['', '', '', ''],
-    correctChoice: q.correctChoice || '',
+    statements: normalizedStatements,
+    choices: Array.isArray(q.choices) ? [0, 1, 2, 3].map(i => q.choices[i] !== undefined && q.choices[i] !== null ? String(q.choices[i]) : '') : ['', '', '', ''],
+    correctChoice: (q.correctChoice || q.correct_choice || '').toString().trim().toUpperCase(),
     solutionSteps: q.solutionSteps?.length > 0 ? q.solutionSteps : [emptyStep()],
     tikzCode: q.tikz_code || q.tikzCode || '',
     imageSvg: q.image_svg || q.imageSvg || '',
@@ -127,6 +155,58 @@ const normalizeQuestion = (q: any): Question => {
     imageLayout: q.image_layout || q.imageLayout || 'auto',
   };
 };
+
+// Dữ liệu mẫu 3 câu thử nghiệm (có hình ảnh TikZ) trích từ đề Chuyên đề 1.1 Từ trường của dòng điện thẳng
+const SAMPLE_PHYSICS_EXAM_JSON = JSON.stringify({
+  exam_name: "Chuyên đề 1.1: Từ trường của dòng điện thẳng",
+  questions: [
+    {
+      questionNo: "Câu 1",
+      type: "trac_nghiem",
+      qText: "Một dòng điện có cường độ $I = 5\\text{ A}$ chạy trong một dây dẫn thẳng, dài đặt trong không khí. Hai điểm $M, N$ nằm trong mặt phẳng vuông góc với dây dẫn và cùng cách dòng điện một khoảng $r = 4\\text{ cm} = 0{,}04\\text{ m}$ như hình vẽ. Cảm ứng từ tại điểm $M$ có độ lớn là:",
+      choices: [
+        "2{,}5 \\cdot 10^{-5}\\text{ T}",
+        "1{,}5 \\cdot 10^{-5}\\text{ T}",
+        "4{,}0 \\cdot 10^{-5}\\text{ T}",
+        "2{,}0 \\cdot 10^{-5}\\text{ T}"
+      ],
+      correctChoice: "A",
+      solution: "**Hướng dẫn giải chi tiết:**\n- Cảm ứng từ do dòng điện thẳng dài gây ra tại điểm cách dây một khoảng $r$ được tính bởi:\n$$B = 2 \\cdot 10^{-7} \\cdot \\frac{I}{r}$$\n- Thay số $I = 5\\text{ A}$ và $r = 0{,}04\\text{ m}$:\n$$B_M = 2 \\cdot 10^{-7} \\cdot \\frac{5}{0{,}04} = 2{,}5 \\cdot 10^{-5}\\text{ T}$$\n- Dùng quy tắc nắm bàn tay phải, ta xác định được phương chiều của $\\vec{B}$ tại $M$ và $N$.\n=> Chọn đáp án **A**.",
+      tikzCode: "\\begin{tikzpicture}[scale=1]\n  \\draw[thick, fill=gray!20] (0,0) circle (0.25);\n  \\fill[black] (0,0) circle (0.08);\n  \\node[above] at (0,0.3) {$I$ (hướng ra)};\n  \\draw[dashed, gray] (-2.5,0) -- (2.5,0);\n  \\fill[blue] (-2,0) circle (0.06) node[below] {$M$};\n  \\fill[blue] (2,0) circle (0.06) node[below] {$N$};\n  \\draw[<->, >=stealth, red] (0,-0.4) -- (-2,-0.4) node[midway, below] {$r = 4\\text{ cm}$};\n  \\draw[<->, >=stealth, red] (0,-0.4) -- (2,-0.4) node[midway, below] {$r = 4\\text{ cm}$};\n  \\draw[->, >=stealth, ultra thick, blue] (-2,0) -- (-2,-1.2) node[left] {$\\vec{B}_M$};\n  \\draw[->, >=stealth, ultra thick, blue] (2,0) -- (2,1.2) node[right] {$\\vec{B}_N$};\n\\end{tikzpicture}",
+      imageLayout: "right"
+    },
+    {
+      questionNo: "Câu 6",
+      type: "trac_nghiem",
+      qText: "Trong mặt phẳng tọa độ $Oxy$ nằm ngang, ba dòng điện thẳng dài vô hạn cùng song song với trục $Oy$. Dòng $I_1 = I_2 = 10\\text{ A}$ chạy theo chiều dương của trục $Oy$, dòng $I_3 = 45\\text{ A}$ chạy theo chiều ngược lại như hình vẽ. Ba dây cắt trục $Ox$ lần lượt tại $x_1 = -4\\text{ cm}$, $x_2 = 0\\text{ cm}$, $x_3 = 4\\text{ cm}$. Điểm $M$ thuộc trục $Ox$ có hoành độ $x$ hữu hạn sao cho cảm ứng từ tổng hợp bằng không. Giá trị của $x$ là:",
+      choices: [
+        "-5\\text{ cm} \\text{ hoặc } 4\\text{ cm}",
+        "-3\\text{ cm} \\text{ hoặc } 4{,}5\\text{ cm}",
+        "+5\\text{ cm} \\text{ hoặc } -4\\text{ cm}",
+        "+3\\text{ cm} \\text{ hoặc } -4{,}5\\text{ cm}"
+      ],
+      correctChoice: "A",
+      solution: "**Hướng dẫn giải chi tiết:**\n- Cảm ứng từ tổng hợp tại $M$ do ba dòng điện gây ra:\n$$\\vec{B}_M = \\vec{B}_1 + \\vec{B}_2 + \\vec{B}_3 = \\vec{0}$$\n- Vì các dòng điện song song và vuông góc với mặt phẳng hình vẽ, vectơ cảm ứng từ do mỗi dòng gây ra tại các điểm trên trục $Ox$ đều vuông góc với $Ox$. Chiếu lên chiều quy ước theo quy tắc nắm tay phải:\n$$2\\cdot 10^{-7}\\left( \\frac{I_1}{x - x_1} + \\frac{I_2}{x - x_2} - \\frac{I_3}{x - x_3} \\right) = 0$$\n- Thay $I_1 = 10, I_2 = 10, I_3 = 45$ và $x_1 = -4, x_2 = 0, x_3 = 4$:\n$$\\frac{10}{x + 4} + \\frac{10}{x} - \\frac{45}{x - 4} = 0$$\n- Rút gọn phương trình bậc hai:\n$$5x^2 - 4x - 32 = 0 \\iff (x - 4)(5x + 8) = 0 \\quad \\text{hoặc quy đồng đầy đủ được } x = -5\\text{ cm}, x = 4\\text{ cm}$$\n=> Chọn đáp án **A**.",
+      tikzCode: "\\begin{tikzpicture}[scale=0.9]\n  \\draw[->, thick] (-5.5,0) -- (5.5,0) node[right] {$x$ (cm)};\n  \\draw[->, thick] (0,-1.5) -- (0,2.5) node[above] {$y$};\n  \\fill[black] (-3,0) circle (0.15) node[above=2pt] {$I_1 (\\odot)$};\n  \\node[below] at (-3,0) {$-4$};\n  \\fill[black] (0,0) circle (0.15) node[above left] {$I_2 (\\odot)$};\n  \\node[below right] at (0,0) {$O$};\n  \\draw[thick] (3,0) circle (0.15);\n  \\draw[thick] (3-0.1, -0.1) -- (3+0.1, 0.1);\n  \\draw[thick] (3-0.1, 0.1) -- (3+0.1, -0.1);\n  \\node[above=2pt] at (3,0) {$I_3 (\\otimes)$};\n  \\node[below] at (3,0) {$+4$};\n  \\fill[red] (-4,0) circle (0.07) node[below=2pt, red] {$M$};\n\\end{tikzpicture}",
+      imageLayout: "bottom"
+    },
+    {
+      questionNo: "Câu 11",
+      type: "trac_nghiem",
+      qText: "Hai dòng điện thẳng dài đặt vuông góc với nhau, cách điện với nhau tại điểm bắt chéo, cùng nằm trong một mặt phẳng. Dòng $I_1$ đặt dọc theo trục $Ox$, dòng $I_2$ dọc theo trục $Oy$ sao cho $I_1 = 2I_2$. Chiều các dòng đó cùng chiều với các trục tọa độ như hình vẽ. Nếu điểm $M$ thuộc đường thẳng $y = ax$, có cảm ứng từ bằng 0 thì hệ số góc $a$ bằng:",
+      choices: [
+        "a = 2",
+        "a = -2",
+        "a = 1/2",
+        "a = -1/2"
+      ],
+      correctChoice: "A",
+      solution: "**Hướng dẫn giải chi tiết:**\n- Tại điểm $M(x, y)$:\n+ Khoảng cách từ $M$ đến dòng $I_1$ (trục $Ox$) là $d_1 = |y|$.\n+ Khoảng cách từ $M$ đến dòng $I_2$ (trục $Oy$) là $d_2 = |x|$.\n- Cảm ứng từ do từng dòng điện gây ra:\n$$B_1 = 2\\cdot 10^{-7} \\frac{I_1}{|y|}, \\quad B_2 = 2\\cdot 10^{-7} \\frac{I_2}{|x|}$$\n- Để cảm ứng từ tổng hợp $\\vec{B}_M = \\vec{B}_1 + \\vec{B}_2 = \\vec{0}$ thì:\n1. $\\vec{B}_1$ và $\\vec{B}_2$ phải ngược chiều: Áp dụng quy tắc nắm tay phải, các điểm ở góc phần tư I ($x > 0, y > 0$) và III ($x < 0, y < 0$) có $\\vec{B}_1$ và $\\vec{B}_2$ ngược chiều nhau $\\Rightarrow a = \\frac{y}{x} > 0$.\n2. $B_1 = B_2 \\iff \\frac{I_1}{|y|} = \\frac{I_2}{|x|} \\iff |y| = \\frac{I_1}{I_2} |x| = 2|x|$.\n- Vì $x$ và $y$ cùng dấu (góc phần tư I hoặc III), suy ra $y = 2x \\Rightarrow a = 2$.\n=> Chọn đáp án **A**.",
+      tikzCode: "\\begin{tikzpicture}[scale=1]\n  \\draw[->, ultra thick, blue] (-2.5,0) -- (3,0) node[right] {$x$};\n  \\draw[->, ultra thick, red] (0,-2) -- (0,3) node[above] {$y$};\n  \\node[above right] at (1.5,0) {$I_1$};\n  \\node[above right] at (0,1.5) {$I_2$};\n  \\node[below left] at (0,0) {$O$};\n  \\draw[dashed, purple, thick] (-1.2,-2.4) -- (1.4,2.8) node[right] {$y = 2x$};\n  \\fill[purple] (1,2) circle (0.07) node[right] {$M(x, y)$};\n  \\draw[dotted, gray] (1,0) -- (1,2) -- (0,2);\n  \\node[below] at (1,0) {$x$};\n  \\node[left] at (0,2) {$y$};\n\\end{tikzpicture}",
+      imageLayout: "right"
+    }
+  ]
+}, null, 2);
 
 // ── BATCH OPTION PARSERS (Dán nhanh 4 đáp án / 4 mệnh đề) ───
 function parseMultipleChoiceBatch(raw: string): { choices: string[]; correctChoice?: string } {
@@ -643,6 +723,107 @@ export default function SolutionEditor({
     }
   };
 
+  // ── Import Đề Thi Từ JSON ──────────────────────────────────
+  const [showJsonModal, setShowJsonModal] = useState(false);
+  const [jsonInput, setJsonInput] = useState('');
+  const [importingJson, setImportingJson] = useState(false);
+
+  // Phân tích cú pháp JSON thời gian thực để báo trạng thái trên giao diện
+  const parsedPreview = useMemo(() => {
+    if (!jsonInput.trim()) return null;
+    try {
+      const parsed = JSON.parse(jsonInput);
+      let list: any[] = [];
+      if (Array.isArray(parsed)) {
+        list = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.questions)) list = parsed.questions;
+        else if (parsed.questionNo || parsed.qText || parsed.question_text) list = [parsed];
+      }
+      if (list.length === 0) return { error: 'Không tìm thấy câu hỏi trong JSON', count: 0, tikzCount: 0 };
+      const tikzCount = list.filter(q => Boolean(q.tikzCode || q.tikz_code)).length;
+      return { count: list.length, tikzCount, error: null };
+    } catch {
+      return { error: 'Cú pháp JSON chưa hợp lệ', count: 0, tikzCount: 0 };
+    }
+  }, [jsonInput]);
+
+  const handleImportJson = async () => {
+    if (!jsonInput.trim()) {
+      showToast('Vui lòng dán nội dung JSON trước khi nạp!', 'warning');
+      return;
+    }
+
+    setImportingJson(true);
+    try {
+      let parsed: any;
+      try {
+        parsed = JSON.parse(jsonInput);
+      } catch {
+        throw new Error('Định dạng JSON không hợp lệ! Vui lòng kiểm tra lại cú pháp hoặc dấu đóng mở ngoặc.');
+      }
+
+      let rawQuestions: any[] = [];
+      let importedExamName = '';
+
+      if (Array.isArray(parsed)) {
+        rawQuestions = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        if (parsed.exam_name || parsed.examName || parsed.title) {
+          importedExamName = parsed.exam_name || parsed.examName || parsed.title;
+        }
+        if (Array.isArray(parsed.questions)) {
+          rawQuestions = parsed.questions;
+        } else if (parsed.questionNo || parsed.qText || parsed.question_text) {
+          rawQuestions = [parsed];
+        } else {
+          throw new Error('Không tìm thấy danh sách câu hỏi ("questions") trong đối tượng JSON.');
+        }
+      } else {
+        throw new Error('Dữ liệu JSON không hợp lệ.');
+      }
+
+      if (rawQuestions.length === 0) {
+        throw new Error('Danh sách câu hỏi trong JSON rỗng.');
+      }
+
+      const normalizedList: Question[] = rawQuestions.map(normalizeQuestion);
+
+      // Tự động render TikZ sang SVG nếu có tikzCode mà chưa có imageSvg
+      let renderedCount = 0;
+      for (let i = 0; i < normalizedList.length; i++) {
+        const q = normalizedList[i];
+        if (q.tikzCode && !q.imageSvg) {
+          try {
+            const res = await renderTikzToSvg(q.tikzCode);
+            q.imageSvg = res.svg;
+            if (!q.imageLayout || q.imageLayout === 'auto') {
+              q.imageLayout = res.recommendedLayout;
+            }
+            renderedCount++;
+          } catch (tikzErr: any) {
+            console.warn(`Không thể render TikZ cho câu ${q.questionNo || i + 1}:`, tikzErr?.message);
+          }
+        }
+      }
+
+      if (importedExamName) {
+        setExamName(importedExamName);
+      }
+
+      setQuestions(normalizedList);
+      setActiveQIdx(0);
+      setShowJsonModal(false);
+
+      const svgNote = renderedCount > 0 ? ` (đã sinh tự động ${renderedCount} hình vẽ vector SVG)` : '';
+      showToast(`Đã nạp thành công ${normalizedList.length} câu hỏi vào trình soạn${svgNote}!`, 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi nhập dữ liệu JSON', 'error');
+    } finally {
+      setImportingJson(false);
+    }
+  };
+
   // ── Load data ──────────────────────────────────────────────
   useEffect(() => {
     if (!blog) return;
@@ -956,6 +1137,14 @@ export default function SolutionEditor({
                 <button onClick={addQuestion}
                   className="px-3 py-2 rounded-lg text-sm font-semibold border-2 border-dashed border-[#DCDCDA] text-[#787774] hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1">
                   <Plus className="w-4 h-4" /> Thêm câu
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowJsonModal(true)}
+                  className="px-3 py-2 rounded-lg text-sm font-semibold border border-[#E9E9E7] bg-white text-[#37352F] hover:bg-[#F7F6F3] hover:border-[#DCDCDA] transition-all flex items-center gap-1.5 shadow-sm"
+                  title="Nạp toàn bộ đề thi từ JSON (hỗ trợ trắc nghiệm, đúng sai, trả lời ngắn và tự động vẽ TikZ)"
+                >
+                  <FileCode className="w-4 h-4 text-indigo-600" /> Nhập từ JSON
                 </button>
               </div>
 
@@ -1478,6 +1667,152 @@ export default function SolutionEditor({
             </button>
           </div>
         </div>
+      )}
+
+      {/* ── Modal: Nhập đề thi từ JSON ── */}
+      {showJsonModal && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 select-none animate-fade-in flex items-center justify-center p-4"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 99999,
+            backgroundColor: 'rgba(0, 0, 0, 0.45)',
+            backdropFilter: 'blur(5px)',
+            WebkitBackdropFilter: 'blur(5px)',
+          }}
+          onClick={() => {
+            if (!importingJson) setShowJsonModal(false);
+          }}
+        >
+          <div
+            className="w-full max-w-3xl rounded-2xl overflow-hidden bg-white shadow-2xl border border-[#E9E9E7] flex flex-col max-h-[90vh]"
+            style={{
+              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0,0,0,0.05)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-[#E9E9E7] flex items-center justify-between bg-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                  <FileCode className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#1A1A1A]">Nhập đề thi từ JSON</h3>
+                  <p className="text-xs text-[#787774]">Dán cấu trúc JSON để nạp nhanh đề thi, đáp án, lời giải và tự động render hình vẽ TikZ</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!importingJson) setShowJsonModal(false);
+                }}
+                disabled={importingJson}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-[#787774] hover:bg-[#F7F6F3] hover:text-[#1A1A1A] transition-colors disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4">
+              {/* Quick Actions Bar */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setJsonInput(SAMPLE_PHYSICS_EXAM_JSON)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#F7F6F3] hover:bg-[#EFEFED] text-[#37352F] border border-[#E9E9E7] transition-all flex items-center gap-1.5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    Dán mẫu 3 câu thử nghiệm (có hình vẽ TikZ)
+                  </button>
+                  {jsonInput && (
+                    <button
+                      type="button"
+                      onClick={() => setJsonInput('')}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-all"
+                    >
+                      Xóa nội dung
+                    </button>
+                  )}
+                </div>
+
+                {/* Parsing Status Preview */}
+                {parsedPreview && (
+                  <div className="text-xs text-[#787774] flex items-center gap-1.5">
+                    {parsedPreview.error ? (
+                      <span className="text-red-500 font-medium flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" /> {parsedPreview.error}
+                      </span>
+                    ) : (
+                      <span className="text-emerald-600 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Phát hiện {parsedPreview.count} câu hỏi {parsedPreview.tikzCount > 0 ? `(${parsedPreview.tikzCount} hình TikZ)` : ''}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Textarea */}
+              <div className="relative">
+                <textarea
+                  value={jsonInput}
+                  onChange={e => setJsonInput(e.target.value)}
+                  placeholder={`{\n  "exam_name": "Chuyên đề Từ trường...",\n  "questions": [\n    {\n      "questionNo": "Câu 1",\n      "type": "trac_nghiem",\n      "qText": "Nội dung câu hỏi...",\n      "choices": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],\n      "correctChoice": "A",\n      "solution": "Lời giải chi tiết...",\n      "tikzCode": "\\\\begin{tikzpicture}...\\\\end{tikzpicture}"\n    }\n  ]\n}`}
+                  className="w-full h-72 p-3.5 rounded-xl font-mono text-xs bg-[#FAFAFA] border border-[#E9E9E7] text-[#1A1A1A] focus:outline-none focus:bg-white focus:border-[#2383E2] transition-colors resize-y leading-relaxed"
+                  spellCheck={false}
+                />
+              </div>
+
+              {/* Format Guide */}
+              <div className="p-3.5 rounded-xl bg-[#F7F6F3] border border-[#E9E9E7] text-[12px] text-[#787774] leading-relaxed">
+                <p className="font-semibold text-[#37352F] mb-1">💡 Hướng dẫn cấu trúc JSON:</p>
+                <p>• Hỗ trợ đối tượng <code>&#123; exam_name, questions: [...] &#125;</code> hoặc mảng trực tiếp <code>[...]</code>.</p>
+                <p>• Các trường mỗi câu: <code>questionNo</code>, <code>type</code> (<code>'trac_nghiem'</code> | <code>'dung_sai'</code> | <code>'tu_luan'</code>), <code>qText</code>, <code>choices</code>, <code>correctChoice</code>, <code>statements</code>, <code>solution</code>, <code>tikzCode</code>.</p>
+                <p>• Hệ thống sẽ tự động gọi Kroki API để sinh ảnh vector SVG chất lượng cao cho các câu có mã <code>tikzCode</code>.</p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 border-t border-[#E9E9E7] bg-[#FAFAFA] flex items-center justify-end gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowJsonModal(false)}
+                disabled={importingJson}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#57564F] hover:bg-[#EFEFED] border border-[#E9E9E7] transition-colors disabled:opacity-50"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={handleImportJson}
+                disabled={!jsonInput.trim() || importingJson}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm"
+              >
+                {importingJson ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Đang xử lý & vẽ hình...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5" />
+                    Nạp vào trình soạn
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
