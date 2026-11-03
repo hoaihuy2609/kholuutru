@@ -128,6 +128,117 @@ const normalizeQuestion = (q: any): Question => {
   };
 };
 
+// ── BATCH OPTION PARSERS (Dán nhanh 4 đáp án / 4 mệnh đề) ───
+function parseMultipleChoiceBatch(raw: string): { choices: string[]; correctChoice?: string } {
+  const text = raw.trim();
+  if (!text) return { choices: ['', '', '', ''] };
+
+  const regex = /(?:^|\s+)(?:\*?\s*\[?\(?([A-D])[\.\)\]]|\*([A-D])(?=[\.\)\s]))\s*/g;
+  const matches: { label: string; isStar: boolean; index: number; matchLen: number }[] = [];
+  let m;
+  while ((m = regex.exec(text)) !== null) {
+    const isStar = m[0].includes('*');
+    const lbl = (m[2] || m[1]).toUpperCase();
+    matches.push({ label: lbl, isStar, index: m.index, matchLen: m[0].length });
+  }
+
+  if (matches.length >= 2) {
+    const result = ['', '', '', ''];
+    let detectedCorrect = '';
+    const labelIdx: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 };
+
+    for (let i = 0; i < matches.length; i++) {
+      const cur = matches[i];
+      const next = matches[i + 1];
+      const start = cur.index + cur.matchLen;
+      const end = next ? next.index : text.length;
+      let part = text.substring(start, end).trim();
+
+      if (cur.isStar || part.startsWith('*')) {
+        detectedCorrect = cur.label;
+        part = part.replace(/^\*\s*/, '').trim();
+      }
+
+      const idx = labelIdx[cur.label];
+      if (idx !== undefined) {
+        result[idx] = part;
+      }
+    }
+    return { choices: result, correctChoice: detectedCorrect || undefined };
+  }
+
+  // Fallback nếu người dùng dán 4 dòng riêng biệt
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length >= 2) {
+    const result = ['', '', '', ''];
+    for (let i = 0; i < Math.min(lines.length, 4); i++) {
+      result[i] = lines[i].replace(/^(?:\[?\(?[A-D0-9][\.\)\]]?|\*[A-D0-9][\.\)]?)\s*/i, '').trim();
+    }
+    return { choices: result };
+  }
+
+  return { choices: [text, '', '', ''] };
+}
+
+function parseStatementsBatch(raw: string, currentStatements: Statement[]): Statement[] {
+  const text = raw.trim();
+  if (!text) return currentStatements;
+
+  const regex = /(?:^|\s+)\[?\(?([a-dA-D])[\.\)\]]\s*/g;
+  const matches: { label: string; index: number; matchLen: number }[] = [];
+  let m;
+  while ((m = regex.exec(text)) !== null) {
+    matches.push({ label: m[1].toLowerCase(), index: m.index, matchLen: m[0].length });
+  }
+
+  const labelMap: Record<string, number> = { a: 0, b: 1, c: 2, d: 3 };
+  const newStmts = currentStatements.map(s => ({ ...s }));
+
+  const extractVerdict = (content: string, currentVerdict: boolean | null): { text: string; verdict: boolean | null } => {
+    let verdict = currentVerdict;
+    let clean = content;
+    if (/(?:[\(\[\-–—\s]\s*)?(?:Đúng|đúng|True|true)\s*[\)\]]?\s*$/i.test(clean)) {
+      verdict = true;
+      clean = clean.replace(/(?:[\(\[\-–—\s]\s*)?(?:Đúng|đúng|True|true)\s*[\)\]]?\s*$/i, '').trim();
+    } else if (/(?:[\(\[\-–—\s]\s*)?(?:Sai|sai|False|false)\s*[\)\]]?\s*$/i.test(clean)) {
+      verdict = false;
+      clean = clean.replace(/(?:[\(\[\-–—\s]\s*)?(?:Sai|sai|False|false)\s*[\)\]]?\s*$/i, '').trim();
+    }
+    return { text: clean, verdict };
+  };
+
+  if (matches.length >= 2) {
+    for (let i = 0; i < matches.length; i++) {
+      const cur = matches[i];
+      const next = matches[i + 1];
+      const start = cur.index + cur.matchLen;
+      const end = next ? next.index : text.length;
+      const part = text.substring(start, end).trim();
+
+      const idx = labelMap[cur.label];
+      if (idx !== undefined && newStmts[idx]) {
+        const { text: cleanText, verdict } = extractVerdict(part, newStmts[idx].verdict);
+        newStmts[idx] = { ...newStmts[idx], claim: cleanText, verdict };
+      }
+    }
+    return newStmts;
+  }
+
+  // Fallback 4 dòng riêng biệt
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length >= 2) {
+    for (let i = 0; i < Math.min(lines.length, 4); i++) {
+      const line = lines[i].replace(/^(?:\[?\(?[a-dA-D0-9][\.\)\]]|\*[a-dA-D0-9][\.\)]?)\s*/, '').trim();
+      if (newStmts[i]) {
+        const { text: cleanText, verdict } = extractVerdict(line, newStmts[i].verdict);
+        newStmts[i] = { ...newStmts[i], claim: cleanText, verdict };
+      }
+    }
+  }
+
+  return newStmts;
+}
+
 // ─────────────────────────────────────────────────────────────
 // SUB-COMPONENTS (KaTeX, TextWithMath, AutoResizeTextarea)
 // ─────────────────────────────────────────────────────────────
@@ -480,6 +591,34 @@ export default function SolutionEditor({
   const activeQuestion = questions[activeQIdx] ?? emptyQuestion();
   const [renderingTikz, setRenderingTikz] = useState(false);
   const [tikzError, setTikzError] = useState<string | null>(null);
+
+  // Khung dán nhanh cả 4 đáp án / 4 mệnh đề
+  const [quickBatchInput, setQuickBatchInput] = useState('');
+
+  useEffect(() => {
+    setQuickBatchInput('');
+  }, [activeQIdx]);
+
+  const handleBatchChoicesChange = (val: string) => {
+    setQuickBatchInput(val);
+    if (!val.trim()) return;
+    const { choices: newChoices, correctChoice } = parseMultipleChoiceBatch(val);
+    if (newChoices.filter(Boolean).length >= 2) {
+      updateQ('choices', newChoices);
+      if (correctChoice) {
+        updateQ('correctChoice', correctChoice);
+      }
+    }
+  };
+
+  const handleBatchStatementsChange = (val: string) => {
+    setQuickBatchInput(val);
+    if (!val.trim()) return;
+    const newStmts = parseStatementsBatch(val, activeQuestion.statements);
+    if (newStmts.filter(s => s.claim).length >= 2) {
+      updateQ('statements', newStmts);
+    }
+  };
 
   const handleRenderTikz = async () => {
     if (!activeQuestion.tikzCode?.trim()) {
@@ -990,6 +1129,33 @@ export default function SolutionEditor({
               <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2 text-lg">
                 <Layers className="w-5 h-5 text-amber-500" /> 4 Mệnh đề Đúng / Sai — {activeQuestion.questionNo || `Câu ${activeQIdx + 1}`}
               </h3>
+
+              {/* Khung dán nhanh 4 mệnh đề */}
+              <div className="bg-[#FAF9F6] border border-[#E9E9E7] rounded-xl p-3 space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-[#787774]">
+                  <span className="font-semibold text-[#1A1A1A]">Dán nhanh 4 mệnh đề (a, b, c, d)</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[#9B9A97]">Tự động phân bổ xuống 4 ô bên dưới</span>
+                    {quickBatchInput && (
+                      <button
+                        type="button"
+                        onClick={() => setQuickBatchInput('')}
+                        className="text-[11px] text-[#787774] hover:text-[#1A1A1A] underline"
+                      >
+                        Xóa
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <textarea
+                  rows={2}
+                  className="w-full p-2.5 bg-white rounded-lg border border-[#E9E9E7] text-sm text-[#1A1A1A] placeholder:text-[#9B9A97] outline-none focus:border-[#1A1A1A] transition-colors resize-none leading-relaxed"
+                  placeholder="Dán cụm 4 mệnh đề vào đây (VD: a) ... b) ... c) ... d) hoặc 4 dòng riêng). Chữ sẽ tự động nhảy vào từng ô bên dưới."
+                  value={quickBatchInput}
+                  onChange={e => handleBatchStatementsChange(e.target.value)}
+                />
+              </div>
+
               <div className="space-y-3">
                 {activeQuestion.statements.map((st, si) => (
                   <StatementEditor key={si} st={st} si={si} onUpdate={updStatement} onFocus={trackFocus} />
@@ -1025,6 +1191,33 @@ export default function SolutionEditor({
               <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2 text-lg">
                 <Layers className="w-5 h-5 text-emerald-500" /> 4 Phương án lựa chọn — {activeQuestion.questionNo || `Câu ${activeQIdx + 1}`}
               </h3>
+
+              {/* Khung dán nhanh 4 đáp án */}
+              <div className="bg-[#FAF9F6] border border-[#E9E9E7] rounded-xl p-3 space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-[#787774]">
+                  <span className="font-semibold text-[#1A1A1A]">Dán nhanh 4 đáp án (A, B, C, D)</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[#9B9A97]">Tự động phân bổ xuống 4 ô bên dưới</span>
+                    {quickBatchInput && (
+                      <button
+                        type="button"
+                        onClick={() => setQuickBatchInput('')}
+                        className="text-[11px] text-[#787774] hover:text-[#1A1A1A] underline"
+                      >
+                        Xóa
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <textarea
+                  rows={2}
+                  className="w-full p-2.5 bg-white rounded-lg border border-[#E9E9E7] text-sm text-[#1A1A1A] placeholder:text-[#9B9A97] outline-none focus:border-[#1A1A1A] transition-colors resize-none leading-relaxed"
+                  placeholder="Dán cụm 4 đáp án vào đây (VD: A. ... B. ... C. ... D. hoặc 4 dòng riêng). Chữ sẽ tự động nhảy vào từng ô bên dưới."
+                  value={quickBatchInput}
+                  onChange={e => handleBatchChoicesChange(e.target.value)}
+                />
+              </div>
+
               {/* 4 lựa chọn A/B/C/D */}
               <div className="space-y-2">
                 {['A', 'B', 'C', 'D'].map((lbl, ci) => (
