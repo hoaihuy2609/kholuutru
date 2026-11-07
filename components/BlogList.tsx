@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BlogPost } from '../types';
-import { BookOpen, Plus, Search, Filter, FileText, Check, Sparkles, ChevronLeft } from 'lucide-react';
+import { BookOpen, Plus, Search, Filter, FileText, Check, Sparkles, ChevronLeft, Folder, X } from 'lucide-react';
 import ExamStyleModal from './ExamStyleModal';
+import TreeTableOfContents, { TreeSelection } from './TreeTableOfContents';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import katex from 'katex';
@@ -434,6 +435,8 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedTag, setSelectedTag] = useState('');
     const [gradeFilter, setGradeFilter] = useState<number>(0);
+    const [selectedTreeNode, setSelectedTreeNode] = useState<TreeSelection>({ type: 'all' });
+    const [showMobileTree, setShowMobileTree] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
     const [isExamModalOpen, setIsExamModalOpen] = useState(false);
@@ -512,6 +515,34 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
             if (postGrade !== 0 && postGrade !== studentGrade) return false;
         }
 
+        // Lọc theo Cây mục lục thư mục (TreeSelection)
+        if (selectedTreeNode.type === 'grade' && selectedTreeNode.grade) {
+            if (postGrade !== selectedTreeNode.grade) return false;
+        } else if (selectedTreeNode.type !== 'all' && selectedTreeNode.name) {
+            if (selectedTreeNode.grade && postGrade && postGrade !== selectedTreeNode.grade) return false;
+
+            const rawName = selectedTreeNode.name.toLowerCase();
+            const cleanKeyword = rawName.replace(/^(chương|bài|dạng)\s*([0-9ivxabc\.\:\-]+)\s*[\.\:\-]?\s*/i, '').trim();
+            const prefixMatch = rawName.match(/^(chương|bài|dạng)\s*([0-9ivxabc\.\:\-]+)/i);
+            const prefixCode = prefixMatch ? prefixMatch[0].trim() : '';
+
+            const cat = (b.category || '').toLowerCase();
+            const title = (b.title || '').toLowerCase();
+            const summary = (b.summary || '').toLowerCase();
+            const tags = (b.tags || []).map(t => t.toLowerCase());
+
+            let matchesTree = false;
+            if (prefixCode && (cat.includes(prefixCode) || tags.some(t => t.includes(prefixCode)))) {
+                matchesTree = true;
+            } else if (cleanKeyword && cleanKeyword.length >= 3 && (cat.includes(cleanKeyword) || tags.some(t => t.includes(cleanKeyword) || cleanKeyword.includes(t)) || title.includes(cleanKeyword) || summary.includes(cleanKeyword))) {
+                matchesTree = true;
+            } else if (cat.includes(rawName) || tags.some(t => t.includes(rawName)) || title.includes(rawName)) {
+                matchesTree = true;
+            }
+
+            if (!matchesTree) return false;
+        }
+
         // Tab filter
         const matchGrade = gradeFilter === 0 || postGrade === gradeFilter;
 
@@ -520,7 +551,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
         const matchCat = !selectedCategory || b.category === selectedCategory;
         const matchTag = !selectedTag || (b.tags || []).includes(selectedTag);
         return matchSearch && matchCat && matchTag && matchGrade;
-    }), [blogs, debouncedSearch, selectedCategory, selectedTag, gradeFilter, isAdmin, studentGrade]);
+    }), [blogs, debouncedSearch, selectedCategory, selectedTag, gradeFilter, selectedTreeNode, isAdmin, studentGrade]);
 
     const allGradeTabs = [
         { label: 'Tất cả', value: 0, color: '#787774' },
@@ -591,138 +622,246 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                 )}
             </div>
 
-            {/* Filter Bar */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
-                {gradeTabs.map(tab => (
-                    <button
-                        key={tab.value}
-                        onClick={() => setGradeFilter(tab.value)}
-                        style={{
-                            padding: '6px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
-                            border: `1px solid ${gradeFilter === tab.value ? tab.color : '#E9E9E7'}`,
-                            background: gradeFilter === tab.value ? tab.color : '#fff',
-                            color: gradeFilter === tab.value ? '#fff' : '#787774',
-                            cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap'
+            {/* ── BỐ CỤC 2 CỘT: Cột Trái (Mục lục cây thư mục) & Cột Phải (Kho học liệu & Bộ lọc) ── */}
+            <div className="flex flex-col lg:flex-row gap-6 items-start mt-6">
+                {/* ── CỘT TRÁI: MỤC LỤC CÂY THƯ MỤC 4 CẤP CHUẨN GDPT 2018 (Desktop) ── */}
+                <aside className="hidden lg:block w-[320px] xl:w-[350px] shrink-0 sticky top-6">
+                    <TreeTableOfContents
+                        blogs={blogs}
+                        selectedItem={selectedTreeNode}
+                        onSelect={(sel) => {
+                            setSelectedTreeNode(sel);
+                            if (sel.type === 'grade' && sel.grade) {
+                                setGradeFilter(sel.grade);
+                            } else if (sel.type === 'all') {
+                                setGradeFilter(0);
+                            }
                         }}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-
-                <div style={{ width: '1px', height: '20px', background: '#E9E9E7', margin: '0 4px', flexShrink: 0 }} />
-
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    padding: '6px 12px', borderRadius: '8px', border: '1px solid #E9E9E7',
-                    background: '#fff', flex: 1, minWidth: '180px'
-                }}>
-                    <Search style={{ width: '14px', height: '14px', color: '#AEACA8', flexShrink: 0 }} />
-                    <input
-                        type="text"
-                        placeholder="Tìm kiếm bài viết..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        style={{
-                            border: 'none', outline: 'none', background: 'transparent', width: '100%',
-                            fontSize: '13px', color: '#1A1A1A'
-                        }}
+                        isAdmin={isAdmin}
                     />
-                    {(categories.length > 0 || allTags.length > 0) && (
+                </aside>
+
+                {/* ── CỘT PHẢI: BỘ LỌC + DANH SÁCH BÀI TẬP ── */}
+                <div className="flex-1 min-w-0 w-full space-y-4">
+                    {/* Nút mở Mục lục trên Mobile / Tablet */}
+                    <div className="lg:hidden flex items-center justify-between bg-white p-3 rounded-xl border border-[#E9E9E7] shadow-2xs">
                         <button
-                            onClick={() => setShowFilters(!showFilters)}
+                            onClick={() => setShowMobileTree(true)}
+                            className="flex items-center gap-2 text-xs font-bold text-[#8C4A00] bg-[#FDF6ED] px-3.5 py-2 rounded-lg border border-[#F3DFC1]"
+                        >
+                            <Folder className="w-4 h-4 fill-[#F5A623] text-[#D9730D]" />
+                            <span>📑 Mục lục thư mục ({blogs.length} câu)</span>
+                        </button>
+                        {selectedTreeNode.type !== 'all' && (
+                            <span className="text-xs font-semibold text-[#8C4A00] truncate max-w-[160px]">
+                                {selectedTreeNode.name}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Thanh Breadcrumb khi đang chọn một thư mục bất kỳ trong cây */}
+                    {selectedTreeNode.type !== 'all' && (
+                        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#FDF4E7] border border-[#F6E1C4] text-xs">
+                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                                <Folder className="w-4 h-4 fill-[#F5A623] text-[#D9730D] shrink-0" />
+                                <span className="text-[#8C4A00] font-bold truncate">
+                                    {selectedTreeNode.type === 'grade' && `Khối: ${selectedTreeNode.name}`}
+                                    {selectedTreeNode.type === 'chapter' && `Chương: ${selectedTreeNode.name}`}
+                                    {selectedTreeNode.type === 'lesson' && `Bài: ${selectedTreeNode.name}`}
+                                    {selectedTreeNode.type === 'topic' && `Dạng: ${selectedTreeNode.name}`}
+                                </span>
+                                <span className="text-[11px] font-semibold text-[#8C4A00] bg-[#FAEDE0] px-2 py-0.5 rounded-full shrink-0">
+                                    {filteredBlogs.length} câu
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setSelectedTreeNode({ type: 'all' });
+                                    setGradeFilter(0);
+                                }}
+                                className="text-xs font-bold text-[#8C4A00] hover:text-[#5C3000] underline shrink-0 cursor-pointer"
+                            >
+                                ✕ Xem tất cả
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Filter Bar */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {gradeTabs.map(tab => (
+                            <button
+                                key={tab.value}
+                                onClick={() => setGradeFilter(tab.value)}
+                                style={{
+                                    padding: '6px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
+                                    border: `1px solid ${gradeFilter === tab.value ? tab.color : '#E9E9E7'}`,
+                                    background: gradeFilter === tab.value ? tab.color : '#fff',
+                                    color: gradeFilter === tab.value ? '#fff' : '#787774',
+                                    cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap'
+                                }}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+
+                        <div style={{ width: '1px', height: '20px', background: '#E9E9E7', margin: '0 4px', flexShrink: 0 }} />
+
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '6px 12px', borderRadius: '8px', border: '1px solid #E9E9E7',
+                            background: '#fff', flex: 1, minWidth: '180px'
+                        }}>
+                            <Search style={{ width: '14px', height: '14px', color: '#AEACA8', flexShrink: 0 }} />
+                            <input
+                                type="text"
+                                placeholder="Tìm kiếm bài viết..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                style={{
+                                    border: 'none', outline: 'none', background: 'transparent', width: '100%',
+                                    fontSize: '13px', color: '#1A1A1A'
+                                }}
+                            />
+                            {(categories.length > 0 || allTags.length > 0) && (
+                                <button
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    style={{
+                                        padding: '3px', borderRadius: '5px', border: 'none', background: 'transparent',
+                                        color: showFilters ? '#6B7CDB' : '#AEACA8', cursor: 'pointer', display: 'flex',
+                                        transition: 'all 0.15s'
+                                    }}
+                                >
+                                    <Filter style={{ width: '14px', height: '14px' }} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Sub-Filters */}
+                    {showFilters && (categories.length > 0 || allTags.length > 0) && (
+                        <div
+                            className="animate-fade-in"
                             style={{
-                                padding: '3px', borderRadius: '5px', border: 'none', background: 'transparent',
-                                color: showFilters ? '#6B7CDB' : '#AEACA8', cursor: 'pointer', display: 'flex',
-                                transition: 'all 0.15s'
+                                padding: '16px', borderRadius: '12px',
+                                background: '#fff', border: '1px solid #E9E9E7',
+                                display: 'flex', flexDirection: 'column', gap: '12px'
                             }}
                         >
-                            <Filter style={{ width: '14px', height: '14px' }} />
-                        </button>
+                            {categories.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#AEACA8', marginRight: '4px', letterSpacing: '0.05em' }}>Chuyên mục:</span>
+                                    {categories.map(cat => (
+                                        <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
+                                            style={{
+                                                padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 500,
+                                                border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                                                background: selectedCategory === cat ? '#6B7CDB' : '#F7F6F3',
+                                                color: selectedCategory === cat ? '#fff' : '#57564F'
+                                            }}>{cat}</button>
+                                    ))}
+                                </div>
+                            )}
+                            {allTags.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#AEACA8', marginRight: '4px', letterSpacing: '0.05em' }}>Thẻ:</span>
+                                    {allTags.map(tag => (
+                                        <button key={tag} onClick={() => setSelectedTag(tag === selectedTag ? '' : tag)}
+                                            style={{
+                                                padding: '3px 8px', borderRadius: '5px', fontSize: '11px', fontWeight: 500,
+                                                border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                                                background: selectedTag === tag ? '#EAF3EE' : '#F7F6F3',
+                                                color: selectedTag === tag ? '#448361' : '#AEACA8'
+                                            }}>#{tag}</button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Content */}
+                    {loading ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: '12px' }}>
+                            <div className="animate-spin" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid #EEF0FB', borderTopColor: '#6B7CDB' }} />
+                            <p style={{ fontSize: '13px', color: '#AEACA8', fontWeight: 500 }}>Đang tải bài viết...</p>
+                        </div>
+                    ) : filteredBlogs.length === 0 ? (
+                        <div style={{
+                            textAlign: 'center', padding: '64px 24px', borderRadius: '12px',
+                            border: '1px solid #E9E9E7', background: '#fff'
+                        }}>
+                            <div style={{
+                                width: '48px', height: '48px', borderRadius: '12px', background: '#F1F0EC',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px'
+                            }}>
+                                <BookOpen style={{ width: '22px', height: '22px', color: '#CFCFCB' }} />
+                            </div>
+                            <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#1A1A1A', marginBottom: '6px' }}>Chưa có bài viết nào</h3>
+                            <p style={{ fontSize: '13px', color: '#AEACA8', maxWidth: '280px', margin: '0 auto' }}>
+                                Thầy đang biên tập thêm nội dung. Quay lại sau nhé!
+                            </p>
+                        </div>
+                    ) : (
+                        /* ── Grid: 1 cột trên mobile, đúng 2 cột trên tablet/desktop ── */
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            {filteredBlogs.map(blog => {
+                                const gc = GRADE_COLORS[blog.grade || 0] || GRADE_COLORS[0];
+                                return (
+                                    <QuestionCard
+                                        key={blog.id}
+                                        blog={blog}
+                                        isAdmin={isAdmin}
+                                        onEditBlog={onEditBlog}
+                                        onClick={() => onReadBlog(blog)}
+                                        gc={gc}
+                                        isSelected={selectedBlogIds.includes(blog.id)}
+                                        onToggleSelect={() => handleToggleSelect(blog.id)}
+                                    />
+                                );
+                            })}
+                        </div>
                     )}
                 </div>
             </div>
 
-            {/* Sub-Filters */}
-            {showFilters && (categories.length > 0 || allTags.length > 0) && (
+            {/* ── Modal Drawer Mục lục trên Mobile ── */}
+            {showMobileTree && (
                 <div
-                    className="animate-fade-in"
-                    style={{
-                        padding: '16px', borderRadius: '12px', marginBottom: '20px',
-                        background: '#fff', border: '1px solid #E9E9E7',
-                        display: 'flex', flexDirection: 'column', gap: '12px'
-                    }}
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs lg:hidden"
+                    onClick={() => setShowMobileTree(false)}
                 >
-                    {categories.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#AEACA8', marginRight: '4px', letterSpacing: '0.05em' }}>Chuyên mục:</span>
-                            {categories.map(cat => (
-                                <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
-                                    style={{
-                                        padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 500,
-                                        border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-                                        background: selectedCategory === cat ? '#6B7CDB' : '#F7F6F3',
-                                        color: selectedCategory === cat ? '#fff' : '#57564F'
-                                    }}>{cat}</button>
-                            ))}
+                    <div
+                        className="w-full max-w-md max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="p-3 border-b border-[#E9E9E7] flex items-center justify-between bg-[#FAFAFA]">
+                            <div className="flex items-center gap-2 text-xs font-bold text-[#1A1A1A]">
+                                <Folder className="w-4 h-4 fill-[#F5A623] text-[#D9730D]" />
+                                <span>Mục lục thư mục môn Vật lý</span>
+                            </div>
+                            <button
+                                onClick={() => setShowMobileTree(false)}
+                                className="p-1 rounded text-[#787774] hover:text-[#1A1A1A]"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
                         </div>
-                    )}
-                    {allTags.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#AEACA8', marginRight: '4px', letterSpacing: '0.05em' }}>Thẻ:</span>
-                            {allTags.map(tag => (
-                                <button key={tag} onClick={() => setSelectedTag(tag === selectedTag ? '' : tag)}
-                                    style={{
-                                        padding: '3px 8px', borderRadius: '5px', fontSize: '11px', fontWeight: 500,
-                                        border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-                                        background: selectedTag === tag ? '#EAF3EE' : '#F7F6F3',
-                                        color: selectedTag === tag ? '#448361' : '#AEACA8'
-                                    }}>#{tag}</button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Content */}
-            {loading ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: '12px' }}>
-                    <div className="animate-spin" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid #EEF0FB', borderTopColor: '#6B7CDB' }} />
-                    <p style={{ fontSize: '13px', color: '#AEACA8', fontWeight: 500 }}>Đang tải bài viết...</p>
-                </div>
-            ) : filteredBlogs.length === 0 ? (
-                <div style={{
-                    textAlign: 'center', padding: '64px 24px', borderRadius: '12px',
-                    border: '1px solid #E9E9E7', background: '#fff'
-                }}>
-                    <div style={{
-                        width: '48px', height: '48px', borderRadius: '12px', background: '#F1F0EC',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px'
-                    }}>
-                        <BookOpen style={{ width: '22px', height: '22px', color: '#CFCFCB' }} />
-                    </div>
-                    <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#1A1A1A', marginBottom: '6px' }}>Chưa có bài viết nào</h3>
-                    <p style={{ fontSize: '13px', color: '#AEACA8', maxWidth: '280px', margin: '0 auto' }}>
-                        Thầy đang biên tập thêm nội dung. Quay lại sau nhé!
-                    </p>
-                </div>
-            ) : (
-                /* ── Grid: 1 cột trên mobile, đúng 2 cột trên tablet/desktop ── */
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {filteredBlogs.map(blog => {
-                        const gc = GRADE_COLORS[blog.grade || 0] || GRADE_COLORS[0];
-                        return (
-                            <QuestionCard
-                                key={blog.id}
-                                blog={blog}
+                        <div className="flex-1 overflow-hidden p-2">
+                            <TreeTableOfContents
+                                blogs={blogs}
+                                selectedItem={selectedTreeNode}
+                                onSelect={(sel) => {
+                                    setSelectedTreeNode(sel);
+                                    if (sel.type === 'grade' && sel.grade) {
+                                        setGradeFilter(sel.grade);
+                                    } else if (sel.type === 'all') {
+                                        setGradeFilter(0);
+                                    }
+                                    setShowMobileTree(false);
+                                }}
                                 isAdmin={isAdmin}
-                                onEditBlog={onEditBlog}
-                                onClick={() => onReadBlog(blog)}
-                                gc={gc}
-                                isSelected={selectedBlogIds.includes(blog.id)}
-                                onToggleSelect={() => handleToggleSelect(blog.id)}
                             />
-                        );
-                    })}
+                        </div>
+                    </div>
                 </div>
             )}
 
