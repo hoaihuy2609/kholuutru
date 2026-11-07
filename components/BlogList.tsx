@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BlogPost } from '../types';
-import { BookOpen, Plus, Search, Filter, FileText, Check, Sparkles, ChevronLeft, Folder, X } from 'lucide-react';
+import { BookOpen, Plus, Search, Filter, FileText, Check, Sparkles, ChevronLeft, Folder, X, RotateCcw } from 'lucide-react';
 import ExamStyleModal from './ExamStyleModal';
 import TreeTableOfContents, { TreeSelection } from './TreeTableOfContents';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
@@ -437,6 +437,12 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     const [gradeFilter, setGradeFilter] = useState<number>(0);
     const [selectedTreeNode, setSelectedTreeNode] = useState<TreeSelection>({ type: 'all' });
     const [showMobileTree, setShowMobileTree] = useState(false);
+
+    // ── BỘ LỌC CHUYÊN SÂU (Question Format, Difficulty Level, Image/Diagram) ──
+    const [questionTypeFilter, setQuestionTypeFilter] = useState<'all' | 'dung_sai' | 'trac_nghiem' | 'tu_luan'>('all');
+    const [levelFilter, setLevelFilter] = useState<number>(0); // 0 = Tất cả, 1-4 = Mức độ 1 đến 4
+    const [hasImageFilter, setHasImageFilter] = useState<boolean>(false); // Chỉ câu có hình vẽ / đồ thị
+
     const [showFilters, setShowFilters] = useState(false);
     const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
     const [isExamModalOpen, setIsExamModalOpen] = useState(false);
@@ -505,17 +511,9 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     const categories = useMemo(() => [...new Set(blogs.map(b => b.category).filter(Boolean))], [blogs]);
     const allTags = useMemo(() => [...new Set(blogs.flatMap(b => b.tags || []))], [blogs]);
 
-    const filteredBlogs = useMemo(() => blogs.filter(b => {
-        // Ẩn đề thi (exam_paper) khỏi Góc học tập của học sinh — chỉ admin mới thấy để quản lý
-        if (!isAdmin && b.category === 'exam_paper') return false;
-
-        // Lọc theo khối lớp học sinh
+    // Hàm kiểm tra bài tập có khớp với nhánh Mục lục cây đang chọn hay không
+    const matchTreeNode = (b: BlogPost) => {
         const postGrade = b.grade || 0;
-        if (!isAdmin && studentGrade) {
-            if (postGrade !== 0 && postGrade !== studentGrade) return false;
-        }
-
-        // Lọc theo Cây mục lục thư mục (TreeSelection)
         if (selectedTreeNode.type === 'grade' && selectedTreeNode.grade) {
             if (postGrade !== selectedTreeNode.grade) return false;
         } else if (selectedTreeNode.type !== 'all' && selectedTreeNode.name) {
@@ -531,27 +529,114 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
             const summary = (b.summary || '').toLowerCase();
             const tags = (b.tags || []).map(t => t.toLowerCase());
 
-            let matchesTree = false;
+            let matches = false;
             if (prefixCode && (cat.includes(prefixCode) || tags.some(t => t.includes(prefixCode)))) {
-                matchesTree = true;
+                matches = true;
             } else if (cleanKeyword && cleanKeyword.length >= 3 && (cat.includes(cleanKeyword) || tags.some(t => t.includes(cleanKeyword) || cleanKeyword.includes(t)) || title.includes(cleanKeyword) || summary.includes(cleanKeyword))) {
-                matchesTree = true;
+                matches = true;
             } else if (cat.includes(rawName) || tags.some(t => t.includes(rawName)) || title.includes(rawName)) {
-                matchesTree = true;
+                matches = true;
             }
 
-            if (!matchesTree) return false;
+            if (!matches) return false;
+        }
+        return true;
+    };
+
+    // Thống kê số lượng bài tập theo các tiêu chí bộ lọc (tính chuẩn xác trên nhánh mục lục đang chọn)
+    const filterCounts = useMemo(() => {
+        let dungSai = 0;
+        let tracNghiem = 0;
+        let tuLuan = 0;
+        let lvl1 = 0, lvl2 = 0, lvl3 = 0, lvl4 = 0;
+        let withImage = 0;
+        let inCurrentScope = 0;
+
+        blogs.forEach(b => {
+            if (!isAdmin && b.category === 'exam_paper') return;
+            const postGrade = b.grade || 0;
+            if (!isAdmin && studentGrade && postGrade !== 0 && postGrade !== studentGrade) return;
+
+            // Kiểm tra grade tab
+            if (gradeFilter !== 0 && postGrade !== gradeFilter) return;
+
+            // Kiểm tra tree filter
+            if (!matchTreeNode(b)) return;
+
+            inCurrentScope++;
+
+            const q = parseCardQuestion(b.content);
+            const qType = q?.type === 'dung_sai' ? 'dung_sai' : q?.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan';
+            if (qType === 'dung_sai') dungSai++;
+            else if (qType === 'trac_nghiem') tracNghiem++;
+            else tuLuan++;
+
+            const lv = (b as any).level || 0;
+            if (lv === 1) lvl1++;
+            else if (lv === 2) lvl2++;
+            else if (lv === 3) lvl3++;
+            else if (lv === 4) lvl4++;
+
+            if (q && (q.imageSvg || q.imageUrl || q.imageTelegramFileId)) {
+                withImage++;
+            }
+        });
+
+        return { dungSai, tracNghiem, tuLuan, lvl1, lvl2, lvl3, lvl4, withImage, inCurrentScope };
+    }, [blogs, selectedTreeNode, gradeFilter, isAdmin, studentGrade]);
+
+    const isAnyFilterActive = questionTypeFilter !== 'all' || levelFilter !== 0 || hasImageFilter || searchQuery.trim() !== '';
+
+    const handleResetAllFilters = () => {
+        setQuestionTypeFilter('all');
+        setLevelFilter(0);
+        setHasImageFilter(false);
+        setSearchQuery('');
+    };
+
+    const filteredBlogs = useMemo(() => blogs.filter(b => {
+        // Ẩn đề thi khỏi Góc học tập của học sinh
+        if (!isAdmin && b.category === 'exam_paper') return false;
+
+        // Lọc theo khối lớp học sinh
+        const postGrade = b.grade || 0;
+        if (!isAdmin && studentGrade) {
+            if (postGrade !== 0 && postGrade !== studentGrade) return false;
         }
 
-        // Tab filter
-        const matchGrade = gradeFilter === 0 || postGrade === gradeFilter;
+        // Lọc theo Cây mục lục thư mục
+        if (!matchTreeNode(b)) return false;
 
+        // Tab filter (Grade)
+        const matchGrade = gradeFilter === 0 || postGrade === gradeFilter;
+        if (!matchGrade) return false;
+
+        // ── LỌC THEO BỘ LỌC CHUYÊN SÂU ──
+        // 1. Loại câu hỏi (Đúng/Sai, Trắc nghiệm 4 PA, Trả lời ngắn)
+        if (questionTypeFilter !== 'all') {
+            const q = parseCardQuestion(b.content);
+            const qType = q?.type === 'dung_sai' ? 'dung_sai' : q?.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan';
+            if (qType !== questionTypeFilter) return false;
+        }
+
+        // 2. Mức độ nhận thức (1: Nhận biết, 2: Thông hiểu, 3: Vận dụng, 4: Vận dụng cao)
+        if (levelFilter !== 0) {
+            const lv = (b as any).level || 0;
+            if (lv !== levelFilter) return false;
+        }
+
+        // 3. Có hình ảnh / đồ thị
+        if (hasImageFilter) {
+            const q = parseCardQuestion(b.content);
+            const hasImg = !!(q?.imageSvg || q?.imageUrl || q?.imageTelegramFileId);
+            if (!hasImg) return false;
+        }
+
+        // Tìm kiếm theo từ khóa
         const q = debouncedSearch.toLowerCase();
         const matchSearch = !q || b.title.toLowerCase().includes(q) || b.summary.toLowerCase().includes(q) || (b.tags || []).some(t => t.toLowerCase().includes(q));
-        const matchCat = !selectedCategory || b.category === selectedCategory;
-        const matchTag = !selectedTag || (b.tags || []).includes(selectedTag);
-        return matchSearch && matchCat && matchTag && matchGrade;
-    }), [blogs, debouncedSearch, selectedCategory, selectedTag, gradeFilter, selectedTreeNode, isAdmin, studentGrade]);
+        return matchSearch;
+    }), [blogs, debouncedSearch, gradeFilter, selectedTreeNode, questionTypeFilter, levelFilter, hasImageFilter, isAdmin, studentGrade]);
 
     const allGradeTabs = [
         { label: 'Tất cả', value: 0, color: '#787774' },
@@ -686,97 +771,139 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                         </div>
                     )}
 
-                    {/* Filter Bar */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        {gradeTabs.map(tab => (
+                    {/* ── BỘ LỌC CHUYÊN SÂU (Smart Physics Filter Bar) ── */}
+                    <div className="bg-white rounded-2xl border border-[#E9E9E7] p-3.5 space-y-2.5 shadow-2xs">
+                        {/* Hàng 1: Khối lớp + Tìm kiếm + Có hình/đồ thị + Reset */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {/* Tab khối lớp */}
+                            <div className="flex items-center gap-1 bg-[#FAFAF9] p-1 rounded-xl border border-[#E9E9E7]">
+                                {gradeTabs.map(tab => (
+                                    <button
+                                        key={tab.value}
+                                        onClick={() => setGradeFilter(tab.value)}
+                                        style={{
+                                            backgroundColor: gradeFilter === tab.value ? tab.color : 'transparent',
+                                            color: gradeFilter === tab.value ? '#fff' : '#787774',
+                                        }}
+                                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                            gradeFilter === tab.value ? 'shadow-2xs font-bold' : 'hover:bg-black/5'
+                                        }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Ô tìm kiếm câu hỏi */}
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E2E0DB] bg-[#FAFAF9] flex-1 min-w-[180px] focus-within:border-[#C4630A] focus-within:bg-white transition-all">
+                                <Search className="w-3.5 h-3.5 text-[#8F8E8C] shrink-0" />
+                                <input
+                                    type="text"
+                                    placeholder="Tìm nội dung, công thức, từ khóa..."
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    className="w-full text-xs text-[#1A1A1A] placeholder-[#9E9B97] bg-transparent outline-none"
+                                />
+                                {searchQuery && (
+                                    <button onClick={() => setSearchQuery('')} className="text-[#8F8E8C] hover:text-[#1A1A1A] p-0.5">
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Nút lọc Có hình vẽ / Đồ thị */}
                             <button
-                                key={tab.value}
-                                onClick={() => setGradeFilter(tab.value)}
-                                style={{
-                                    padding: '6px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
-                                    border: `1px solid ${gradeFilter === tab.value ? tab.color : '#E9E9E7'}`,
-                                    background: gradeFilter === tab.value ? tab.color : '#fff',
-                                    color: gradeFilter === tab.value ? '#fff' : '#787774',
-                                    cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap'
-                                }}
+                                onClick={() => setHasImageFilter(!hasImageFilter)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                                    hasImageFilter
+                                        ? 'bg-[#EEF0FB] text-[#4F62C9] border-[#C7D0F8] shadow-2xs font-bold'
+                                        : 'bg-[#FAFAF9] text-[#57564F] border-[#E2E0DB] hover:bg-[#F0EFEB]'
+                                }`}
+                                title="Chỉ hiển thị các câu có hình vẽ minh họa hoặc đồ thị"
                             >
-                                {tab.label}
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span>Có hình / Đồ thị</span>
+                                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${hasImageFilter ? 'bg-[#DCE3FA] text-[#3649AF]' : 'bg-[#EAE8E4] text-[#787774]'}`}>
+                                    {filterCounts.withImage}
+                                </span>
                             </button>
-                        ))}
 
-                        <div style={{ width: '1px', height: '20px', background: '#E9E9E7', margin: '0 4px', flexShrink: 0 }} />
-
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '6px 12px', borderRadius: '8px', border: '1px solid #E9E9E7',
-                            background: '#fff', flex: 1, minWidth: '180px'
-                        }}>
-                            <Search style={{ width: '14px', height: '14px', color: '#AEACA8', flexShrink: 0 }} />
-                            <input
-                                type="text"
-                                placeholder="Tìm kiếm bài viết..."
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                style={{
-                                    border: 'none', outline: 'none', background: 'transparent', width: '100%',
-                                    fontSize: '13px', color: '#1A1A1A'
-                                }}
-                            />
-                            {(categories.length > 0 || allTags.length > 0) && (
+                            {/* Nút Đặt lại tất cả lọc (hiện khi có lọc active) */}
+                            {isAnyFilterActive && (
                                 <button
-                                    onClick={() => setShowFilters(!showFilters)}
-                                    style={{
-                                        padding: '3px', borderRadius: '5px', border: 'none', background: 'transparent',
-                                        color: showFilters ? '#6B7CDB' : '#AEACA8', cursor: 'pointer', display: 'flex',
-                                        transition: 'all 0.15s'
-                                    }}
+                                    onClick={handleResetAllFilters}
+                                    className="flex items-center gap-1 text-xs font-bold text-[#8C4A00] hover:text-[#5C3000] px-2.5 py-1.5 rounded-xl hover:bg-[#FDF6ED] transition-colors cursor-pointer"
                                 >
-                                    <Filter style={{ width: '14px', height: '14px' }} />
+                                    <RotateCcw className="w-3 h-3" />
+                                    <span>Đặt lại</span>
                                 </button>
                             )}
                         </div>
-                    </div>
 
-                    {/* Sub-Filters */}
-                    {showFilters && (categories.length > 0 || allTags.length > 0) && (
-                        <div
-                            className="animate-fade-in"
-                            style={{
-                                padding: '16px', borderRadius: '12px',
-                                background: '#fff', border: '1px solid #E9E9E7',
-                                display: 'flex', flexDirection: 'column', gap: '12px'
-                            }}
-                        >
-                            {categories.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
-                                    <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#AEACA8', marginRight: '4px', letterSpacing: '0.05em' }}>Chuyên mục:</span>
-                                    {categories.map(cat => (
-                                        <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
-                                            style={{
-                                                padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 500,
-                                                border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-                                                background: selectedCategory === cat ? '#6B7CDB' : '#F7F6F3',
-                                                color: selectedCategory === cat ? '#fff' : '#57564F'
-                                            }}>{cat}</button>
-                                    ))}
-                                </div>
-                            )}
-                            {allTags.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
-                                    <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#AEACA8', marginRight: '4px', letterSpacing: '0.05em' }}>Thẻ:</span>
-                                    {allTags.map(tag => (
-                                        <button key={tag} onClick={() => setSelectedTag(tag === selectedTag ? '' : tag)}
-                                            style={{
-                                                padding: '3px 8px', borderRadius: '5px', fontSize: '11px', fontWeight: 500,
-                                                border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-                                                background: selectedTag === tag ? '#EAF3EE' : '#F7F6F3',
-                                                color: selectedTag === tag ? '#448361' : '#AEACA8'
-                                            }}>#{tag}</button>
-                                    ))}
-                                </div>
-                            )}
+                        {/* Hàng 2: Bộ lọc Loại câu hỏi (Định dạng thi Bộ GD 2025) */}
+                        <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-[#F2F1ED]">
+                            <span className="text-[10.5px] font-bold text-[#8F8E8C] uppercase tracking-wider mr-1">Loại câu:</span>
+                            {[
+                                { id: 'all', label: 'Tất cả loại câu', count: blogs.length },
+                                { id: 'dung_sai', label: '⚖️ Đúng / Sai (Phần II)', count: filterCounts.dungSai, activeColor: 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]' },
+                                { id: 'trac_nghiem', label: '⚡ Trắc nghiệm 4 PA (Phần I)', count: filterCounts.tracNghiem, activeColor: 'bg-[#EAF3EE] text-[#448361] border-[#44836140]' },
+                                { id: 'tu_luan', label: '✏️ Trả lời ngắn (Phần III)', count: filterCounts.tuLuan, activeColor: 'bg-[#EEF0FB] text-[#6B7CDB] border-[#D0D5F5]' },
+                            ].map(typeItem => {
+                                const isActive = questionTypeFilter === typeItem.id;
+                                return (
+                                    <button
+                                        key={typeItem.id}
+                                        onClick={() => setQuestionTypeFilter(typeItem.id as any)}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+                                            isActive
+                                                ? `${typeItem.activeColor || 'bg-[#1A1A1A] text-white border-[#1A1A1A]'} font-bold shadow-2xs`
+                                                : 'bg-white text-[#57564F] border-[#E2E0DB] hover:bg-[#F7F6F3]'
+                                        }`}
+                                    >
+                                        <span>{typeItem.label}</span>
+                                        <span className={`text-[10px] tabular-nums px-1.5 py-0.2 rounded-full font-bold ${
+                                            isActive ? 'bg-black/10' : 'bg-[#F0EFEB] text-[#787774]'
+                                        }`}>
+                                            {typeItem.count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
                         </div>
-                    )}
+
+                        {/* Hàng 3: Bộ lọc Mức độ nhận thức (Độ khó chuẩn 4 mức) */}
+                        <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-[#F2F1ED]">
+                            <span className="text-[10.5px] font-bold text-[#8F8E8C] uppercase tracking-wider mr-1">Mức độ:</span>
+                            {[
+                                { id: 0, label: 'Tất cả mức', count: blogs.length },
+                                { id: 1, label: 'Mức 1: Nhận biết', count: filterCounts.lvl1, bg: '#EAF3EE', color: '#448361', border: '#44836130' },
+                                { id: 2, label: 'Mức 2: Thông hiểu', count: filterCounts.lvl2, bg: '#EEF0FB', color: '#6B7CDB', border: '#6B7CDB30' },
+                                { id: 3, label: 'Mức 3: Vận dụng', count: filterCounts.lvl3, bg: '#FFF3E8', color: '#D9730D', border: '#D9730D30' },
+                                { id: 4, label: 'Mức 4: Vận dụng cao', count: filterCounts.lvl4, bg: '#F3ECF8', color: '#9065B0', border: '#9065B030' },
+                            ].map(lvlItem => {
+                                const isActive = levelFilter === lvlItem.id;
+                                return (
+                                    <button
+                                        key={lvlItem.id}
+                                        onClick={() => setLevelFilter(lvlItem.id)}
+                                        style={{
+                                            backgroundColor: isActive ? lvlItem.bg || '#1A1A1A' : '#fff',
+                                            color: isActive ? lvlItem.color || '#fff' : '#57564F',
+                                            borderColor: isActive ? lvlItem.border || '#1A1A1A' : '#E2E0DB',
+                                        }}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+                                            isActive ? 'font-bold shadow-2xs' : 'hover:bg-[#F7F6F3]'
+                                        }`}
+                                    >
+                                        <span>{lvlItem.label}</span>
+                                        <span className="text-[10px] tabular-nums px-1.5 py-0.2 rounded-full font-bold bg-black/5">
+                                            {lvlItem.count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
 
                     {/* Content */}
                     {loading ? (
