@@ -543,47 +543,98 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
         return true;
     };
 
-    // Thống kê số lượng bài tập theo các tiêu chí bộ lọc (tính chuẩn xác trên nhánh mục lục đang chọn)
-    const filterCounts = useMemo(() => {
+    // ── TÍNH TOÁN BỘ ĐẾM LIÊN ĐỚI THÔNG MINH (FACETED COUNTS) ──
+    // Đếm chính xác theo từng loại và mức độ liên đới với nhau (không bị đếm tổng nhầm)
+    const facetCounts = useMemo(() => {
+        // 1. Tập bài tập cơ sở theo khối học sinh, tab khối lớp, và nhánh mục lục cây
+        const inScopeBlogs = blogs.filter(b => {
+            if (!isAdmin && b.category === 'exam_paper') return false;
+            const postGrade = b.grade || 0;
+            if (!isAdmin && studentGrade && postGrade !== 0 && postGrade !== studentGrade) return false;
+            if (gradeFilter !== 0 && postGrade !== gradeFilter) return false;
+            if (!matchTreeNode(b)) return false;
+            return true;
+        });
+
+        // 2. ĐẾM CHO HÀNG LOẠI CÂU: Phụ thuộc vào levelFilter & hasImageFilter đang chọn
+        const forTypeCounts = inScopeBlogs.filter(b => {
+            if (levelFilter !== 0 && ((b as any).level || 0) !== levelFilter) return false;
+            if (hasImageFilter) {
+                const q = parseCardQuestion(b.content);
+                if (!q || !(q.imageSvg || q.imageUrl || q.imageTelegramFileId)) return false;
+            }
+            return true;
+        });
+
+        let typeAll = forTypeCounts.length;
         let dungSai = 0;
         let tracNghiem = 0;
         let tuLuan = 0;
-        let lvl1 = 0, lvl2 = 0, lvl3 = 0, lvl4 = 0;
-        let withImage = 0;
-        let inCurrentScope = 0;
-
-        blogs.forEach(b => {
-            if (!isAdmin && b.category === 'exam_paper') return;
-            const postGrade = b.grade || 0;
-            if (!isAdmin && studentGrade && postGrade !== 0 && postGrade !== studentGrade) return;
-
-            // Kiểm tra grade tab
-            if (gradeFilter !== 0 && postGrade !== gradeFilter) return;
-
-            // Kiểm tra tree filter
-            if (!matchTreeNode(b)) return;
-
-            inCurrentScope++;
-
+        forTypeCounts.forEach(b => {
             const q = parseCardQuestion(b.content);
             const qType = q?.type === 'dung_sai' ? 'dung_sai' : q?.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan';
             if (qType === 'dung_sai') dungSai++;
             else if (qType === 'trac_nghiem') tracNghiem++;
             else tuLuan++;
+        });
 
+        // 3. ĐẾM CHO HÀNG MỨC ĐỘ: Phụ thuộc vào questionTypeFilter & hasImageFilter đang chọn
+        const forLevelCounts = inScopeBlogs.filter(b => {
+            if (questionTypeFilter !== 'all') {
+                const q = parseCardQuestion(b.content);
+                const qType = q?.type === 'dung_sai' ? 'dung_sai' : q?.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan';
+                if (qType !== questionTypeFilter) return false;
+            }
+            if (hasImageFilter) {
+                const q = parseCardQuestion(b.content);
+                if (!q || !(q.imageSvg || q.imageUrl || q.imageTelegramFileId)) return false;
+            }
+            return true;
+        });
+
+        let levelAll = forLevelCounts.length;
+        let lvl1 = 0, lvl2 = 0, lvl3 = 0, lvl4 = 0;
+        forLevelCounts.forEach(b => {
             const lv = (b as any).level || 0;
             if (lv === 1) lvl1++;
             else if (lv === 2) lvl2++;
             else if (lv === 3) lvl3++;
             else if (lv === 4) lvl4++;
+        });
 
+        // 4. ĐẾM CHO NÚT "CÓ HÌNH / ĐỒ THỊ": Phụ thuộc cả questionTypeFilter & levelFilter
+        const forImageCount = inScopeBlogs.filter(b => {
+            if (questionTypeFilter !== 'all') {
+                const q = parseCardQuestion(b.content);
+                const qType = q?.type === 'dung_sai' ? 'dung_sai' : q?.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan';
+                if (qType !== questionTypeFilter) return false;
+            }
+            if (levelFilter !== 0 && ((b as any).level || 0) !== levelFilter) return false;
+            return true;
+        });
+
+        let withImage = 0;
+        forImageCount.forEach(b => {
+            const q = parseCardQuestion(b.content);
             if (q && (q.imageSvg || q.imageUrl || q.imageTelegramFileId)) {
                 withImage++;
             }
         });
 
-        return { dungSai, tracNghiem, tuLuan, lvl1, lvl2, lvl3, lvl4, withImage, inCurrentScope };
-    }, [blogs, selectedTreeNode, gradeFilter, isAdmin, studentGrade]);
+        return {
+            typeAll,
+            dungSai,
+            tracNghiem,
+            tuLuan,
+            levelAll,
+            lvl1,
+            lvl2,
+            lvl3,
+            lvl4,
+            withImage,
+            totalInScope: inScopeBlogs.length,
+        };
+    }, [blogs, selectedTreeNode, gradeFilter, questionTypeFilter, levelFilter, hasImageFilter, isAdmin, studentGrade]);
 
     const isAnyFilterActive = questionTypeFilter !== 'all' || levelFilter !== 0 || hasImageFilter || searchQuery.trim() !== '';
 
@@ -824,7 +875,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                                 <Sparkles className="w-3.5 h-3.5" />
                                 <span>Có hình / Đồ thị</span>
                                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${hasImageFilter ? 'bg-[#DCE3FA] text-[#3649AF]' : 'bg-[#EAE8E4] text-[#787774]'}`}>
-                                    {filterCounts.withImage}
+                                    {facetCounts.withImage}
                                 </span>
                             </button>
 
@@ -844,10 +895,10 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                         <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-[#F2F1ED]">
                             <span className="text-[10.5px] font-bold text-[#8F8E8C] uppercase tracking-wider mr-1">Loại câu:</span>
                             {[
-                                { id: 'all', label: 'Tất cả loại câu', count: blogs.length },
-                                { id: 'dung_sai', label: '⚖️ Đúng / Sai (Phần II)', count: filterCounts.dungSai, activeColor: 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]' },
-                                { id: 'trac_nghiem', label: '⚡ Trắc nghiệm 4 PA (Phần I)', count: filterCounts.tracNghiem, activeColor: 'bg-[#EAF3EE] text-[#448361] border-[#44836140]' },
-                                { id: 'tu_luan', label: '✏️ Trả lời ngắn (Phần III)', count: filterCounts.tuLuan, activeColor: 'bg-[#EEF0FB] text-[#6B7CDB] border-[#D0D5F5]' },
+                                { id: 'all', label: 'Tất cả loại câu', count: facetCounts.typeAll },
+                                { id: 'dung_sai', label: '⚖️ Đúng / Sai (Phần II)', count: facetCounts.dungSai, activeColor: 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]' },
+                                { id: 'trac_nghiem', label: '⚡ Trắc nghiệm 4 PA (Phần I)', count: facetCounts.tracNghiem, activeColor: 'bg-[#EAF3EE] text-[#448361] border-[#44836140]' },
+                                { id: 'tu_luan', label: '✏️ Trả lời ngắn (Phần III)', count: facetCounts.tuLuan, activeColor: 'bg-[#EEF0FB] text-[#6B7CDB] border-[#D0D5F5]' },
                             ].map(typeItem => {
                                 const isActive = questionTypeFilter === typeItem.id;
                                 return (
@@ -875,11 +926,11 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                         <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-[#F2F1ED]">
                             <span className="text-[10.5px] font-bold text-[#8F8E8C] uppercase tracking-wider mr-1">Mức độ:</span>
                             {[
-                                { id: 0, label: 'Tất cả mức', count: blogs.length },
-                                { id: 1, label: 'Mức 1: Nhận biết', count: filterCounts.lvl1, bg: '#EAF3EE', color: '#448361', border: '#44836130' },
-                                { id: 2, label: 'Mức 2: Thông hiểu', count: filterCounts.lvl2, bg: '#EEF0FB', color: '#6B7CDB', border: '#6B7CDB30' },
-                                { id: 3, label: 'Mức 3: Vận dụng', count: filterCounts.lvl3, bg: '#FFF3E8', color: '#D9730D', border: '#D9730D30' },
-                                { id: 4, label: 'Mức 4: Vận dụng cao', count: filterCounts.lvl4, bg: '#F3ECF8', color: '#9065B0', border: '#9065B030' },
+                                { id: 0, label: 'Tất cả mức', count: facetCounts.levelAll },
+                                { id: 1, label: 'Mức 1: Nhận biết', count: facetCounts.lvl1, bg: '#EAF3EE', color: '#448361', border: '#44836130' },
+                                { id: 2, label: 'Mức 2: Thông hiểu', count: facetCounts.lvl2, bg: '#EEF0FB', color: '#6B7CDB', border: '#6B7CDB30' },
+                                { id: 3, label: 'Mức 3: Vận dụng', count: facetCounts.lvl3, bg: '#FFF3E8', color: '#D9730D', border: '#D9730D30' },
+                                { id: 4, label: 'Mức 4: Vận dụng cao', count: facetCounts.lvl4, bg: '#F3ECF8', color: '#9065B0', border: '#9065B030' },
                             ].map(lvlItem => {
                                 const isActive = levelFilter === lvlItem.id;
                                 return (
