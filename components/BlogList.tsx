@@ -62,8 +62,20 @@ function TextWithMathCard({ text }: { text: string }) {
     );
 }
 
-// Parse blog.content → lấy câu hỏi đầu tiên để hiển thị trên card
 type QuestionType = StudyQuestionType;
+
+interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
+    'type' | 'choices' | 'correctChoice' | 'statements' | 'solution' | 'steps' | 'solutionSteps'
+    | 'tikzCode' | 'imageSvg' | 'imageUrl' | 'imageTelegramFileId' | 'imageLayout'>> {
+    question_no?: string;
+    question_text?: string;
+    question_latex?: string;
+    tikz_code?: string;
+    image_svg?: string;
+    image_url?: string;
+    image_telegram_file_id?: string;
+    image_layout?: SelectedQuestionItem['imageLayout'];
+}
 
 interface CardQuestionData {
     questionNo: string;
@@ -73,41 +85,40 @@ interface CardQuestionData {
     imageSvg?: string;
     imageUrl?: string;
     imageTelegramFileId?: string;
-    imageLayout?: 'auto' | 'right' | 'bottom';
+    imageLayout?: SelectedQuestionItem['imageLayout'];
 }
 
-function parseCardQuestion(content: string): CardQuestionData | null {
+function parsePhysicsSolution(content: string): { type: 'physics_solution'; data: StoredQuestion & { questions?: StoredQuestion[] } } | null {
     try {
         const parsed = JSON.parse(content);
-        if (parsed.type !== 'physics_solution' || !parsed.data) return null;
-        const data = parsed.data;
-        if (data.questions && data.questions.length > 0) {
-            const q = data.questions[0];
-            return {
-                questionNo: q.question_no || '',
-                questionText: q.question_text || '',
-                questionLatex: q.question_latex || '',
-                type: q.type === 'dung_sai' ? 'dung_sai' : q.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan',
-                imageSvg: q.image_svg || q.imageSvg || '',
-                imageUrl: q.image_url || q.imageUrl || '',
-                imageTelegramFileId: q.image_telegram_file_id || q.imageTelegramFileId || '',
-                imageLayout: q.image_layout || q.imageLayout || 'auto',
-            };
-        }
-        // Backward compat: root-level single question
-        return {
-            questionNo: data.question_no || '',
-            questionText: data.question_text || '',
-            questionLatex: data.question_latex || '',
-            type: 'tu_luan',
-            imageSvg: data.image_svg || data.imageSvg || '',
-            imageUrl: data.image_url || data.imageUrl || '',
-            imageTelegramFileId: data.image_telegram_file_id || data.imageTelegramFileId || '',
-            imageLayout: data.image_layout || data.imageLayout || 'auto',
-        };
+        return parsed?.type === 'physics_solution' && parsed.data && typeof parsed.data === 'object' ? parsed : null;
     } catch {
         return null;
     }
+}
+
+function getStoredQuestions(solution: ReturnType<typeof parsePhysicsSolution>): StoredQuestion[] {
+    if (!solution) return [];
+    const { data } = solution;
+    return Array.isArray(data.questions) && data.questions.length ? data.questions : [data];
+}
+
+function toCardQuestion(question?: StoredQuestion): CardQuestionData | null {
+    if (!question) return null;
+    return {
+        questionNo: question.question_no || '',
+        questionText: question.question_text || '',
+        questionLatex: question.question_latex || '',
+        type: question.type === 'dung_sai' ? 'dung_sai' : question.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan',
+        imageSvg: question.image_svg || question.imageSvg || '',
+        imageUrl: question.image_url || question.imageUrl || '',
+        imageTelegramFileId: question.image_telegram_file_id || question.imageTelegramFileId || '',
+        imageLayout: question.image_layout || question.imageLayout || 'auto',
+    };
+}
+
+function questionKey(blogId: string, index: number) {
+    return JSON.stringify([blogId, index]);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -116,6 +127,7 @@ function parseCardQuestion(content: string): CardQuestionData | null {
 
 interface QuestionCardProps {
     blog: BlogPost;
+    question: CardQuestionData | null;
     isAdmin: boolean;
     onEditBlog?: (blog: BlogPost) => void;
     onClick: () => void;
@@ -124,8 +136,7 @@ interface QuestionCardProps {
     onToggleSelect?: () => void;
 }
 
-function QuestionCard({ blog, isAdmin, onEditBlog, onClick, gc, isSelected, onToggleSelect }: QuestionCardProps) {
-    const q = parseCardQuestion(blog.content);
+function QuestionCard({ blog, question: q, isAdmin, onEditBlog, onClick, gc, isSelected, onToggleSelect }: QuestionCardProps) {
     const isDungSai    = q?.type === 'dung_sai';
     const isTracNghiem = q?.type === 'trac_nghiem';
     const hasImg = !!(q?.imageSvg || q?.imageUrl || q?.imageTelegramFileId);
@@ -400,7 +411,7 @@ function QuestionCard({ blog, isAdmin, onEditBlog, onClick, gc, isSelected, onTo
                     height: '240px', overflowY: 'auto', padding: '14px 16px',
                     fontSize: '15px', color: '#374151', lineHeight: 1.7,
                 }}>
-                    <p style={{ margin: 0, color: '#787774' }}>{blog.summary}</p>
+                    <p style={{ margin: 0, color: '#787774' }}>{blog.summary || blog.title}</p>
                 </div>
             )}
         </article>
@@ -451,7 +462,7 @@ const levelOptions = [
 ] as const;
 
 function indexQuestion(blog: BlogPost) {
-    const question = parseCardQuestion(blog.content);
+    const question = toCardQuestion(getStoredQuestions(parsePhysicsSolution(blog.content))[0]);
     return {
         blog,
         type: question?.type ?? 'tu_luan',
@@ -555,53 +566,85 @@ const BlogList: React.FC<BlogListProps> = ({
     const [levelFilter, setLevelFilter] = useState<number>(0); // 0 = Tất cả, 1-4 = Mức độ 1 đến 4
     const [hasImageFilter, setHasImageFilter] = useState<boolean>(false); // Chỉ câu có hình vẽ / đồ thị
 
-    const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
+    const [selectedCardIndexes, setSelectedCardIndexes] = useState(() => new Map<string, Set<number>>());
     const [isExamModalOpen, setIsExamModalOpen] = useState(false);
     const navigate = useNavigate();
 
-    const handleToggleSelect = (id: string) => {
-        setSelectedBlogIds(prev =>
-            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-        );
+    const handleToggleSelect = (blogId: string, index: number) => {
+        setSelectedCardIndexes(previous => {
+            const next = new Map(previous);
+            const indexes = new Set(next.get(blogId));
+            if (indexes.has(index)) indexes.delete(index);
+            else indexes.add(index);
+            if (indexes.size) next.set(blogId, indexes);
+            else next.delete(blogId);
+            return next;
+        });
     };
 
-    const selectedQuestions: SelectedQuestionItem[] = useMemo(() => {
-        return blogs
-            .filter(b => selectedBlogIds.includes(b.id))
-            .map((b, idx) => {
-                try {
-                    const p = JSON.parse(b.content);
-                    if (p.type === 'physics_solution' && p.data) {
-                        const q = p.data.questions?.[0] || p.data;
-                        return {
-                            id: b.id,
-                            questionNo: q.question_no || `Câu ${idx + 1}`,
-                            qText: q.question_text || '',
-                            qFormula: q.question_latex || '',
-                            type: q.type === 'dung_sai' ? 'dung_sai' : q.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan',
-                            choices: q.choices || [],
-                            correctChoice: q.correctChoice || '',
-                            statements: q.statements || [],
-                            solution: q.solution || "",
-                            solutionSteps: q.solutionSteps || [],
-                            steps: q.steps || [],
-                            level: b.level || 0,
-                            tikzCode: q.tikz_code || q.tikzCode || '',
-                            imageSvg: q.image_svg || q.imageSvg || '',
-                            imageUrl: q.image_url || q.imageUrl || '',
-                            imageTelegramFileId: q.image_telegram_file_id || q.imageTelegramFileId || '',
-                            imageLayout: q.image_layout || q.imageLayout || 'auto',
-                        };
-                    }
-                } catch (_) {}
-                return {
-                    id: b.id,
-                    questionNo: `Câu ${idx + 1}`,
-                    qText: b.summary || b.title,
-                    type: 'tu_luan' as const,
-                };
+    const selectedQuestions = useMemo(() => {
+        const selected: SelectedQuestionItem[] = [];
+        for (const blog of blogs) {
+            const indexes = selectedCardIndexes.get(blog.id);
+            if (!indexes) continue;
+            const questions = getStoredQuestions(parsePhysicsSolution(blog.content));
+            (questions.length ? questions : [undefined]).forEach((question, index) => {
+                if (!indexes.has(index)) return;
+                const card = toCardQuestion(question);
+                selected.push({
+                    id: questionKey(blog.id, index),
+                    questionNo: card?.questionNo || 'Câu ' + (selected.length + 1),
+                    qText: card ? card.questionText : blog.summary || blog.title,
+                    qFormula: card?.questionLatex,
+                    type: card?.type ?? 'tu_luan',
+                    choices: question?.choices,
+                    correctChoice: question?.correctChoice,
+                    statements: question?.statements,
+                    solution: question?.solution,
+                    solutionSteps: question?.solutionSteps,
+                    steps: question?.steps,
+                    level: blog.level,
+                    tikzCode: question?.tikz_code || question?.tikzCode,
+                    imageSvg: card?.imageSvg,
+                    imageUrl: card?.imageUrl,
+                    imageTelegramFileId: card?.imageTelegramFileId,
+                    imageLayout: card?.imageLayout,
+                });
             });
-    }, [blogs, selectedBlogIds]);
+        }
+        return selected;
+    }, [blogs, selectedCardIndexes]);
+
+    const renderQuestionCards = (posts: BlogPost[], expandQuestions = false) => (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            {posts.flatMap(blog => {
+                const solution = parsePhysicsSolution(blog.content);
+                const questions = getStoredQuestions(solution);
+                const displayed = expandQuestions && questions.length ? questions : [questions[0]];
+                const gc = GRADE_COLORS[blog.grade || 0] || GRADE_COLORS[0];
+                return displayed.map((question, index) => (
+                    <QuestionCard
+                        key={questionKey(blog.id, index)}
+                        blog={blog}
+                        question={toCardQuestion(question)}
+                        isAdmin={isAdmin}
+                        onEditBlog={onEditBlog}
+                        onClick={() => {
+                            if (solution && question && expandQuestions && questions.length > 1) {
+                                const content = JSON.stringify({ ...solution, data: { ...solution.data, questions: [question] } });
+                                onReadBlog({ ...blog, content });
+                            } else {
+                                onReadBlog(blog);
+                            }
+                        }}
+                        gc={gc}
+                        isSelected={selectedCardIndexes.get(blog.id)?.has(index)}
+                        onToggleSelect={() => handleToggleSelect(blog.id, index)}
+                    />
+                ));
+            })}
+        </div>
+    );
 
     useEffect(() => {
         let cancelled = false;
@@ -850,6 +893,7 @@ const BlogList: React.FC<BlogListProps> = ({
                                 if (selectedType) setSearchParams(studySectionParams({ chapterId: activeChapter.id, questionType: selectedType, lessonId }));
                             }}
                             onRead={onReadBlog} onCreate={isAdmin ? onCreateBlog : undefined} onEdit={isAdmin ? onEditBlog : undefined}
+                            renderLessonPosts={posts => renderQuestionCards(posts, true)}
                             onSaveLesson={onSaveLesson} lessonSync={lessonSync} onRetryLessonSync={onRetryLessonSync} />
                     ) : (<>
                     <section aria-labelledby="question-filter-heading" className="space-y-2 rounded-xl border border-stone-200 bg-white p-2.5 shadow-sm sm:px-3">
@@ -969,31 +1013,14 @@ const BlogList: React.FC<BlogListProps> = ({
                             )}
                         </div>
                     ) : (
-                        /* ── Grid: 1 cột trên mobile, đúng 2 cột trên tablet/desktop ── */
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            {filteredBlogs.map(blog => {
-                                const gc = GRADE_COLORS[blog.grade || 0] || GRADE_COLORS[0];
-                                return (
-                                    <QuestionCard
-                                        key={blog.id}
-                                        blog={blog}
-                                        isAdmin={isAdmin}
-                                        onEditBlog={onEditBlog}
-                                        onClick={() => onReadBlog(blog)}
-                                        gc={gc}
-                                        isSelected={selectedBlogIds.includes(blog.id)}
-                                        onToggleSelect={() => handleToggleSelect(blog.id)}
-                                    />
-                                );
-                            })}
-                        </div>
+                        renderQuestionCards(filteredBlogs)
                     )}
                     </>)}
                 </div>
             </div>
 
             {/* ── FLOATING BAR: Khi có câu hỏi được chọn ── */}
-            {selectedBlogIds.length > 0 && (
+            {selectedQuestions.length > 0 && (
                 <div
                     style={{
                         position: 'fixed',
@@ -1020,13 +1047,13 @@ const BlogList: React.FC<BlogListProps> = ({
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: '11px', fontWeight: 700, padding: '0 6px',
                         }}>
-                            {selectedBlogIds.length}
+                            {selectedQuestions.length}
                         </span>
                         <span>câu hỏi đã chọn</span>
                     </div>
 
                     <button
-                        onClick={() => setSelectedBlogIds([])}
+                        onClick={() => setSelectedCardIndexes(new Map())}
                         style={{
                             background: 'none',
                             border: 'none',

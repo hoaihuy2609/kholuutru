@@ -38,7 +38,7 @@ function PostRows({ posts, onRead, onEdit }: {
 
 export default function ChapterStudyList({
   chapter, selectedType, selectedLessonId, blogs, lessons, loading, onSelectType, onSelectLesson,
-  onRead, onCreate, onEdit, onSaveLesson, lessonSync, onRetryLessonSync,
+  onRead, onCreate, onEdit, onSaveLesson, lessonSync, onRetryLessonSync, renderLessonPosts,
 }: {
   chapter: { id: string; name: string; grade: number };
   selectedType?: StudyQuestionType;
@@ -51,6 +51,7 @@ export default function ChapterStudyList({
   onRead: (blog: BlogPost) => void;
   onCreate?: (section: StudySection) => void;
   onEdit?: (blog: BlogPost) => void;
+  renderLessonPosts: (posts: BlogPost[]) => React.ReactNode;
   onSaveLesson?: (section: StudySection, title: string, id?: string) => Promise<StudyLesson | null>;
   lessonSync?: 'syncing' | 'failed';
   onRetryLessonSync?: () => void;
@@ -189,7 +190,11 @@ export default function ChapterStudyList({
           {loading ? (
             <p role="status" className="px-3.5 py-8 text-center text-sm text-stone-600">Đang tải danh sách bài…</p>
           ) : activeLesson ? (
-            lessonPosts.length ? <PostRows posts={lessonPosts} onRead={onRead} onEdit={onEdit} />
+            lessonPosts.length ? (
+              <div className="p-3.5">
+                {renderLessonPosts([...lessonPosts].sort((first, second) => titleOrder.compare(first.title, second.title)))}
+              </div>
+            )
               : <p className="px-3.5 py-8 text-center text-sm text-stone-600">Bài này chưa có nội dung.</p>
           ) : (
             <>
