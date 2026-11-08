@@ -6,6 +6,7 @@ import {
 import {
   ExamStyleConfig, DEFAULT_EXAM_STYLE, SelectedQuestionItem,
   formatExamSectionNote, generateExamLatex, downloadTexFile,
+  printExamDirectlyToPdf
 } from '../src/services/examLatexService';
 
 interface ExamStyleModalProps {
@@ -63,20 +64,46 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
     downloadTexFile(tex, `De_Thi_${config.subject}_Ma_${config.examCode}.tex`);
   };
 
+  // 2. Xuất file PDF TRỰC TIẾP TRONG WEB (100% Client-side, không qua bên thứ 3)
   const handleExportPdf = async () => {
     setIsCompiling(true);
-    setCompileStatus('');
+    setCompileStatus('Đang biên soạn đề thi...');
+    const tex = generateExamLatex(questions, config);
 
     try {
-      const { downloadExamPdf } = await import('../src/services/examPdfService');
-      await downloadExamPdf(questions, config);
-    } catch (error) {
-      const message = error instanceof Error && error.message.startsWith('Không tải được hình')
-        ? error.message : 'Không tạo được PDF. Vui lòng thử lại.';
-      setCompileStatus(message);
-    } finally {
-      setIsCompiling(false);
+      // 1. Thử gọi backend local compiler nếu có
+      const res = await fetch('/api/compile-latex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tex, fileName: `De_Thi_${config.subject}_Ma_${config.examCode}` }),
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `De_Thi_${config.subject}_Ma_${config.examCode}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setCompileStatus('Đã tải file PDF về máy!');
+        setIsCompiling(false);
+        return;
+      }
+    } catch (_) {
+      // Fallback sang Engine in trực tiếp trong trình duyệt
     }
+
+    // 2. Tự biên soạn và xuất PDF trực tiếp ngay trong trình duyệt (100% nội bộ)
+    setCompileStatus('Đang mở bản in PDF...');
+    printExamDirectlyToPdf(questions, config);
+
+    setTimeout(() => {
+      setIsCompiling(false);
+      setCompileStatus('');
+    }, 1000);
   };
 
   return (
@@ -442,7 +469,6 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
         </div>
 
         {/* ── FOOTER MODAL: NÚT XUẤT ĐỀ TRỰC TIẾP TRONG WEB ── */}
-        {compileStatus && <p role="alert" className="shrink-0 border-t border-red-100 bg-red-50 px-3 py-2 text-xs text-red-800 sm:px-5">{compileStatus}</p>}
         <div className="grid shrink-0 gap-2 border-t border-stone-200 bg-white p-3 sm:flex sm:items-center sm:justify-between sm:px-5">
           <div className="flex items-center gap-2 text-xs font-semibold text-stone-700">
             <span className="rounded-full bg-amber-100 px-2 py-1 font-bold tabular-nums text-amber-950">{questions.length}</span>
@@ -470,7 +496,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
               {isCompiling ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Đang tạo PDF…</span>
+                  <span>{compileStatus || 'Đang biên soạn...'}</span>
                 </>
               ) : (
                 <>

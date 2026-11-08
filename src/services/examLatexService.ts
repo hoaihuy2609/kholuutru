@@ -431,12 +431,16 @@ export function openInOverleaf(texContent: string) {
 }
 
 
-function escapeHtml(value: string): string {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;').replaceAll('"', '&quot;');
-}
+/**
+ * Tự động biên soạn đề và in/xuất PDF trực tiếp ngay trong trình duyệt (100% nội bộ, không qua bên thứ 3)
+ */
+export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config: ExamStyleConfig) {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    alert('Trình duyệt đang chặn cửa sổ pop-up. Vui lòng cho phép mở pop-up để xuất PDF!');
+    return;
+  }
 
-export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: ExamStyleConfig) {
   const primaryColor = config.isCustomColor ? config.customColor : config.themeColor;
 
   const renderQuestionImageHtml = (q: SelectedQuestionItem) => {
@@ -444,10 +448,8 @@ export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: Exam
     let inner = '';
     if (q.imageSvg) {
       inner = `<div style="max-width: 100%; display: flex; justify-content: center; align-items: center;">${q.imageSvg}</div>`;
-    } else {
-      inner = q.imageUrl
-        ? `<img src="${escapeHtml(q.imageUrl)}" style="max-width: 100%; height: auto;" />`
-        : `<img data-telegram-image="${escapeHtml(q.imageTelegramFileId || '')}" style="max-width: 100%; height: auto;" />`;
+    } else if (q.imageUrl) {
+      inner = `<img src="${q.imageUrl}" style="max-width: 100%; height: auto;" />`;
     }
     return inner ? `<div style="display: flex; justify-content: center; align-items: center; background: transparent;">${inner}</div>` : '';
   };
@@ -461,10 +463,10 @@ export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: Exam
       const before = parts[0] || '';
       const after = parts.slice(1).join('[image]') || '';
       return `
-        <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(before)}</div>
+        <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${before}</div>
         <div style="margin: 10px 0; text-align: center;">${imgHtml}</div>
-        ${after.trim() ? `<div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-top: 4px;">${escapeHtml(after)}</div>` : ''}
-        ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
+        ${after.trim() ? `<div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-top: 4px;">${after}</div>` : ''}
+        ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
       `;
     }
 
@@ -473,10 +475,10 @@ export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: Exam
       return `
         <div style="display: flex; gap: 16px; align-items: flex-start;">
           <div style="flex: 1;">
-            <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
-            ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
+            <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
+            ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
           </div>
-          <div style="width: 38%; max-width: 260px; flex-shrink: 0;">
+          <div style="width: 38%; max-width: 260px; shrink: 0;">
             ${imgHtml}
           </div>
         </div>
@@ -484,8 +486,8 @@ export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: Exam
     }
 
     return `
-      <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
-      ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
+      <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
+      ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${q.qFormula}$$</div>` : ''}
       ${imgHtml ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}
     `;
   };
@@ -498,29 +500,29 @@ export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: Exam
   const shortAnswerNote = config.shortAnswerNote || config.essayNote || DEFAULT_EXAM_STYLE.shortAnswerNote;
   let nextQuestionNumber = 1;
 
-  let bodyHtml = config.enableBox ? `
+  let bodyHtml = `
     <!-- HEADER ĐỀ THI -->
     <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 24px;">
       <div style="text-align: center; width: 45%;">
-        <div style="font-weight: bold; font-size: 11pt; text-transform: uppercase;">${escapeHtml(config.headerTitle)}</div>
-        <div style="font-size: 10.5pt; font-weight: bold;">${escapeHtml(config.schoolName)}</div>
-        <div style="margin-top: 4px; font-size: 9.5pt;">Mã đề thi: <b>${escapeHtml(config.examCode)}</b></div>
+        <div style="font-weight: bold; font-size: 11pt; text-transform: uppercase;">${config.headerTitle}</div>
+        <div style="font-size: 10.5pt; font-weight: bold;">${config.schoolName}</div>
+        <div style="margin-top: 4px; font-size: 9.5pt;">Mã đề thi: <b>${config.examCode}</b></div>
       </div>
       <div style="text-align: center; width: 50%;">
-        <div style="font-weight: bold; font-size: 13pt; text-transform: uppercase; color: ${primaryColor};">${escapeHtml(config.examName)}</div>
-        <div style="font-size: 10.5pt;">Môn thi: <b>${escapeHtml(config.subject.toUpperCase())}</b></div>
+        <div style="font-weight: bold; font-size: 13pt; text-transform: uppercase; color: ${primaryColor};">${config.examName}</div>
+        <div style="font-size: 10.5pt;">Môn thi: <b>${config.subject.toUpperCase()}</b></div>
         <div style="font-size: 10pt; font-style: italic;">Thời gian làm bài: ${config.duration} phút</div>
       </div>
     </div>
-  ` : '';
+  `;
 
   // PHẦN I: TRẮC NGHIỆM
   if (tracNghiemList.length > 0) {
     if (config.enableSectionTitles) {
       bodyHtml += `
-        <div data-keep-with-next style="margin: 16px 0 10px 0;">
-          <div style="font-weight: bold; font-size: 12pt; color: ${primaryColor};">${escapeHtml(config.choice4Title)}</div>
-          <div style="font-size: 10pt; font-style: italic; color: #555;">${escapeHtml(formatExamSectionNote(config.choice4Note, tracNghiemList.length))}</div>
+        <div style="margin: 16px 0 10px 0;">
+          <div style="font-weight: bold; font-size: 12pt; color: ${primaryColor};">${config.choice4Title}</div>
+          <div style="font-size: 10pt; font-style: italic; color: #555;">${formatExamSectionNote(config.choice4Note, tracNghiemList.length)}</div>
         </div>
       `;
     }
@@ -535,10 +537,10 @@ export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: Exam
         <div style="margin-bottom: 16px; page-break-inside: avoid; text-align: justify;">
           ${renderQuestionHeaderPdf(q, qNum)}
           <div style="display: grid; grid-template-columns: ${cols}; gap: 6px 16px; margin-top: 8px;">
-            <div><b>A.</b> ${escapeHtml(choices[0] || '')}</div>
-            <div><b>B.</b> ${escapeHtml(choices[1] || '')}</div>
-            <div><b>C.</b> ${escapeHtml(choices[2] || '')}</div>
-            <div><b>D.</b> ${escapeHtml(choices[3] || '')}</div>
+            <div><b>A.</b> ${choices[0] || ''}</div>
+            <div><b>B.</b> ${choices[1] || ''}</div>
+            <div><b>C.</b> ${choices[2] || ''}</div>
+            <div><b>D.</b> ${choices[3] || ''}</div>
           </div>
         </div>
       `;
@@ -549,9 +551,9 @@ export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: Exam
   if (dungSaiList.length > 0) {
     if (config.enableSectionTitles) {
       bodyHtml += `
-        <div data-keep-with-next style="margin: 20px 0 10px 0;">
-          <div style="font-weight: bold; font-size: 12pt; color: ${primaryColor};">${escapeHtml(config.trueFalseTitle)}</div>
-          <div style="font-size: 10pt; font-style: italic; color: #555;">${escapeHtml(formatExamSectionNote(config.trueFalseNote, dungSaiList.length))}</div>
+        <div style="margin: 20px 0 10px 0; page-break-before: auto;">
+          <div style="font-weight: bold; font-size: 12pt; color: ${primaryColor};">${config.trueFalseTitle}</div>
+          <div style="font-size: 10pt; font-style: italic; color: #555;">${formatExamSectionNote(config.trueFalseNote, dungSaiList.length)}</div>
         </div>
       `;
     }
@@ -563,7 +565,7 @@ export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: Exam
         <div style="margin-bottom: 16px; page-break-inside: avoid; text-align: justify;">
           ${renderQuestionHeaderPdf(q, qNum)}
           <div style="margin-top: 6px; padding-left: 12px; display: flex; flex-direction: column; gap: 4px;">
-            ${(q.statements || []).map(st => `<div><b>${escapeHtml(st.label)})</b> ${escapeHtml(st.claim || '')}</div>`).join('')}
+            ${(q.statements || []).map(st => `<div><b>${st.label})</b> ${st.claim || ''}</div>`).join('')}
           </div>
         </div>
       `;
@@ -574,9 +576,9 @@ export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: Exam
   if (tuLuanList.length > 0) {
     if (config.enableSectionTitles) {
       bodyHtml += `
-        <div data-keep-with-next style="margin: 20px 0 10px 0;">
-          <div style="font-weight: bold; font-size: 12pt; color: ${primaryColor};">${escapeHtml(shortAnswerTitle)}</div>
-          <div style="font-size: 10pt; font-style: italic; color: #555;">${escapeHtml(formatExamSectionNote(shortAnswerNote, tuLuanList.length))}</div>
+        <div style="margin: 20px 0 10px 0;">
+          <div style="font-weight: bold; font-size: 12pt; color: ${primaryColor};">${shortAnswerTitle}</div>
+          <div style="font-size: 10pt; font-style: italic; color: #555;">${formatExamSectionNote(shortAnswerNote, tuLuanList.length)}</div>
         </div>
       `;
     }
@@ -595,16 +597,16 @@ export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: Exam
   // BẢNG ĐÁP ÁN (NẾU BẬT)
   if (config.exportAnswerTable && tracNghiemList.length > 0) {
     bodyHtml += `
-      <div data-new-page style="margin-top: 12px;">
+      <div style="margin-top: 30px; page-break-before: always;">
         <div style="text-align: center; font-weight: bold; font-size: 12pt; color: ${primaryColor}; margin-bottom: 12px;">
-          BẢNG ĐÁP ÁN THAM KHẢO (MÃ ĐỀ: ${escapeHtml(config.examCode)})
+          BẢNG ĐÁP ÁN THAM KHẢO (MÃ ĐỀ: ${config.examCode})
         </div>
         <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 11pt;">
           <tr style="background: #f5f5f5;">
             ${tracNghiemList.map((_, i) => `<th style="border: 1px solid #333; padding: 6px;">${i + 1}</th>`).join('')}
           </tr>
           <tr>
-            ${tracNghiemList.map(q => `<td style="border: 1px solid #333; padding: 6px; font-weight: bold;">${escapeHtml(q.correctChoice || '-')}</td>`).join('')}
+            ${tracNghiemList.map(q => `<td style="border: 1px solid #333; padding: 6px; font-weight: bold;">${q.correctChoice || '-'}</td>`).join('')}
           </tr>
         </table>
       </div>
@@ -614,9 +616,10 @@ export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: Exam
   // LỜI GIẢI CHI TIẾT (NẾU BẬT)
   if (config.exportDetailedSolution) {
     bodyHtml += `
-      <div data-new-page data-keep-with-next style="text-align: center; font-weight: bold; font-size: 14pt; color: ${primaryColor}; border-bottom: 2px solid ${primaryColor}; padding-bottom: 6px; margin-bottom: 18px;">
-        HƯỚNG DẪN GIẢI CHI TIẾT
-      </div>
+      <div style="margin-top: 30px; page-break-before: always;">
+        <div style="text-align: center; font-weight: bold; font-size: 14pt; color: ${primaryColor}; border-bottom: 2px solid ${primaryColor}; padding-bottom: 6px; margin-bottom: 18px;">
+          HƯỚNG DẪN GIẢI CHI TIẾT
+        </div>
     `;
 
     const entries = getSolutionEntries([
@@ -625,27 +628,100 @@ export function buildExamPdfHtml(questions: SelectedQuestionItem[], config: Exam
       { title: shortAnswerTitle, questions: tuLuanList },
     ], config.enableSectionTitles);
     entries.forEach(({ question: q, number: qNum, sectionTitle }) => {
-      if (sectionTitle) bodyHtml += `<h3 data-keep-with-next style="font-size: 11pt; color: ${primaryColor};">${escapeHtml(sectionTitle)}</h3>`;
+      if (sectionTitle) bodyHtml += `<h3 style="font-size: 11pt; color: ${primaryColor};">${sectionTitle}</h3>`;
       bodyHtml += `
         <div style="margin-bottom: 18px; page-break-inside: avoid;">
-          <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-bottom: 6px;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
+          <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-bottom: 6px;"><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>
           <div style="text-align: center; color: #0000ff; font-weight: bold; margin: 6px 0 8px 0;">Lời giải:</div>
           <div style="padding-left: 12px; font-size: 11pt; text-align: justify; text-justify: inter-word;">
             ${q.solution ? `
-              <div style="margin-bottom: 6px; white-space: pre-wrap; line-height: 1.45;">${escapeHtml(q.solution)}</div>
+              <div style="margin-bottom: 6px; white-space: pre-wrap; line-height: 1.45;">${q.solution}</div>
             ` : (q.solutionSteps || q.steps || []).map(s => `
               <div style="margin-bottom: 6px;">
-                ${s.title ? `<b>${escapeHtml(s.title)}:</b> ` : ''}${escapeHtml(s.text || '')}
-                ${s.formula ? `<div style="text-align: center; margin: 4px 0;">$$${escapeHtml(s.formula)}$$</div>` : ''}
+                ${s.title ? `<b>${s.title}:</b> ` : ''}${s.text || ''}
+                ${s.formula ? `<div style="text-align: center; margin: 4px 0;">$$${s.formula}$$</div>` : ''}
               </div>
             `).join('')}
-            ${q.correctChoice ? `<div style="font-weight: bold; color: #2e7d32; margin-top: 4px;">➔ Đáp án: ${escapeHtml(q.correctChoice)}</div>` : ''}
+            ${q.correctChoice ? `<div style="font-weight: bold; color: #2e7d32; margin-top: 4px;">➔ Đáp án: ${q.correctChoice}</div>` : ''}
           </div>
         </div>
       `;
     });
 
+    bodyHtml += `</div>`;
   }
 
-  return bodyHtml;
+  const fullHtml = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>${config.examName} - Mã đề ${config.examCode}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 15mm 18mm 15mm;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'KaTeX_Main', 'Computer Modern', 'Times New Roman', serif;
+      font-size: 12pt;
+      font-weight: 400;
+      line-height: 1.4;
+      color: #1a1a1a;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      margin: 0;
+      padding: 15px;
+    }
+    b, strong {
+      font-weight: 600;
+    }
+    .katex {
+      font-size: 1em !important;
+      font-weight: normal !important;
+    }
+    .katex-display {
+      margin: 6px 0 !important;
+    }
+    @media print {
+      body {
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  ${bodyHtml}
+  <script>
+    function doRenderAndPrint() {
+      if (window.renderMathInElement) {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+          ],
+          throwOnError: false
+        });
+      }
+      setTimeout(function() {
+        window.print();
+      }, 500);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener("DOMContentLoaded", doRenderAndPrint);
+    } else {
+      doRenderAndPrint();
+    }
+  </script>
+</body>
+</html>`;
+
+  printWindow.document.open();
+  printWindow.document.write(fullHtml);
+  printWindow.document.close();
 }
