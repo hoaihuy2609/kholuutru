@@ -789,7 +789,7 @@ export default function SolutionEditor({
           createdCount++;
         }
 
-        if (syncBlogs) await syncBlogs();
+        void syncBlogs?.();
         setShowJsonModal(false);
         showToast(`Phát hiện ${createdCount} câu hỏi -> Đã tự động tách thành ${createdCount} Cards riêng biệt thành công!`, 'success');
         if (onBack) onBack();
@@ -961,9 +961,8 @@ export default function SolutionEditor({
       if (saveBlog) {
         const saved = await saveBlog(payload);
         if (saved) {
-          showToast("Đã lưu bài viết! Đang đồng bộ...", "warning");
-          if (syncBlogs) await syncBlogs();
-          showToast("Đã lưu và đồng bộ thành công!", "success");
+          void syncBlogs?.();
+          showToast("Đã lưu bài viết!", "success");
           if (onSaved) onSaved(saved);
         } else throw new Error("Lưu thất bại.");
       } else {
@@ -977,6 +976,19 @@ export default function SolutionEditor({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDelete = async () => {
+    if (!blog || !deleteBlog || !window.confirm('Xóa bài viết này?')) return;
+    setSaving(true);
+    const deleted = await deleteBlog(blog.id);
+    setSaving(false);
+    if (!deleted) {
+      showToast('Xóa thất bại. Vui lòng thử lại.', 'error');
+      return;
+    }
+    void syncBlogs?.();
+    onBack?.();
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -1052,13 +1064,7 @@ export default function SolutionEditor({
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {blog && deleteBlog && (
-            <button onClick={async () => {
-              if (!window.confirm("Xóa bài viết này?")) return;
-              setSaving(true);
-              const ok = await deleteBlog(blog.id);
-              setSaving(false);
-              if (ok && onBack) onBack();
-            }} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-red-50 text-red-600 transition-colors disabled:opacity-50">
+            <button onClick={handleDelete} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-red-50 text-red-600 transition-colors disabled:opacity-50">
               <Trash2 className="w-4 h-4" /> Xóa bài
             </button>
           )}
@@ -1615,13 +1621,7 @@ export default function SolutionEditor({
             {scopedLayout && publishControl}
             {blog && deleteBlog && (
               <button
-                onClick={async () => {
-                  if (!window.confirm('Xóa bài viết này?')) return;
-                  setSaving(true);
-                  const ok = await deleteBlog(blog.id);
-                  setSaving(false);
-                  if (ok && onBack) onBack();
-                }}
+                onClick={handleDelete}
                 disabled={saving}
                 className="px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-red-50 text-red-600 border border-red-200 transition-colors disabled:opacity-50"
               >
@@ -1634,7 +1634,7 @@ export default function SolutionEditor({
               className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-amber-800 px-3.5 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-60 sm:ml-auto"
             >
               <Save className="w-4 h-4" />
-              {saving ? 'Đang lưu & sync...' : (blog ? 'Cập nhật Lời Giải' : 'Đăng bài Lời Giải')}
+              {saving ? 'Đang lưu...' : (blog ? 'Cập nhật Lời Giải' : 'Đăng bài Lời Giải')}
             </button>
           </div>
         </div>

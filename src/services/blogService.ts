@@ -1,12 +1,15 @@
 import { supabase } from '../lib/supabase';
-import { dbGet, dbSet, dbUpdate } from '../lib/db';
+import { dbGet, dbSet, dbSetBatch, dbUpdate } from '../lib/db';
 import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
-import { xorObfuscate, xorDeobfuscate } from '../lib/crypto';
+import { packBlogSnapshot, unpackBlogSnapshot } from './blogSnapshot';
+import { useBlogStore } from '../stores/useContentStore';
 import { BlogPost, StudyLesson, StudyLibrary, StudySection } from '../../types';
 import { getStudyChapter, isStudyQuestionType } from '../utils/studyLibrary';
 
 const BLOG_LOCAL_KEY = 'physivault_blogs_local';
 const BLOG_READER_KEY = 'physivault_blogs_reader';
+const BLOG_READER_FILE_ID = 'physivault_blogs_reader_file_id';
+const BLOG_PENDING_SYNC = 'pv_blog_pending_sync';
 type BlogRecord = BlogPost | StudyLesson;
 
 const isStudyLesson = (record: BlogRecord): record is StudyLesson =>
@@ -23,7 +26,12 @@ let _blogInflight: Promise<string | null> | null = null;
 async function getBlogIndexFileId(): Promise<string | null> {
     if (_blogInflight) return _blogInflight;
     _blogInflight = (async (): Promise<string | null> => {
-        // Ưu tiên: Cloudflare Worker (cache 300s)
+        // Kiểm tra bản mới nhất để điện thoại thấy thay đổi khi mở lại kho.
+        try {
+            const { data, error } = await supabase.from('blog_index')
+                .select('telegram_file_id').order('updated_at', { ascending: false }).limit(1).maybeSingle();
+            if (!error) return data?.telegram_file_id || null;
+        } catch { /* fallback Cloudflare Worker */ }
         if (VAULT_WORKER_URL) {
             try {
                 const res = await fetch(`${VAULT_WORKER_URL}/blog-index`);
@@ -32,14 +40,9 @@ async function getBlogIndexFileId(): Promise<string | null> {
                     const fid = Array.isArray(data) ? data[0]?.telegram_file_id : data?.telegram_file_id;
                     if (fid) return fid as string;
                 }
-            } catch { /* fallback Supabase */ }
+            } catch { /* fallback local cache */ }
         }
-        // Fallback: hỏi Supabase trực tiếp
-        try {
-            const { data } = await supabase.from('blog_index')
-                .select('telegram_file_id').order('updated_at', { ascending: false }).limit(1).maybeSingle();
-            return data?.telegram_file_id || null;
-        } catch { return null; }
+        return null;
     })();
     _blogInflight.finally(() => { _blogInflight = null; });
     return _blogInflight;
@@ -65,25 +68,25 @@ const getBlogRecords = async (isAdmin: boolean): Promise<BlogRecord[]> => {
         return oldCache.filter(record => isBlogPost(record) && record.is_published);
     };
     try {
-        const cached = await getCached();
-        const lastFetch = Number(localStorage.getItem('pv_blog_last_fetch') || '0');
-        if (cached.length && (isAdmin || Date.now() - lastFetch < 15 * 60 * 1000)) return cached;
+        const local: BlogRecord[] | undefined = await dbGet(cacheKey);
+        const cached = local ?? await getCached();
+        if (isAdmin && local !== undefined) return local;
 
         const fileId = await getBlogIndexFileId();
         if (!fileId) return cached;
+        if (!isAdmin && local !== undefined && fileId === await dbGet(BLOG_READER_FILE_ID)) return local;
 
         const records = await fetchBlogRecords(fileId);
         if (isAdmin) {
             // A local edit from another tab can land while the remote index loads.
             let current = records;
             await dbUpdate<BlogRecord[]>(cacheKey, local => {
-                current = local?.length ? local : records;
+                current = local ?? records;
                 return current;
             });
             return current;
         }
-        await dbSet(cacheKey, records);
-        localStorage.setItem('pv_blog_last_fetch', String(Date.now()));
+        await dbSetBatch([[cacheKey, records], [BLOG_READER_FILE_ID, fileId]]);
         return records;
     } catch (error) {
         console.warn('[Blog] Fetch thất bại, dùng cache local:', error);
@@ -93,9 +96,9 @@ const getBlogRecords = async (isAdmin: boolean): Promise<BlogRecord[]> => {
 
 async function fetchBlogRecords(fileId: string): Promise<BlogRecord[]> {
     const buffer = await fetchViaCloudflareProxy(fileId);
-    const text = new TextDecoder().decode(buffer);
-    const firstChar = text.charCodeAt(0);
-    return (firstChar === 91 || firstChar === 123) ? JSON.parse(text) : JSON.parse(xorDeobfuscate(text));
+    const records = await unpackBlogSnapshot(new Uint8Array(buffer));
+    if (!Array.isArray(records)) throw new Error('Dữ liệu kho câu hỏi không hợp lệ');
+    return records;
 }
 
 export const getStudyLibrary = async (isAdmin: boolean): Promise<StudyLibrary> => {
@@ -188,13 +191,12 @@ const uploadBlogRecords = async (onProgress?: (pct: number) => void): Promise<{ 
         if (onProgress) onProgress(5);
         const records: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
         const blogCount = records.filter(isBlogPost).length;
-        const jsonStr = xorObfuscate(JSON.stringify(records));
+        const { blob, name } = await packBlogSnapshot(records);
         if (onProgress) onProgress(20);
 
-        const blob = new Blob([jsonStr], { type: 'application/json' });
         const formData = new FormData();
         formData.append('chat_id', TELEGRAM_CHAT_ID);
-        formData.append('document', blob, `blog_vault_v1.json`);
+        formData.append('document', blob, name);
         formData.append('caption', `[BLOG-V1] ${blogCount} bài viết | ${new Date().toLocaleString('vi-VN')}`);
 
         const uploadRes = await fetch(`${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`, {
@@ -212,14 +214,12 @@ const uploadBlogRecords = async (onProgress?: (pct: number) => void): Promise<{ 
         if (onProgress) onProgress(95);
         // Keep this browser's reader preview in step with a successful publication.
         try {
-            await dbSet(BLOG_READER_KEY, records);
-            localStorage.setItem('pv_blog_last_fetch', String(Date.now()));
+            await dbSetBatch([[BLOG_READER_KEY, records], [BLOG_READER_FILE_ID, newFileId]]);
         } catch { /* The remote index has already been saved. */ }
 
         // Purge Cloudflare Worker cache ngay sau khi đăng bài mới
         purgeBlogCache().catch(() => {});
 
-        try { fetchViaCloudflareProxy(newFileId).catch(() => { }); } catch { }
 
         if (onProgress) onProgress(100);
         return { success: true, fileId: newFileId, blogCount };
@@ -229,18 +229,69 @@ const uploadBlogRecords = async (onProgress?: (pct: number) => void): Promise<{ 
     }
 };
 
-let pendingBlogSync: ReturnType<typeof uploadBlogRecords> | undefined;
+type SyncResult = Awaited<ReturnType<typeof uploadBlogRecords>>;
+type SyncRequest = { resolve: (result: SyncResult) => void; onProgress?: (pct: number) => void };
+const BLOG_SYNC_DELAY = 1500;
+let waiting: SyncRequest[] = [];
+let syncTimer: ReturnType<typeof setTimeout> | undefined;
+let syncing = false;
 
-export const syncBlogs = (onProgress?: (pct: number) => void) => {
-    const sync = (pendingBlogSync ?? Promise.resolve()).then(() => uploadBlogRecords(onProgress));
-    pendingBlogSync = sync;
-    void sync.then(() => { if (pendingBlogSync === sync) pendingBlogSync = undefined; });
-    return sync;
-};
+function scheduleSync() {
+    if (syncing || syncTimer !== undefined) return;
+    syncTimer = setTimeout(() => {
+        syncTimer = undefined;
+        void flushSync();
+    }, BLOG_SYNC_DELAY);
+}
+
+async function flushSync() {
+    const requests = waiting;
+    waiting = [];
+    syncing = true;
+    const upload = async () => {
+        const pending = localStorage.getItem(BLOG_PENDING_SYNC);
+        if (!pending) return { success: true, blogCount: 0 };
+        const result = await uploadBlogRecords(pct => {
+            for (const request of requests) request.onProgress?.(pct);
+        });
+        if (result.success && localStorage.getItem(BLOG_PENDING_SYNC) === pending) {
+            localStorage.removeItem(BLOG_PENDING_SYNC);
+        }
+        return result;
+    };
+    let result: SyncResult;
+    try {
+        result = navigator.locks ? await navigator.locks.request(BLOG_PENDING_SYNC, upload) : await upload();
+    } catch (error) {
+        console.error('[Blog Sync] Lỗi hàng đợi:', error);
+        result = { success: false, blogCount: 0 };
+    }
+    syncing = false;
+    for (const request of requests) request.resolve(result);
+    if (waiting.length) scheduleSync();
+    else if (result.success && localStorage.getItem(BLOG_PENDING_SYNC)) resumeBlogSync();
+    else useBlogStore.setState({ syncStatus: result.success ? 'synced' : 'failed' });
+}
+
+export function syncBlogs(onProgress?: (pct: number) => void): Promise<SyncResult> {
+    localStorage.setItem(BLOG_PENDING_SYNC, crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`);
+    useBlogStore.setState({ syncStatus: 'syncing' });
+    return new Promise(resolve => {
+        waiting.push({ resolve, onProgress });
+        scheduleSync();
+    });
+}
+
+export function resumeBlogSync() {
+    if (localStorage.getItem(BLOG_PENDING_SYNC) && !syncing && !waiting.length) void syncBlogs();
+}
 
 export const fetchBlogsForEditing = async (): Promise<{ blogs: BlogPost[]; loaded: boolean }> => {
     try {
-        // Ưu tiên: Cloudflare Worker Cache (300s TTL) → Supabase fallback
+        if (localStorage.getItem(BLOG_PENDING_SYNC)) {
+            const local: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
+            return { blogs: local.filter(isBlogPost), loaded: false };
+        }
         const fileId = await getBlogIndexFileId();
         if (!fileId) {
             const local: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];

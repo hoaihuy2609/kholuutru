@@ -328,8 +328,6 @@ interface BlogListProps {
     onCreateBlog?: (section?: StudySection) => void;
     studyLessons: StudyLesson[];
     onSaveLesson?: (section: StudySection, title: string, id?: string) => Promise<StudyLesson | null>;
-    lessonSync?: 'syncing' | 'failed';
-    onRetryLessonSync?: () => void;
     onLibraryLoaded: (library: StudyLibrary) => void;
     getStudyLibrary: (isAdmin: boolean) => Promise<StudyLibrary>;
 }
@@ -438,7 +436,7 @@ function FilterGroup({ label, children }: { label: string; children: React.React
 
 const BlogList: React.FC<BlogListProps> = ({
     isAdmin, studentGrade, onReadBlog, onEditBlog, onCreateBlog, studyLessons,
-    onSaveLesson, lessonSync, onRetryLessonSync, onLibraryLoaded, getStudyLibrary,
+    onSaveLesson, onLibraryLoaded, getStudyLibrary,
 }) => {
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
     const [loading, setLoading] = useState(true);
@@ -709,7 +707,7 @@ const BlogList: React.FC<BlogListProps> = ({
                 posts.flatMap(getBlogCards).filter(({ blog, index }) => !groupMatches || groupMatches.get(blog.id)?.has(index)),
                 true,
             )}
-            onSaveLesson={onSaveLesson} lessonSync={lessonSync} onRetryLessonSync={onRetryLessonSync} />
+            onSaveLesson={onSaveLesson} />
     );
     const isLessonOpen = chapterLessons.some(lesson =>
         lesson.id === selectedLessonId && lesson.studySection.questionType === selectedType

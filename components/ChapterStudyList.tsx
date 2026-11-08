@@ -39,7 +39,7 @@ function PostRows({ posts, onRead, onEdit }: {
 export default function ChapterStudyList({
   chapter, selectedType, selectedLessonId, selectedGroup, groupMatches, blogs, lessons, loading,
   onSelectType, onSelectGroup, onSelectLesson,
-  onRead, onCreate, onEdit, onSaveLesson, lessonSync, onRetryLessonSync, countQuestions, renderLessonPosts,
+  onRead, onCreate, onEdit, onSaveLesson, countQuestions, renderLessonPosts,
 }: {
   chapter: { id: string; name: string; grade: number };
   selectedType?: StudyQuestionType;
@@ -58,8 +58,6 @@ export default function ChapterStudyList({
   countQuestions: (blog: BlogPost) => number;
   renderLessonPosts: (posts: BlogPost[]) => React.ReactNode;
   onSaveLesson?: (section: StudySection, title: string, id?: string) => Promise<StudyLesson | null>;
-  lessonSync?: 'syncing' | 'failed';
-  onRetryLessonSync?: () => void;
 }) {
   const [nameEditor, setNameEditor] = useState<StudyLesson | 'new' | null>(null);
   const [name, setName] = useState('');
@@ -233,14 +231,6 @@ export default function ChapterStudyList({
               </div>
               {saveError && <p role="alert" className="text-xs text-red-700">Chưa lưu được tên bài. Thử lại nhé.</p>}
             </form>
-          )}
-          {lessonSync && (
-            <div role="status" className="flex flex-wrap items-center gap-2 border-b border-stone-100 px-3.5 py-2 text-xs text-stone-700">
-              {lessonSync === 'syncing' ? 'Đang đồng bộ tên bài…' : 'Tên bài đã lưu trên máy này. Đồng bộ chưa thành công.'}
-              {lessonSync === 'failed' && onRetryLessonSync && (
-                <button type="button" onClick={onRetryLessonSync} className="font-semibold text-amber-900 underline">Thử đồng bộ lại</button>
-              )}
-            </div>
           )}
           {loading ? (
             <p role="status" className="px-3.5 py-8 text-center text-sm text-stone-600">Đang tải danh sách bài…</p>

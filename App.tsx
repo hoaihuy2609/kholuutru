@@ -14,6 +14,7 @@ import { useDataStore } from './src/stores/useDataStore';
 import { useExamStore, useBlogStore } from './src/stores/useContentStore';
 import { useShallow } from 'zustand/react/shallow';
 import { syncPendingOnStartup } from './src/services/examService';
+import { resumeBlogSync, syncBlogs } from './src/services/blogService';
 import { syncServerTime } from './src/lib/serverTime';
 import { isStudyQuestionGroup, studySectionParams, supportsStudyGroups } from './src/utils/studyLibrary';
 
@@ -55,6 +56,7 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const setIsActivated = useDataStore(state => state.setIsActivated);
   const setStudentGradeValue = useDataStore(state => state.setStudentGradeValue);
   const isAdmin = useUIStore(state => state.isAdmin);
+  useEffect(() => { if (isAdmin) resumeBlogSync(); }, [isAdmin]);
   const setKicked = useUIStore(state => state.setKicked);
   const setNotificationUnreadCount = useUIStore(state => state.setNotificationUnreadCount);
   const { getFetchedNotificationIds, getNotifications, verifyAccess } = cloud;
@@ -398,8 +400,6 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const [createSection, setCreateSection] = useState<StudySection>();
   const [editQuestionIndex, setEditQuestionIndex] = useState(0);
   const [studyLessons, setStudyLessons] = useState<StudyLesson[]>([]);
-  const [lessonSync, setLessonSync] = useState<'syncing' | 'failed'>();
-  const lessonSyncVersion = useRef(0);
   const isAdmin = useUIStore(state => state.isAdmin);
   const previewMode = useUIStore(state => state.previewMode);
   const effectiveIsAdmin = isAdmin && !previewMode;
@@ -418,18 +418,11 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     setIsCreatingBlog: state.setIsCreatingBlog,
     setAllBlogs: state.setAllBlogs,
   })));
-  const syncStudyLessons = async () => {
-    const version = ++lessonSyncVersion.current;
-    setLessonSync('syncing');
-    const result = await cloud.syncBlogs();
-    if (version === lessonSyncVersion.current) setLessonSync(result.success ? undefined : 'failed');
-  };
-
   const saveLesson = async (section: StudySection, title: string, id?: string) => {
     const saved = await cloud.saveStudyLesson(section, title, id);
     if (saved) {
       setStudyLessons(previous => [...previous.filter(lesson => lesson.id !== saved.id), saved]);
-      void syncStudyLessons();
+      void cloud.syncBlogs();
     }
     return saved;
   };
@@ -493,7 +486,6 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
           setIsCreatingBlog(true);
         } : undefined}
         studyLessons={studyLessons} onSaveLesson={effectiveIsAdmin ? saveLesson : undefined}
-        lessonSync={effectiveIsAdmin ? lessonSync : undefined} onRetryLessonSync={effectiveIsAdmin ? syncStudyLessons : undefined}
         onLibraryLoaded={handleLibraryLoaded}
         getStudyLibrary={cloud.getStudyLibrary} />
     </Suspense></ErrorBoundary>
@@ -504,6 +496,21 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 // ──────────────────────────────────────────────────────────────────
 // AppShell: layout (sidebar + mobile nav + modals)
 // ──────────────────────────────────────────────────────────────────
+function BlogSyncStatus() {
+  const status = useBlogStore(state => state.syncStatus);
+  if (status === 'idle') return null;
+  return (
+    <div role="status" className="flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700 shadow-sm">
+      <span>{status === 'syncing' ? 'Kho câu hỏi · Đã lưu trên máy, đang đồng bộ'
+        : status === 'synced' ? 'Kho câu hỏi · Đã đồng bộ'
+        : 'Kho câu hỏi · Đồng bộ chưa thành công'}</span>
+      {status === 'failed' && (
+        <button type="button" onClick={() => void syncBlogs()} className="font-semibold text-amber-900 underline">Thử lại</button>
+      )}
+    </div>
+  );
+}
+
 function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const navigate = useNavigate();
   const { pathname: path } = useLocation(); // ✅ reactive với React Router
@@ -724,6 +731,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 
       {/* Toasts */}
       <div className="fixed bottom-0 right-0 p-4 space-y-2 z-50">
+        {effectiveIsAdmin && <BlogSyncStatus />}
         {toasts.map(t => <Toast key={t.id} message={t.message} type={t.type} onClose={() => removeToast(t.id)} />)}
       </div>
 

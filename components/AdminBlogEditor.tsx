@@ -46,8 +46,6 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
     const firstQuestionNumber = useMemo(() => chapter && studyType
         ? nextStudyQuestionNumber(existingBlogs, { chapterId: chapter.id, questionType: studyType, lessonId: lesson?.id })
         : 1, [chapter, studyType, lesson?.id, existingBlogs]);
-    const [pendingSync, setPendingSync] = useState(false); // flag cần sync lên Telegram
-    const [isSyncingBlog, setIsSyncingBlog] = useState(false);
 
     const [formData, setFormData] = useState<Partial<BlogPost>>({
         title: '', summary: '', content: '', cover_image: '', category: '', is_published: false,
@@ -133,38 +131,11 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
         const saved = await savePlacedBlog(formData);
         setIsSaving(false);
         if (saved) {
-            // Nếu bài đã published → auto-sync luôn để học sinh thấy ngay
-            if (formData.is_published) {
-                showToast('Đã lưu! Đang sync lên Telegram...', 'warning');
-                setIsSyncingBlog(true);
-                const result = await syncBlogs();
-                setIsSyncingBlog(false);
-                if (result.success) {
-                    showToast(`Sync xong! ${result.blogCount} bài viết đã lên Telegram.`);
-                    setPendingSync(false);
-                } else {
-                    showToast('Sync thất bại! Vui lòng thử lại.', 'error');
-                    setPendingSync(true);
-                }
-            } else {
-                showToast('Đã lưu bản nháp. Bật “Hiển thị cho học sinh” khi sẵn sàng đăng.');
-                setPendingSync(true);
-            }
+            if (formData.is_published || blog?.is_published) void syncBlogs();
+            showToast(formData.is_published ? 'Đã lưu bài viết.' : 'Đã lưu bản nháp.');
             onSaved(saved);
         } else if (!chapter || studyType) {
             showToast('Lưu thất bại, vui lòng thử lại.', 'error');
-        }
-    };
-
-    const handleSyncNow = async () => {
-        setIsSyncingBlog(true);
-        const result = await syncBlogs();
-        setIsSyncingBlog(false);
-        if (result.success) {
-            showToast(`Sync xong! ${result.blogCount} bài viết đã lên Telegram.`);
-            setPendingSync(false);
-        } else {
-            showToast('Sync thất bại! Kiểm tra kết nối.', 'error');
         }
     };
 
@@ -178,18 +149,9 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
             showToast('Lỗi khi xóa!', 'error');
             return;
         }
-        // Sync lên Telegram NGAY để Telegram cũng phản ánh bài đã xóa
-        // Nếu không sync trước, BlogList sẽ kéo lại bài cũ từ Telegram khi re-mount
-        showToast('Đã xóa! Đang sync lên Telegram...');
-        setIsSyncingBlog(true);
-        const result = await syncBlogs();
-        setIsSyncingBlog(false);
+        void syncBlogs();
         setIsSaving(false);
-        if (result.success) {
-            showToast('Đã xóa và sync xong!');
-        } else {
-            showToast('Đã xóa local. Sync thất bại — Telegram chưa cập nhật.', 'error');
-        }
+        showToast('Đã xóa bài viết.');
         onBack();
     };
 
@@ -349,7 +311,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                             {blog && (
                                 <button
                                     onClick={handleDelete}
-                                    disabled={isSaving || isSyncingBlog}
+                                    disabled={isSaving}
                                     className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-red-50 text-red-600 transition-colors disabled:opacity-50"
                                 >
                                     <Trash2 className="w-4 h-4" /> Xóa bài
@@ -364,11 +326,11 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                             </button>
                             <button
                                 onClick={handleSave}
-                                disabled={isSaving || isSyncingBlog}
+                                disabled={isSaving}
                                 className="px-6 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60"
                             >
                                 <Save className="w-4 h-4" />
-                                {isSaving ? 'Đang lưu...' : isSyncingBlog ? 'Đang sync...' : blog ? 'Cập nhật' : 'Đăng bài'}
+                                {isSaving ? 'Đang lưu...' : blog ? 'Cập nhật' : 'Đăng bài'}
                             </button>
                         </>
                     )}
@@ -387,6 +349,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                     blog={blog}
                     initialQuestionIndex={initialQuestionIndex}
                     onSaved={onSaved}
+                    onBack={onBack}
                     saveBlog={savePlacedBlog}
                     syncBlogs={syncBlogs}
                     deleteBlog={deleteBlog}

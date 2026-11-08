@@ -24,6 +24,7 @@ interface BlogStore {
   activeAdminBlog: BlogPost | null;
   isCreatingBlog: boolean;
   allBlogs: BlogPost[];
+  syncStatus: 'idle' | 'syncing' | 'synced' | 'failed';
 
   setActiveBlog: (b: BlogPost | null) => void;
   setActiveAdminBlog: (b: BlogPost | null) => void;
@@ -36,6 +37,7 @@ export const useBlogStore = create<BlogStore>((set) => ({
   activeAdminBlog: null,
   isCreatingBlog: false,
   allBlogs: [],
+  syncStatus: 'idle',
 
   setActiveBlog: (activeBlog) => set({ activeBlog }),
   setActiveAdminBlog: (activeAdminBlog) => set({ activeAdminBlog }),

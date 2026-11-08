@@ -222,8 +222,6 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
   );
   const [isPublished, setIsPublished] = useState<boolean>(existingBlog?.is_published ?? false);
   const [saving, setSaving] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [syncPct, setSyncPct] = useState(0);
 
   // Toast — 3 loại giống SolutionEditor
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'warning' } | null>(null);
@@ -260,49 +258,31 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
     if (!existingBlog?.id || !deleteBlog) return;
     if (!window.confirm('Xóa đề thi này? Hành động không thể hoàn tác!')) return;
     setSaving(true);
-    showToast('Đang xóa & sync...', 'warning');
     const ok = await deleteBlog(existingBlog.id);
     if (!ok) {
       setSaving(false);
       showToast('Xóa thất bại, thử lại!', 'error');
       return;
     }
-    await syncBlogs();
+    void syncBlogs();
     setSaving(false);
     if (onBack) onBack();
   };
 
-  // Nút duy nhất — giống SolutionEditor:
-  // Nháp → chỉ lưu vào DB, không sync
-  // Công khai → lưu rồi sync lên Telegram ngay
   const handleSubmit = async () => {
     setSaving(true);
-    if (isPublished) {
-      showToast('Đang lưu & sync lên Telegram...', 'warning');
-    }
     const saved = await saveBlog(buildBlogPayload());
     setSaving(false);
     if (!saved) {
       showToast('Lưu thất bại, thử lại!', 'error');
       return;
     }
+    if (isPublished || existingBlog?.is_published) void syncBlogs();
     if (!isPublished) {
       showToast('Đã lưu bản nháp. Bật "Công khai" khi sẵn sàng đăng.', 'success');
       return;
     }
-    // Công khai → sync luôn
-    localStorage.removeItem('pv_blog_last_fetch');
-    setSyncing(true);
-    setSyncPct(0);
-    const result = await syncBlogs(pct => setSyncPct(pct));
-    setSyncing(false);
-    setSyncPct(0);
-    if (result.success) {
-      showToast(`Sync thành công! ${result.blogCount} bài đã lên Telegram.`, 'success');
-      onSaved?.();
-    } else {
-      showToast('Sync thất bại!', 'error');
-    }
+    onSaved?.();
   };
 
   const toggleQType = (qi: number) => {
@@ -490,18 +470,16 @@ const ExamPaperEditor: React.FC<ExamPaperEditorProps> = ({ saveBlog, syncBlogs, 
           {existingBlog && deleteBlog && (
             <button
               onClick={handleDelete}
-              disabled={saving || syncing}
+              disabled={saving}
               className="px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-red-50 text-red-600 border border-red-200 transition-colors disabled:opacity-50">
               <Trash2 className="w-4 h-4" /> Xóa đề
             </button>
           )}
-          <button onClick={handleSubmit} disabled={saving || syncing}
+          <button onClick={handleSubmit} disabled={saving}
             className="px-8 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60 shadow-sm">
             <Save className="w-4 h-4" />
             {saving
               ? 'Đang lưu...'
-              : syncing
-              ? `Đang sync... ${syncPct}%`
               : isPublished
               ? (existingBlog ? 'Cập nhật Đề Thi' : 'Đăng Đề Thi')
               : (existingBlog ? 'Lưu Nháp' : 'Lưu Nháp')}
