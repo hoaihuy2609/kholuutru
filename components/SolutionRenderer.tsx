@@ -56,7 +56,7 @@ function parseContent(content: string): { examName: string; questions: Question[
     if (parsed.type !== 'physics_solution' || !parsed.data) return null;
 
     const data: PhysicsSolutionData = parsed.data;
-    const examName = data.exam_name || "";
+    const examName = typeof data.exam_name === 'string' ? data.exam_name : '';
 
     let questions: Question[];
 
@@ -288,288 +288,181 @@ const convertStepsToSolution = (steps?: Step[]): string => {
     .join('\n\n');
 };
 
+const detailPanel = 'min-w-0 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm';
+const detailHeading = 'text-base font-bold text-stone-900';
+const detailProse = 'min-w-0 overflow-x-auto whitespace-pre-wrap text-[17px] leading-relaxed text-stone-800 [overflow-wrap:anywhere]';
+
+function SolutionPanel({ text }: { text: string }) {
+  if (!text) return null;
+  return (
+    <section className={detailPanel}>
+      <h3 className={detailHeading + ' border-b border-stone-100 bg-amber-50/60 px-4 py-2.5 sm:px-5'}>Lời giải chi tiết</h3>
+      <div className={detailProse + ' px-4 py-4 sm:px-5'}>
+        <TextWithMath text={text} />
+      </div>
+    </section>
+  );
+}
+
+function VerdictBadge({ verdict }: { verdict?: boolean | null }) {
+  return (
+    <span className={'shrink-0 rounded-full px-2.5 py-1 text-xs font-bold '
+      + (verdict === true ? 'bg-emerald-100 text-emerald-800' : verdict === false ? 'bg-red-100 text-red-800' : 'bg-stone-100 text-stone-600')}>
+      {verdict === true ? 'Đúng' : verdict === false ? 'Sai' : 'Chưa kết luận'}
+    </span>
+  );
+}
+
+function AnswerRow({ label, badge, children }: { label: string; badge?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <li className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-x-2.5 gap-y-1 px-4 py-3 sm:grid-cols-[1.75rem_minmax(0,1fr)_auto] sm:gap-x-3 sm:px-5">
+      <span className="grid size-7 place-items-center rounded-md bg-stone-100 text-sm font-bold text-stone-800">{label}</span>
+      <div className={detailProse}>{children}</div>
+      {badge && <div className="col-start-2 justify-self-start sm:col-start-3 sm:justify-self-end">{badge}</div>}
+    </li>
+  );
+}
+
 function TracNghiemRenderer({ question }: { question: Question }) {
-  const choices  = question.choices  || [];
-  const correct  = question.correctChoice || '';
-  const effectiveSolution = question.solution || convertStepsToSolution(question.solutionSteps);
+  const choices = question.choices || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <QuestionHeader question={question} />
-      {/* 4 đáp án A/B/C/D */}
-      <div className="space-y-2">
-        {['A','B','C','D'].map((lbl, ci) => choices[ci] ? (
-          <div key={lbl}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors"
-            style={{
-              background: correct === lbl ? '#EAF3EE' : '#fff',
-              borderColor: correct === lbl ? '#44836150' : '#E9E9E7',
-            }}>
-            <span
-              className="w-7 h-7 rounded-full text-sm font-bold flex items-center justify-center shrink-0"
-              style={{
-                background: correct === lbl ? '#448361' : '#F1F0EC',
-                color:      correct === lbl ? '#fff' : '#787774',
-              }}>{lbl}</span>
-            <span className="text-[17px] text-[#1A1A1A] leading-relaxed flex-1">
-              <TextWithMath text={choices[ci]} />
-            </span>
-            {correct === lbl && (
-              <span className="text-xs font-bold text-emerald-600 shrink-0">✓ Đúng</span>
-            )}
-          </div>
-        ) : null)}
-      </div>
-      {/* Lời giải chi tiết bên dưới */}
-      {effectiveSolution && (
-        <div>
-          <SectionLabel>Lời giải chi tiết</SectionLabel>
-          <div className="bg-white border border-[#E9E9E7] rounded-xl p-6 shadow-sm text-[17px] text-[#1A1A1A] leading-relaxed">
-            <TextWithMath text={effectiveSolution} />
-          </div>
-        </div>
+      {choices.some(Boolean) && (
+        <section className={detailPanel}>
+          <h3 className={detailHeading + ' border-b border-stone-100 px-4 py-2.5 sm:px-5'}>Các phương án</h3>
+          <ul className="divide-y divide-stone-100">
+            {['A', 'B', 'C', 'D'].map((label, index) => choices[index] && (
+              <AnswerRow key={label} label={label} badge={question.correctChoice === label ? <VerdictBadge verdict /> : undefined}>
+                <TextWithMath text={choices[index]} />
+              </AnswerRow>
+            ))}
+          </ul>
+        </section>
       )}
+      <SolutionPanel text={question.solution || convertStepsToSolution(question.solutionSteps)} />
     </div>
   );
 }
 
 function TuLuanRenderer({ question }: { question: Question }) {
-  const effectiveSolution = question.solution || convertStepsToSolution(question.steps);
-
   return (
-    <div className="space-y-6">
-      {/* Đề bài */}
+    <div className="space-y-4">
       <QuestionHeader question={question} />
-
-      {/* Lời giải chi tiết bên dưới */}
-      {effectiveSolution && (
-        <div>
-          <SectionLabel>Lời giải chi tiết</SectionLabel>
-          <div className="bg-white border border-[#E9E9E7] rounded-xl p-6 shadow-sm text-[17px] text-[#1A1A1A] leading-relaxed">
-            <TextWithMath text={effectiveSolution} />
-          </div>
-        </div>
-      )}
+      <SolutionPanel text={question.solution || convertStepsToSolution(question.steps)} />
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// ĐÚNG/SAI RENDERER
-// ─────────────────────────────────────────────────────────────
 function DungSaiRenderer({ question }: { question: Question }) {
-  const hasStatements = question.statements.some(s => s.claim || s.claim_latex);
-  const trueCount  = question.statements.filter(s => s.verdict === true).length;
-  const falseCount = question.statements.filter(s => s.verdict === false).length;
+  const statements = question.statements.filter(statement => statement.claim || statement.claim_latex);
+  const trueCount = question.statements.filter(statement => statement.verdict === true).length;
+  const falseCount = question.statements.filter(statement => statement.verdict === false).length;
 
-  // Lấy lời giải từ question.solution hoặc tự động gom các bước chứng minh của a, b, c, d xuống dưới
-  const effectiveSolution = question.solution || (() => {
-    const hasLegacySteps = question.statements.some(st => st.steps?.some(s => s.title || s.text || s.formula || s.formula2));
-    if (!hasLegacySteps) return '';
-    return question.statements
-      .map(st => {
-        const sText = convertStepsToSolution(st.steps);
-        const vBadge = st.verdict === true ? '(ĐÚNG)' : st.verdict === false ? '(SAI)' : '';
-        return sText ? `**Mệnh đề ${st.label.toUpperCase()} ${vBadge}:**\n${sText}` : '';
-      })
-      .filter(Boolean)
-      .join('\n\n---\n\n');
-  })();
+  // Older posts can store the explanation as steps under each statement.
+  const effectiveSolution = question.solution || question.statements
+    .map(statement => {
+      const text = convertStepsToSolution(statement.steps);
+      const badge = statement.verdict === true ? ' (ĐÚNG)' : statement.verdict === false ? ' (SAI)' : '';
+      return text ? '**Mệnh đề ' + statement.label.toUpperCase() + badge + ':**\n' + text : '';
+    })
+    .filter(Boolean)
+    .join('\n\n---\n\n');
 
   return (
-    <div className="space-y-6">
-      {/* Đề bài */}
+    <div className="space-y-4">
       <QuestionHeader question={question} />
-
-      {/* Tổng kết verdict */}
-      {hasStatements && (trueCount + falseCount > 0) && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-semibold text-[#57564F]">Tổng kết:</span>
-          <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">
-            ✓ {trueCount} mệnh đề đúng
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-full bg-red-100 text-red-700 border border-red-300">
-            ✗ {falseCount} mệnh đề sai
-          </span>
-        </div>
-      )}
-
-      {/* 4 Mệnh đề gọn gàng: chỉ gồm nội dung + nhãn Đúng (xanh) / Sai (đỏ) */}
-      {hasStatements && (
-        <div>
-          <SectionLabel>Phân tích 4 mệnh đề</SectionLabel>
-          <div className="space-y-3">
-            {question.statements.map((st, i) => (
-              (st.claim || st.claim_latex) ? <StatementRenderer key={i} st={st} /> : null
+      {statements.length > 0 && (
+        <section className={detailPanel}>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-stone-100 px-4 py-2.5 sm:px-5">
+            <h3 className={detailHeading}>Các mệnh đề</h3>
+            {trueCount + falseCount > 0 && (
+              <div className="flex flex-wrap gap-1.5 text-xs font-semibold">
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800">{trueCount} đúng</span>
+                <span className="rounded-full bg-red-50 px-2.5 py-1 text-red-800">{falseCount} sai</span>
+              </div>
+            )}
+          </div>
+          <ul className="divide-y divide-stone-100">
+            {statements.map((statement, index) => (
+              <AnswerRow key={index} label={statement.label.toUpperCase()} badge={<VerdictBadge verdict={statement.verdict} />}>
+                {statement.claim && <TextWithMath text={statement.claim} />}
+                {statement.claim_latex && <KatexBlock tex={statement.claim_latex} />}
+              </AnswerRow>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
       )}
-
-      {/* Lời giải chi tiết chung bên dưới cùng */}
-      {effectiveSolution && (
-        <div className="mt-8">
-          <SectionLabel>Hướng dẫn giải chi tiết</SectionLabel>
-          <div className="bg-white border border-[#E9E9E7] rounded-xl p-6 shadow-sm text-[17px] text-[#1A1A1A] leading-relaxed">
-            <TextWithMath text={effectiveSolution} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// STATEMENT RENDERER (một mệnh đề gọn gàng)
-// ─────────────────────────────────────────────────────────────
-function StatementRenderer({ st }: { st: Statement }) {
-  const isTrue  = st.verdict === true;
-  const isFalse = st.verdict === false;
-
-  const borderColor = isTrue ? 'border-emerald-300' : isFalse ? 'border-red-300' : 'border-[#E9E9E7]';
-  const headBg      = isTrue ? 'bg-emerald-50'      : isFalse ? 'bg-red-50'      : 'bg-[#FCFCFA]';
-
-  const VerdictBadge = () => {
-    if (isTrue)  return <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">✓ ĐÚNG</span>;
-    if (isFalse) return <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700 border border-red-300">✗ SAI</span>;
-    return <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 border border-gray-200">Chưa kết luận</span>;
-  };
-
-  return (
-    <div className={`bg-white border rounded-xl overflow-hidden shadow-sm transition-all ${borderColor}`}>
-      {/* Header */}
-      <div className={`flex items-center justify-between px-4 py-2.5 border-b ${borderColor} ${headBg}`}>
-        <div className="flex items-center gap-2">
-          <span className={`font-mono text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center text-white ${isTrue ? 'bg-emerald-500' : isFalse ? 'bg-red-500' : 'bg-[#6B7CDB]'}`}>
-            {st.label.toUpperCase()}
-          </span>
-          <span className="font-bold text-sm text-[#1A1A1A]">Mệnh đề {st.label.toUpperCase()}</span>
-        </div>
-        <VerdictBadge />
-      </div>
-
-      {/* Nội dung mệnh đề */}
-      <div className="p-4 text-[17px] text-[#1A1A1A] leading-relaxed">
-        {st.claim && <TextWithMath text={st.claim} />}
-        {st.claim_latex && <KatexBlock tex={st.claim_latex} />}
-      </div>
+      <SolutionPanel text={effectiveSolution} />
     </div>
   );
 }
 
 function QuestionHeader({ question }: { question: Question }) {
-  const isDungSai    = question.type === 'dung_sai';
-  const isTracNghiem = question.type === 'trac_nghiem';
-  const hasImg = !!(question.image_svg || question.image_url || question.image_telegram_file_id);
-  if (!question.question_text && !question.question_latex && !hasImg) return null;
-
-  const hasImagePlaceholder = hasImg && /\[image\]/i.test(question.question_text || '');
-  const isRight = (question.image_layout === 'right') || (question.image_layout === 'auto');
-
-  const imageElem = hasImg ? (
-    <div className="w-full flex justify-center items-center py-1 px-2 bg-transparent overflow-x-auto">
+  const hasImage = !!(question.image_svg || question.image_url || question.image_telegram_file_id);
+  const parts = hasImage ? (question.question_text || '').split(/\[image\]/i) : [question.question_text];
+  const inlineImage = parts.length > 1;
+  const afterImage = parts.slice(1).join('[image]');
+  const hasText = !!(question.question_text || question.question_latex);
+  const sideImage = hasImage && hasText && !inlineImage && question.image_layout !== 'bottom';
+  const typeLabel = question.type === 'dung_sai' ? 'Đúng / Sai' : question.type === 'trac_nghiem' ? 'Trắc nghiệm' : 'Trả lời ngắn';
+  const image = hasImage && (
+    <figure className={'mx-auto flex w-full min-w-0 max-w-sm justify-center '
+      + (sideImage ? 'md:w-[38%] md:shrink-0' : '')}>
       {question.image_svg ? (
-        <div
-          className="max-w-full flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"
-          dangerouslySetInnerHTML={{ __html: question.image_svg }}
-        />
-      ) : question.image_url ? (
-        <img src={question.image_url} alt="Sơ đồ câu hỏi" className="max-w-full h-auto rounded" />
-      ) : question.image_telegram_file_id ? (
+        <div className="max-w-full [&>svg]:block [&>svg]:h-auto [&>svg]:max-w-full"
+          dangerouslySetInnerHTML={{ __html: question.image_svg }} />
+      ) : (
         <img
-          src={`${CLOUDFLARE_PROXY_URL}/getFile/${question.image_telegram_file_id}`}
-          alt="Sơ đồ câu hỏi"
-          className="max-w-full h-auto rounded"
+          src={question.image_url || CLOUDFLARE_PROXY_URL + '/getFile/' + question.image_telegram_file_id}
+          alt="Sơ đồ câu hỏi" className="h-auto max-w-full"
         />
-      ) : null}
-    </div>
-  ) : null;
+      )}
+    </figure>
+  );
 
   return (
-    <div>
-      {question.question_no && (
-        <div className="flex items-center gap-3 mb-3">
-          <h2 className="font-bold text-xl text-indigo-900">{question.question_no}</h2>
-          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${isDungSai ? 'bg-amber-100 text-amber-700 border-amber-300' : isTracNghiem ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-indigo-100 text-indigo-700 border-indigo-200'}`}>
-            {isDungSai ? 'Đúng / Sai' : isTracNghiem ? 'Trắc nghiệm' : 'Trả lời ngắn'}
-          </span>
-        </div>
-      )}
-      <div className="bg-white border-l-[3px] border-indigo-400 rounded-r-xl p-5 shadow-sm">
-        {hasImagePlaceholder ? (
-          <div>
-            {(() => {
-              const parts = (question.question_text || '').split(/\[image\]/i);
-              const beforeText = parts[0] || '';
-              const afterText = parts.slice(1).join('[image]') || '';
-              return (
-                <>
-                  {beforeText.trim() && (
-                    <p className="text-[17px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
-                      <TextWithMath text={beforeText} />
-                    </p>
-                  )}
-                  <div className="my-4">
-                    {imageElem}
-                  </div>
-                  {afterText.trim() && (
-                    <p className="text-[17px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
-                      <TextWithMath text={afterText} />
-                    </p>
-                  )}
-                </>
-              );
-            })()}
-            {question.question_latex && <KatexBlock tex={question.question_latex} />}
-          </div>
-        ) : hasImg && isRight ? (
-          <div className="flex flex-col md:flex-row gap-6 items-start">
-            <div className="flex-1 min-w-0">
-              {question.question_text && (
-                <p className="text-[17px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
-                  <TextWithMath text={question.question_text} />
-                </p>
-              )}
+    <section className={detailPanel}>
+      <div className="flex flex-wrap items-center gap-2 bg-stone-50 px-4 py-2.5 sm:px-5">
+        <h2 className={detailHeading}>{question.question_no || 'Đề bài'}</h2>
+        <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-950">{typeLabel}</span>
+      </div>
+      {(hasText || hasImage) && (
+        <div className="border-t border-stone-100 px-4 py-4 sm:px-5">
+          {inlineImage ? (
+            <div className="space-y-3">
+              {parts[0].trim() && <div className={detailProse}><TextWithMath text={parts[0]} /></div>}
+              {image}
+              {afterImage.trim() && <div className={detailProse}><TextWithMath text={afterImage} /></div>}
               {question.question_latex && <KatexBlock tex={question.question_latex} />}
             </div>
-            <div className="w-full md:w-[40%] max-w-[400px] shrink-0">
-              {imageElem}
+          ) : (
+            <div className={'flex flex-col gap-4 ' + (sideImage ? 'md:flex-row md:items-start' : '')}>
+              {hasText && (
+                <div className={detailProse + ' flex-1'}>
+                  {question.question_text && <TextWithMath text={question.question_text} />}
+                  {question.question_latex && <KatexBlock tex={question.question_latex} />}
+                </div>
+              )}
+              {image}
             </div>
-          </div>
-        ) : (
-          <div>
-            {question.question_text && (
-              <p className="text-[17px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">
-                <TextWithMath text={question.question_text} />
-              </p>
-            )}
-            {question.question_latex && <KatexBlock tex={question.question_latex} />}
-            {hasImg && <div className="mt-4">{imageElem}</div>}
-          </div>
-        )}
-      </div>
-    </div>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-[10px] font-mono text-[#AEACA8] uppercase tracking-[0.15em] flex items-center gap-3 mb-5">
-      {children}
-      <div className="h-[1px] flex-1 bg-[#E9E9E7]" />
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
 // MAIN EXPORT
 // ─────────────────────────────────────────────────────────────
 interface SolutionRendererProps {
   content: string;    // blog.content (JSON string)
   className?: string;
+  title?: string;
 }
 
-export default function SolutionRenderer({ content, className = "" }: SolutionRendererProps) {
+export default function SolutionRenderer({ content, className = "", title }: SolutionRendererProps) {
   const parsed = parseContent(content);
 
   if (!parsed) {
@@ -583,22 +476,12 @@ export default function SolutionRenderer({ content, className = "" }: SolutionRe
   const { examName, questions } = parsed;
 
   return (
-    <div className={`solution-renderer latex-prose space-y-12 ${className}`}>
-
-      {/* Tên đề thi */}
-      {examName && (
-        <div className="text-xs font-mono text-gray-500 uppercase tracking-wider pb-2 border-b border-[#E9E9E7]">
-          {examName}
-        </div>
-      )}
-
-      {/* Từng câu hỏi */}
+    <div className={`solution-renderer latex-prose space-y-5 ${className}`}>
+      <h1 className="break-words text-xl font-bold leading-snug text-stone-900 sm:text-2xl">
+        {examName.trim() || title || 'Lời giải bài tập'}
+      </h1>
       {questions.map((q, idx) => (
-        <div key={idx} className="space-y-6">
-          {/* Đường phân cách giữa các câu */}
-          {idx > 0 && <div className="h-px bg-[#E9E9E7] my-8" />}
-
-          {/* Router: tự luận / đúng sài / trắc nghiệm */}
+        <div key={idx} className={idx > 0 ? 'border-t border-stone-200 pt-5' : ''}>
           {q.type === 'dung_sai'
             ? <DungSaiRenderer   question={q} />
             : q.type === 'trac_nghiem'

@@ -138,24 +138,15 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
 
     if (parsedSolution) {
         return (
-            <div className="max-w-6xl mx-auto p-4 md:p-8 animate-fade-in relative pb-20">
+            <div className="mx-auto w-full max-w-[60rem] space-y-3 px-4 pt-4 pb-16 animate-fade-in sm:px-6 sm:pt-6">
                 <button
+                    type="button"
                     onClick={onBack}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: '6px',
-                        fontSize: '13px', fontWeight: 500, color: '#787774',
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        marginBottom: '28px', padding: '6px 10px 6px 4px', borderRadius: '8px',
-                        transition: 'all 0.15s'
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#F1F0EC'; e.currentTarget.style.color = '#1A1A1A'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#787774'; }}
+                    className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-2.5 text-sm font-semibold text-stone-700 hover:border-amber-300 hover:text-amber-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700"
                 >
-                    <ChevronLeft style={{ width: '16px', height: '16px' }} /> Quay lại
+                    <ChevronLeft aria-hidden="true" className="size-4" /> Quay lại
                 </button>
-                <div style={{ position: 'relative' }}>
-                    <SolutionRenderer content={blog.content} />
-                </div>
+                <SolutionRenderer content={blog.content} title={blog.title} />
             </div>
         );
     }
