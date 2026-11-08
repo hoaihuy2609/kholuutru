@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback, Suspense, useState, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useCallback, Suspense, useState, useRef } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { GradeLevel, Lesson, Exam, BlogPost, StudyLesson, StudySection } from './types';
 import Sidebar from './components/Sidebar';
@@ -400,6 +400,8 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const [createSection, setCreateSection] = useState<StudySection>();
   const [editQuestionIndex, setEditQuestionIndex] = useState(0);
   const [studyLessons, setStudyLessons] = useState<StudyLesson[]>([]);
+  const [nextQuestion, setNextQuestion] = useState<(() => void) | undefined>();
+  const listScrollTop = useRef<number | undefined>(undefined);
   const isAdmin = useUIStore(state => state.isAdmin);
   const previewMode = useUIStore(state => state.previewMode);
   const effectiveIsAdmin = isAdmin && !previewMode;
@@ -432,6 +434,21 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     setStudyLessons(lessons);
   }, [setAllBlogs]);
 
+  const openBlog = (blog: BlogPost, onNext?: () => void) => {
+    listScrollTop.current ??= window.scrollY;
+    setNextQuestion(() => onNext);
+    setActiveBlog(blog);
+  };
+
+  useLayoutEffect(() => {
+    if (activeBlog) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    } else if (listScrollTop.current !== undefined) {
+      window.scrollTo({ top: listScrollTop.current, behavior: 'instant' });
+      listScrollTop.current = undefined;
+    }
+  }, [activeBlog]);
+
   if ((activeAdminBlog || isCreatingBlog) && effectiveIsAdmin) {
     const back = () => {
       setActiveAdminBlog(null);
@@ -459,6 +476,7 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
       </Suspense></ErrorBoundary>
     );
   }
+  let detail: React.ReactNode;
   if (activeBlog) {
     const section = activeBlog.studySection;
     const related = allBlogs.filter(blog => {
@@ -469,26 +487,34 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
       }
       return blog.category === activeBlog.category || (blog.tags || []).some(tag => (activeBlog.tags || []).includes(tag));
     }).slice(0, 4);
-    return (
+    detail = (
       <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-        <BlogDetail blog={activeBlog} onBack={() => setActiveBlog(null)} relatedBlogs={related} onReadRelated={setActiveBlog} />
+        <BlogDetail blog={activeBlog} onBack={() => {
+          setNextQuestion(undefined);
+          setActiveBlog(null);
+        }} onNextQuestion={nextQuestion} relatedBlogs={related} onReadRelated={openBlog} />
       </Suspense></ErrorBoundary>
     );
   }
   return (
-    <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-      <BlogList isAdmin={effectiveIsAdmin} studentGrade={effectiveIsAdmin ? null : studentGrade} onReadBlog={setActiveBlog}
-        onEditBlog={effectiveIsAdmin ? (blog, questionIndex = 0) => {
-          setEditQuestionIndex(questionIndex);
-          setActiveAdminBlog(blog);
-        } : undefined} onCreateBlog={effectiveIsAdmin ? section => {
-          setCreateSection(section);
-          setIsCreatingBlog(true);
-        } : undefined}
-        studyLessons={studyLessons} onSaveLesson={effectiveIsAdmin ? saveLesson : undefined}
-        onLibraryLoaded={handleLibraryLoaded}
-        getStudyLibrary={cloud.getStudyLibrary} />
-    </Suspense></ErrorBoundary>
+    <>
+      {detail}
+      <div hidden={!!activeBlog}>
+        <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+          <BlogList isAdmin={effectiveIsAdmin} studentGrade={effectiveIsAdmin ? null : studentGrade} onReadBlog={openBlog}
+            onEditBlog={effectiveIsAdmin ? (blog, questionIndex = 0) => {
+              setEditQuestionIndex(questionIndex);
+              setActiveAdminBlog(blog);
+            } : undefined} onCreateBlog={effectiveIsAdmin ? section => {
+              setCreateSection(section);
+              setIsCreatingBlog(true);
+            } : undefined}
+            studyLessons={studyLessons} onSaveLesson={effectiveIsAdmin ? saveLesson : undefined}
+            onLibraryLoaded={handleLibraryLoaded}
+            getStudyLibrary={cloud.getStudyLibrary} />
+        </Suspense></ErrorBoundary>
+      </div>
+    </>
   );
 }
 

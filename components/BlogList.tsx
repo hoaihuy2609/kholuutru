@@ -216,9 +216,7 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
     const renderText = (value: string) => value.trim() ? (
         <div className="overflow-x-auto whitespace-pre-wrap text-justify [overflow-wrap:anywhere]"><TextWithMathCard text={value} /></div>
     ) : null;
-    const height = large
-        ? (expanded ? 'min-h-[280px] lg:min-h-[230px] ' : 'h-[280px] lg:h-[230px] ')
-        : (expanded ? 'min-h-[250px] sm:min-h-[280px] ' : 'h-[250px] sm:h-[280px] ');
+    const height = expanded ? 'min-h-[168px] lg:min-h-[176px] ' : 'h-[168px] lg:h-[176px] ';
     const readLabel = question ? 'Xem lời giải' : 'Đọc bài';
 
     return (
@@ -262,8 +260,7 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
                 </div>
             </header>
 
-            <div className={'flex min-h-0 min-w-0 flex-1 flex-col px-3.5 py-3.5 [container-type:inline-size] sm:px-4 '
-                + (large ? 'lg:p-5' : '')}>
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3.5 py-2.5 [container-type:inline-size] sm:px-4">
                 <div id={contentId} ref={viewportRef}
                     className="relative min-h-0 flex-1 overflow-hidden">
                     <div ref={contentRef} className={'latex-prose min-w-0 text-base leading-relaxed text-stone-800 '
@@ -290,7 +287,7 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
                         )}
                     </div>
                     {!expanded && isClipped && (
-                        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-white/0" />
+                        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-white to-white/0" />
                     )}
                 </div>
             </div>
@@ -323,7 +320,7 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
 interface BlogListProps {
     isAdmin: boolean;
     studentGrade?: number | null;
-    onReadBlog: (blog: BlogPost) => void;
+    onReadBlog: (blog: BlogPost, onNext?: () => void) => void;
     onEditBlog?: (blog: BlogPost, questionIndex?: number) => void;
     onCreateBlog?: (section?: StudySection) => void;
     studyLessons: StudyLesson[];
@@ -507,10 +504,24 @@ const BlogList: React.FC<BlogListProps> = ({
 
     const renderQuestionCards = (cards: BlogCard[], inLesson = false) => {
         const sortedCards = [...cards].sort((first, second) => first.number - second.number);
+        const readCard = (position: number) => {
+            const { blog, question, solution, questionCount } = sortedCards[position];
+            if (!solution || !question) {
+                onReadBlog(blog);
+                return;
+            }
+
+            let next = position + 1;
+            while (next < sortedCards.length && !sortedCards[next].question) next++;
+            const content = questionCount > 1
+                ? JSON.stringify({ ...solution, data: { ...solution.data, questions: [question] } })
+                : blog.content;
+            onReadBlog({ ...blog, content }, next < sortedCards.length ? () => readCard(next) : undefined);
+        };
 
         return (
             <div className={'grid grid-cols-1 items-start gap-3.5 ' + (inLesson ? 'lg:grid-cols-2 lg:gap-5' : 'md:grid-cols-2')}>
-                {sortedCards.map(({ blog, question, index, solution, questionCount, data }) => (
+                {sortedCards.map(({ blog, index, data }, position) => (
                     <QuestionCard
                         key={questionKey(blog.id, index)}
                         blog={blog}
@@ -518,14 +529,7 @@ const BlogList: React.FC<BlogListProps> = ({
                         isAdmin={isAdmin}
                         large={inLesson}
                         onEdit={onEditBlog && (() => onEditBlog(blog, index))}
-                        onClick={() => {
-                            if (solution && question && questionCount > 1) {
-                                const content = JSON.stringify({ ...solution, data: { ...solution.data, questions: [question] } });
-                                onReadBlog({ ...blog, content });
-                            } else {
-                                onReadBlog(blog);
-                            }
-                        }}
+                        onClick={() => readCard(position)}
                         isSelected={selectedCardIndexes.get(blog.id)?.has(index)}
                         onToggleSelect={() => handleToggleSelect(blog.id, index)}
                     />

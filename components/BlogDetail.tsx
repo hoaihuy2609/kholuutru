@@ -5,12 +5,13 @@ import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import { BlogPost } from '../types';
-import { Calendar, ChevronLeft, Tag, Clock, Copy, Check, List } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Tag, Clock, Copy, Check, List } from 'lucide-react';
 import SolutionRenderer from './SolutionRenderer';
 
 interface BlogDetailProps {
     blog: BlogPost;
     onBack: () => void;
+    onNextQuestion?: () => void;
     relatedBlogs?: BlogPost[];
     onReadRelated?: (blog: BlogPost) => void;
 }
@@ -74,7 +75,7 @@ const CodeBlock: React.FC<{ children?: React.ReactNode; className?: string }> = 
     );
 };
 
-const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = [], onReadRelated }) => {
+const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, onNextQuestion, relatedBlogs = [], onReadRelated }) => {
     const [showToc, setShowToc] = useState(false);
     const [activeHeading, setActiveHeading] = useState('');
     const [readProgress, setReadProgress] = useState(0);
@@ -139,13 +140,21 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
     if (parsedSolution) {
         return (
             <div className="mx-auto w-full max-w-[60rem] space-y-3 px-4 pt-4 pb-16 animate-fade-in sm:px-6 sm:pt-6">
-                <button
-                    type="button"
-                    onClick={onBack}
-                    className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-2.5 text-sm font-semibold text-stone-700 hover:border-amber-300 hover:text-amber-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700"
-                >
-                    <ChevronLeft aria-hidden="true" className="size-4" /> Quay lại
-                </button>
+                <div className="flex items-center justify-between gap-2">
+                    <button
+                        type="button"
+                        onClick={onBack}
+                        className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-2.5 text-sm font-semibold text-stone-700 hover:border-amber-300 hover:text-amber-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700"
+                    >
+                        <ChevronLeft aria-hidden="true" className="size-4" /> Quay lại
+                    </button>
+                    {onNextQuestion && (
+                        <button type="button" onClick={onNextQuestion}
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 text-sm font-semibold text-amber-900 hover:border-amber-300 hover:bg-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700">
+                            Câu sau <ChevronRight aria-hidden="true" className="size-4" />
+                        </button>
+                    )}
+                </div>
                 <SolutionRenderer content={blog.content} />
             </div>
         );
