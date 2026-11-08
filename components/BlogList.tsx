@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useId, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { BlogPost, StudyLesson, StudyLibrary, StudyQuestionType, StudySection } from '../types';
-import { BookOpen, Plus, Search, SlidersHorizontal, Image, FileText, Check, Sparkles, ChevronLeft, ChevronDown, Folder, X, RotateCcw } from 'lucide-react';
+import { BookOpen, Plus, Search, SlidersHorizontal, Image, FileText, Check, Pencil, Sparkles, ChevronLeft, ChevronRight, ChevronDown, Folder, X, RotateCcw } from 'lucide-react';
 import ExamStyleModal from './ExamStyleModal';
 import TreeTableOfContents, { normalizeSearchText } from './TreeTableOfContents';
 import ChapterStudyList from './ChapterStudyList';
@@ -121,299 +121,154 @@ function questionKey(blogId: string, index: number) {
     return JSON.stringify([blogId, index]);
 }
 
-// ─────────────────────────────────────────────────────────────
-// CARD THUMBNAIL: Khung đề bài (toàn bộ card là đề bài)
-// ─────────────────────────────────────────────────────────────
-
 interface QuestionCardProps {
     blog: BlogPost;
     question: CardQuestionData | null;
     isAdmin: boolean;
     onEditBlog?: (blog: BlogPost) => void;
     onClick: () => void;
-    gc: { bg: string; text: string; dot: string };
     isSelected?: boolean;
-    onToggleSelect?: () => void;
+    onToggleSelect: () => void;
 }
 
-function QuestionCard({ blog, question: q, isAdmin, onEditBlog, onClick, gc, isSelected, onToggleSelect }: QuestionCardProps) {
-    const isDungSai    = q?.type === 'dung_sai';
-    const isTracNghiem = q?.type === 'trac_nghiem';
-    const hasImg = !!(q?.imageSvg || q?.imageUrl || q?.imageTelegramFileId);
-    const hasQuestion = q && (q.questionText || q.questionLatex || hasImg);
-    const isRight = (q?.imageLayout === 'right') || (q?.imageLayout === 'auto') || !q?.imageLayout;
+const cardTypes: Record<QuestionType, string> = {
+    dung_sai: 'Đúng / Sai',
+    trac_nghiem: 'Trắc nghiệm',
+    tu_luan: 'Trả lời ngắn',
+};
 
-    const imageElem = hasImg ? (
-        <div style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'transparent',
-            padding: '2px',
-        }}>
-            {q?.imageSvg ? (
-                <div
-                    style={{
-                        maxWidth: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                    }}
-                    className="[&>svg]:max-w-full [&>svg]:h-auto [&>svg]:max-h-[190px] [&>svg]:object-contain"
-                    dangerouslySetInnerHTML={{ __html: q.imageSvg }}
-                />
-            ) : q?.imageUrl ? (
-                <img
-                    src={q.imageUrl}
-                    alt="Hình vẽ minh họa"
-                    style={{ maxWidth: '100%', maxHeight: '190px', objectFit: 'contain' }}
-                />
-            ) : q?.imageTelegramFileId ? (
-                <img
-                    src={`${CLOUDFLARE_PROXY_URL}/getFile/${q.imageTelegramFileId}`}
-                    alt="Hình vẽ minh họa"
-                    style={{ maxWidth: '100%', maxHeight: '190px', objectFit: 'contain' }}
-                />
-            ) : null}
-        </div>
+const cardControl = 'inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700';
+
+function QuestionCard({ blog, question, isAdmin, onEditBlog, onClick, isSelected = false, onToggleSelect }: QuestionCardProps) {
+    const [expanded, setExpanded] = useState(false);
+    const [isClipped, setIsClipped] = useState(false);
+    const contentId = useId();
+    const viewportRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const viewport = viewportRef.current;
+        const content = contentRef.current;
+        if (!viewport || !content || expanded) return;
+
+        const measure = () => setIsClipped(content.scrollHeight > viewport.clientHeight + 1);
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(viewport);
+        observer.observe(content);
+        return () => observer.disconnect();
+    }, [expanded]);
+
+    const imageSrc = question?.imageUrl || (question?.imageTelegramFileId
+        ? CLOUDFLARE_PROXY_URL + '/getFile/' + question.imageTelegramFileId : '');
+    const hasImage = !!(question?.imageSvg || imageSrc);
+    const text = question?.questionText || '';
+    const formula = question?.questionLatex || '';
+    const hasQuestion = !!(text || formula || hasImage);
+    const parts = hasImage ? text.split(/\[image\]/i) : [text];
+    const inlineImage = parts.length > 1;
+    const sideImage = hasImage && !inlineImage && !!(text || formula) && question?.imageLayout !== 'bottom';
+    const image = hasImage && (
+        <figure className={'mx-auto flex w-full min-w-0 max-w-sm items-center justify-center self-start rounded-lg border border-stone-200 bg-stone-50 p-2.5 '
+            + (sideImage ? '[@container_(min-width:26rem)]:w-[38%] [@container_(min-width:26rem)]:shrink-0' : '')}>
+            {question?.imageSvg ? (
+                <div className="max-w-full [&>svg]:block [&>svg]:h-auto [&>svg]:max-h-48 [&>svg]:max-w-full"
+                    dangerouslySetInnerHTML={{ __html: question.imageSvg }} />
+            ) : (
+                <img src={imageSrc} alt="Hình vẽ minh họa" className="max-h-48 max-w-full object-contain" />
+            )}
+        </figure>
+    );
+    const renderText = (value: string) => value.trim() ? (
+        <div className="overflow-x-auto whitespace-pre-wrap [overflow-wrap:anywhere]"><TextWithMathCard text={value} /></div>
     ) : null;
+    const readLabel = question ? 'Xem lời giải' : 'Đọc bài';
 
     return (
         <article
-            onClick={onClick}
-            style={{
-                borderRadius: '14px',
-                overflow: 'hidden',
-                cursor: 'pointer',
-                border: isSelected ? '2px solid #7B1113' : '1px solid #E9E9E7',
-                background: '#fff',
-                display: 'flex',
-                flexDirection: 'column',
-                transition: 'all 0.2s',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+            onClick={event => {
+                if (event.target instanceof Element && event.target.closest('button, a')) return;
+                const selection = window.getSelection();
+                if (selection && !selection.isCollapsed && event.currentTarget.contains(selection.anchorNode)) return;
+                onClick();
             }}
-            onMouseEnter={e => {
-                e.currentTarget.style.borderColor = '#CFCFCB';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.08)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={e => {
-                e.currentTarget.style.borderColor = '#E9E9E7';
-                e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)';
-                e.currentTarget.style.transform = 'translateY(0)';
-            }}
-        >
-            {/* ── Thanh Header ── */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '8px 12px',
-                borderBottom: '1px solid #F0F0EE',
-                background: '#FAFAFA',
-                gap: '8px',
-                flexShrink: 0,
-            }}>
-                {/* Bên trái: Số câu + Loại bài */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {q?.questionNo ? (
-                        <span style={{
-                            fontSize: '11px', fontWeight: 700, color: '#1A1A1A',
-                            background: '#F1F0EC', padding: '2px 8px',
-                            borderRadius: '5px', border: '1px solid #E2E1DD',
-                        }}>
-                            {q.questionNo}
+            className={'flex min-h-48 min-w-0 cursor-pointer flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-colors hover:border-amber-300 '
+                + (isSelected ? 'border-amber-400 ring-1 ring-inset ring-amber-200' : 'border-stone-200')}>
+            <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-stone-100 bg-stone-50 px-3 py-1.5 sm:px-3.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    {question?.questionNo && (
+                        <span className="rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs font-bold text-amber-950">
+                            {question.questionNo}
                         </span>
-                    ) : null}
-                    <span style={{
-                        fontSize: '10px', fontWeight: 700,
-                        padding: '2px 8px', borderRadius: '5px',
-                        background: isDungSai ? '#FEF3C7' : isTracNghiem ? '#EAF3EE' : '#EEF0FB',
-                        color: isDungSai ? '#92400E' : isTracNghiem ? '#448361' : '#6B7CDB',
-                        border: `1px solid ${isDungSai ? '#FDE68A' : isTracNghiem ? '#44836140' : '#D0D5F5'}`,
-                    }}>
-                        {isDungSai ? 'Đúng / Sai' : isTracNghiem ? 'Trắc nghiệm' : q ? 'Trả lời ngắn' : 'Bài viết'}
-                    </span>
-                    {/* Grade badge */}
-                    <span style={{
-                        fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em',
-                        padding: '2px 8px', borderRadius: '5px',
-                        background: gc.bg, color: gc.text, border: `1px solid ${gc.dot}30`,
-                    }}>
-                        {(blog.grade || 0) === 0 ? 'Chung' : `Lớp ${blog.grade}`}
-                    </span>
+                    )}
+                    <span className="text-xs font-semibold text-stone-700">{question ? cardTypes[question.type] : 'Bài viết'}</span>
                 </div>
-
-                {/* Bên phải: Mức độ (placeholder) + Thêm + Admin status */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {/* Mức độ thực tế */}
-                    {(() => {
-                        const lvlMap: Record<number, {label:string;bg:string;color:string;brd:string}> = {
-                            1:{label:'Mức 1',bg:'#EAF3EE',color:'#448361',brd:'#44836130'},
-                            2:{label:'Mức 2',bg:'#EEF0FB',color:'#6B7CDB',brd:'#6B7CDB30'},
-                            3:{label:'Mức 3',bg:'#FFF3E8',color:'#D9730D',brd:'#D9730D30'},
-                            4:{label:'Mức 4',bg:'#F3ECF8',color:'#9065B0',brd:'#9065B030'},
-                        };
-                        const lv = (blog as any).level || 0;
-                        const s = lvlMap[lv];
-                        return <span style={{
-                            fontSize:'10px',fontWeight:700,
-                            padding:'2px 8px',borderRadius:'5px',
-                            background:s?.bg||'#F1F0EC',color:s?.color||'#AEACA8',
-                            border:`1px solid ${s?.brd||'#E2E1DD'}`,
-                        }}>{s?.label||'Mức —'}</span>;
-                    })()}
-
-                    {/* Nút Thêm vào đề thi */}
-                    <button
-                        onClick={e => {
-                            e.stopPropagation();
-                            if (onToggleSelect) onToggleSelect();
-                        }}
-                        title={isSelected ? "Bỏ chọn khỏi đề thi" : "Thêm vào đề thi kiểm tra"}
-                        style={{
-                            fontSize: '11px', fontWeight: 700, lineHeight: 1,
-                            padding: '3px 8px', borderRadius: '5px',
-                            background: isSelected ? '#7B1113' : '#F1F0EC',
-                            color: isSelected ? '#fff' : '#787774',
-                            border: `1px solid ${isSelected ? '#7B1113' : '#E2E1DD'}`,
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
-                            display: 'flex', alignItems: 'center', gap: '3px',
-                        }}
-                        onMouseEnter={e => {
-                            if (!isSelected) {
-                                e.currentTarget.style.background = '#EEF0FB';
-                                e.currentTarget.style.color = '#6B7CDB';
-                                e.currentTarget.style.borderColor = '#D0D5F5';
-                            }
-                        }}
-                        onMouseLeave={e => {
-                            if (!isSelected) {
-                                e.currentTarget.style.background = '#F1F0EC';
-                                e.currentTarget.style.color = '#787774';
-                                e.currentTarget.style.borderColor = '#E2E1DD';
-                            }
-                        }}
-                    >
-                        {isSelected ? '✓ Đã chọn' : '+ Thêm'}
+                <div className="ml-auto flex flex-wrap items-center gap-1">
+                    <button type="button" aria-pressed={isSelected} onClick={onToggleSelect}
+                        title={isSelected ? 'Bỏ chọn khỏi đề thi' : 'Thêm vào đề thi'}
+                        className={cardControl + (isSelected ? ' bg-amber-100 text-amber-950 hover:bg-amber-200' : ' text-amber-900 hover:bg-amber-100')}>
+                        {isSelected ? <Check aria-hidden="true" className="size-3.5" /> : <Plus aria-hidden="true" className="size-3.5" />}
+                        {isSelected ? 'Đã chọn' : 'Thêm'}
                     </button>
-
-                    {/* Admin: nút Sửa (thay thế badge "Đã đăng / Nháp") */}
                     {isAdmin && onEditBlog && (
-                        <button
-                            onClick={e => { e.stopPropagation(); onEditBlog(blog); }}
-                            title="Chỉnh sửa bài viết"
-                            style={{
-                                fontSize: '9px', fontWeight: 700,
-                                padding: '2px 8px', borderRadius: '5px', cursor: 'pointer',
-                                background: blog.is_published ? '#EAF3EE' : '#F3ECF8',
-                                color: blog.is_published ? '#448361' : '#9065B0',
-                                border: `1px solid ${blog.is_published ? '#B7D9C4' : '#C8A8DC'}`,
-                                transition: 'all 0.15s',
-                            }}
-                            onMouseEnter={e => {
-                                e.currentTarget.style.background = '#EEF0FB';
-                                e.currentTarget.style.color = '#6B7CDB';
-                                e.currentTarget.style.borderColor = '#D0D5F5';
-                            }}
-                            onMouseLeave={e => {
-                                e.currentTarget.style.background = blog.is_published ? '#EAF3EE' : '#F3ECF8';
-                                e.currentTarget.style.color = blog.is_published ? '#448361' : '#9065B0';
-                                e.currentTarget.style.borderColor = blog.is_published ? '#B7D9C4' : '#C8A8DC';
-                            }}
-                        >
-                            ✎ Sửa
+                        <button type="button" onClick={() => onEditBlog(blog)} title="Chỉnh sửa bài viết"
+                            className={cardControl + ' text-stone-700 hover:bg-stone-200'}>
+                            <Pencil aria-hidden="true" className="size-3.5" /> Sửa
                         </button>
                     )}
                 </div>
+            </header>
+
+            <div className="min-w-0 flex-1 px-3.5 py-3.5 [container-type:inline-size] sm:px-4">
+                <div id={contentId} ref={viewportRef}
+                    className={'relative overflow-hidden ' + (expanded ? '' : 'max-h-52')}>
+                    <div ref={contentRef} className="min-w-0 text-[15px] leading-relaxed text-stone-800 [&_.katex]:text-[1em]">
+                        {!hasQuestion ? (
+                            <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{blog.summary || blog.title}</p>
+                        ) : inlineImage ? (
+                            <div className="space-y-3">
+                                {renderText(parts[0])}
+                                {image}
+                                {renderText(parts.slice(1).join('[image]'))}
+                                {formula && <KatexBlockCard tex={formula} />}
+                            </div>
+                        ) : (
+                            <div className={'flex flex-col gap-3 ' + (sideImage ? '[@container_(min-width:26rem)]:flex-row' : '')}>
+                                {(text || formula) && (
+                                    <div className="min-w-0 flex-1 space-y-2">
+                                        {renderText(text)}
+                                        {formula && <KatexBlockCard tex={formula} />}
+                                    </div>
+                                )}
+                                {image}
+                            </div>
+                        )}
+                    </div>
+                    {!expanded && isClipped && (
+                        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-white/0" />
+                    )}
+                </div>
+                {(isClipped || expanded) && (
+                    <button type="button" aria-expanded={expanded} aria-controls={contentId}
+                        onClick={() => setExpanded(previous => !previous)} className={cardControl + ' mt-1 text-amber-900 hover:bg-amber-50'}>
+                        {expanded ? 'Thu gọn' : 'Xem thêm'}
+                        <ChevronDown aria-hidden="true" className={'size-3.5 ' + (expanded ? 'rotate-180' : '')} />
+                    </button>
+                )}
             </div>
 
-            {/* ── Vùng đề bài: chiều cao cố định, scroll nếu đề dài ── */}
-            {hasQuestion ? (
-                <div
-                    style={{
-                        height: '240px',
-                        overflowY: 'auto',
-                        padding: '14px 16px',
-                        fontSize: '15px',
-                        color: '#374151',
-                        lineHeight: 1.7,
-                        fontFamily: "'KaTeX_Main', 'Computer Modern', serif",
-                        scrollbarWidth: 'thin',
-                        scrollbarColor: '#D1D5DB transparent',
-                    }}
-                    onWheel={e => e.stopPropagation()}
-                >
-                    <style>{`.katex { color: #1A1A1A !important; font-size: 1em !important; }`}</style>
-                    {(() => {
-                        const hasPlaceholder = hasImg && /\[image\]/i.test(q!.questionText || '');
-                        if (hasPlaceholder) {
-                            const parts = (q!.questionText || '').split(/\[image\]/i);
-                            const before = parts[0] || '';
-                            const after = parts.slice(1).join('[image]') || '';
-                            return (
-                                <div>
-                                    {before.trim() && (
-                                        <div style={{ marginBottom: '8px', whiteSpace: 'pre-wrap' }}>
-                                            <TextWithMathCard text={before} />
-                                        </div>
-                                    )}
-                                    <div style={{ margin: '8px 0', display: 'flex', justifyContent: 'center' }}>
-                                        {imageElem}
-                                    </div>
-                                    {after.trim() && (
-                                        <div style={{ marginBottom: q!.questionLatex ? '8px' : 0, whiteSpace: 'pre-wrap' }}>
-                                            <TextWithMathCard text={after} />
-                                        </div>
-                                    )}
-                                    {q!.questionLatex && <KatexBlockCard tex={q!.questionLatex} />}
-                                </div>
-                            );
-                        }
-                        if (hasImg && isRight) {
-                            return (
-                                <div className="flex flex-col sm:flex-row gap-4 items-start">
-                                    <div className="flex-1 min-w-0">
-                                        {q!.questionText && (
-                                            <div style={{ marginBottom: q!.questionLatex ? '8px' : 0, whiteSpace: 'pre-wrap' }}>
-                                                <TextWithMathCard text={q!.questionText} />
-                                            </div>
-                                        )}
-                                        {q!.questionLatex && <KatexBlockCard tex={q!.questionLatex} />}
-                                    </div>
-                                    <div className="w-full sm:w-[38%] max-w-[320px] shrink-0 self-center">
-                                        {imageElem}
-                                    </div>
-                                </div>
-                            );
-                        }
-                        return (
-                            <div>
-                                {q!.questionText && (
-                                    <div style={{ marginBottom: q!.questionLatex ? '8px' : 0, whiteSpace: 'pre-wrap' }}>
-                                        <TextWithMathCard text={q!.questionText} />
-                                    </div>
-                                )}
-                                {q!.questionLatex && <KatexBlockCard tex={q!.questionLatex} />}
-                                {hasImg && (
-                                    <div style={{ marginTop: '10px' }}>
-                                        {imageElem}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })()}
+            <footer className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-stone-100 px-3.5 py-1.5 sm:px-4">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-stone-600">
+                    <span>{blog.grade ? 'Lớp ' + blog.grade : 'Chung'}</span>
+                    {!!blog.level && <span className="border-l border-stone-200 pl-2">Mức {blog.level}</span>}
+                    {isAdmin && !blog.is_published && <span className="border-l border-stone-200 pl-2">Nháp</span>}
                 </div>
-            ) : (
-                /* Fallback: bài viết thường không phải lời giải */
-                <div style={{
-                    height: '240px', overflowY: 'auto', padding: '14px 16px',
-                    fontSize: '15px', color: '#374151', lineHeight: 1.7,
-                }}>
-                    <p style={{ margin: 0, color: '#787774' }}>{blog.summary || blog.title}</p>
-                </div>
-            )}
+                <button type="button" onClick={onClick}
+                    aria-label={question?.questionNo ? readLabel + ' ' + question.questionNo : readLabel}
+                    className={cardControl + ' ml-auto text-amber-900 hover:bg-amber-50'}>
+                    {readLabel} <ChevronRight aria-hidden="true" className="size-3.5" />
+                </button>
+            </footer>
         </article>
     );
 }
@@ -438,13 +293,6 @@ interface BlogListProps {
 
 const estimateReadTime = (content: string): number =>
     Math.max(1, Math.ceil(content.trim().split(/\s+/).length / 200));
-
-const GRADE_COLORS: Record<number, { bg: string; text: string; dot: string }> = {
-    12: { bg: '#F3ECF8', text: '#9065B0', dot: '#9065B0' },
-    11: { bg: '#EEF0FB', text: '#6B7CDB', dot: '#6B7CDB' },
-    10: { bg: '#EAF3EE', text: '#448361', dot: '#448361' },
-    0:  { bg: '#F1F0EC', text: '#787774', dot: '#AEACA8' },
-};
 
 const questionTypeOptions = [
     { value: 'all', label: 'Tất cả' },
@@ -616,12 +464,11 @@ const BlogList: React.FC<BlogListProps> = ({
     }, [blogs, selectedCardIndexes]);
 
     const renderQuestionCards = (posts: BlogPost[], expandQuestions = false) => (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-3.5 md:grid-cols-2">
             {posts.flatMap(blog => {
                 const solution = parsePhysicsSolution(blog.content);
                 const questions = getStoredQuestions(solution);
                 const displayed = expandQuestions && questions.length ? questions : [questions[0]];
-                const gc = GRADE_COLORS[blog.grade || 0] || GRADE_COLORS[0];
                 return displayed.map((question, index) => (
                     <QuestionCard
                         key={questionKey(blog.id, index)}
@@ -637,7 +484,6 @@ const BlogList: React.FC<BlogListProps> = ({
                                 onReadBlog(blog);
                             }
                         }}
-                        gc={gc}
                         isSelected={selectedCardIndexes.get(blog.id)?.has(index)}
                         onToggleSelect={() => handleToggleSelect(blog.id, index)}
                     />
