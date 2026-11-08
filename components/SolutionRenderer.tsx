@@ -120,21 +120,40 @@ function KatexInline({ tex }: { tex: string }) {
   return <span ref={ref} />;
 }
 
+function renderFormattedText(text: string, baseKey: string | number): React.ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((chunk, j) => {
+    if (chunk.startsWith('**') && chunk.endsWith('**') && chunk.length >= 4) {
+      return <strong key={`${baseKey}-b-${j}`} className="font-bold text-[#1A1A1A]">{chunk.slice(2, -2)}</strong>;
+    }
+    return <span key={`${baseKey}-t-${j}`}>{chunk}</span>;
+  });
+}
+
 function renderInlineMath(text: string): React.ReactNode[] {
-  return text.split(/(\$(?!\$)[^$\n]+(?<!\$)\$|\\\([\s\S]*?\\\))/g).map((part, i) => {
+  if (!text) return [];
+
+  // Tự động nhận diện công thức toán nếu AI quên kẹp dấu $
+  let processed = text;
+  if (!processed.includes('$') && /\\(?:vec|frac|cdot|text|alpha|beta|omega|pi|Delta|mu|times|le|ge|neq|approx)|[A-Za-z]_[0-9A-Za-z]|\^[0-9]/.test(processed)) {
+    return [<KatexInline key="auto-math" tex={processed.trim()} />];
+  }
+
+  return processed.split(/(\$(?!\$)[^$\n]+(?<!\$)\$|\\\([\s\S]*?\\\))/g).map((part, i) => {
     if (part.startsWith('$') && part.endsWith('$') && part.length > 2 && !part.startsWith('$$')) {
       return <KatexInline key={i} tex={part.slice(1, -1).trim()} />;
     }
     if (part.startsWith('\\(') && part.endsWith('\\)') && part.length > 3) {
       return <KatexInline key={i} tex={part.slice(2, -2).trim()} />;
     }
-    return <span key={i}>{part}</span>;
+    return <React.Fragment key={i}>{renderFormattedText(part, i)}</React.Fragment>;
   });
 }
 
 function TextWithMath({ text }: { text: string }) {
   if (!text) return null;
-  const clean = text.replace(/\[\/?justify\]/gi, '');
+  // Chuẩn hóa ký tự \n dạng chuỗi escape thành ký tự xuống dòng thực tế
+  const normalized = text.replace(/\\n/g, '\n');
+  const clean = normalized.replace(/\[\/?justify\]/gi, '');
   const rawLines = clean.split('\n');
 
   const elements: React.ReactNode[] = [];

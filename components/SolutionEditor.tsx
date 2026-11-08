@@ -214,12 +214,13 @@ HÃY ĐỌC NỘI DUNG HOẶC HÌNH ẢNH ĐỀ THI ĐƯỢC CUNG CẤP VÀ CHUY
 
 1. QUY TẮC CÚ PHÁP JSON VÀ LATEX:
 - Đầu ra phải là chuỗi JSON thuần hợp lệ (chỉ trả về khối mã json, không giải thích ngoài lề).
-- Trong chuỗi JSON, tất cả dấu gạch chéo ngược của LaTeX phải escape thành 2 dấu gạch chéo ngược: ví dụ \\\\frac, \\\\cdot, \\\\alpha, \\\\text{...}.
-- Công thức trong dòng kẹp giữa $ công thức $. Công thức căn giữa độc lập kẹp giữa $$ công thức $$.
+- Trong chuỗi JSON, tất cả dấu gạch chéo ngược của LaTeX phải escape thành 2 dấu gạch chéo ngược: ví dụ \\\\frac, \\\\cdot, \\\\alpha, \\\\vec, \\\\text{...}.
+- MỌI CÔNG THỨC TOÁN (kể cả trong choices, statements) BẮT BUỘC PHẢI KẸP GIỮA $ ... $ hoặc $$ ... $$. Tuyệt đối không để công thức trần không có $.
+- Trong solution: Công thức căn giữa $$ ... $$ phải đứng riêng một dòng, không viết dính chữ ngay sau $$.
 
 2. PHÂN LOẠI 3 DẠNG CÂU HỎI:
 - type: "trac_nghiem" (Trắc nghiệm 4 phương án):
-  + choices: mảng đúng 4 phần tử tương ứng A, B, C, D (không ghi lại chữ "A.", "B." ở đầu đáp án).
+  + choices: mảng đúng 4 phần tử tương ứng A, B, C, D (kẹp công thức trong $, ví dụ "$\\\\vec{F}_1 + \\\\vec{F}_2 = \\\\vec{0}$", không ghi lại chữ "A.", "B." ở đầu đáp án).
   + correctChoice: chữ cái đáp án đúng, viết hoa ("A", "B", "C", hoặc "D").
   + solution: hướng dẫn giải chi tiết.
 - type: "dung_sai" (Đúng / Sai 4 ý a, b, c, d):
@@ -228,10 +229,10 @@ HÃY ĐỌC NỘI DUNG HOẶC HÌNH ẢNH ĐỀ THI ĐƯỢC CUNG CẤP VÀ CHUY
 - type: "tu_luan" (Tự luận hoặc trả lời ngắn):
   + solution: hướng dẫn giải chi tiết kèm công thức và kết quả.
 
-3. HÌNH ẢNH VÀ ĐỒ THỊ (NẾU CÓ):
-- Nếu câu hỏi có hình vẽ mạch điện, đồ thị, vectơ: hãy tạo mã TikZ LaTeX đặt vào trường tikzCode (escape thành \\\\begin{tikzpicture}...\\\\end{tikzpicture}).
+3. HÌNH ẢNH VÀ ĐỒ THỊ (CỰC KỲ QUAN TRỌNG):
+- NẾU ẢNH HOẶC ĐỀ THI CÓ HÌNH VẼ (khung dây, mạch điện, đồ thị, vectơ từ trường/lực): BẮT BUỘC PHẢI DỰNG LẠI HÌNH BẰNG MÃ TIKZ LATEX đặt vào trường tikzCode (escape thành \\\\begin{tikzpicture}...\\\\end{tikzpicture}). KHÔNG ĐƯỢC ĐỂ TRỐNG TRONG KHI ĐỀ BÀI CÓ HÌNH.
 - imageLayout: "right" (ảnh đặt bên phải) hoặc "bottom" (ảnh đặt bên dưới).
-- Nếu không có hình, để tikzCode: "".
+- Chỉ khi đề hoàn toàn không có hình vẽ mới để tikzCode: "".
 
 4. CẤU TRÚC JSON MẪU BẮT BUỘC:
 {
@@ -406,20 +407,39 @@ function KatexSpan({ tex, block = false }: { tex: string; block?: boolean }) {
     : <span ref={ref as React.RefObject<HTMLSpanElement>} />;
 }
 
-const renderInlineMath = (text: string) =>
-  text.split(/(\$(?!\$)[^$\n]+(?<!\$)\$|\\\([\s\S]*?\\\))/g).map((part, i) => {
+const renderFormattedText = (text: string, baseKey: string | number): React.ReactNode[] => {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((chunk, j) => {
+    if (chunk.startsWith('**') && chunk.endsWith('**') && chunk.length >= 4) {
+      return <strong key={`${baseKey}-b-${j}`} className="font-bold text-[#1A1A1A]">{chunk.slice(2, -2)}</strong>;
+    }
+    return <span key={`${baseKey}-t-${j}`}>{chunk}</span>;
+  });
+};
+
+const renderInlineMath = (text: string) => {
+  if (!text) return [];
+
+  // Tự động nhận diện công thức toán nếu AI quên kẹp dấu $
+  let processed = text;
+  if (!processed.includes('$') && /\\(?:vec|frac|cdot|text|alpha|beta|omega|pi|Delta|mu|times|le|ge|neq|approx)|[A-Za-z]_[0-9A-Za-z]|\^[0-9]/.test(processed)) {
+    return [<KatexSpan key="auto-math" tex={processed.trim()} block={false} />];
+  }
+
+  return processed.split(/(\$(?!\$)[^$\n]+(?<!\$)\$|\\\([\s\S]*?\\\))/g).map((part, i) => {
     if (part.startsWith('$') && part.endsWith('$') && part.length > 2 && !part.startsWith('$$')) {
       return <KatexSpan key={i} tex={part.slice(1, -1).trim()} block={false} />;
     }
     if (part.startsWith('\\(') && part.endsWith('\\)') && part.length > 3) {
       return <KatexSpan key={i} tex={part.slice(2, -2).trim()} block={false} />;
     }
-    return <span key={i}>{part}</span>;
+    return <React.Fragment key={i}>{renderFormattedText(part, i)}</React.Fragment>;
   });
+};
 
 function TextWithMath({ text }: { text: string }) {
   if (!text) return null;
-  const clean = text.replace(/\[\/?justify\]/gi, '');
+  const normalized = text.replace(/\\n/g, '\n');
+  const clean = normalized.replace(/\[\/?justify\]/gi, '');
   const rawLines = clean.split('\n');
 
   const elements: React.ReactNode[] = [];
