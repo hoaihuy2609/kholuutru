@@ -157,9 +157,22 @@ export function calculateChoiceLayout(choices: string[]): 1 | 2 | 4 {
   return 1;
 }
 
-/**
- * Sinh mã nguồn LaTeX hoàn chỉnh từ danh sách câu hỏi và cấu hình giao diện
- */
+export function formatExamSectionNote(note: string, questionCount: number): string {
+  return note.replace(/(câu\s+)n(?![\p{L}\p{N}_])/giu, (_, prefix: string) => prefix + questionCount);
+}
+
+function getSolutionEntries(sections: { title: string; questions: SelectedQuestionItem[] }[], numberBySection: boolean) {
+  const populatedSections = sections.filter(section => section.questions.length > 0);
+  const showSectionTitle = numberBySection && populatedSections.length > 1;
+  let nextNumber = 1;
+  return populatedSections.flatMap(section => section.questions.map((question, index) => ({
+    question,
+    number: numberBySection ? index + 1 : nextNumber++,
+    sectionTitle: showSectionTitle && index === 0 ? section.title : '',
+  })));
+}
+
+/** Sinh mã nguồn LaTeX hoàn chỉnh từ danh sách câu hỏi và cấu hình giao diện. */
 export function generateExamLatex(questions: SelectedQuestionItem[], config: ExamStyleConfig): string {
   const primaryColorHex = (config.isCustomColor ? config.customColor : config.themeColor).replace('#', '');
 
@@ -168,7 +181,9 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
   const dungSaiList = questions.filter(q => q.type === 'dung_sai');
   const tuLuanList = questions.filter(q => q.type === 'tu_luan');
 
-  let currentGlobalQIdx = 1;
+  const shortAnswerTitle = config.shortAnswerTitle || config.essayTitle || DEFAULT_EXAM_STYLE.shortAnswerTitle;
+  const shortAnswerNote = config.shortAnswerNote || config.essayNote || DEFAULT_EXAM_STYLE.shortAnswerNote;
+  let nextQuestionNumber = 1;
 
   // 1. Header template
   let out = `\\documentclass[12pt,a4paper]{article}
@@ -225,13 +240,13 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
       out += `
 \\vspace{2mm}
 \\noindent\\textbf{\\color{primaryColor} ${config.choice4Title}}\\\\
-\\textit{${config.choice4Note}}
+\\textit{${formatExamSectionNote(config.choice4Note, tracNghiemList.length)}}
 \\vspace{3mm}
 `;
     }
 
-    tracNghiemList.forEach((q) => {
-      const qNum = currentGlobalQIdx++;
+    tracNghiemList.forEach((q, index) => {
+      const qNum = config.enableSectionTitles ? index + 1 : nextQuestionNumber++;
       const prefix = config.questionPrefix || 'Câu';
       out += `\n\\noindent \\textbf{${prefix} ${qNum}:} ${q.qText || ''}\n`;
       if (q.qFormula) {
@@ -265,13 +280,13 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
       out += `
 \\vspace{4mm}
 \\noindent\\textbf{\\color{primaryColor} ${config.trueFalseTitle}}\\\\
-\\textit{${config.trueFalseNote}}
+\\textit{${formatExamSectionNote(config.trueFalseNote, dungSaiList.length)}}
 \\vspace{3mm}
 `;
     }
 
-    dungSaiList.forEach((q) => {
-      const qNum = currentGlobalQIdx++;
+    dungSaiList.forEach((q, index) => {
+      const qNum = config.enableSectionTitles ? index + 1 : nextQuestionNumber++;
       const prefix = config.questionPrefix || 'Câu';
       out += `\n\\noindent \\textbf{${prefix} ${qNum}:} ${q.qText || ''}\n`;
       if (q.qFormula) {
@@ -293,14 +308,14 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
     if (config.enableSectionTitles) {
       out += `
 \\vspace{4mm}
-\\noindent\\textbf{\\color{primaryColor} ${config.shortAnswerTitle || config.essayTitle || 'PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN'}}\\\\
-\\textit{${config.shortAnswerNote || config.essayNote || 'Thí sinh trả lời từ câu 1 đến câu n. Mỗi câu hỏi thí sinh điền kết quả vào ô tương ứng.'}}
+\\noindent\\textbf{\\color{primaryColor} ${shortAnswerTitle}}\\\\
+\\textit{${formatExamSectionNote(shortAnswerNote, tuLuanList.length)}}
 \\vspace{3mm}
 `;
     }
 
-    tuLuanList.forEach((q) => {
-      const qNum = currentGlobalQIdx++;
+    tuLuanList.forEach((q, index) => {
+      const qNum = config.enableSectionTitles ? index + 1 : nextQuestionNumber++;
       const prefix = config.questionPrefix || 'Câu';
       out += `\n\\noindent \\textbf{${prefix} ${qNum}:} ${q.qText || ''}\n`;
       if (q.qFormula) {
@@ -355,10 +370,14 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
 \\vspace{3mm}
 `;
 
-    let solIdx = 1;
-    questions.forEach((q) => {
+    const entries = getSolutionEntries([
+      { title: config.choice4Title || DEFAULT_EXAM_STYLE.choice4Title, questions: tracNghiemList },
+      { title: config.trueFalseTitle || DEFAULT_EXAM_STYLE.trueFalseTitle, questions: dungSaiList },
+      { title: shortAnswerTitle, questions: tuLuanList },
+    ], config.enableSectionTitles);
+    entries.forEach(({ question: q, number: qNum, sectionTitle }) => {
+      if (sectionTitle) out += `\n\\noindent\\textbf{\\color{primaryColor} ${sectionTitle}}\\par\n`;
       const prefix = config.questionPrefix || 'Câu';
-      const qNum = solIdx++;
       out += `\n\\noindent \\textbf{${prefix} ${qNum}:} ${q.qText || ''}\n`;
       out += `\n\\begin{center}\\textbf{\\color{blue} Lời giải:}\\end{center}\n`;
 
@@ -508,7 +527,9 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
   const dungSaiList = questions.filter(q => q.type === 'dung_sai');
   const tuLuanList = questions.filter(q => q.type === 'tu_luan');
 
-  let qCount = 1;
+  const shortAnswerTitle = config.shortAnswerTitle || config.essayTitle || DEFAULT_EXAM_STYLE.shortAnswerTitle;
+  const shortAnswerNote = config.shortAnswerNote || config.essayNote || DEFAULT_EXAM_STYLE.shortAnswerNote;
+  let nextQuestionNumber = 1;
 
   let bodyHtml = `
     <!-- HEADER ĐỀ THI -->
@@ -532,13 +553,13 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
       bodyHtml += `
         <div style="margin: 16px 0 10px 0;">
           <div style="font-weight: bold; font-size: 12pt; color: ${primaryColor};">${config.choice4Title}</div>
-          <div style="font-size: 10pt; font-style: italic; color: #555;">${config.choice4Note}</div>
+          <div style="font-size: 10pt; font-style: italic; color: #555;">${formatExamSectionNote(config.choice4Note, tracNghiemList.length)}</div>
         </div>
       `;
     }
 
-    tracNghiemList.forEach(q => {
-      const qNum = qCount++;
+    tracNghiemList.forEach((q, index) => {
+      const qNum = config.enableSectionTitles ? index + 1 : nextQuestionNumber++;
       const choices = q.choices || ['', '', '', ''];
       const layout = calculateChoiceLayout(choices);
       const cols = layout === 4 ? '1fr 1fr 1fr 1fr' : layout === 2 ? '1fr 1fr' : '1fr';
@@ -563,13 +584,13 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
       bodyHtml += `
         <div style="margin: 20px 0 10px 0; page-break-before: auto;">
           <div style="font-weight: bold; font-size: 12pt; color: ${primaryColor};">${config.trueFalseTitle}</div>
-          <div style="font-size: 10pt; font-style: italic; color: #555;">${config.trueFalseNote}</div>
+          <div style="font-size: 10pt; font-style: italic; color: #555;">${formatExamSectionNote(config.trueFalseNote, dungSaiList.length)}</div>
         </div>
       `;
     }
 
-    dungSaiList.forEach(q => {
-      const qNum = qCount++;
+    dungSaiList.forEach((q, index) => {
+      const qNum = config.enableSectionTitles ? index + 1 : nextQuestionNumber++;
 
       bodyHtml += `
         <div style="margin-bottom: 16px; page-break-inside: avoid; text-align: justify;">
@@ -587,14 +608,14 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
     if (config.enableSectionTitles) {
       bodyHtml += `
         <div style="margin: 20px 0 10px 0;">
-          <div style="font-weight: bold; font-size: 12pt; color: ${primaryColor};">${config.shortAnswerTitle || config.essayTitle || 'PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN'}</div>
-          <div style="font-size: 10pt; font-style: italic; color: #555;">${config.shortAnswerNote || config.essayNote || 'Thí sinh trả lời từ câu 1 đến câu n. Mỗi câu hỏi thí sinh điền kết quả vào ô tương ứng.'}</div>
+          <div style="font-weight: bold; font-size: 12pt; color: ${primaryColor};">${shortAnswerTitle}</div>
+          <div style="font-size: 10pt; font-style: italic; color: #555;">${formatExamSectionNote(shortAnswerNote, tuLuanList.length)}</div>
         </div>
       `;
     }
 
-    tuLuanList.forEach(q => {
-      const qNum = qCount++;
+    tuLuanList.forEach((q, index) => {
+      const qNum = config.enableSectionTitles ? index + 1 : nextQuestionNumber++;
 
       bodyHtml += `
         <div style="margin-bottom: 16px; page-break-inside: avoid; text-align: justify;">
@@ -632,9 +653,13 @@ export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config
         </div>
     `;
 
-    let sIdx = 1;
-    questions.forEach(q => {
-      const qNum = sIdx++;
+    const entries = getSolutionEntries([
+      { title: config.choice4Title || DEFAULT_EXAM_STYLE.choice4Title, questions: tracNghiemList },
+      { title: config.trueFalseTitle || DEFAULT_EXAM_STYLE.trueFalseTitle, questions: dungSaiList },
+      { title: shortAnswerTitle, questions: tuLuanList },
+    ], config.enableSectionTitles);
+    entries.forEach(({ question: q, number: qNum, sectionTitle }) => {
+      if (sectionTitle) bodyHtml += `<h3 style="font-size: 11pt; color: ${primaryColor};">${sectionTitle}</h3>`;
       bodyHtml += `
         <div style="margin-bottom: 18px; page-break-inside: avoid;">
           <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-bottom: 6px;"><b>${config.questionPrefix || 'Câu'} ${qNum}:</b> ${q.qText || ''}</div>

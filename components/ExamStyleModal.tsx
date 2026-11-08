@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import {
   ExamStyleConfig, DEFAULT_EXAM_STYLE, SelectedQuestionItem,
-  generateExamLatex, downloadTexFile,
+  formatExamSectionNote, generateExamLatex, downloadTexFile,
   printExamDirectlyToPdf
 } from '../src/services/examLatexService';
 
@@ -13,6 +13,27 @@ interface ExamStyleModalProps {
   isOpen: boolean;
   onClose: () => void;
   questions: SelectedQuestionItem[];
+}
+
+function SectionNoteInput({ label, note, count, onChange }: {
+  label: string;
+  note: string;
+  count: number;
+  onChange: (note: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <input
+      type="text"
+      aria-label={label}
+      value={editing || count === 0 ? note : formatExamSectionNote(note, count)}
+      onFocus={() => setEditing(true)}
+      onBlur={() => setEditing(false)}
+      onChange={event => onChange(event.target.value)}
+      placeholder="Dùng “câu n” để tự điền số câu"
+      className="w-full p-2 rounded border border-stone-200 text-xs italic bg-white"
+    />
+  );
 }
 
 export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
@@ -466,12 +487,11 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                     onChange={e => updateConfig('choice4Title', e.target.value)}
                     className="w-full p-2 rounded border border-stone-200 text-xs bg-white"
                   />
-                  <input
-                    type="text"
-                    value={config.choice4Note}
-                    onChange={e => updateConfig('choice4Note', e.target.value)}
-                    placeholder="Ghi chú in nghiêng..."
-                    className="w-full p-2 rounded border border-stone-200 text-xs italic bg-white"
+                  <SectionNoteInput
+                    label="Hướng dẫn phần trắc nghiệm 4 phương án"
+                    note={config.choice4Note}
+                    count={questions.filter(question => question.type === 'trac_nghiem').length}
+                    onChange={note => updateConfig('choice4Note', note)}
                   />
                 </div>
 
@@ -484,12 +504,11 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                     onChange={e => updateConfig('trueFalseTitle', e.target.value)}
                     className="w-full p-2 rounded border border-stone-200 text-xs bg-white"
                   />
-                  <input
-                    type="text"
-                    value={config.trueFalseNote}
-                    onChange={e => updateConfig('trueFalseNote', e.target.value)}
-                    placeholder="Ghi chú in nghiêng..."
-                    className="w-full p-2 rounded border border-stone-200 text-xs italic bg-white"
+                  <SectionNoteInput
+                    label="Hướng dẫn phần đúng sai"
+                    note={config.trueFalseNote}
+                    count={questions.filter(question => question.type === 'dung_sai').length}
+                    onChange={note => updateConfig('trueFalseNote', note)}
                   />
                 </div>
 
@@ -498,16 +517,15 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                   <label className="block text-xs font-semibold text-stone-700">Tiêu đề — Phần III (Trả lời ngắn)</label>
                   <input
                     type="text"
-                    value={config.essayTitle}
-                    onChange={e => updateConfig('essayTitle', e.target.value)}
+                    value={config.shortAnswerTitle}
+                    onChange={e => updateConfig('shortAnswerTitle', e.target.value)}
                     className="w-full p-2 rounded border border-stone-200 text-xs bg-white"
                   />
-                  <input
-                    type="text"
-                    value={config.essayNote}
-                    onChange={e => updateConfig('essayNote', e.target.value)}
-                    placeholder="Ghi chú in nghiêng..."
-                    className="w-full p-2 rounded border border-stone-200 text-xs italic bg-white"
+                  <SectionNoteInput
+                    label="Hướng dẫn phần trả lời ngắn"
+                    note={config.shortAnswerNote}
+                    count={questions.filter(question => question.type === 'tu_luan').length}
+                    onChange={note => updateConfig('shortAnswerNote', note)}
                   />
                 </div>
               </div>
