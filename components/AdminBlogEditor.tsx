@@ -29,7 +29,9 @@ interface AdminBlogEditorProps {
 const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
 const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, studyLessons, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
-    const [editorMode, setEditorMode] = useState<'markdown' | 'solution' | 'exam_paper'>('markdown');
+    const [selectedMode, setEditorMode] = useState<'markdown' | 'solution' | 'exam_paper'>('markdown');
+    const isLessonCreation = !blog && !!initialSection?.lessonId;
+    const editorMode = isLessonCreation ? 'solution' : selectedMode;
     const placement = blog?.studySection ?? initialSection;
     const [chapterId, setChapterId] = useState(placement?.chapterId ?? '');
     const [studyType, setStudyType] = useState<StudyQuestionType | ''>(placement?.questionType ?? '');
@@ -265,25 +267,27 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                     </button>
                 </div>
 
-                <div className="flex items-center bg-white p-1 rounded-xl border border-[#E9E9E7]">
-                    {([
-                        { key: 'markdown' as const, label: 'Markdown' },
-                        { key: 'solution' as const, label: 'Lời Giải (LaTeX)' },
-                        { key: 'exam_paper' as const, label: 'Soạn Đề' },
-                    ]).filter(tab => !chapter || tab.key !== 'exam_paper').map(tab => (
-                        <button
-                            key={tab.key}
-                            onClick={() => setEditorMode(tab.key)}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                                editorMode === tab.key
-                                    ? 'bg-[#EEF0FB] text-[#6B7CDB]'
-                                    : 'text-[#787774] hover:bg-gray-50'
-                            }`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
+                {!isLessonCreation && (
+                    <div className="flex items-center bg-white p-1 rounded-xl border border-[#E9E9E7]">
+                        {([
+                            { key: 'markdown' as const, label: 'Markdown' },
+                            { key: 'solution' as const, label: 'Lời Giải (LaTeX)' },
+                            { key: 'exam_paper' as const, label: 'Soạn Đề' },
+                        ]).filter(tab => !chapter || tab.key !== 'exam_paper').map(tab => (
+                            <button
+                                key={tab.key}
+                                onClick={() => setEditorMode(tab.key)}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                                    editorMode === tab.key
+                                        ? 'bg-[#EEF0FB] text-[#6B7CDB]'
+                                        : 'text-[#787774] hover:bg-gray-50'
+                                }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' as const }}>
                     {editorMode === 'markdown' && (
