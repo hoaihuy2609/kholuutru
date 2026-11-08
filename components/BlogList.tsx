@@ -172,7 +172,6 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
     const sideImage = hasImage && !inlineImage && !!(text || formula) && question?.imageLayout !== 'bottom';
     const metadata = [
         blog.grade ? 'Lớp ' + blog.grade : 'Chung',
-        blog.level ? 'Mức ' + blog.level : '',
         isAdmin && !blog.is_published ? 'Nháp' : '',
     ].filter(Boolean).join(' · ');
     const image = hasImage && (
@@ -215,6 +214,11 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
                         </span>
                     )}
                     <span className="truncate text-xs font-semibold text-stone-700">{question ? cardTypes[question.type] : 'Bài viết'}</span>
+                    {!!blog.level && (
+                        <span className="shrink-0 rounded-md bg-stone-100 px-1.5 py-0.5 text-xs font-medium text-stone-700">
+                            Mức {blog.level}
+                        </span>
+                    )}
                 </div>
                 <div className="ml-auto flex shrink-0 items-center gap-1">
                     <button type="button" aria-pressed={isSelected} onClick={onToggleSelect}
