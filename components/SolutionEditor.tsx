@@ -17,6 +17,10 @@ import {
 import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
 import { MAX_QUESTION_IMAGE_WIDTH, MIN_QUESTION_IMAGE_WIDTH, normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { renderTikzToSvg, uploadQuestionImageToTelegram, uploadSvgToTelegram } from "../src/services/tikzService";
+import type { PdfQuestionSource } from '../src/utils/pdfExamQuestions';
+import type { ReviewedPdfQuestion } from './PdfExamImport';
+
+const PdfExamImport = React.lazy(() => import('./PdfExamImport'));
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -42,6 +46,7 @@ interface Question {
   imageFile?: File;        // Ảnh cục bộ chưa lưu
   imageLayout?: 'auto' | 'right' | 'bottom'; // Bố cục ảnh
   imageWidth?: number;
+  pdfSource?: PdfQuestionSource;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -160,6 +165,7 @@ const normalizeQuestion = (q: any): Question => {
     imageTelegramFileId: q.image_telegram_file_id || q.imageTelegramFileId || '',
     imageLayout: q.image_layout || q.imageLayout || 'auto',
     imageWidth: normalizeQuestionImageWidth(q.image_width ?? q.imageWidth),
+    pdfSource: q.pdf_source,
   };
 };
 
@@ -177,6 +183,7 @@ function serializeQuestion(q: Question, questionNo: string) {
     image_telegram_file_id: q.imageTelegramFileId || '',
     image_layout:   q.imageLayout || 'auto',
     image_width:    q.imageWidth,
+    pdf_source:     q.pdfSource,
     // Tự luận: lưu cả solution và steps tương thích
     steps:         q.type === 'tu_luan'    ? (q.solution ? [{ title: '', text: q.solution, formula: '', formula2: '' }] : q.steps) : [],
     // Đúng/sai: lưu statements
@@ -654,6 +661,7 @@ export default function SolutionEditor({
 
   // ── Import Đề Thi Từ JSON ──────────────────────────────────
   const [showJsonModal, setShowJsonModal] = useState(false);
+  const [showPdfModal, setShowPdfModal] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [importingJson, setImportingJson] = useState(false);
 
@@ -891,16 +899,9 @@ export default function SolutionEditor({
     updateQ('statements', activeQuestion.statements.map((s, i) => i === si ? val : s));
 
   // ── Save ───────────────────────────────────────────────────
-  const handleSave = async () => {
-    if (illustrationBusy) return;
-    if (!studyDefaults && (!examName.trim() || questions.some(q => !q.questionNo))) {
-      showToast("Vui lòng nhập tên đề và số câu cho tất cả các câu!", "error");
-      return;
-    }
-    setSaving(true);
-    try {
+  const persistQuestions = async (batch: Question[], source: string, targetGrade: number, published: boolean) => {
       // Ảnh tải lên cần có file_id trước khi lưu. SVG vẫn có thể dùng bản nhúng.
-      const processedQuestions = await Promise.all(questions.map(async (q, idx) => {
+      const processedQuestions = await Promise.all(batch.map(async (q, idx) => {
         if (q.imageFile) {
           const file = q.imageFile;
           const fileId = uploadedImageIds.current.get(file) ?? await uploadQuestionImageToTelegram(file);
@@ -921,14 +922,14 @@ export default function SolutionEditor({
       }));
       const failedImageIndex = processedQuestions.findIndex(q => q.imageFile);
       if (failedImageIndex >= 0) {
-        throw new Error(`Không tải được ảnh của ${questionNumber(questions[failedImageIndex], failedImageIndex)} lên Telegram. Vui lòng thử lưu lại.`);
+        throw new Error(`Không tải được ảnh của ${questionNumber(batch[failedImageIndex], failedImageIndex)} lên Telegram. Vui lòng thử lưu lại.`);
       }
 
       // Serialize mỗi câu hỏi tùy theo type
       const serializedQuestions = processedQuestions.map((q, index) =>
         serializeQuestion(q, studyDefaults ? questionNumber(q, index) : q.questionNo));
 
-      const savedExamName = studyDefaults ? examName.trim() || blog?.title || studyDefaults.title : examName;
+      const savedExamName = studyDefaults ? source.trim() || blog?.title || studyDefaults.title : source;
       const solutionData = {
         type: 'physics_solution',
         data: {
@@ -936,33 +937,33 @@ export default function SolutionEditor({
           questions: serializedQuestions,
           // Backward compat: giữ root-level của câu đầu
           question_no:    serializedQuestions[0].question_no,
-          question_text:  questions[0].qText,
-          question_latex: questions[0].qFormula,
-          steps:          questions[0].type === 'tu_luan' ? questions[0].steps : [],
+          question_text:  serializedQuestions[0].question_text,
+          question_latex: serializedQuestions[0].question_latex,
+          steps:          batch[0].type === 'tu_luan' ? batch[0].steps : [],
         }
       };
 
-      const titleStr = studyGrade ? savedExamName.trim() : questions.length === 1
-        ? `[Giải chi tiết] ${examName} - ${questions[0].questionNo}`
-        : `[Giải chi tiết] ${examName} (${questions.length} câu)`;
+      const titleStr = studyGrade ? savedExamName.trim() : batch.length === 1
+        ? `[Giải chi tiết] ${source} - ${batch[0].questionNo}`
+        : `[Giải chi tiết] ${source} (${batch.length} câu)`;
 
       const payload = {
         id: blog?.id,
         title: titleStr,
-        summary: (questions[0].qText || '').substring(0, 150) || 'Hướng dẫn giải chi tiết bằng LaTeX.',
+        summary: batch[0].qText.substring(0, 150) || 'Hướng dẫn giải chi tiết bằng LaTeX.',
         content: JSON.stringify(solutionData),
         category: category || 'Lời giải',
-        is_published: isPublished,
+        is_published: published,
         tags: [],
         level,
-        grade,
+        grade: targetGrade,
       };
 
       if (saveBlog) {
         const saved = await saveBlog(payload);
         if (saved) {
           void syncBlogs?.();
-          showToast("Đã lưu bài viết!", "success");
+          showToast(published ? 'Đã lưu bài viết!' : 'Đã lưu bản nháp!', 'success');
           if (onSaved) onSaved(saved);
         } else throw new Error("Lưu thất bại.");
       } else {
@@ -971,11 +972,43 @@ export default function SolutionEditor({
         showToast("Đã lưu (standalone mode)!", "success");
         setQuestions([emptyQuestion()]);
       }
+  };
+
+  const handleSave = async () => {
+    if (illustrationBusy) return;
+    if (!studyDefaults && (!examName.trim() || questions.some(q => !q.questionNo))) {
+      showToast("Vui lòng nhập tên đề và số câu cho tất cả các câu!", "error");
+      return;
+    }
+    setSaving(true);
+    try {
+      await persistQuestions(questions, examName, grade, isPublished);
     } catch (err: any) {
       showToast("Lỗi: " + err.message, "error");
     } finally {
       setSaving(false);
     }
+  };
+
+  const savePdfBatch = async (source: string, targetGrade: number, reviewed: ReviewedPdfQuestion[]) => {
+    if (studyGrade && !studyQuestionType) {
+      throw new Error('Đóng màn hình nhập và chọn loại câu cho vị trí trong kho trước khi lưu.');
+    }
+    const batch = reviewed.map((question, index): Question => ({
+      ...emptyQuestion(question.type, initialQuestionGroup),
+      questionNo: 'Câu ' + (index + 1),
+      qText: question.text.trim(),
+      choices: question.options,
+      correctChoice: question.type === 'trac_nghiem' ? question.answer : '',
+      solution: question.type === 'tu_luan' ? question.answer : '',
+      statements: STMT_LABELS.map((label, position) => ({
+        ...emptyStatement(label), claim: question.options[position], verdict: question.verdicts[position],
+      })),
+      pdfSource: question.source,
+      imageFile: question.imageFile,
+    }));
+    await persistQuestions(batch, source, targetGrade, false);
+    setShowPdfModal(false);
   };
 
   const handleDelete = async () => {
@@ -1035,15 +1068,29 @@ export default function SolutionEditor({
     </div>
   );
   const importControl = (
-    <button type="button" disabled={illustrationBusy} onClick={() => setShowJsonModal(true)}
+    <div className="flex flex-wrap items-center gap-2">
+      {saveBlog && !blog && (
+        <button type="button" disabled={illustrationBusy} onClick={() => setShowPdfModal(true)}
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 text-xs font-semibold text-stone-800 hover:bg-stone-100">
+          Nhập từ PDF
+        </button>
+      )}
+      <button type="button" disabled={illustrationBusy} onClick={() => setShowJsonModal(true)}
       className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-950 hover:bg-amber-100"
       title="Nạp đề thi từ JSON, hỗ trợ cả hình vẽ TikZ">
       <FileCode aria-hidden="true" className="size-4" /> Nhập từ JSON
-    </button>
+      </button>
+    </div>
   );
 
   return (
     <div className={hideTopBar ? "space-y-6 font-sans" : "max-w-[1920px] w-full mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20 font-sans"}>
+      {showPdfModal && (
+        <React.Suspense fallback={<p role="status">Đang mở trình nhập PDF…</p>}>
+          <PdfExamImport fixedGrade={studyGrade} requiredType={studyQuestionType}
+            onClose={() => setShowPdfModal(false)} onSave={savePdfBatch} />
+        </React.Suspense>
+      )}
 
       {/* ── Top Bar ── (hidden when parent manages it) */}
       {!hideTopBar && (
@@ -1229,6 +1276,11 @@ export default function SolutionEditor({
                     placeholder="VD: Câu 4"
                     value={activeQuestion.questionNo} onChange={e => updateQ('questionNo', e.target.value)} />
                 </div>}
+                {activeQuestion.pdfSource && (
+                  <p className="text-xs text-stone-600">
+                    {examName && examName + ' · '}{activeQuestion.pdfSource.label} · Trang {activeQuestion.pdfSource.page}
+                  </p>
+                )}
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-stone-800">Mô tả đề bài</label>
                   <AutoResizeTextarea rows={2}
