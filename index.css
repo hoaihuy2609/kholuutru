@@ -92,6 +92,26 @@ body {
     -webkit-overflow-scrolling: touch;
 }
 
+/* ==================== LaTeX Typography ==================== */
+.latex-prose,
+.latex-prose *:not(svg):not(svg *) {
+    font-family: 'KaTeX_Main', 'Computer Modern', serif !important;
+}
+
+.latex-prose .katex {
+    color: #1A1A1A !important;
+    font-size: 1.02em !important;
+}
+
+.latex-prose .katex-display .katex {
+    font-size: 1.15em !important;
+}
+
+.solution-renderer .font-mono,
+.solution-renderer span.font-mono {
+    font-family: monospace !important;
+}
+
 /* ==================== Custom Scrollbar ==================== */
 ::-webkit-scrollbar {
     width: 5px;

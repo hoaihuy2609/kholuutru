@@ -168,14 +168,21 @@ function QuestionCard({ blog, question, isAdmin, onEditBlog, onClick, isSelected
     const parts = hasImage ? text.split(/\[image\]/i) : [text];
     const inlineImage = parts.length > 1;
     const sideImage = hasImage && !inlineImage && !!(text || formula) && question?.imageLayout !== 'bottom';
+    const metadata = [
+        blog.grade ? 'Lớp ' + blog.grade : 'Chung',
+        blog.level ? 'Mức ' + blog.level : '',
+        isAdmin && !blog.is_published ? 'Nháp' : '',
+    ].filter(Boolean).join(' · ');
     const image = hasImage && (
         <figure className={'mx-auto flex w-full min-w-0 max-w-sm items-center justify-center self-start '
             + (sideImage ? '[@container_(min-width:26rem)]:w-[38%] [@container_(min-width:26rem)]:shrink-0' : '')}>
             {question?.imageSvg ? (
-                <div className="max-w-full [&>svg]:block [&>svg]:h-auto [&>svg]:max-h-48 [&>svg]:max-w-full"
+                <div className={'max-w-full [&>svg]:block [&>svg]:h-auto [&>svg]:max-w-full '
+                    + (expanded ? '[&>svg]:max-h-48' : '[&>svg]:max-h-32 sm:[&>svg]:max-h-40')}
                     dangerouslySetInnerHTML={{ __html: question.imageSvg }} />
             ) : (
-                <img src={imageSrc} alt="Hình vẽ minh họa" className="max-h-48 max-w-full object-contain" />
+                <img src={imageSrc} alt="Hình vẽ minh họa"
+                    className={'max-w-full object-contain ' + (expanded ? 'max-h-48' : 'max-h-32 sm:max-h-40')} />
             )}
         </figure>
     );
@@ -192,18 +199,19 @@ function QuestionCard({ blog, question, isAdmin, onEditBlog, onClick, isSelected
                 if (selection && !selection.isCollapsed && event.currentTarget.contains(selection.anchorNode)) return;
                 onClick();
             }}
-            className={'flex min-h-48 min-w-0 cursor-pointer flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-colors hover:border-amber-300 '
+            className={'flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-colors hover:border-amber-300 '
+                + (expanded ? 'min-h-[250px] sm:min-h-[280px] ' : 'h-[250px] sm:h-[280px] ')
                 + (isSelected ? 'border-amber-400 ring-1 ring-inset ring-amber-200' : 'border-stone-200')}>
-            <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-stone-100 bg-stone-50 px-3 py-1.5 sm:px-3.5">
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <header className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-stone-100 bg-stone-50 px-3 sm:px-3.5">
+                <div className="flex min-w-0 items-center gap-2">
                     {question?.questionNo && (
-                        <span className="rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs font-bold text-amber-950">
+                        <span className="max-w-[55%] truncate rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs font-bold text-amber-950" title={question.questionNo}>
                             {question.questionNo}
                         </span>
                     )}
-                    <span className="text-xs font-semibold text-stone-700">{question ? cardTypes[question.type] : 'Bài viết'}</span>
+                    <span className="truncate text-xs font-semibold text-stone-700">{question ? cardTypes[question.type] : 'Bài viết'}</span>
                 </div>
-                <div className="ml-auto flex flex-wrap items-center gap-1">
+                <div className="ml-auto flex shrink-0 items-center gap-1">
                     <button type="button" aria-pressed={isSelected} onClick={onToggleSelect}
                         title={isSelected ? 'Bỏ chọn khỏi đề thi' : 'Thêm vào đề thi'}
                         className={cardControl + (isSelected ? ' bg-amber-100 text-amber-950 hover:bg-amber-200' : ' text-amber-900 hover:bg-amber-100')}>
@@ -219,10 +227,10 @@ function QuestionCard({ blog, question, isAdmin, onEditBlog, onClick, isSelected
                 </div>
             </header>
 
-            <div className="min-w-0 flex-1 px-3.5 py-3.5 [container-type:inline-size] sm:px-4">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3.5 py-3.5 [container-type:inline-size] sm:px-4">
                 <div id={contentId} ref={viewportRef}
-                    className={'relative overflow-hidden ' + (expanded ? '' : 'max-h-52')}>
-                    <div ref={contentRef} className="min-w-0 text-[15px] leading-relaxed text-stone-800 [&_.katex]:text-[1em]">
+                    className="relative min-h-0 flex-1 overflow-hidden">
+                    <div ref={contentRef} className="latex-prose min-w-0 text-[15px] leading-relaxed text-stone-800">
                         {!hasQuestion ? (
                             <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{blog.summary || blog.title}</p>
                         ) : inlineImage ? (
@@ -248,26 +256,24 @@ function QuestionCard({ blog, question, isAdmin, onEditBlog, onClick, isSelected
                         <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-white/0" />
                     )}
                 </div>
-                {(isClipped || expanded) && (
-                    <button type="button" aria-expanded={expanded} aria-controls={contentId}
-                        onClick={() => setExpanded(previous => !previous)} className={cardControl + ' mt-1 text-amber-900 hover:bg-amber-50'}>
-                        {expanded ? 'Thu gọn' : 'Xem thêm'}
-                        <ChevronDown aria-hidden="true" className={'size-3.5 ' + (expanded ? 'rotate-180' : '')} />
-                    </button>
-                )}
             </div>
 
-            <footer className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-stone-100 px-3.5 py-1.5 sm:px-4">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-stone-600">
-                    <span>{blog.grade ? 'Lớp ' + blog.grade : 'Chung'}</span>
-                    {!!blog.level && <span className="border-l border-stone-200 pl-2">Mức {blog.level}</span>}
-                    {isAdmin && !blog.is_published && <span className="border-l border-stone-200 pl-2">Nháp</span>}
+            <footer className="flex h-11 shrink-0 items-center justify-between gap-1 border-t border-stone-100 px-3.5 sm:px-4">
+                <span className="min-w-0 flex-1 truncate text-xs text-stone-600" title={metadata}>{metadata}</span>
+                <div className="flex shrink-0 items-center gap-0.5">
+                    {(isClipped || expanded) && (
+                        <button type="button" aria-expanded={expanded} aria-controls={contentId}
+                            onClick={() => setExpanded(previous => !previous)} className={cardControl + ' text-amber-900 hover:bg-amber-50'}>
+                            {expanded ? 'Thu gọn' : 'Xem thêm'}
+                            <ChevronDown aria-hidden="true" className={'size-3.5 ' + (expanded ? 'rotate-180' : '')} />
+                        </button>
+                    )}
+                    <button type="button" onClick={onClick}
+                        aria-label={question?.questionNo ? readLabel + ' ' + question.questionNo : readLabel}
+                        className={cardControl + ' text-amber-900 hover:bg-amber-50'}>
+                        {readLabel} <ChevronRight aria-hidden="true" className="size-3.5" />
+                    </button>
                 </div>
-                <button type="button" onClick={onClick}
-                    aria-label={question?.questionNo ? readLabel + ' ' + question.questionNo : readLabel}
-                    className={cardControl + ' ml-auto text-amber-900 hover:bg-amber-50'}>
-                    {readLabel} <ChevronRight aria-hidden="true" className="size-3.5" />
-                </button>
             </footer>
         </article>
     );
