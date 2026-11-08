@@ -444,52 +444,44 @@ function escapeHtml(value: string): string {
 export function renderExamPrintBody(questions: SelectedQuestionItem[], config: ExamStyleConfig) {
   const primaryColor = config.isCustomColor ? config.customColor : config.themeColor;
 
-  const renderQuestionImageHtml = (q: SelectedQuestionItem) => {
+  const renderQuestionImageHtml = (q: SelectedQuestionItem, wrap: boolean) => {
     const imageUrl = q.imageSvg ? 'data:image/svg+xml,' + encodeURIComponent(q.imageSvg)
       : q.imageUrl || (CLOUDFLARE_PROXY_URL && q.imageTelegramFileId
         ? CLOUDFLARE_PROXY_URL + '/getFile/' + encodeURIComponent(q.imageTelegramFileId) : '');
     if (!imageUrl) return '';
     const width = normalizeQuestionImageWidth(q.imageWidth);
+    if (wrap) {
+      const widthStyle = width === undefined ? '' : ` width: calc(min(38%, 260px) * ${width / 100});`;
+      return `<img src="${escapeHtml(imageUrl)}" alt="Hình minh họa" style="float: right; max-width: min(38%, 260px); height: auto; margin: 0 0 8px 16px;${widthStyle}" />`;
+    }
     const widthStyle = width === undefined ? '' : ` width: ${width}%;`;
     return `<div style="display: flex; justify-content: center; align-items: center; background: transparent;"><img src="${escapeHtml(imageUrl)}" alt="Hình minh họa" style="max-width: 100%; height: auto;${widthStyle}" /></div>`;
   };
 
   const renderQuestionHeaderPdf = (q: SelectedQuestionItem, qNum: number) => {
-    const imgHtml = renderQuestionImageHtml(q);
-    const hasPlaceholder = !!imgHtml && /\[image\]/i.test(q.qText || '');
+    const inlineImage = /\[image\]/i.test(q.qText || '');
+    const sideLayout = q.imageLayout === 'right' || q.imageLayout === 'auto';
+    const imgHtml = renderQuestionImageHtml(q, sideLayout && !inlineImage);
+    const wrapsImage = !!imgHtml && sideLayout && !inlineImage;
 
-    if (hasPlaceholder) {
+    if (imgHtml && inlineImage) {
       const parts = (q.qText || '').split(/\[image\]/i);
       const before = parts[0] || '';
       const after = parts.slice(1).join('[image]') || '';
-      return `
+      return { wrapsImage, html: `
         <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(before)}</div>
         <div style="margin: 10px 0; text-align: center;">${imgHtml}</div>
         ${after.trim() ? `<div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-top: 4px;">${escapeHtml(after)}</div>` : ''}
         ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
-      `;
+      ` };
     }
 
-    const isRight = (q.imageLayout === 'right' || q.imageLayout === 'auto') && !!imgHtml;
-    if (isRight) {
-      return `
-        <div style="display: flex; gap: 16px; align-items: flex-start;">
-          <div style="flex: 1;">
-            <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
-            ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
-          </div>
-          <div style="width: 38%; max-width: 260px; flex-shrink: 0;">
-            ${imgHtml}
-          </div>
-        </div>
-      `;
-    }
-
-    return `
+    return { wrapsImage, html: `
+      ${wrapsImage ? imgHtml : ''}
       <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
       ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
-      ${imgHtml ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}
-    `;
+      ${imgHtml && !wrapsImage ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}
+    ` };
   };
 
   const tracNghiemList = questions.filter(q => q.type === 'trac_nghiem');
@@ -532,11 +524,13 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       const choices = q.choices || ['', '', '', ''];
       const layout = calculateChoiceLayout(choices);
       const cols = layout === 4 ? '1fr 1fr 1fr 1fr' : layout === 2 ? '1fr 1fr' : '1fr';
+      const header = renderQuestionHeaderPdf(q, qNum);
+      const choiceLayout = header.wrapsImage ? '' : `display: grid; grid-template-columns: ${cols}; gap: 6px 16px;`;
 
       bodyHtml += `
-        <div style="margin-bottom: 16px; page-break-inside: avoid; text-align: justify;">
-          ${renderQuestionHeaderPdf(q, qNum)}
-          <div style="display: grid; grid-template-columns: ${cols}; gap: 6px 16px; margin-top: 8px;">
+        <div class="exam-question" style="text-align: justify;">
+          ${header.html}
+          <div${header.wrapsImage ? ' class="exam-wrapped-choices"' : ''} style="margin-top: 8px; ${choiceLayout}">
             <div><b>A.</b> ${escapeHtml(choices[0] || '')}</div>
             <div><b>B.</b> ${escapeHtml(choices[1] || '')}</div>
             <div><b>C.</b> ${escapeHtml(choices[2] || '')}</div>
@@ -562,9 +556,9 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       const qNum = config.enableSectionTitles ? index + 1 : nextQuestionNumber++;
 
       bodyHtml += `
-        <div style="margin-bottom: 16px; page-break-inside: avoid; text-align: justify;">
-          ${renderQuestionHeaderPdf(q, qNum)}
-          <div style="margin-top: 6px; padding-left: 12px; display: flex; flex-direction: column; gap: 4px;">
+        <div class="exam-question" style="text-align: justify;">
+          ${renderQuestionHeaderPdf(q, qNum).html}
+          <div class="exam-statements" style="margin-top: 6px; padding-left: 12px;">
             ${(q.statements || []).map(st => `<div><b>${escapeHtml(st.label)})</b> ${escapeHtml(st.claim || '')}</div>`).join('')}
           </div>
         </div>
@@ -587,8 +581,8 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       const qNum = config.enableSectionTitles ? index + 1 : nextQuestionNumber++;
 
       bodyHtml += `
-        <div style="margin-bottom: 16px; page-break-inside: avoid; text-align: justify;">
-          ${renderQuestionHeaderPdf(q, qNum)}
+        <div class="exam-question" style="text-align: justify;">
+          ${renderQuestionHeaderPdf(q, qNum).html}
         </div>
       `;
     });
@@ -689,6 +683,9 @@ export function examPrintDocument(body = '', title = 'Xem trước đề thi') {
     b, strong { font-weight: 600; }
     .katex { font-size: 1em; color: var(--math-color); }
     .katex-display { margin: 6px 0; }
+    .exam-question { display: flow-root; margin-bottom: 16px; break-inside: avoid; }
+    .exam-statements > div + div { margin-top: 4px; }
+    .exam-wrapped-choices > div + div { margin-top: 6px; }
     .exam-watermark {
       position: fixed; z-index: -1; inset: 45% 5% auto;
       transform: rotate(-30deg); text-align: center;
