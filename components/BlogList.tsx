@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BlogPost } from '../types';
-import { BookOpen, Plus, Search, Filter, FileText, Check, Sparkles, ChevronLeft, Folder, X, RotateCcw } from 'lucide-react';
+import { BookOpen, Plus, Search, SlidersHorizontal, Image, FileText, Check, Sparkles, ChevronLeft, Folder, X, RotateCcw } from 'lucide-react';
 import ExamStyleModal from './ExamStyleModal';
-import TreeTableOfContents, { indexFolderBlogs, loadPhysicsTree, savePhysicsTree, selectTreeNode, TreeNode, TreeSelection } from './TreeTableOfContents';
+import TreeTableOfContents, { indexFolderBlogs, loadPhysicsTree, normalizeSearchText, savePhysicsTree, selectTreeNode, TreeNode, TreeSelection } from './TreeTableOfContents';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import katex from 'katex';
@@ -61,11 +61,13 @@ function TextWithMathCard({ text }: { text: string }) {
 }
 
 // Parse blog.content → lấy câu hỏi đầu tiên để hiển thị trên card
+type QuestionType = 'tu_luan' | 'dung_sai' | 'trac_nghiem';
+
 interface CardQuestionData {
     questionNo: string;
     questionText: string;
     questionLatex: string;
-    type: 'tu_luan' | 'dung_sai' | 'trac_nghiem';
+    type: QuestionType;
     imageSvg?: string;
     imageUrl?: string;
     imageTelegramFileId?: string;
@@ -427,11 +429,103 @@ const GRADE_COLORS: Record<number, { bg: string; text: string; dot: string }> = 
     0:  { bg: '#F1F0EC', text: '#787774', dot: '#AEACA8' },
 };
 
+const questionTypeOptions = [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'trac_nghiem', label: 'Trắc nghiệm 4 đáp án' },
+    { value: 'dung_sai', label: 'Đúng / Sai' },
+    { value: 'tu_luan', label: 'Trả lời ngắn' },
+] as const;
+
+const levelOptions = [
+    { value: 0, label: 'Tất cả' },
+    { value: 1, label: 'Nhận biết' },
+    { value: 2, label: 'Thông hiểu' },
+    { value: 3, label: 'Vận dụng' },
+    { value: 4, label: 'Vận dụng cao' },
+] as const;
+
+function indexQuestion(blog: BlogPost) {
+    const question = parseCardQuestion(blog.content);
+    return {
+        blog,
+        type: question?.type ?? 'tu_luan',
+        level: blog.level ?? 0,
+        hasImage: !!(question?.imageSvg || question?.imageUrl || question?.imageTelegramFileId),
+        searchFields: [
+            blog.title, blog.summary, blog.category, ...(blog.tags || []),
+            question?.questionText, question?.questionLatex,
+        ].filter((value): value is string => typeof value === 'string' && value.length > 0)
+            .map(normalizeSearchText),
+    };
+}
+
+function filterQuestions(
+    questions: ReturnType<typeof indexQuestion>[],
+    search: string,
+    questionType: QuestionType | 'all',
+    difficulty: number,
+    imagesOnly: boolean,
+) {
+    const filteredBlogs: BlogPost[] = [];
+    const typeCounts = { all: 0, trac_nghiem: 0, dung_sai: 0, tu_luan: 0 };
+    const levelCounts = [0, 0, 0, 0, 0];
+    let withImage = 0;
+    const query = normalizeSearchText(search);
+
+    for (const { blog, type, level, hasImage, searchFields } of questions) {
+        if (query && !searchFields.some(field => field.includes(query))) continue;
+        const matchesType = questionType === 'all' || questionType === type;
+        const matchesLevel = difficulty === 0 || difficulty === level;
+        const matchesImage = !imagesOnly || hasImage;
+
+        // Each badge counts results after replacing just its own filter.
+        if (matchesLevel && matchesImage) {
+            typeCounts.all++;
+            typeCounts[type]++;
+        }
+        if (matchesType && matchesImage) {
+            levelCounts[0]++;
+            if (Number.isInteger(level) && level >= 1 && level <= 4) levelCounts[level]++;
+        }
+        if (matchesType && matchesLevel && hasImage) withImage++;
+        if (matchesType && matchesLevel && matchesImage) filteredBlogs.push(blog);
+    }
+
+    return { filteredBlogs, typeCounts, levelCounts, withImage };
+}
+
+const filterFocus = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700';
+
+function FilterChip({ children, selected, count, onClick }: {
+    children: React.ReactNode;
+    selected: boolean;
+    count?: number;
+    onClick: () => void;
+}) {
+    return (
+        <button type="button" aria-pressed={selected} onClick={onClick}
+            className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs font-semibold leading-snug transition-colors ${filterFocus} ${
+                selected
+                    ? 'border-amber-300 bg-amber-50 text-amber-950'
+                    : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300 hover:bg-stone-50'
+            }`}>
+            <span className="flex min-w-0 flex-1 items-center gap-1.5">{children}</span>
+            {count !== undefined && (
+                <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] tabular-nums ${selected ? 'bg-amber-100 text-amber-900' : 'bg-stone-100 text-stone-600'}`}>
+                    {count}
+                </span>
+            )}
+        </button>
+    );
+}
+
 const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, onEditBlog, onCreateBlog, onBlogsLoaded, getBlogs }) => {
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
+    const questionSearch = useRef<HTMLInputElement>(null);
+    const filterHeading = useRef<HTMLHeadingElement>(null);
     const [treeData, setTreeData] = useState(loadPhysicsTree);
     const [selectedTreeNode, setSelectedTreeNode] = useState<TreeSelection>({ type: 'all' });
     const [showMobileTree, setShowMobileTree] = useState(false);
@@ -439,11 +533,10 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     const mobileTreeClose = useRef<HTMLButtonElement>(null);
 
     // ── BỘ LỌC CHUYÊN SÂU (Question Format, Difficulty Level, Image/Diagram) ──
-    const [questionTypeFilter, setQuestionTypeFilter] = useState<'all' | 'dung_sai' | 'trac_nghiem' | 'tu_luan'>('all');
+    const [questionTypeFilter, setQuestionTypeFilter] = useState<QuestionType | 'all'>('all');
     const [levelFilter, setLevelFilter] = useState<number>(0); // 0 = Tất cả, 1-4 = Mức độ 1 đến 4
     const [hasImageFilter, setHasImageFilter] = useState<boolean>(false); // Chỉ câu có hình vẽ / đồ thị
 
-    const [showFilters, setShowFilters] = useState(false);
     const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
     const [isExamModalOpen, setIsExamModalOpen] = useState(false);
     const navigate = useNavigate();
@@ -548,138 +641,26 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
         setSelectedTreeNode(node ? selectTreeNode(node) : { type: 'all' });
     };
 
+    const questionIndex = useMemo(() => inScopeBlogs.map(indexQuestion), [inScopeBlogs]);
+    const { filteredBlogs, typeCounts, levelCounts, withImage } = useMemo(
+        () => filterQuestions(questionIndex, debouncedSearch, questionTypeFilter, levelFilter, hasImageFilter),
+        [questionIndex, debouncedSearch, questionTypeFilter, levelFilter, hasImageFilter]
+    );
+    const isAnyFilterActive = questionTypeFilter !== 'all' || levelFilter !== 0 || hasImageFilter || !!searchQuery.trim();
+    const gradeTabs = [0, ...[12, 11, 10].filter(grade => visibleTree.some(node => node.grade === grade))];
 
-
-    // ── TÍNH TOÁN BỘ ĐẾM LIÊN ĐỚI THÔNG MINH (FACETED COUNTS) ──
-    // Đếm chính xác theo từng loại và mức độ liên đới với nhau (không bị đếm tổng nhầm)
-    const facetCounts = useMemo(() => {
-        // 2. ĐẾM CHO HÀNG LOẠI CÂU: Phụ thuộc vào levelFilter & hasImageFilter đang chọn
-        const forTypeCounts = inScopeBlogs.filter(b => {
-            if (levelFilter !== 0 && ((b as any).level || 0) !== levelFilter) return false;
-            if (hasImageFilter) {
-                const q = parseCardQuestion(b.content);
-                if (!q || !(q.imageSvg || q.imageUrl || q.imageTelegramFileId)) return false;
-            }
-            return true;
-        });
-
-        let typeAll = forTypeCounts.length;
-        let dungSai = 0;
-        let tracNghiem = 0;
-        let tuLuan = 0;
-        forTypeCounts.forEach(b => {
-            const q = parseCardQuestion(b.content);
-            const qType = q?.type === 'dung_sai' ? 'dung_sai' : q?.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan';
-            if (qType === 'dung_sai') dungSai++;
-            else if (qType === 'trac_nghiem') tracNghiem++;
-            else tuLuan++;
-        });
-
-        // 3. ĐẾM CHO HÀNG MỨC ĐỘ: Phụ thuộc vào questionTypeFilter & hasImageFilter đang chọn
-        const forLevelCounts = inScopeBlogs.filter(b => {
-            if (questionTypeFilter !== 'all') {
-                const q = parseCardQuestion(b.content);
-                const qType = q?.type === 'dung_sai' ? 'dung_sai' : q?.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan';
-                if (qType !== questionTypeFilter) return false;
-            }
-            if (hasImageFilter) {
-                const q = parseCardQuestion(b.content);
-                if (!q || !(q.imageSvg || q.imageUrl || q.imageTelegramFileId)) return false;
-            }
-            return true;
-        });
-
-        let levelAll = forLevelCounts.length;
-        let lvl1 = 0, lvl2 = 0, lvl3 = 0, lvl4 = 0;
-        forLevelCounts.forEach(b => {
-            const lv = (b as any).level || 0;
-            if (lv === 1) lvl1++;
-            else if (lv === 2) lvl2++;
-            else if (lv === 3) lvl3++;
-            else if (lv === 4) lvl4++;
-        });
-
-        // 4. ĐẾM CHO NÚT "CÓ HÌNH / ĐỒ THỊ": Phụ thuộc cả questionTypeFilter & levelFilter
-        const forImageCount = inScopeBlogs.filter(b => {
-            if (questionTypeFilter !== 'all') {
-                const q = parseCardQuestion(b.content);
-                const qType = q?.type === 'dung_sai' ? 'dung_sai' : q?.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan';
-                if (qType !== questionTypeFilter) return false;
-            }
-            if (levelFilter !== 0 && ((b as any).level || 0) !== levelFilter) return false;
-            return true;
-        });
-
-        let withImage = 0;
-        forImageCount.forEach(b => {
-            const q = parseCardQuestion(b.content);
-            if (q && (q.imageSvg || q.imageUrl || q.imageTelegramFileId)) {
-                withImage++;
-            }
-        });
-
-        return {
-            typeAll,
-            dungSai,
-            tracNghiem,
-            tuLuan,
-            levelAll,
-            lvl1,
-            lvl2,
-            lvl3,
-            lvl4,
-            withImage,
-            totalInScope: inScopeBlogs.length,
-        };
-    }, [inScopeBlogs, questionTypeFilter, levelFilter, hasImageFilter]);
-
-    const isAnyFilterActive = questionTypeFilter !== 'all' || levelFilter !== 0 || hasImageFilter || searchQuery.trim() !== '';
+    const clearQuestionSearch = () => {
+        setSearchQuery('');
+        setDebouncedSearch('');
+    };
 
     const handleResetAllFilters = () => {
         setQuestionTypeFilter('all');
         setLevelFilter(0);
         setHasImageFilter(false);
-        setSearchQuery('');
+        clearQuestionSearch();
+        filterHeading.current?.focus();
     };
-
-    const filteredBlogs = useMemo(() => inScopeBlogs.filter(b => {
-        // ── LỌC THEO BỘ LỌC CHUYÊN SÂU ──
-        // 1. Loại câu hỏi (Đúng/Sai, Trắc nghiệm 4 PA, Trả lời ngắn)
-        if (questionTypeFilter !== 'all') {
-            const q = parseCardQuestion(b.content);
-            const qType = q?.type === 'dung_sai' ? 'dung_sai' : q?.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan';
-            if (qType !== questionTypeFilter) return false;
-        }
-
-        // 2. Mức độ nhận thức (1: Nhận biết, 2: Thông hiểu, 3: Vận dụng, 4: Vận dụng cao)
-        if (levelFilter !== 0) {
-            const lv = (b as any).level || 0;
-            if (lv !== levelFilter) return false;
-        }
-
-        // 3. Có hình ảnh / đồ thị
-        if (hasImageFilter) {
-            const q = parseCardQuestion(b.content);
-            const hasImg = !!(q?.imageSvg || q?.imageUrl || q?.imageTelegramFileId);
-            if (!hasImg) return false;
-        }
-
-        // Tìm kiếm theo từ khóa
-        const q = debouncedSearch.toLowerCase();
-        const matchSearch = !q || b.title.toLowerCase().includes(q) || b.summary.toLowerCase().includes(q) || (b.tags || []).some(t => t.toLowerCase().includes(q));
-        return matchSearch;
-    }), [inScopeBlogs, debouncedSearch, questionTypeFilter, levelFilter, hasImageFilter]);
-
-    const allGradeTabs = [
-        { label: 'Tất cả', value: 0, color: '#787774' },
-        { label: 'Lớp 12', value: 12, color: '#9065B0' },
-        { label: 'Lớp 11', value: 11, color: '#6B7CDB' },
-        { label: 'Lớp 10', value: 10, color: '#448361' },
-    ];
-    // Học sinh chỉ thấy "Tất cả" + tab đúng khối của mình
-    const gradeTabs = (!isAdmin && studentGrade)
-        ? allGradeTabs.filter(t => t.value === 0 || t.value === studentGrade)
-        : allGradeTabs;
 
     return (
         <div className="w-full max-w-[1720px] mx-auto p-4 md:p-6 lg:p-8 animate-fade-in relative pb-20" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
@@ -831,139 +812,82 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                         </div>
                     )}
 
-                    {/* ── BỘ LỌC CHUYÊN SÂU (Smart Physics Filter Bar) ── */}
-                    <div className="bg-white rounded-2xl border border-[#E9E9E7] p-3.5 space-y-2.5 shadow-2xs">
-                        {/* Hàng 1: Khối lớp + Tìm kiếm + Có hình/đồ thị + Reset */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                            {/* Tab khối lớp */}
-                            <div className="flex items-center gap-1 bg-[#FAFAF9] p-1 rounded-xl border border-[#E9E9E7]">
-                                {gradeTabs.map(tab => (
-                                    <button
-                                        key={tab.value}
-                                        onClick={() => selectGrade(tab.value)}
-                                        style={{
-                                            backgroundColor: gradeFilter === tab.value ? tab.color : 'transparent',
-                                            color: gradeFilter === tab.value ? '#fff' : '#787774',
-                                        }}
-                                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                                            gradeFilter === tab.value ? 'shadow-2xs font-bold' : 'hover:bg-black/5'
-                                        }`}
-                                    >
-                                        {tab.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Ô tìm kiếm câu hỏi */}
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E2E0DB] bg-[#FAFAF9] flex-1 min-w-[180px] focus-within:border-[#C4630A] focus-within:bg-white transition-all">
-                                <Search className="w-3.5 h-3.5 text-[#8F8E8C] shrink-0" />
-                                <input
-                                    type="text"
-                                    placeholder="Tìm nội dung, công thức, từ khóa..."
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                    className="w-full text-xs text-[#1A1A1A] placeholder-[#9E9B97] bg-transparent outline-none"
-                                />
-                                {searchQuery && (
-                                    <button onClick={() => setSearchQuery('')} className="text-[#8F8E8C] hover:text-[#1A1A1A] p-0.5">
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Nút lọc Có hình vẽ / Đồ thị */}
-                            <button
-                                onClick={() => setHasImageFilter(!hasImageFilter)}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
-                                    hasImageFilter
-                                        ? 'bg-[#EEF0FB] text-[#4F62C9] border-[#C7D0F8] shadow-2xs font-bold'
-                                        : 'bg-[#FAFAF9] text-[#57564F] border-[#E2E0DB] hover:bg-[#F0EFEB]'
-                                }`}
-                                title="Chỉ hiển thị các câu có hình vẽ minh họa hoặc đồ thị"
-                            >
-                                <Sparkles className="w-3.5 h-3.5" />
-                                <span>Có hình / Đồ thị</span>
-                                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${hasImageFilter ? 'bg-[#DCE3FA] text-[#3649AF]' : 'bg-[#EAE8E4] text-[#787774]'}`}>
-                                    {facetCounts.withImage}
+                    <section aria-labelledby="question-filter-heading" className="space-y-4 rounded-2xl border border-stone-200 bg-white p-3.5 shadow-sm sm:p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                            <div className="flex flex-wrap items-center gap-2.5">
+                                <span className="grid size-8 place-items-center rounded-lg bg-amber-50 text-amber-800">
+                                    <SlidersHorizontal aria-hidden="true" className="size-4" />
                                 </span>
-                            </button>
-
-                            {/* Nút Đặt lại tất cả lọc (hiện khi có lọc active) */}
+                                <h2 ref={filterHeading} tabIndex={-1} id="question-filter-heading" className="text-sm font-bold text-stone-900">Bộ lọc câu hỏi</h2>
+                                <span role="status" className="rounded-md bg-stone-100 px-2 py-1 text-xs font-medium tabular-nums text-stone-700">
+                                    {loading ? 'Đang tải…' : filteredBlogs.length.toLocaleString('vi-VN') + ' kết quả'}
+                                </span>
+                            </div>
                             {isAnyFilterActive && (
-                                <button
-                                    onClick={handleResetAllFilters}
-                                    className="flex items-center gap-1 text-xs font-bold text-[#8C4A00] hover:text-[#5C3000] px-2.5 py-1.5 rounded-xl hover:bg-[#FDF6ED] transition-colors cursor-pointer"
-                                >
-                                    <RotateCcw className="w-3 h-3" />
-                                    <span>Đặt lại</span>
+                                <button type="button" onClick={handleResetAllFilters}
+                                    className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-amber-900 hover:bg-amber-50 ${filterFocus}`}>
+                                    <RotateCcw aria-hidden="true" className="size-3.5" /> Xóa bộ lọc
                                 </button>
                             )}
                         </div>
 
-                        {/* Hàng 2: Bộ lọc Loại câu hỏi (Định dạng thi Bộ GD 2025) */}
-                        <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-[#F2F1ED]">
-                            <span className="text-[10.5px] font-bold text-[#8F8E8C] uppercase tracking-wider mr-1">Loại câu:</span>
-                            {[
-                                { id: 'all', label: 'Tất cả loại câu', count: facetCounts.typeAll },
-                                { id: 'dung_sai', label: '⚖️ Đúng / Sai (Phần II)', count: facetCounts.dungSai, activeColor: 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]' },
-                                { id: 'trac_nghiem', label: '⚡ Trắc nghiệm 4 PA (Phần I)', count: facetCounts.tracNghiem, activeColor: 'bg-[#EAF3EE] text-[#448361] border-[#44836140]' },
-                                { id: 'tu_luan', label: '✏️ Trả lời ngắn (Phần III)', count: facetCounts.tuLuan, activeColor: 'bg-[#EEF0FB] text-[#6B7CDB] border-[#D0D5F5]' },
-                            ].map(typeItem => {
-                                const isActive = questionTypeFilter === typeItem.id;
-                                return (
-                                    <button
-                                        key={typeItem.id}
-                                        onClick={() => setQuestionTypeFilter(typeItem.id as any)}
-                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
-                                            isActive
-                                                ? `${typeItem.activeColor || 'bg-[#1A1A1A] text-white border-[#1A1A1A]'} font-bold shadow-2xs`
-                                                : 'bg-white text-[#57564F] border-[#E2E0DB] hover:bg-[#F7F6F3]'
-                                        }`}
-                                    >
-                                        <span>{typeItem.label}</span>
-                                        <span className={`text-[10px] tabular-nums px-1.5 py-0.2 rounded-full font-bold ${
-                                            isActive ? 'bg-black/10' : 'bg-[#F0EFEB] text-[#787774]'
-                                        }`}>
-                                            {typeItem.count}
-                                        </span>
+                        <div className="flex flex-wrap items-stretch gap-2">
+                            <div className="relative min-w-0 basis-full sm:flex-1">
+                                <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-500" />
+                                <input ref={questionSearch} type="text" aria-label="Tìm câu hỏi"
+                                    placeholder="Tìm câu hỏi, công thức hoặc từ khóa…"
+                                    value={searchQuery} onChange={event => setSearchQuery(event.target.value)}
+                                    className="h-11 w-full rounded-lg border border-stone-200 bg-stone-50 pl-9 pr-10 text-sm text-stone-900 outline-none placeholder:text-stone-500 focus:border-amber-600 focus:bg-white focus:ring-1 focus:ring-amber-600" />
+                                {searchQuery && (
+                                    <button type="button" aria-label="Xóa từ khóa"
+                                        onClick={() => { clearQuestionSearch(); questionSearch.current?.focus(); }}
+                                        className={`absolute right-1 top-1 grid size-9 place-items-center rounded-md text-stone-500 hover:bg-stone-100 hover:text-stone-800 ${filterFocus}`}>
+                                        <X aria-hidden="true" className="size-4" />
                                     </button>
-                                );
-                            })}
+                                )}
+                            </div>
+                            <FilterChip selected={hasImageFilter} count={loading ? undefined : withImage}
+                                onClick={() => setHasImageFilter(previous => !previous)}>
+                                <Image aria-hidden="true" className="size-4 shrink-0" /> Có hình hoặc đồ thị
+                            </FilterChip>
                         </div>
 
-                        {/* Hàng 3: Bộ lọc Mức độ nhận thức (Độ khó chuẩn 4 mức) */}
-                        <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-[#F2F1ED]">
-                            <span className="text-[10.5px] font-bold text-[#8F8E8C] uppercase tracking-wider mr-1">Mức độ:</span>
-                            {[
-                                { id: 0, label: 'Tất cả mức', count: facetCounts.levelAll },
-                                { id: 1, label: 'Mức 1: Nhận biết', count: facetCounts.lvl1, bg: '#EAF3EE', color: '#448361', border: '#44836130' },
-                                { id: 2, label: 'Mức 2: Thông hiểu', count: facetCounts.lvl2, bg: '#EEF0FB', color: '#6B7CDB', border: '#6B7CDB30' },
-                                { id: 3, label: 'Mức 3: Vận dụng', count: facetCounts.lvl3, bg: '#FFF3E8', color: '#D9730D', border: '#D9730D30' },
-                                { id: 4, label: 'Mức 4: Vận dụng cao', count: facetCounts.lvl4, bg: '#F3ECF8', color: '#9065B0', border: '#9065B030' },
-                            ].map(lvlItem => {
-                                const isActive = levelFilter === lvlItem.id;
-                                return (
-                                    <button
-                                        key={lvlItem.id}
-                                        onClick={() => setLevelFilter(lvlItem.id)}
-                                        style={{
-                                            backgroundColor: isActive ? lvlItem.bg || '#1A1A1A' : '#fff',
-                                            color: isActive ? lvlItem.color || '#fff' : '#57564F',
-                                            borderColor: isActive ? lvlItem.border || '#1A1A1A' : '#E2E0DB',
-                                        }}
-                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
-                                            isActive ? 'font-bold shadow-2xs' : 'hover:bg-[#F7F6F3]'
-                                        }`}
-                                    >
-                                        <span>{lvlItem.label}</span>
-                                        <span className="text-[10px] tabular-nums px-1.5 py-0.2 rounded-full font-bold bg-black/5">
-                                            {lvlItem.count}
-                                        </span>
-                                    </button>
-                                );
-                            })}
+                        <fieldset className="min-w-0">
+                            <legend className="mb-2 text-xs font-semibold text-stone-600">Khối lớp</legend>
+                            <div className="flex flex-wrap gap-1.5">
+                                {gradeTabs.map(grade => (
+                                    <FilterChip key={grade} selected={gradeFilter === grade} onClick={() => selectGrade(grade)}>
+                                        {grade ? 'Lớp ' + grade : 'Tất cả'}
+                                    </FilterChip>
+                                ))}
+                            </div>
+                        </fieldset>
+
+                        <div className="grid gap-4 border-t border-stone-100 pt-3 xl:grid-cols-2">
+                            <fieldset className="min-w-0">
+                                <legend className="mb-2 text-xs font-semibold text-stone-600">Loại câu hỏi</legend>
+                                <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap">
+                                    {questionTypeOptions.map(({ value, label }) => (
+                                        <FilterChip key={value} selected={questionTypeFilter === value}
+                                            count={loading ? undefined : typeCounts[value]} onClick={() => setQuestionTypeFilter(value)}>
+                                            {label}
+                                        </FilterChip>
+                                    ))}
+                                </div>
+                            </fieldset>
+                            <fieldset className="min-w-0">
+                                <legend className="mb-2 text-xs font-semibold text-stone-600">Mức độ</legend>
+                                <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap">
+                                    {levelOptions.map(({ value, label }) => (
+                                        <FilterChip key={value} selected={levelFilter === value}
+                                            count={loading ? undefined : levelCounts[value]} onClick={() => setLevelFilter(value)}>
+                                            {label}
+                                        </FilterChip>
+                                    ))}
+                                </div>
+                            </fieldset>
                         </div>
-                    </div>
+                    </section>
 
                     {/* Content */}
                     {loading ? (
@@ -982,10 +906,15 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                             }}>
                                 <BookOpen style={{ width: '22px', height: '22px', color: '#CFCFCB' }} />
                             </div>
-                            <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#1A1A1A', marginBottom: '6px' }}>Chưa có bài viết nào</h3>
-                            <p style={{ fontSize: '13px', color: '#AEACA8', maxWidth: '280px', margin: '0 auto' }}>
-                                Thầy đang biên tập thêm nội dung. Quay lại sau nhé!
-                            </p>
+                            <h3 className="mb-1.5 text-base font-semibold text-stone-900">
+                                {inScopeBlogs.length > 0 ? 'Không có câu hỏi phù hợp' : 'Chưa có câu hỏi trong mục này'}
+                            </h3>
+                            {inScopeBlogs.length > 0 && (
+                                <button type="button" onClick={handleResetAllFilters}
+                                    className={`mt-2 min-h-10 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-900 hover:bg-amber-100 ${filterFocus}`}>
+                                    Xóa bộ lọc
+                                </button>
+                            )}
                         </div>
                     ) : (
                         /* ── Grid: 1 cột trên mobile, đúng 2 cột trên tablet/desktop ── */

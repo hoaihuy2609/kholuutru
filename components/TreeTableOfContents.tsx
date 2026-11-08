@@ -397,7 +397,7 @@ export function selectTreeNode(node: TreeNode, grade = node.grade): TreeSelectio
   return { type: node.level, id: node.id, name: node.name, grade };
 }
 
-function normalizeFolderText(text: string) {
+export function normalizeSearchText(text: string) {
   return text.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
     .replace(/đ/g, 'd').replace(/\s+/g, ' ').trim();
 }
@@ -407,13 +407,13 @@ export function indexFolderBlogs(tree: TreeNode[], blogs: BlogPost[]) {
   const searchable = blogs.map(blog => ({
     id: blog.id,
     grade: blog.grade,
-    title: normalizeFolderText(blog.title || ''),
-    summary: normalizeFolderText(blog.summary || ''),
-    labels: [blog.category || '', ...(blog.tags || [])].map(normalizeFolderText).filter(Boolean),
+    title: normalizeSearchText(blog.title || ''),
+    summary: normalizeSearchText(blog.summary || ''),
+    labels: [blog.category || '', ...(blog.tags || [])].map(normalizeSearchText).filter(Boolean),
   }));
 
   const indexNode = (node: TreeNode, grade = node.grade) => {
-    const name = normalizeFolderText(node.name);
+    const name = normalizeSearchText(node.name);
     const numberedName = name.match(/^(chuong|bai|dang) ([ivxlcdm]+|\d+(?:\.\d+)*)(?:[.:\-]\s*|\s+|$)/);
     const keyword = numberedName ? name.slice(numberedName[0].length).trim() : name;
     const numberLabel = numberedName ? numberedName[1] + ' ' + numberedName[2] : '';
@@ -457,7 +457,7 @@ function findNodePath(nodes: TreeNode[], id?: string): TreeNode[] {
 
 function filterFolders(nodes: TreeNode[], query: string): TreeNode[] {
   return nodes.flatMap(node => {
-    if (normalizeFolderText(node.name).includes(query)) return [node];
+    if (normalizeSearchText(node.name).includes(query)) return [node];
     const children = filterFolders(node.children ?? [], query);
     return children.length ? [{ ...node, children }] : [];
   });
@@ -499,7 +499,7 @@ export const TreeTableOfContents: React.FC<TreeTableOfContentsProps> = ({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const query = normalizeFolderText(searchQuery);
+  const query = normalizeSearchText(searchQuery);
   const visibleTree = useMemo(() => query ? filterFolders(treeData, query) : treeData, [treeData, query]);
 
   useEffect(() => {
