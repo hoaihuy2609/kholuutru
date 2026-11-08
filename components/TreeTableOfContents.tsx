@@ -1,13 +1,14 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Folder, FolderOpen, ChevronRight, FileText,
-  Search, Plus, Trash2, Layers, X, RotateCcw
+  Search, Plus, Pencil, Trash2, Layers, X, RotateCcw
 } from 'lucide-react';
 import { BlogPost } from '../types';
 
 export interface TreeNode {
   id: string;
   name: string;
+  previousNames?: string[];
   level: 'grade' | 'chapter' | 'lesson' | 'topic';
   grade?: number; // 10, 11, 12
   parentId?: string;
@@ -412,11 +413,16 @@ export function indexFolderBlogs(tree: TreeNode[], blogs: BlogPost[]) {
     labels: [blog.category || '', ...(blog.tags || [])].map(normalizeSearchText).filter(Boolean),
   }));
 
-  const indexNode = (node: TreeNode, grade = node.grade) => {
-    const name = normalizeSearchText(node.name);
+  const getFolderTerms = (label: string) => {
+    const name = normalizeSearchText(label);
     const numberedName = name.match(/^(chuong|bai|dang) ([ivxlcdm]+|\d+(?:\.\d+)*)(?:[.:\-]\s*|\s+|$)/);
     const keyword = numberedName ? name.slice(numberedName[0].length).trim() : name;
     const numberLabel = numberedName ? numberedName[1] + ' ' + numberedName[2] : '';
+    return { name, keyword, numberLabel };
+  };
+
+  const indexNode = (node: TreeNode, grade = node.grade) => {
+    const terms = [node.name, ...(node.previousNames ?? [])].map(getFolderTerms);
     const ids = new Set<string>();
 
     for (const blog of searchable) {
@@ -425,11 +431,12 @@ export function indexFolderBlogs(tree: TreeNode[], blogs: BlogPost[]) {
         continue;
       }
       if (blog.grade && grade && blog.grade !== grade) continue;
-      if (blog.title.includes(name) || blog.labels.some(label => label.includes(name) || label === numberLabel)
+      if (terms.some(({ name, keyword, numberLabel }) =>
+        blog.title.includes(name) || blog.labels.some(label => label.includes(name) || label === numberLabel)
         || (keyword.length >= 3 && (
           blog.title.includes(keyword) || blog.summary.includes(keyword)
           || blog.labels.some(label => label.includes(keyword) || (label.length >= 3 && keyword.includes(label)))
-        ))) {
+        )))) {
         ids.add(blog.id);
       }
     }
@@ -445,7 +452,7 @@ export function indexFolderBlogs(tree: TreeNode[], blogs: BlogPost[]) {
   return byFolder;
 }
 
-function findNodePath(nodes: TreeNode[], id?: string): TreeNode[] {
+export function findNodePath(nodes: TreeNode[], id?: string): TreeNode[] {
   if (!id) return [];
   for (const node of nodes) {
     if (node.id === id) return [node];
@@ -457,7 +464,7 @@ function findNodePath(nodes: TreeNode[], id?: string): TreeNode[] {
 
 function filterFolders(nodes: TreeNode[], query: string): TreeNode[] {
   return nodes.flatMap(node => {
-    if (normalizeSearchText(node.name).includes(query)) return [node];
+    if ([node.name, ...(node.previousNames ?? [])].some(name => normalizeSearchText(name).includes(query))) return [node];
     const children = filterFolders(node.children ?? [], query);
     return children.length ? [{ ...node, children }] : [];
   });
@@ -494,7 +501,7 @@ export const TreeTableOfContents: React.FC<TreeTableOfContentsProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedNodes, setExpandedNodes] = useState(() => new Set<string>());
   const [collapsedResults, setCollapsedResults] = useState(() => new Set<string>());
-  const [modalParent, setModalParent] = useState<TreeNode | null>(null);
+  const [folderEditor, setFolderEditor] = useState<{ mode: 'add' | 'rename'; node: TreeNode } | null>(null);
   const [newNodeName, setNewNodeName] = useState('');
   const dialogRef = useRef<HTMLDialogElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -510,8 +517,8 @@ export const TreeTableOfContents: React.FC<TreeTableOfContentsProps> = ({
   }, [selectedItem.id, treeData]);
 
   useEffect(() => {
-    if (modalParent) dialogRef.current?.showModal();
-  }, [modalParent]);
+    if (folderEditor) dialogRef.current?.showModal();
+  }, [folderEditor]);
 
   const updateSearch = (value: string) => {
     setSearchQuery(value);
@@ -528,32 +535,41 @@ export const TreeTableOfContents: React.FC<TreeTableOfContentsProps> = ({
     });
   };
 
-  const closeAddDialog = () => {
-    setModalParent(null);
-    setNewNodeName('');
+  const openFolderEditor = (mode: 'add' | 'rename', node: TreeNode) => {
+    setNewNodeName(mode === 'rename' ? node.name : '');
+    setFolderEditor({ mode, node });
   };
 
-  const addFolder = (event: React.FormEvent) => {
+  const saveFolder = (event: React.FormEvent) => {
     event.preventDefault();
     const name = newNodeName.trim();
-    if (!isAdmin || !modalParent || !name) return;
-    const parentPath = findNodePath(treeData, modalParent.id);
-    if (!parentPath.length) return;
-    const newFolder: TreeNode = {
-      id: 'custom-' + crypto.randomUUID(),
-      name,
-      grade: parentPath[0].grade,
-      level: modalParent.level === 'chapter' ? 'lesson' : 'topic',
-      parentId: modalParent.id,
-      isCustom: true,
-    };
-    const append = (nodes: TreeNode[]): TreeNode[] => nodes.map(node => {
-      if (node.id === modalParent.id) return { ...node, children: [...(node.children ?? []), newFolder] };
-      return node.children ? { ...node, children: append(node.children) } : node;
+    if (!isAdmin || !folderEditor || !name) return;
+    const path = findNodePath(treeData, folderEditor.node.id);
+    const current = path.at(-1);
+    if (!current) return;
+
+    const update = (nodes: TreeNode[], depth = 0): TreeNode[] => nodes.map(node => {
+      if (node.id !== path[depth].id) return node;
+      if (node.id !== current.id) return { ...node, children: update(node.children ?? [], depth + 1) };
+      if (folderEditor.mode === 'rename') {
+        const previousNames = [...new Set([...(node.previousNames ?? []), node.name])].filter(label => label !== name);
+        return { ...node, name, previousNames };
+      }
+      const child: TreeNode = {
+        id: 'custom-' + crypto.randomUUID(),
+        name,
+        grade: path[0].grade,
+        level: node.level === 'chapter' ? 'lesson' : 'topic',
+        parentId: node.id,
+        isCustom: true,
+      };
+      return { ...node, children: [...(node.children ?? []), child] };
     });
-    onTreeChange(append(treeData));
-    setExpandedNodes(previous => new Set([...previous, ...parentPath.map(node => node.id)]));
-    updateSearch('');
+    onTreeChange(update(treeData));
+    if (folderEditor.mode === 'add') {
+      setExpandedNodes(previous => new Set([...previous, ...path.map(node => node.id)]));
+      updateSearch('');
+    }
     dialogRef.current?.close();
   };
 
@@ -570,6 +586,7 @@ export const TreeTableOfContents: React.FC<TreeTableOfContentsProps> = ({
     const expanded = hasChildren && (query ? !collapsedResults.has(node.id) : expandedNodes.has(node.id));
     const selected = selectedItem.id === node.id;
     const canAdd = isAdmin && (node.level === 'chapter' || node.level === 'lesson');
+    const canRename = isAdmin && (node.level === 'lesson' || node.level === 'topic');
     const addLabel = node.level === 'chapter' ? 'Thêm bài học' : 'Thêm dạng bài';
     const count = folderBlogs.get(node.id)?.size ?? 0;
     const Icon = node.level === 'topic' ? FileText : expanded ? FolderOpen : Folder;
@@ -598,8 +615,14 @@ export const TreeTableOfContents: React.FC<TreeTableOfContentsProps> = ({
           </button>
           {canAdd && (
             <button type="button" className={iconButton} aria-label={addLabel + ' vào ' + node.name}
-              title={addLabel} onClick={() => setModalParent(node)}>
+              title={addLabel} onClick={() => openFolderEditor('add', node)}>
               <Plus aria-hidden="true" className="size-4" />
+            </button>
+          )}
+          {canRename && (
+            <button type="button" className={iconButton} aria-label={'Đổi tên ' + node.name}
+              title="Đổi tên" onClick={() => openFolderEditor('rename', node)}>
+              <Pencil aria-hidden="true" className="size-3.5" />
             </button>
           )}
           {isAdmin && node.isCustom && (
@@ -666,14 +689,16 @@ export const TreeTableOfContents: React.FC<TreeTableOfContentsProps> = ({
         )}
       </div>
 
-      {modalParent && (
-        <dialog ref={dialogRef} aria-labelledby="physics-folder-dialog-title" onClose={closeAddDialog}
+      {folderEditor && (
+        <dialog ref={dialogRef} aria-labelledby="physics-folder-dialog-title" onClose={() => setFolderEditor(null)}
           className="w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-stone-200 p-5 text-stone-900 shadow-xl backdrop:bg-black/40">
-          <form onSubmit={addFolder} className="space-y-3">
+          <form onSubmit={saveFolder} className="space-y-3">
             <h2 id="physics-folder-dialog-title" className="text-base font-bold">
-              {modalParent.level === 'chapter' ? 'Thêm bài học' : 'Thêm dạng bài'}
+              {folderEditor.mode === 'rename'
+                ? (folderEditor.node.level === 'lesson' ? 'Đổi tên bài học' : 'Đổi tên dạng bài')
+                : (folderEditor.node.level === 'chapter' ? 'Thêm bài học' : 'Thêm dạng bài')}
             </h2>
-            <p className="text-sm text-stone-600">{modalParent.name}</p>
+            {folderEditor.mode === 'add' && <p className="text-sm text-stone-600">{folderEditor.node.name}</p>}
             <label className="block space-y-1 text-sm font-medium">
               <span>Tên thư mục</span>
               <input autoFocus required value={newNodeName} onChange={event => setNewNodeName(event.target.value)}
@@ -682,9 +707,9 @@ export const TreeTableOfContents: React.FC<TreeTableOfContentsProps> = ({
             <div className="flex justify-end gap-2 pt-1">
               <button type="button" onClick={() => dialogRef.current?.close()}
                 className="rounded-lg px-3 py-2 text-sm hover:bg-stone-100">Hủy</button>
-              <button type="submit" disabled={!newNodeName.trim()}
+              <button type="submit" disabled={!newNodeName.trim() || (folderEditor.mode === 'rename' && newNodeName.trim() === folderEditor.node.name)}
                 className="rounded-lg bg-amber-800 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-50">
-                Thêm thư mục
+                {folderEditor.mode === 'rename' ? 'Lưu tên' : 'Thêm thư mục'}
               </button>
             </div>
           </form>

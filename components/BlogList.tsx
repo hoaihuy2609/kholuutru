@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BlogPost } from '../types';
-import { BookOpen, Plus, Search, SlidersHorizontal, Image, FileText, Check, Sparkles, ChevronLeft, Folder, X, RotateCcw } from 'lucide-react';
+import { BookOpen, Plus, Search, SlidersHorizontal, Image, FileText, Check, Sparkles, ChevronLeft, ChevronDown, Folder, X, RotateCcw } from 'lucide-react';
 import ExamStyleModal from './ExamStyleModal';
-import TreeTableOfContents, { indexFolderBlogs, loadPhysicsTree, normalizeSearchText, savePhysicsTree, selectTreeNode, TreeNode, TreeSelection } from './TreeTableOfContents';
+import TreeTableOfContents, { findNodePath, indexFolderBlogs, loadPhysicsTree, normalizeSearchText, savePhysicsTree, selectTreeNode, TreeNode } from './TreeTableOfContents';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import katex from 'katex';
@@ -504,18 +504,27 @@ function FilterChip({ children, selected, count, onClick }: {
 }) {
     return (
         <button type="button" aria-pressed={selected} onClick={onClick}
-            className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs font-semibold leading-snug transition-colors ${filterFocus} ${
+            className={`inline-flex min-h-8 items-center gap-1.5 rounded-md border px-2 py-1 text-left text-xs font-semibold leading-tight transition-colors sm:min-h-7 ${filterFocus} ${
                 selected
                     ? 'border-amber-300 bg-amber-50 text-amber-950'
                     : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300 hover:bg-stone-50'
             }`}>
             <span className="flex min-w-0 flex-1 items-center gap-1.5">{children}</span>
             {count !== undefined && (
-                <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] tabular-nums ${selected ? 'bg-amber-100 text-amber-900' : 'bg-stone-100 text-stone-600'}`}>
+                <span className={`shrink-0 rounded px-1 text-[11px] tabular-nums ${selected ? 'bg-amber-100 text-amber-900' : 'bg-stone-100 text-stone-600'}`}>
                     {count}
                 </span>
             )}
         </button>
+    );
+}
+
+function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div role="group" aria-label={label} className="flex min-w-0 items-start gap-1.5">
+            <span aria-hidden="true" className="w-12 shrink-0 pt-2 text-xs font-semibold text-stone-600 sm:w-16 sm:pt-1.5">{label}</span>
+            <div className="flex min-w-0 flex-wrap gap-1.5">{children}</div>
+        </div>
     );
 }
 
@@ -527,8 +536,9 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     const questionSearch = useRef<HTMLInputElement>(null);
     const filterHeading = useRef<HTMLHeadingElement>(null);
     const [treeData, setTreeData] = useState(loadPhysicsTree);
-    const [selectedTreeNode, setSelectedTreeNode] = useState<TreeSelection>({ type: 'all' });
+    const [selectedFolderId, setSelectedFolderId] = useState<string>();
     const [showMobileTree, setShowMobileTree] = useState(false);
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const mobileTreeOpener = useRef<HTMLButtonElement>(null);
     const mobileTreeClose = useRef<HTMLButtonElement>(null);
 
@@ -611,9 +621,11 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
         [treeData, isAdmin, studentGrade]
     );
     const folderBlogs = useMemo(() => indexFolderBlogs(visibleTree, visibleBlogs), [visibleTree, visibleBlogs]);
-    const activeTreeNode = selectedTreeNode.id && folderBlogs.has(selectedTreeNode.id)
-        ? selectedTreeNode
-        : null;
+    const activeTreeNode = useMemo(() => {
+        const path = findNodePath(visibleTree, selectedFolderId);
+        const node = path.at(-1);
+        return node ? selectTreeNode(node, path[0].grade) : null;
+    }, [visibleTree, selectedFolderId]);
     const gradeFilter = activeTreeNode?.grade ?? 0;
     const selectedFolderIds = activeTreeNode?.id ? folderBlogs.get(activeTreeNode.id) : undefined;
     const inScopeBlogs = useMemo(
@@ -637,8 +649,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     };
 
     const selectGrade = (grade: number) => {
-        const node = visibleTree.find(folder => folder.grade === grade);
-        setSelectedTreeNode(node ? selectTreeNode(node) : { type: 'all' });
+        setSelectedFolderId(visibleTree.find(folder => folder.grade === grade)?.id);
     };
 
     const questionIndex = useMemo(() => inScopeBlogs.map(indexQuestion), [inScopeBlogs]);
@@ -647,6 +658,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
         [questionIndex, debouncedSearch, questionTypeFilter, levelFilter, hasImageFilter]
     );
     const isAnyFilterActive = questionTypeFilter !== 'all' || levelFilter !== 0 || hasImageFilter || !!searchQuery.trim();
+    const advancedCount = Number(questionTypeFilter !== 'all') + Number(levelFilter !== 0);
     const gradeTabs = [0, ...[12, 11, 10].filter(grade => visibleTree.some(node => node.grade === grade))];
 
     const clearQuestionSearch = () => {
@@ -760,7 +772,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                             totalCount={visibleBlogs.length}
                             selectedItem={activeTreeNode ?? { type: 'all' }}
                             onSelect={selection => {
-                                setSelectedTreeNode(selection);
+                                setSelectedFolderId(selection.id);
                                 closeMobileTree();
                             }}
                             onTreeChange={handleTreeChange}
@@ -812,80 +824,71 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                         </div>
                     )}
 
-                    <section aria-labelledby="question-filter-heading" className="space-y-4 rounded-2xl border border-stone-200 bg-white p-3.5 shadow-sm sm:p-4">
-                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                            <div className="flex flex-wrap items-center gap-2.5">
-                                <span className="grid size-8 place-items-center rounded-lg bg-amber-50 text-amber-800">
-                                    <SlidersHorizontal aria-hidden="true" className="size-4" />
-                                </span>
-                                <h2 ref={filterHeading} tabIndex={-1} id="question-filter-heading" className="text-sm font-bold text-stone-900">Bộ lọc câu hỏi</h2>
-                                <span role="status" className="rounded-md bg-stone-100 px-2 py-1 text-xs font-medium tabular-nums text-stone-700">
+                    <section aria-labelledby="question-filter-heading" className="space-y-2 rounded-xl border border-stone-200 bg-white p-2.5 shadow-sm sm:px-3">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                            <div className="flex shrink-0 items-center gap-1.5">
+                                <SlidersHorizontal aria-hidden="true" className="hidden size-3.5 text-amber-800 sm:block" />
+                                <h2 ref={filterHeading} tabIndex={-1} id="question-filter-heading" className="sr-only text-xs font-bold text-stone-900 sm:not-sr-only">Bộ lọc</h2>
+                                <span role="status" className="rounded bg-stone-100 px-1.5 py-0.5 text-xs tabular-nums text-stone-700">
                                     {loading ? 'Đang tải…' : filteredBlogs.length.toLocaleString('vi-VN') + ' kết quả'}
                                 </span>
                             </div>
-                            {isAnyFilterActive && (
-                                <button type="button" onClick={handleResetAllFilters}
-                                    className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-amber-900 hover:bg-amber-50 ${filterFocus}`}>
-                                    <RotateCcw aria-hidden="true" className="size-3.5" /> Xóa bộ lọc
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="flex flex-wrap items-stretch gap-2">
-                            <div className="relative min-w-0 basis-full sm:flex-1">
-                                <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-500" />
+                            <div className="relative order-first min-w-0 basis-full sm:order-none sm:flex-[1_1_12rem]">
+                                <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-stone-500" />
                                 <input ref={questionSearch} type="text" aria-label="Tìm câu hỏi"
-                                    placeholder="Tìm câu hỏi, công thức hoặc từ khóa…"
+                                    placeholder="Tìm câu hỏi, công thức…"
                                     value={searchQuery} onChange={event => setSearchQuery(event.target.value)}
-                                    className="h-11 w-full rounded-lg border border-stone-200 bg-stone-50 pl-9 pr-10 text-sm text-stone-900 outline-none placeholder:text-stone-500 focus:border-amber-600 focus:bg-white focus:ring-1 focus:ring-amber-600" />
+                                    className="h-9 w-full rounded-md border border-stone-200 bg-stone-50 pl-8 pr-8 text-sm text-stone-900 outline-none placeholder:text-stone-500 focus:border-amber-600 focus:bg-white focus:ring-1 focus:ring-amber-600 sm:h-8" />
                                 {searchQuery && (
                                     <button type="button" aria-label="Xóa từ khóa"
                                         onClick={() => { clearQuestionSearch(); questionSearch.current?.focus(); }}
-                                        className={`absolute right-1 top-1 grid size-9 place-items-center rounded-md text-stone-500 hover:bg-stone-100 hover:text-stone-800 ${filterFocus}`}>
+                                        className={`absolute right-0.5 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded text-stone-500 hover:bg-stone-100 hover:text-stone-800 ${filterFocus}`}>
                                         <X aria-hidden="true" className="size-4" />
                                     </button>
                                 )}
                             </div>
                             <FilterChip selected={hasImageFilter} count={loading ? undefined : withImage}
                                 onClick={() => setHasImageFilter(previous => !previous)}>
-                                <Image aria-hidden="true" className="size-4 shrink-0" /> Có hình hoặc đồ thị
+                                <Image aria-hidden="true" className="size-3.5 shrink-0" />
+                                <span>Có hình<span className="sr-only sm:not-sr-only">/đồ thị</span></span>
                             </FilterChip>
+                            <button type="button" aria-expanded={showAdvancedFilters} aria-controls="question-advanced-filters"
+                                onClick={() => setShowAdvancedFilters(previous => !previous)}
+                                className={`inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-50 sm:hidden ${filterFocus}`}>
+                                Lọc thêm{advancedCount > 0 && ' (' + advancedCount + ')'}
+                                <ChevronDown aria-hidden="true" className={'size-3.5 ' + (showAdvancedFilters ? 'rotate-180' : '')} />
+                            </button>
+                            {isAnyFilterActive && (
+                                <button type="button" onClick={handleResetAllFilters} aria-label="Xóa bộ lọc" title="Xóa bộ lọc"
+                                    className={`inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-50 sm:min-h-7 ${filterFocus}`}>
+                                    <RotateCcw aria-hidden="true" className="size-3.5" /> <span className="hidden sm:inline">Xóa bộ lọc</span>
+                                </button>
+                            )}
                         </div>
-
-                        <fieldset className="min-w-0">
-                            <legend className="mb-2 text-xs font-semibold text-stone-600">Khối lớp</legend>
-                            <div className="flex flex-wrap gap-1.5">
-                                {gradeTabs.map(grade => (
-                                    <FilterChip key={grade} selected={gradeFilter === grade} onClick={() => selectGrade(grade)}>
-                                        {grade ? 'Lớp ' + grade : 'Tất cả'}
+                        <FilterGroup label="Khối">
+                            {gradeTabs.map(grade => (
+                                <FilterChip key={grade} selected={gradeFilter === grade} onClick={() => selectGrade(grade)}>
+                                    {grade ? 'Lớp ' + grade : 'Tất cả'}
+                                </FilterChip>
+                            ))}
+                        </FilterGroup>
+                        <div id="question-advanced-filters" className={(showAdvancedFilters ? 'grid ' : 'hidden ') + 'gap-1.5 border-t border-stone-100 pt-2 sm:grid'}>
+                            <FilterGroup label="Loại câu">
+                                {questionTypeOptions.map(({ value, label }) => (
+                                    <FilterChip key={value} selected={questionTypeFilter === value}
+                                        count={loading ? undefined : typeCounts[value]} onClick={() => setQuestionTypeFilter(value)}>
+                                        {label}
                                     </FilterChip>
                                 ))}
-                            </div>
-                        </fieldset>
-
-                        <div className="grid gap-4 border-t border-stone-100 pt-3 xl:grid-cols-2">
-                            <fieldset className="min-w-0">
-                                <legend className="mb-2 text-xs font-semibold text-stone-600">Loại câu hỏi</legend>
-                                <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap">
-                                    {questionTypeOptions.map(({ value, label }) => (
-                                        <FilterChip key={value} selected={questionTypeFilter === value}
-                                            count={loading ? undefined : typeCounts[value]} onClick={() => setQuestionTypeFilter(value)}>
-                                            {label}
-                                        </FilterChip>
-                                    ))}
-                                </div>
-                            </fieldset>
-                            <fieldset className="min-w-0">
-                                <legend className="mb-2 text-xs font-semibold text-stone-600">Mức độ</legend>
-                                <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap">
-                                    {levelOptions.map(({ value, label }) => (
-                                        <FilterChip key={value} selected={levelFilter === value}
-                                            count={loading ? undefined : levelCounts[value]} onClick={() => setLevelFilter(value)}>
-                                            {label}
-                                        </FilterChip>
-                                    ))}
-                                </div>
-                            </fieldset>
+                            </FilterGroup>
+                            <FilterGroup label="Mức độ">
+                                {levelOptions.map(({ value, label }) => (
+                                    <FilterChip key={value} selected={levelFilter === value}
+                                        count={loading ? undefined : levelCounts[value]} onClick={() => setLevelFilter(value)}>
+                                        {label}
+                                    </FilterChip>
+                                ))}
+                            </FilterGroup>
                         </div>
                     </section>
 
