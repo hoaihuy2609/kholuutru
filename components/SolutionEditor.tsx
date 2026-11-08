@@ -12,7 +12,7 @@ import {
   ChevronLeft, Save, Trash2, ArrowUp, ArrowDown,
   Plus, Eye, BookOpen, Layers, X, ToggleLeft, ToggleRight,
   Image as ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle,
-  FileCode, Download
+  FileCode, Download, Copy, Check
 } from 'lucide-react';
 import { renderTikzToSvg, uploadSvgToTelegram } from "../src/services/tikzService";
 import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
@@ -207,6 +207,78 @@ const SAMPLE_PHYSICS_EXAM_JSON = JSON.stringify({
     }
   ]
 }, null, 2);
+
+const AI_PROMPT_TEMPLATE = `Bạn là chuyên gia chuyển đổi và số hóa đề thi Vật lý sang cấu trúc dữ liệu JSON để nạp vào hệ thống website.
+
+HÃY ĐỌC NỘI DUNG HOẶC HÌNH ẢNH ĐỀ THI ĐƯỢC CUNG CẤP VÀ CHUYỂN TOÀN BỘ SANG ĐỊNH DẠNG JSON THEO CÁC QUY TẮC SAU:
+
+1. QUY TẮC CÚ PHÁP JSON VÀ LATEX:
+- Đầu ra phải là chuỗi JSON thuần hợp lệ (chỉ trả về khối mã json, không giải thích ngoài lề).
+- Trong chuỗi JSON, tất cả dấu gạch chéo ngược của LaTeX phải escape thành 2 dấu gạch chéo ngược: ví dụ \\\\frac, \\\\cdot, \\\\alpha, \\\\text{...}.
+- Công thức trong dòng kẹp giữa $ công thức $. Công thức căn giữa độc lập kẹp giữa $$ công thức $$.
+
+2. PHÂN LOẠI 3 DẠNG CÂU HỎI:
+- type: "trac_nghiem" (Trắc nghiệm 4 phương án):
+  + choices: mảng đúng 4 phần tử tương ứng A, B, C, D (không ghi lại chữ "A.", "B." ở đầu đáp án).
+  + correctChoice: chữ cái đáp án đúng, viết hoa ("A", "B", "C", hoặc "D").
+  + solution: hướng dẫn giải chi tiết.
+- type: "dung_sai" (Đúng / Sai 4 ý a, b, c, d):
+  + statements: mảng 4 mệnh đề [a, b, c, d]. Mỗi mệnh đề có label ("a","b","c","d"), claim (nội dung mệnh đề), verdict (true nếu Đúng, false nếu Sai).
+  + solution: hướng dẫn giải chi tiết cho từng ý.
+- type: "tu_luan" (Tự luận hoặc trả lời ngắn):
+  + solution: hướng dẫn giải chi tiết kèm công thức và kết quả.
+
+3. HÌNH ẢNH VÀ ĐỒ THỊ (NẾU CÓ):
+- Nếu câu hỏi có hình vẽ mạch điện, đồ thị, vectơ: hãy tạo mã TikZ LaTeX đặt vào trường tikzCode (escape thành \\\\begin{tikzpicture}...\\\\end{tikzpicture}).
+- imageLayout: "right" (ảnh đặt bên phải) hoặc "bottom" (ảnh đặt bên dưới).
+- Nếu không có hình, để tikzCode: "".
+
+4. CẤU TRÚC JSON MẪU BẮT BUỘC:
+{
+  "exam_name": "[Tên đề thi hoặc chuyên đề]",
+  "questions": [
+    {
+      "questionNo": "Câu 1",
+      "type": "trac_nghiem",
+      "qText": "Một dòng điện thẳng dài $I = 5\\\\text{ A}$ đặt trong không khí. Cảm ứng từ tại điểm $M$ cách dây $r = 4\\\\text{ cm}$ có độ lớn là:",
+      "choices": [
+        "2{,}5 \\\\cdot 10^{-5}\\\\text{ T}",
+        "1{,}5 \\\\cdot 10^{-5}\\\\text{ T}",
+        "4{,}0 \\\\cdot 10^{-5}\\\\text{ T}",
+        "2{,}0 \\\\cdot 10^{-5}\\\\text{ T}"
+      ],
+      "correctChoice": "A",
+      "solution": "**Hướng dẫn giải:**\\n- Áp dụng công thức: $$B = 2 \\\\cdot 10^{-7} \\\\cdot \\\\frac{I}{r}$$\\n- Thay số ta được $B_M = 2{,}5 \\\\cdot 10^{-5}\\\\text{ T}$. Chọn đáp án A.",
+      "tikzCode": "",
+      "imageLayout": "auto"
+    },
+    {
+      "questionNo": "Câu 2",
+      "type": "dung_sai",
+      "qText": "Một lượng khí lí tưởng xác định biến đổi trạng thái theo chu trình...",
+      "statements": [
+        { "label": "a", "claim": "Quá trình (1) đến (2) là đẳng tích.", "verdict": true },
+        { "label": "b", "claim": "Nhiệt độ khí ở trạng thái (2) giảm so với (1).", "verdict": false },
+        { "label": "c", "claim": "Công chất khí thực hiện trong chu trình là A > 0.", "verdict": true },
+        { "label": "d", "claim": "Nội năng toàn chu trình không đổi.", "verdict": true }
+      ],
+      "solution": "**Hướng dẫn giải:**\\n- Ý a (Đúng) vì thể tích không đổi.\\n- Ý b (Sai) vì áp suất tăng...",
+      "tikzCode": "",
+      "imageLayout": "auto"
+    },
+    {
+      "questionNo": "Câu 3",
+      "type": "tu_luan",
+      "qText": "Một vật dao động điều hòa với phương trình $x = 4\\\\cos(2\\\\pi t)\\\\text{ cm}$. Xác định tốc độ cực đại của vật.",
+      "solution": "**Hướng dẫn giải:**\\n- Tốc độ cực đại: $$v_{\\\\max} = \\\\omega A = 8\\\\pi\\\\text{ cm/s}$$\\n- Đáp số: $8\\\\pi\\\\text{ cm/s}$.",
+      "tikzCode": "",
+      "imageLayout": "auto"
+    }
+  ]
+}
+
+BÂY GIỜ HÃY CHUYỂN ĐỔI ĐỀ THI SAU ĐÂY SANG JSON:
+[Dán nội dung hoặc ảnh đề thi vào đây]`;
 
 // ── BATCH OPTION PARSERS (Dán nhanh 4 đáp án / 4 mệnh đề) ───
 function parseMultipleChoiceBatch(raw: string): { choices: string[]; correctChoice?: string } {
@@ -727,6 +799,14 @@ export default function SolutionEditor({
   const [showJsonModal, setShowJsonModal] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [importingJson, setImportingJson] = useState(false);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
+
+  const handleCopyAiPrompt = () => {
+    navigator.clipboard.writeText(AI_PROMPT_TEMPLATE);
+    setCopiedPrompt(true);
+    showToast('Đã sao chép prompt cho AI vào clipboard!', 'success');
+    setTimeout(() => setCopiedPrompt(false), 2000);
+  };
 
   // Phân tích cú pháp JSON thời gian thực để báo trạng thái trên giao diện
   const parsedPreview = useMemo(() => {
@@ -1774,7 +1854,27 @@ export default function SolutionEditor({
 
               {/* Format Guide */}
               <div className="p-3.5 rounded-xl bg-[#F7F6F3] border border-[#E9E9E7] text-[12px] text-[#787774] leading-relaxed">
-                <p className="font-semibold text-[#37352F] mb-1">💡 Hướng dẫn cấu trúc JSON:</p>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="font-semibold text-[#37352F]">Hướng dẫn cấu trúc JSON:</p>
+                  <button
+                    type="button"
+                    onClick={handleCopyAiPrompt}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#37352F] bg-white hover:bg-[#EFEFED] border border-[#D3D1CB] transition-colors shadow-xs shrink-0 cursor-pointer"
+                    title="Sao chép prompt cho AI"
+                  >
+                    {copiedPrompt ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-emerald-600">Đã sao chép</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-[#57564F]" />
+                        <span>Sao chép prompt</span>
+                      </>
+                    )}
+                  </button>
+                </div>
                 <p>• Hỗ trợ đối tượng <code>&#123; exam_name, questions: [...] &#125;</code> hoặc mảng trực tiếp <code>[...]</code>.</p>
                 <p>• Các trường mỗi câu: <code>questionNo</code>, <code>type</code> (<code>'trac_nghiem'</code> | <code>'dung_sai'</code> | <code>'tu_luan'</code>), <code>qText</code>, <code>choices</code>, <code>correctChoice</code>, <code>statements</code>, <code>solution</code>, <code>tikzCode</code>.</p>
                 <p>• Hệ thống sẽ tự động gọi Kroki API để sinh ảnh vector SVG chất lượng cao cho các câu có mã <code>tikzCode</code>.</p>
