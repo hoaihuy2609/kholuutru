@@ -1106,10 +1106,10 @@ export default function SolutionEditor({
       )}
 
       {/* ── Main grid ── */}
-      <div className="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-12">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
 
         {/* ════════ EDITOR ════════ */}
-        <div className="flex min-w-0 flex-col gap-5 xl:col-span-7">
+        <div className="flex min-w-0 flex-col gap-5">
 
           {/* Thông tin đề + Tabs câu */}
           <div className="space-y-4 rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm sm:p-4">
@@ -1533,7 +1533,7 @@ export default function SolutionEditor({
         </div>
 
         {/* ════════ PREVIEW ════════ */}
-        <div className="min-w-0 xl:sticky xl:top-20 xl:col-span-5 xl:h-[calc(100dvh-7rem)]">
+        <div className="min-w-0 xl:sticky xl:top-20 xl:h-[calc(100dvh-7rem)]">
           <div className="flex h-full min-h-64 flex-col overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
             <div className="flex shrink-0 items-center justify-between border-b border-stone-100 bg-stone-50 px-3.5 py-3 sm:px-4">
               <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2">
