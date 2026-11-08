@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { BlogPost } from '../types';
 import { BookOpen, Plus, Search, Filter, FileText, Check, Sparkles, ChevronLeft, Folder, X, RotateCcw } from 'lucide-react';
 import ExamStyleModal from './ExamStyleModal';
-import TreeTableOfContents, { TreeSelection } from './TreeTableOfContents';
+import TreeTableOfContents, { indexFolderBlogs, loadPhysicsTree, savePhysicsTree, selectTreeNode, TreeNode, TreeSelection } from './TreeTableOfContents';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import katex from 'katex';
@@ -432,11 +432,11 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [selectedTag, setSelectedTag] = useState('');
-    const [gradeFilter, setGradeFilter] = useState<number>(0);
+    const [treeData, setTreeData] = useState(loadPhysicsTree);
     const [selectedTreeNode, setSelectedTreeNode] = useState<TreeSelection>({ type: 'all' });
     const [showMobileTree, setShowMobileTree] = useState(false);
+    const mobileTreeOpener = useRef<HTMLButtonElement>(null);
+    const mobileTreeClose = useRef<HTMLButtonElement>(null);
 
     // ── BỘ LỌC CHUYÊN SÂU (Question Format, Difficulty Level, Image/Diagram) ──
     const [questionTypeFilter, setQuestionTypeFilter] = useState<'all' | 'dung_sai' | 'trac_nghiem' | 'tu_luan'>('all');
@@ -508,54 +508,51 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
         return () => clearTimeout(t);
     }, [searchQuery]);
 
-    const categories = useMemo(() => [...new Set(blogs.map(b => b.category).filter(Boolean))], [blogs]);
-    const allTags = useMemo(() => [...new Set(blogs.flatMap(b => b.tags || []))], [blogs]);
+    const visibleBlogs = useMemo(() => blogs.filter(blog => {
+        if (isAdmin) return true;
+        return blog.category !== 'exam_paper' && (!studentGrade || !blog.grade || blog.grade === studentGrade);
+    }), [blogs, isAdmin, studentGrade]);
 
-    // Hàm kiểm tra bài tập có khớp với nhánh Mục lục cây đang chọn hay không
-    const matchTreeNode = (b: BlogPost) => {
-        const postGrade = b.grade || 0;
-        if (selectedTreeNode.type === 'grade' && selectedTreeNode.grade) {
-            if (postGrade !== selectedTreeNode.grade) return false;
-        } else if (selectedTreeNode.type !== 'all' && selectedTreeNode.name) {
-            if (selectedTreeNode.grade && postGrade && postGrade !== selectedTreeNode.grade) return false;
+    const visibleTree = useMemo(
+        () => !isAdmin && studentGrade ? treeData.filter(node => node.grade === studentGrade) : treeData,
+        [treeData, isAdmin, studentGrade]
+    );
+    const folderBlogs = useMemo(() => indexFolderBlogs(visibleTree, visibleBlogs), [visibleTree, visibleBlogs]);
+    const activeTreeNode = selectedTreeNode.id && folderBlogs.has(selectedTreeNode.id)
+        ? selectedTreeNode
+        : null;
+    const gradeFilter = activeTreeNode?.grade ?? 0;
+    const selectedFolderIds = activeTreeNode?.id ? folderBlogs.get(activeTreeNode.id) : undefined;
+    const inScopeBlogs = useMemo(
+        () => selectedFolderIds ? visibleBlogs.filter(blog => selectedFolderIds.has(blog.id)) : visibleBlogs,
+        [visibleBlogs, selectedFolderIds]
+    );
 
-            const rawName = selectedTreeNode.name.toLowerCase();
-            const cleanKeyword = rawName.replace(/^(chương|bài|dạng)\s*([0-9ivxabc\.\:\-]+)\s*[\.\:\-]?\s*/i, '').trim();
-            const prefixMatch = rawName.match(/^(chương|bài|dạng)\s*([0-9ivxabc\.\:\-]+)/i);
-            const prefixCode = prefixMatch ? prefixMatch[0].trim() : '';
+    useEffect(() => {
+        if (showMobileTree) mobileTreeClose.current?.focus();
+    }, [showMobileTree]);
 
-            const cat = (b.category || '').toLowerCase();
-            const title = (b.title || '').toLowerCase();
-            const summary = (b.summary || '').toLowerCase();
-            const tags = (b.tags || []).map(t => t.toLowerCase());
-
-            let matches = false;
-            if (prefixCode && (cat.includes(prefixCode) || tags.some(t => t.includes(prefixCode)))) {
-                matches = true;
-            } else if (cleanKeyword && cleanKeyword.length >= 3 && (cat.includes(cleanKeyword) || tags.some(t => t.includes(cleanKeyword) || cleanKeyword.includes(t)) || title.includes(cleanKeyword) || summary.includes(cleanKeyword))) {
-                matches = true;
-            } else if (cat.includes(rawName) || tags.some(t => t.includes(rawName)) || title.includes(rawName)) {
-                matches = true;
-            }
-
-            if (!matches) return false;
-        }
-        return true;
+    const closeMobileTree = () => {
+        if (!showMobileTree) return;
+        setShowMobileTree(false);
+        mobileTreeOpener.current?.focus();
     };
+
+    const handleTreeChange = (tree: TreeNode[]) => {
+        setTreeData(tree);
+        savePhysicsTree(tree);
+    };
+
+    const selectGrade = (grade: number) => {
+        const node = visibleTree.find(folder => folder.grade === grade);
+        setSelectedTreeNode(node ? selectTreeNode(node) : { type: 'all' });
+    };
+
+
 
     // ── TÍNH TOÁN BỘ ĐẾM LIÊN ĐỚI THÔNG MINH (FACETED COUNTS) ──
     // Đếm chính xác theo từng loại và mức độ liên đới với nhau (không bị đếm tổng nhầm)
     const facetCounts = useMemo(() => {
-        // 1. Tập bài tập cơ sở theo khối học sinh, tab khối lớp, và nhánh mục lục cây
-        const inScopeBlogs = blogs.filter(b => {
-            if (!isAdmin && b.category === 'exam_paper') return false;
-            const postGrade = b.grade || 0;
-            if (!isAdmin && studentGrade && postGrade !== 0 && postGrade !== studentGrade) return false;
-            if (gradeFilter !== 0 && postGrade !== gradeFilter) return false;
-            if (!matchTreeNode(b)) return false;
-            return true;
-        });
-
         // 2. ĐẾM CHO HÀNG LOẠI CÂU: Phụ thuộc vào levelFilter & hasImageFilter đang chọn
         const forTypeCounts = inScopeBlogs.filter(b => {
             if (levelFilter !== 0 && ((b as any).level || 0) !== levelFilter) return false;
@@ -634,7 +631,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
             withImage,
             totalInScope: inScopeBlogs.length,
         };
-    }, [blogs, selectedTreeNode, gradeFilter, questionTypeFilter, levelFilter, hasImageFilter, isAdmin, studentGrade]);
+    }, [inScopeBlogs, questionTypeFilter, levelFilter, hasImageFilter]);
 
     const isAnyFilterActive = questionTypeFilter !== 'all' || levelFilter !== 0 || hasImageFilter || searchQuery.trim() !== '';
 
@@ -645,23 +642,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
         setSearchQuery('');
     };
 
-    const filteredBlogs = useMemo(() => blogs.filter(b => {
-        // Ẩn đề thi khỏi Góc học tập của học sinh
-        if (!isAdmin && b.category === 'exam_paper') return false;
-
-        // Lọc theo khối lớp học sinh
-        const postGrade = b.grade || 0;
-        if (!isAdmin && studentGrade) {
-            if (postGrade !== 0 && postGrade !== studentGrade) return false;
-        }
-
-        // Lọc theo Cây mục lục thư mục
-        if (!matchTreeNode(b)) return false;
-
-        // Tab filter (Grade)
-        const matchGrade = gradeFilter === 0 || postGrade === gradeFilter;
-        if (!matchGrade) return false;
-
+    const filteredBlogs = useMemo(() => inScopeBlogs.filter(b => {
         // ── LỌC THEO BỘ LỌC CHUYÊN SÂU ──
         // 1. Loại câu hỏi (Đúng/Sai, Trắc nghiệm 4 PA, Trả lời ngắn)
         if (questionTypeFilter !== 'all') {
@@ -687,7 +668,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
         const q = debouncedSearch.toLowerCase();
         const matchSearch = !q || b.title.toLowerCase().includes(q) || b.summary.toLowerCase().includes(q) || (b.tags || []).some(t => t.toLowerCase().includes(q));
         return matchSearch;
-    }), [blogs, debouncedSearch, gradeFilter, selectedTreeNode, questionTypeFilter, levelFilter, hasImageFilter, isAdmin, studentGrade]);
+    }), [inScopeBlogs, debouncedSearch, questionTypeFilter, levelFilter, hasImageFilter]);
 
     const allGradeTabs = [
         { label: 'Tất cả', value: 0, color: '#787774' },
@@ -761,20 +742,50 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
             {/* ── BỐ CỤC 2 CỘT: Cột Trái (Mục lục cây thư mục) & Cột Phải (Kho học liệu & Bộ lọc) ── */}
             <div className="flex flex-col lg:flex-row gap-6 items-start mt-6">
                 {/* ── CỘT TRÁI: MỤC LỤC CÂY THƯ MỤC 4 CẤP CHUẨN GDPT 2018 (Desktop) ── */}
-                <aside className="hidden lg:block w-[320px] xl:w-[350px] shrink-0 sticky top-6">
-                    <TreeTableOfContents
-                        blogs={blogs}
-                        selectedItem={selectedTreeNode}
-                        onSelect={(sel) => {
-                            setSelectedTreeNode(sel);
-                            if (sel.type === 'grade' && sel.grade) {
-                                setGradeFilter(sel.grade);
-                            } else if (sel.type === 'all') {
-                                setGradeFilter(0);
-                            }
-                        }}
-                        isAdmin={isAdmin}
-                    />
+                <aside className={(showMobileTree ? 'fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4 ' : 'hidden ')
+                    + 'lg:sticky lg:inset-auto lg:top-6 lg:z-auto lg:block lg:w-[320px] lg:shrink-0 lg:p-0 xl:w-[350px]'}
+                    aria-labelledby="physics-folder-panel-title"
+                    onKeyDown={event => {
+                        if (!showMobileTree || !mobileTreeClose.current?.getClientRects().length
+                            || (event.target as HTMLElement).closest('dialog')) return;
+                        if (event.key === 'Escape') closeMobileTree();
+                        if (event.key !== 'Tab') return;
+                        const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)'))
+                            .filter(control => control.getClientRects().length > 0);
+                        const first = controls[0];
+                        const last = controls.at(-1);
+                        if (event.shiftKey ? event.target === first : event.target === last) {
+                            event.preventDefault();
+                            (event.shiftKey ? last : first)?.focus();
+                        }
+                    }}>
+                    {showMobileTree && (
+                        <div aria-hidden="true" className="absolute inset-0 bg-black/40 lg:hidden" onClick={closeMobileTree} />
+                    )}
+                    <div id="physics-folder-panel" className="relative flex h-[85dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-stone-200 bg-white shadow-sm sm:max-w-md sm:rounded-2xl lg:h-[min(740px,calc(100dvh-3rem))]">
+                        <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2.5">
+                            <h2 id="physics-folder-panel-title" className="flex items-center gap-2 text-sm font-bold text-stone-800">
+                                <Folder aria-hidden="true" className="size-4 text-amber-700" />
+                                Mục lục Vật lý
+                            </h2>
+                            <button ref={mobileTreeClose} type="button" aria-label="Đóng mục lục" onClick={closeMobileTree}
+                                className="grid size-9 place-items-center rounded-md text-stone-600 hover:bg-stone-100 lg:hidden">
+                                <X aria-hidden="true" className="size-5" />
+                            </button>
+                        </div>
+                        <TreeTableOfContents
+                            treeData={visibleTree}
+                            folderBlogs={folderBlogs}
+                            totalCount={visibleBlogs.length}
+                            selectedItem={activeTreeNode ?? { type: 'all' }}
+                            onSelect={selection => {
+                                setSelectedTreeNode(selection);
+                                closeMobileTree();
+                            }}
+                            onTreeChange={handleTreeChange}
+                            isAdmin={isAdmin}
+                        />
+                    </div>
                 </aside>
 
                 {/* ── CỘT PHẢI: BỘ LỌC + DANH SÁCH BÀI TẬP ── */}
@@ -782,39 +793,37 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                     {/* Nút mở Mục lục trên Mobile / Tablet */}
                     <div className="lg:hidden flex items-center justify-between bg-white p-3 rounded-xl border border-[#E9E9E7] shadow-2xs">
                         <button
+                            ref={mobileTreeOpener}
+                            type="button"
+                            aria-expanded={showMobileTree}
+                            aria-controls="physics-folder-panel"
                             onClick={() => setShowMobileTree(true)}
                             className="flex items-center gap-2 text-xs font-bold text-[#8C4A00] bg-[#FDF6ED] px-3.5 py-2 rounded-lg border border-[#F3DFC1]"
                         >
                             <Folder className="w-4 h-4 fill-[#F5A623] text-[#D9730D]" />
-                            <span>📑 Mục lục thư mục ({blogs.length} câu)</span>
+                            <span>Mục lục ({visibleBlogs.length} câu)</span>
                         </button>
-                        {selectedTreeNode.type !== 'all' && (
+                        {activeTreeNode && (
                             <span className="text-xs font-semibold text-[#8C4A00] truncate max-w-[160px]">
-                                {selectedTreeNode.name}
+                                {activeTreeNode.name}
                             </span>
                         )}
                     </div>
 
                     {/* Thanh Breadcrumb khi đang chọn một thư mục bất kỳ trong cây */}
-                    {selectedTreeNode.type !== 'all' && (
+                    {activeTreeNode && (
                         <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#FDF4E7] border border-[#F6E1C4] text-xs">
                             <div className="flex items-center gap-2 min-w-0 pr-2">
                                 <Folder className="w-4 h-4 fill-[#F5A623] text-[#D9730D] shrink-0" />
                                 <span className="text-[#8C4A00] font-bold truncate">
-                                    {selectedTreeNode.type === 'grade' && `Khối: ${selectedTreeNode.name}`}
-                                    {selectedTreeNode.type === 'chapter' && `Chương: ${selectedTreeNode.name}`}
-                                    {selectedTreeNode.type === 'lesson' && `Bài: ${selectedTreeNode.name}`}
-                                    {selectedTreeNode.type === 'topic' && `Dạng: ${selectedTreeNode.name}`}
+                                    {activeTreeNode.name}
                                 </span>
                                 <span className="text-[11px] font-semibold text-[#8C4A00] bg-[#FAEDE0] px-2 py-0.5 rounded-full shrink-0">
                                     {filteredBlogs.length} câu
                                 </span>
                             </div>
                             <button
-                                onClick={() => {
-                                    setSelectedTreeNode({ type: 'all' });
-                                    setGradeFilter(0);
-                                }}
+                                onClick={() => selectGrade(0)}
                                 className="text-xs font-bold text-[#8C4A00] hover:text-[#5C3000] underline shrink-0 cursor-pointer"
                             >
                                 ✕ Xem tất cả
@@ -831,7 +840,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                                 {gradeTabs.map(tab => (
                                     <button
                                         key={tab.value}
-                                        onClick={() => setGradeFilter(tab.value)}
+                                        onClick={() => selectGrade(tab.value)}
                                         style={{
                                             backgroundColor: gradeFilter === tab.value ? tab.color : 'transparent',
                                             color: gradeFilter === tab.value ? '#fff' : '#787774',
@@ -1000,48 +1009,6 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                     )}
                 </div>
             </div>
-
-            {/* ── Modal Drawer Mục lục trên Mobile ── */}
-            {showMobileTree && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs lg:hidden"
-                    onClick={() => setShowMobileTree(false)}
-                >
-                    <div
-                        className="w-full max-w-md max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className="p-3 border-b border-[#E9E9E7] flex items-center justify-between bg-[#FAFAFA]">
-                            <div className="flex items-center gap-2 text-xs font-bold text-[#1A1A1A]">
-                                <Folder className="w-4 h-4 fill-[#F5A623] text-[#D9730D]" />
-                                <span>Mục lục thư mục môn Vật lý</span>
-                            </div>
-                            <button
-                                onClick={() => setShowMobileTree(false)}
-                                className="p-1 rounded text-[#787774] hover:text-[#1A1A1A]"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <div className="flex-1 overflow-hidden p-2">
-                            <TreeTableOfContents
-                                blogs={blogs}
-                                selectedItem={selectedTreeNode}
-                                onSelect={(sel) => {
-                                    setSelectedTreeNode(sel);
-                                    if (sel.type === 'grade' && sel.grade) {
-                                        setGradeFilter(sel.grade);
-                                    } else if (sel.type === 'all') {
-                                        setGradeFilter(0);
-                                    }
-                                    setShowMobileTree(false);
-                                }}
-                                isAdmin={isAdmin}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* ── FLOATING BAR: Khi có câu hỏi được chọn ── */}
             {selectedBlogIds.length > 0 && (

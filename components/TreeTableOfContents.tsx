@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  Folder, ChevronRight, ChevronDown,
+  Folder, FolderOpen, ChevronRight, FileText,
   Search, Plus, Trash2, Layers, X, RotateCcw
 } from 'lucide-react';
 import { BlogPost } from '../types';
@@ -375,601 +375,320 @@ export const INITIAL_PHYSICS_TREE: TreeNode[] = [
 
 const LOCAL_STORAGE_KEY = 'physivault_tree_custom_v1';
 
+export function loadPhysicsTree(): TreeNode[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || 'null');
+    if (Array.isArray(saved)) return saved;
+  } catch {
+    // Storage can be unavailable, such as when rendering on the server.
+  }
+  return INITIAL_PHYSICS_TREE;
+}
+
+export function savePhysicsTree(tree: TreeNode[]) {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tree));
+  } catch {
+    // The current session can still use the updated tree.
+  }
+}
+
+export function selectTreeNode(node: TreeNode, grade = node.grade): TreeSelection {
+  return { type: node.level, id: node.id, name: node.name, grade };
+}
+
+function normalizeFolderText(text: string) {
+  return text.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
+    .replace(/đ/g, 'd').replace(/\s+/g, ' ').trim();
+}
+
+export function indexFolderBlogs(tree: TreeNode[], blogs: BlogPost[]) {
+  const byFolder = new Map<string, Set<string>>();
+  const searchable = blogs.map(blog => ({
+    id: blog.id,
+    grade: blog.grade,
+    title: normalizeFolderText(blog.title || ''),
+    summary: normalizeFolderText(blog.summary || ''),
+    labels: [blog.category || '', ...(blog.tags || [])].map(normalizeFolderText).filter(Boolean),
+  }));
+
+  const indexNode = (node: TreeNode, grade = node.grade) => {
+    const name = normalizeFolderText(node.name);
+    const numberedName = name.match(/^(chuong|bai|dang) ([ivxlcdm]+|\d+(?:\.\d+)*)(?:[.:\-]\s*|\s+|$)/);
+    const keyword = numberedName ? name.slice(numberedName[0].length).trim() : name;
+    const numberLabel = numberedName ? numberedName[1] + ' ' + numberedName[2] : '';
+    const ids = new Set<string>();
+
+    for (const blog of searchable) {
+      if (node.level === 'grade') {
+        if (blog.grade === grade) ids.add(blog.id);
+        continue;
+      }
+      if (blog.grade && grade && blog.grade !== grade) continue;
+      if (blog.title.includes(name) || blog.labels.some(label => label.includes(name) || label === numberLabel)
+        || (keyword.length >= 3 && (
+          blog.title.includes(keyword) || blog.summary.includes(keyword)
+          || blog.labels.some(label => label.includes(keyword) || (label.length >= 3 && keyword.includes(label)))
+        ))) {
+        ids.add(blog.id);
+      }
+    }
+
+    for (const child of node.children ?? []) {
+      for (const id of indexNode(child, grade)) ids.add(id);
+    }
+    byFolder.set(node.id, ids);
+    return ids;
+  };
+
+  tree.forEach(node => indexNode(node));
+  return byFolder;
+}
+
+function findNodePath(nodes: TreeNode[], id?: string): TreeNode[] {
+  if (!id) return [];
+  for (const node of nodes) {
+    if (node.id === id) return [node];
+    const childPath = findNodePath(node.children ?? [], id);
+    if (childPath.length) return [node, ...childPath];
+  }
+  return [];
+}
+
+function filterFolders(nodes: TreeNode[], query: string): TreeNode[] {
+  return nodes.flatMap(node => {
+    if (normalizeFolderText(node.name).includes(query)) return [node];
+    const children = filterFolders(node.children ?? [], query);
+    return children.length ? [{ ...node, children }] : [];
+  });
+}
+
+const iconButton = 'grid size-8 shrink-0 place-items-center rounded-md text-stone-500 hover:bg-stone-100 hover:text-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-600';
+const selectedRow = 'bg-amber-50 text-amber-950 ring-1 ring-inset ring-amber-200';
+const labelStyles = {
+  grade: 'text-sm font-bold tracking-wide',
+  chapter: 'text-xs font-semibold',
+  lesson: 'text-sm font-medium',
+  topic: 'text-[13px]',
+};
+
 interface TreeTableOfContentsProps {
-  blogs: BlogPost[];
+  treeData: TreeNode[];
+  folderBlogs: Map<string, Set<string>>;
+  totalCount: number;
   selectedItem: TreeSelection;
   onSelect: (selection: TreeSelection) => void;
-  isAdmin?: boolean;
+  onTreeChange: (tree: TreeNode[]) => void;
+  isAdmin: boolean;
 }
 
 export const TreeTableOfContents: React.FC<TreeTableOfContentsProps> = ({
-  blogs,
+  treeData,
+  folderBlogs,
+  totalCount,
   selectedItem,
   onSelect,
-  isAdmin = false,
+  onTreeChange,
+  isAdmin,
 }) => {
-  // Cây thư mục hiện tại (tùy chỉnh được lưu trong localStorage)
-  const [treeData, setTreeData] = useState<TreeNode[]>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (_) {}
-    return INITIAL_PHYSICS_TREE;
-  });
-
-  // State tìm kiếm thư mục
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Set các node đang mở (expanded)
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(() => {
-    // Mặc định mở Grade 12 và Chương III Từ trường để hiển thị mẫu ngay
-    return new Set(['grade-12', 'g12-ch3', 'g12-ch3-l1']);
-  });
-
-  // Modal thêm node mới (Bài học hoặc Dạng bài)
-  const [modalParent, setModalParent] = useState<{ id: string; level: 'lesson' | 'topic'; parentName: string } | null>(null);
+  const [expandedNodes, setExpandedNodes] = useState(() => new Set<string>());
+  const [collapsedResults, setCollapsedResults] = useState(() => new Set<string>());
+  const [modalParent, setModalParent] = useState<TreeNode | null>(null);
   const [newNodeName, setNewNodeName] = useState('');
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  // Lưu cây thư mục tùy chỉnh vào localStorage
-  const saveTreeData = (newTree: TreeNode[]) => {
-    setTreeData(newTree);
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newTree));
-    } catch (_) {}
-  };
+  const query = normalizeFolderText(searchQuery);
+  const visibleTree = useMemo(() => query ? filterFolders(treeData, query) : treeData, [treeData, query]);
 
-  // Khôi phục cây mặc định
-  const handleResetToDefault = () => {
-    if (window.confirm('Khôi phục cây mục lục về danh mục chuẩn ban đầu?')) {
-      saveTreeData(INITIAL_PHYSICS_TREE);
-      setExpandedNodes(new Set(['grade-12', 'g12-ch3', 'g12-ch3-l1']));
+  useEffect(() => {
+    const path = findNodePath(treeData, selectedItem.id);
+    if (path.length) {
+      setExpandedNodes(previous => new Set([...previous, ...path.map(node => node.id)]));
     }
+  }, [selectedItem.id, treeData]);
+
+  useEffect(() => {
+    if (modalParent) dialogRef.current?.showModal();
+  }, [modalParent]);
+
+  const updateSearch = (value: string) => {
+    setSearchQuery(value);
+    setCollapsedResults(new Set());
   };
 
-  // Toggle mở/đóng node
-  const toggleExpand = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedNodes(prev => {
-      const next = new Set(prev);
+  const toggleBranch = (id: string) => {
+    const setBranchState = query ? setCollapsedResults : setExpandedNodes;
+    setBranchState(previous => {
+      const next = new Set(previous);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
   };
 
-  // ── Tính toán số lượng bài tập theo từng node ─────────────
-  const nodeCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-
-    const countForNode = (node: TreeNode): number => {
-      let c = 0;
-      if (node.level === 'grade') {
-        c = blogs.filter(b => b.grade === node.grade).length;
-      } else {
-        const rawName = node.name.toLowerCase();
-        const cleanKeyword = rawName.replace(/^(chương|bài|dạng)\s*([0-9ivxabc\.\:\-]+)\s*[\.\:\-]?\s*/i, '').trim();
-        const prefixMatch = rawName.match(/^(chương|bài|dạng)\s*([0-9ivxabc\.\:\-]+)/i);
-        const prefixCode = prefixMatch ? prefixMatch[0].trim() : '';
-
-        c = blogs.filter(b => {
-          if (node.grade && b.grade && b.grade !== node.grade) return false;
-          const cat = (b.category || '').toLowerCase();
-          const title = (b.title || '').toLowerCase();
-          const summary = (b.summary || '').toLowerCase();
-          const tags = (b.tags || []).map(t => t.toLowerCase());
-
-          if (prefixCode && (cat.includes(prefixCode) || tags.some(t => t.includes(prefixCode)))) {
-            return true;
-          }
-          if (cleanKeyword && cleanKeyword.length >= 3) {
-            if (cat.includes(cleanKeyword)) return true;
-            if (tags.some(t => t.includes(cleanKeyword) || cleanKeyword.includes(t))) return true;
-            if (title.includes(cleanKeyword) || summary.includes(cleanKeyword)) return true;
-          }
-          if (cat.includes(rawName) || tags.some(t => t.includes(rawName)) || title.includes(rawName)) {
-            return true;
-          }
-          return false;
-        }).length;
-
-        if (node.children && node.children.length > 0) {
-          const childSum = node.children.reduce((acc, child) => acc + countForNode(child), 0);
-          c = Math.max(c, childSum);
-        }
-      }
-
-      counts[node.id] = c;
-      return c;
-    };
-
-    treeData.forEach(countForNode);
-    return counts;
-  }, [blogs, treeData]);
-
-  // Tổng số câu trong kho
-  const totalCount = blogs.length;
-
-  // Lọc cây thư mục theo ô tìm kiếm
-  const filteredTree = useMemo(() => {
-    if (!searchQuery.trim()) return treeData;
-    const q = searchQuery.toLowerCase().trim();
-
-    const filterNode = (node: TreeNode): TreeNode | null => {
-      const matchesSelf = node.name.toLowerCase().includes(q);
-      const filteredChildren = (node.children || [])
-        .map(filterNode)
-        .filter((child): child is TreeNode => child !== null);
-
-      if (matchesSelf || filteredChildren.length > 0) {
-        return {
-          ...node,
-          children: filteredChildren,
-        };
-      }
-      return null;
-    };
-
-    return treeData
-      .map(filterNode)
-      .filter((n): n is TreeNode => n !== null);
-  }, [treeData, searchQuery]);
-
-  // Tự động mở các node khi có tìm kiếm
-  useEffect(() => {
-    if (!searchQuery.trim()) return;
-    const allIds = new Set<string>();
-    const collectIds = (nodes: TreeNode[]) => {
-      nodes.forEach(n => {
-        allIds.add(n.id);
-        if (n.children) collectIds(n.children);
-      });
-    };
-    collectIds(filteredTree);
-    setExpandedNodes(allIds);
-  }, [searchQuery, filteredTree]);
-
-  // Thêm Bài học hoặc Dạng bài mới
-  const handleAddNewNode = () => {
-    if (!modalParent || !newNodeName.trim()) return;
-    const { id: parentId, level } = modalParent;
-
-    const newChild: TreeNode = {
-      id: `custom-${Date.now()}`,
-      name: newNodeName.trim(),
-      level: level,
-      parentId: parentId,
-      isCustom: true,
-      children: level === 'lesson' ? [] : undefined,
-    };
-
-    const addRecursively = (nodes: TreeNode[]): TreeNode[] => {
-      return nodes.map(node => {
-        if (node.id === parentId) {
-          return {
-            ...node,
-            children: [...(node.children || []), newChild],
-          };
-        }
-        if (node.children) {
-          return {
-            ...node,
-            children: addRecursively(node.children),
-          };
-        }
-        return node;
-      });
-    };
-
-    const updated = addRecursively(treeData);
-    saveTreeData(updated);
-    setExpandedNodes(prev => new Set([...prev, parentId]));
+  const closeAddDialog = () => {
     setModalParent(null);
     setNewNodeName('');
   };
 
-  // Xóa node tùy chỉnh
-  const handleDeleteNode = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.confirm('Xóa mục này khỏi cây mục lục?')) return;
-
-    const removeRecursively = (nodes: TreeNode[]): TreeNode[] => {
-      return nodes
-        .filter(n => n.id !== id)
-        .map(n => ({
-          ...n,
-          children: n.children ? removeRecursively(n.children) : undefined,
-        }));
+  const addFolder = (event: React.FormEvent) => {
+    event.preventDefault();
+    const name = newNodeName.trim();
+    if (!isAdmin || !modalParent || !name) return;
+    const parentPath = findNodePath(treeData, modalParent.id);
+    if (!parentPath.length) return;
+    const newFolder: TreeNode = {
+      id: 'custom-' + crypto.randomUUID(),
+      name,
+      grade: parentPath[0].grade,
+      level: modalParent.level === 'chapter' ? 'lesson' : 'topic',
+      parentId: modalParent.id,
+      isCustom: true,
     };
-
-    const updated = removeRecursively(treeData);
-    saveTreeData(updated);
+    const append = (nodes: TreeNode[]): TreeNode[] => nodes.map(node => {
+      if (node.id === modalParent.id) return { ...node, children: [...(node.children ?? []), newFolder] };
+      return node.children ? { ...node, children: append(node.children) } : node;
+    });
+    onTreeChange(append(treeData));
+    setExpandedNodes(previous => new Set([...previous, ...parentPath.map(node => node.id)]));
+    updateSearch('');
+    dialogRef.current?.close();
   };
 
-  return (
-    <div className="w-full bg-[#FFFFFF] rounded-2xl border border-[#E8E6E1] shadow-xs flex flex-col h-[740px] overflow-hidden select-none" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
-      {/* ── Custom Scrollbar Style ── */}
-      <style>{`
-        .physivault-tree-scroll::-webkit-scrollbar {
-          width: 5px;
-        }
-        .physivault-tree-scroll::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .physivault-tree-scroll::-webkit-scrollbar-thumb {
-          background: #A25B60;
-          border-radius: 9999px;
-        }
-        .physivault-tree-scroll::-webkit-scrollbar-thumb:hover {
-          background: #843E43;
-        }
-      `}</style>
+  const deleteFolder = (id: string) => {
+    if (!isAdmin || !window.confirm('Xóa thư mục tùy chỉnh này và các thư mục con?')) return;
+    const remove = (nodes: TreeNode[]): TreeNode[] => nodes.filter(node => node.id !== id)
+      .map(node => node.children ? { ...node, children: remove(node.children) } : node);
+    onTreeChange(remove(treeData));
+  };
 
-      {/* ── Top Search Bar ── */}
-      <div className="p-3 border-b border-[#EAE8E4] bg-[#FAFAF9]">
-        <div className="relative flex items-center">
-          <Search className="w-3.5 h-3.5 text-[#8F8E8C] absolute left-3 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Tìm thư mục..."
-            className="w-full pl-8 pr-7 py-1.5 rounded-lg text-xs bg-white border border-[#E2E0DB] text-[#1A1A1A] placeholder-[#9E9B97] focus:outline-none focus:border-[#C4630A] transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 text-[#8F8E8C] hover:text-[#1A1A1A] p-0.5"
-            >
-              <X className="w-3 h-3" />
+  const renderFolder = (node: TreeNode, grade = node.grade): React.ReactNode => {
+    const children = node.children ?? [];
+    const hasChildren = children.length > 0;
+    const expanded = hasChildren && (query ? !collapsedResults.has(node.id) : expandedNodes.has(node.id));
+    const selected = selectedItem.id === node.id;
+    const canAdd = isAdmin && (node.level === 'chapter' || node.level === 'lesson');
+    const addLabel = node.level === 'chapter' ? 'Thêm bài học' : 'Thêm dạng bài';
+    const count = folderBlogs.get(node.id)?.size ?? 0;
+    const Icon = node.level === 'topic' ? FileText : expanded ? FolderOpen : Folder;
+
+    return (
+      <li key={node.id} className="min-w-0">
+        <div className={'flex min-w-0 items-center gap-0.5 rounded-lg pr-1 ' + (selected ? selectedRow : 'text-stone-700 hover:bg-stone-50')}>
+          {hasChildren ? (
+            <button type="button" className={iconButton}
+              aria-expanded={expanded} aria-label={(expanded ? 'Thu gọn ' : 'Mở ') + node.name}
+              onClick={() => toggleBranch(node.id)}>
+              <ChevronRight aria-hidden="true" className={'size-4 transition-transform motion-reduce:transition-none ' + (expanded ? 'rotate-90' : '')} />
+            </button>
+          ) : <span className="w-3 shrink-0" aria-hidden="true" />}
+          <button type="button" aria-pressed={selected} title={node.name}
+            className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-md py-1.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-600"
+            onClick={() => {
+              if (hasChildren && !expanded) toggleBranch(node.id);
+              onSelect(selectTreeNode(node, grade));
+            }}>
+            <Icon aria-hidden="true" className={'size-4 shrink-0 ' + (node.level === 'topic' ? 'text-stone-500' : 'fill-amber-100 text-amber-700')} />
+            <span className={'line-clamp-2 min-w-0 flex-1 break-words leading-snug ' + labelStyles[node.level]}>{node.name}</span>
+            <span aria-label={count + ' câu'} className="min-w-5 shrink-0 rounded-md bg-stone-100 px-1 py-0.5 text-center text-[11px] font-medium tabular-nums text-stone-600">
+              {count}
+            </span>
+          </button>
+          {canAdd && (
+            <button type="button" className={iconButton} aria-label={addLabel + ' vào ' + node.name}
+              title={addLabel} onClick={() => setModalParent(node)}>
+              <Plus aria-hidden="true" className="size-4" />
+            </button>
+          )}
+          {isAdmin && node.isCustom && (
+            <button type="button" className={iconButton + ' hover:text-red-700'} aria-label={'Xóa ' + node.name}
+              title="Xóa thư mục tùy chỉnh" onClick={() => deleteFolder(node.id)}>
+              <Trash2 aria-hidden="true" className="size-4" />
             </button>
           )}
         </div>
-      </div>
+        {expanded && (
+          <ul className="ml-3 space-y-0.5 border-l border-stone-200 pl-1.5">
+            {children.map(child => renderFolder(child, grade))}
+          </ul>
+        )}
+      </li>
+    );
+  };
 
-      {/* ── Root item: Tất cả (Icon Layers) ── */}
-      <div className="px-2 pt-2 pb-1 border-b border-[#F0EFEB]">
-        <button
-          onClick={() => onSelect({ type: 'all' })}
-          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-            selectedItem.type === 'all'
-              ? 'bg-[#FDF4E7] text-[#8C4A00] border border-[#F6E1C4]'
-              : 'text-[#37352F] hover:bg-[#F7F6F3]'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-[#C4630A]" />
-            <span className="text-[12.5px] font-bold">Tất cả</span>
-          </div>
-          <span className={`text-[11px] tabular-nums font-semibold ${selectedItem.type === 'all' ? 'text-[#8C4A00]' : 'text-[#8F8E8C]'}`}>
-            {totalCount}
-          </span>
-        </button>
-      </div>
-
-      {/* ── Scrollable Tree View với thanh cuộn chuẩn ảnh mẫu ── */}
-      <div className="physivault-tree-scroll flex-1 overflow-y-auto px-2 py-1.5 space-y-0.5 text-xs">
-        {filteredTree.map(gradeNode => {
-          const isGradeExpanded = expandedNodes.has(gradeNode.id);
-          const isGradeSelected = selectedItem.type === 'grade' && selectedItem.grade === gradeNode.grade;
-          const gradeCount = nodeCounts[gradeNode.id] || 0;
-
-          return (
-            <div key={gradeNode.id} className="space-y-0.5">
-              {/* ── CẤP 1: KHỐI LỚP (VẬT LÝ 10, 11, 12) ── */}
-              <div
-                onClick={() => onSelect({ type: 'grade', grade: gradeNode.grade, name: gradeNode.name, id: gradeNode.id })}
-                className={`group flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-all ${
-                  isGradeSelected
-                    ? 'bg-[#FDF4E7] text-[#8C4A00] font-bold border border-[#F6E1C4]'
-                    : 'text-[#37352F] hover:bg-[#F7F6F3]'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span
-                    onClick={(e) => toggleExpand(gradeNode.id, e)}
-                    className="p-0.5 rounded hover:bg-black/5 text-[#787774] transition-colors"
-                  >
-                    {isGradeExpanded ? (
-                      <ChevronDown className="w-3.5 h-3.5 text-[#555]" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5 text-[#555]" />
-                    )}
-                  </span>
-                  
-                  {/* Icon folder vàng chuẩn ảnh mẫu */}
-                  <Folder className="w-4 h-4 fill-[#F5A623] text-[#D9730D] shrink-0" strokeWidth={1.2} />
-
-                  <span className="font-bold truncate text-[12px] tracking-wide">
-                    {gradeNode.name}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <span className={`text-[11px] tabular-nums font-semibold ${
-                    isGradeSelected ? 'text-[#8C4A00]' : 'text-[#8F8E8C]'
-                  }`}>
-                    {gradeCount}
-                  </span>
-                </div>
-              </div>
-
-              {/* ── CẤP 2: CÁC CHƯƠNG (Có đường gióng thẳng & nhánh ngang) ── */}
-              {isGradeExpanded && gradeNode.children && (
-                <div className="relative pl-5 my-0.5 space-y-0.5">
-                  {gradeNode.children.map((chNode, chIdx, chArr) => {
-                    const isChExpanded = expandedNodes.has(chNode.id);
-                    const isChSelected = selectedItem.type === 'chapter' && selectedItem.id === chNode.id;
-                    const chCount = nodeCounts[chNode.id] || 0;
-                    const isChLast = chIdx === chArr.length - 1;
-
-                    return (
-                      <div key={chNode.id} className="relative space-y-0.5">
-                        {/* Đường gióng dọc của Cấp 2 */}
-                        <div
-                          className="absolute -left-[14px] top-0 w-[1px] bg-[#666663]"
-                          style={{
-                            bottom: isChLast ? 'calc(100% - 13px)' : '0px'
-                          }}
-                        />
-                        {/* Nhánh ngang kết nối đến icon */}
-                        <div className="absolute -left-[14px] top-[13px] w-[11px] h-[1px] bg-[#666663]" />
-
-                        {/* Hàng Chương */}
-                        <div
-                          onClick={() => onSelect({ type: 'chapter', id: chNode.id, name: chNode.name, grade: gradeNode.grade })}
-                          className={`group flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-all ${
-                            isChSelected
-                              ? 'bg-[#FDF4E7] text-[#8C4A00] font-bold border border-[#F6E1C4]'
-                              : 'text-[#37352F] hover:bg-[#F7F6F3]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-1.5 min-w-0 pr-1">
-                            <span
-                              onClick={(e) => toggleExpand(chNode.id, e)}
-                              className="p-0.5 rounded hover:bg-black/5 text-[#555]"
-                            >
-                              {chNode.children && chNode.children.length > 0 ? (
-                                isChExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />
-                              ) : (
-                                <span className="w-3 inline-block" />
-                              )}
-                            </span>
-                            <Folder className="w-3.5 h-3.5 fill-[#F5A623] text-[#D9730D] shrink-0" strokeWidth={1.2} />
-                            <span className="truncate text-[11px] font-semibold leading-tight">
-                              {chNode.name}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-1 shrink-0">
-                            {/* Nút thêm bài học cho giáo viên / admin */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setModalParent({ id: chNode.id, level: 'lesson', parentName: chNode.name });
-                              }}
-                              className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[#EAE8E4] text-[#787774] hover:text-[#C4630A] transition-all"
-                              title="Thêm Bài học mới vào chương này"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                            <span className="text-[10.5px] tabular-nums font-normal text-[#8F8E8C]">
-                              {chCount}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* ── CẤP 3: CÁC BÀI HỌC ── */}
-                        {isChExpanded && chNode.children && (
-                          <div className="relative pl-5 my-0.5 space-y-0.5">
-                            {chNode.children.map((lessonNode, lIdx, lArr) => {
-                              const isLesExpanded = expandedNodes.has(lessonNode.id);
-                              const isLesSelected = selectedItem.type === 'lesson' && selectedItem.id === lessonNode.id;
-                              const lesCount = nodeCounts[lessonNode.id] || 0;
-                              const isLesLast = lIdx === lArr.length - 1;
-
-                              return (
-                                <div key={lessonNode.id} className="relative space-y-0.5">
-                                  {/* Đường gióng dọc của Cấp 3 */}
-                                  <div
-                                    className="absolute -left-[14px] top-0 w-[1px] bg-[#666663]"
-                                    style={{
-                                      bottom: isLesLast ? 'calc(100% - 13px)' : '0px'
-                                    }}
-                                  />
-                                  {/* Nhánh ngang kết nối đến icon */}
-                                  <div className="absolute -left-[14px] top-[13px] w-[11px] h-[1px] bg-[#666663]" />
-
-                                  {/* Hàng Bài học */}
-                                  <div
-                                    onClick={() => onSelect({ type: 'lesson', id: lessonNode.id, name: lessonNode.name, grade: gradeNode.grade })}
-                                    className={`group flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-all ${
-                                      isLesSelected
-                                        ? 'bg-[#FDF4E7] text-[#8C4A00] font-bold border border-[#F6E1C4]'
-                                        : 'text-[#474643] hover:bg-[#F7F6F3]'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-1.5 min-w-0 pr-1">
-                                      <span
-                                        onClick={(e) => toggleExpand(lessonNode.id, e)}
-                                        className="p-0.5 rounded hover:bg-black/5 text-[#555]"
-                                      >
-                                        {lessonNode.children && lessonNode.children.length > 0 ? (
-                                          isLesExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />
-                                        ) : (
-                                          <span className="w-3 inline-block" />
-                                        )}
-                                      </span>
-                                      <Folder className="w-3.5 h-3.5 fill-[#F5A623] text-[#D9730D] shrink-0" strokeWidth={1.2} />
-                                      <span className="truncate text-[11px] font-medium leading-tight">
-                                        {lessonNode.name}
-                                      </span>
-                                    </div>
-
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      {/* Nút thêm dạng bài mới */}
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setModalParent({ id: lessonNode.id, level: 'topic', parentName: lessonNode.name });
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[#EAE8E4] text-[#787774] hover:text-[#C4630A] transition-all"
-                                        title="Thêm Dạng bài mới vào bài này"
-                                      >
-                                        <Plus className="w-3 h-3" />
-                                      </button>
-                                      {lessonNode.isCustom && (
-                                        <button
-                                          onClick={(e) => handleDeleteNode(lessonNode.id, e)}
-                                          className="opacity-0 group-hover:opacity-100 p-0.5 text-[#AEACA8] hover:text-red-500 transition-opacity"
-                                          title="Xóa bài học tùy chỉnh"
-                                        >
-                                          <Trash2 className="w-3 h-3" />
-                                        </button>
-                                      )}
-                                      <span className="text-[10px] tabular-nums font-normal text-[#8F8E8C]">
-                                        {lesCount}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  {/* ── CẤP 4: CÁC DẠNG BÀI ── */}
-                                  {isLesExpanded && lessonNode.children && (
-                                    <div className="relative pl-5 my-0.5 space-y-0.5">
-                                      {lessonNode.children.map((topicNode, tIdx, tArr) => {
-                                        const isTopSelected = selectedItem.type === 'topic' && selectedItem.id === topicNode.id;
-                                        const topCount = nodeCounts[topicNode.id] || 0;
-                                        const isTopLast = tIdx === tArr.length - 1;
-
-                                        return (
-                                          <div key={topicNode.id} className="relative">
-                                            {/* Đường gióng dọc của Cấp 4 */}
-                                            <div
-                                              className="absolute -left-[14px] top-0 w-[1px] bg-[#666663]"
-                                              style={{
-                                                bottom: isTopLast ? 'calc(100% - 13px)' : '0px'
-                                              }}
-                                            />
-                                            {/* Nhánh ngang kết nối đến icon dạng bài */}
-                                            <div className="absolute -left-[14px] top-[13px] w-[11px] h-[1px] bg-[#666663]" />
-
-                                            {/* Hàng Dạng bài (Khi chọn -> Highlight full hàng y chang ảnh mẫu) */}
-                                            <div
-                                              onClick={() => onSelect({ type: 'topic', id: topicNode.id, name: topicNode.name, grade: gradeNode.grade })}
-                                              className={`group flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition-all ${
-                                                isTopSelected
-                                                  ? 'bg-[#F4F4F2] text-[#1A1A1A] font-semibold shadow-2xs'
-                                                  : 'text-[#4F4D49] hover:bg-[#F7F6F3]'
-                                              }`}
-                                            >
-                                              <div className="flex items-center gap-1.5 min-w-0 pr-1">
-                                                <Folder className="w-3.5 h-3.5 fill-[#F5A623] text-[#D9730D] shrink-0" strokeWidth={1.2} />
-                                                <span className="truncate text-[10.5px] leading-tight">
-                                                  {topicNode.name}
-                                                </span>
-                                              </div>
-
-                                              <div className="flex items-center gap-1 shrink-0">
-                                                {topicNode.isCustom && (
-                                                  <button
-                                                    onClick={(e) => handleDeleteNode(topicNode.id, e)}
-                                                    className="opacity-0 group-hover:opacity-100 p-0.5 text-[#AEACA8] hover:text-red-500 transition-opacity"
-                                                    title="Xóa dạng bài tùy chỉnh"
-                                                  >
-                                                    <Trash2 className="w-3 h-3" />
-                                                  </button>
-                                                )}
-                                                <span className={`text-[10px] tabular-nums ${isTopSelected ? 'font-bold text-[#1A1A1A]' : 'text-[#8F8E8C]'}`}>
-                                                  {topCount}
-                                                </span>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── Footer bar: Reset to default button ── */}
-      <div className="p-2 border-t border-[#EAE8E4] bg-[#FAFAF9] flex items-center justify-between text-[11px] text-[#8F8E8C]">
-        <span>Chương trình GDPT 2018</span>
-        <button
-          onClick={handleResetToDefault}
-          className="flex items-center gap-1 hover:text-[#1A1A1A] transition-colors p-1"
-          title="Khôi phục lại cây thư mục ban đầu"
-        >
-          <RotateCcw className="w-3 h-3" />
-          <span>Đặt lại</span>
-        </button>
-      </div>
-
-      {/* ── Modal Thêm Bài hoặc Dạng mới ── */}
-      {modalParent && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
-          onClick={() => setModalParent(null)}
-        >
-          <div
-            className="w-full max-w-sm bg-white rounded-2xl p-5 shadow-2xl border border-[#E8E6E1] space-y-4 animate-scale-up"
-            onClick={e => e.stopPropagation()}
-          >
-            <div>
-              <h4 className="text-sm font-bold text-[#1A1A1A]">
-                Thêm {modalParent.level === 'lesson' ? 'Bài học mới' : 'Dạng bài mới'}
-              </h4>
-              <p className="text-xs text-[#787774] mt-0.5 truncate">
-                Thuộc: <span className="font-semibold text-[#37352F]">{modalParent.parentName}</span>
-              </p>
-            </div>
-
-            <div>
-              <input
-                type="text"
-                value={newNodeName}
-                onChange={e => setNewNodeName(e.target.value)}
-                placeholder={modalParent.level === 'lesson' ? 'Ví dụ: Bài 3. Hiện tượng tự cảm' : 'Ví dụ: Dạng 1.4: Lực từ Lorentz'}
-                className="w-full p-2.5 rounded-xl border border-[#E2E0DB] text-xs font-medium outline-none focus:border-[#C4630A]"
-                autoFocus
-                onKeyDown={e => {
-                  if (e.key === 'Enter') handleAddNewNode();
-                }}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setModalParent(null)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#787774] hover:bg-[#F7F6F3]"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={handleAddNewNode}
-                disabled={!newNodeName.trim()}
-                className="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-[#C4630A] hover:bg-[#A35208] disabled:opacity-50 transition-all shadow-2xs"
-              >
-                Thêm vào cây
-              </button>
-            </div>
-          </div>
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="space-y-2 border-b border-stone-100 px-3 pb-3">
+        <div className="relative">
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-3 size-4 text-stone-500" />
+          <input ref={searchRef} type="text" aria-label="Tìm thư mục" placeholder="Tìm thư mục..."
+            value={searchQuery} onChange={event => updateSearch(event.target.value)}
+            className="h-10 w-full rounded-lg border border-stone-200 bg-stone-50 pl-9 pr-10 text-sm text-stone-900 outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600" />
+          {searchQuery && (
+            <button type="button" className={iconButton + ' absolute right-1 top-1'} aria-label="Xóa từ khóa"
+              onClick={() => { updateSearch(''); searchRef.current?.focus(); }}>
+              <X aria-hidden="true" className="size-4" />
+            </button>
+          )}
         </div>
+        <button type="button" aria-pressed={selectedItem.type === 'all'} onClick={() => onSelect({ type: 'all' })}
+          className={'flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-600 '
+            + (selectedItem.type === 'all' ? selectedRow : 'text-stone-700 hover:bg-stone-50')}>
+          <Layers aria-hidden="true" className="size-4 text-amber-700" />
+          <span className="flex-1">Tất cả</span>
+          <span aria-label={totalCount + ' câu'} className="rounded-md bg-amber-100 px-1.5 py-0.5 text-xs tabular-nums text-amber-900">{totalCount}</span>
+        </button>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
+        {visibleTree.length ? (
+          <ul aria-label="Thư mục Vật lý" className="space-y-0.5">{visibleTree.map(node => renderFolder(node))}</ul>
+        ) : (
+          <p role="status" className="px-3 py-6 text-center text-sm text-stone-600">Không tìm thấy thư mục phù hợp.</p>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between gap-2 border-t border-stone-100 px-3 py-2 text-xs text-stone-600">
+        <span>Chương trình GDPT 2018</span>
+        {isAdmin && (
+          <button type="button" className="flex min-h-8 items-center gap-1 rounded px-1 hover:text-amber-800"
+            onClick={() => {
+              if (!window.confirm('Khôi phục cây mục lục về danh mục chuẩn ban đầu?')) return;
+              onTreeChange(INITIAL_PHYSICS_TREE);
+              setExpandedNodes(new Set());
+              updateSearch('');
+              onSelect({ type: 'all' });
+            }}>
+            <RotateCcw aria-hidden="true" className="size-3.5" /> Đặt lại
+          </button>
+        )}
+      </div>
+
+      {modalParent && (
+        <dialog ref={dialogRef} aria-labelledby="physics-folder-dialog-title" onClose={closeAddDialog}
+          className="w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-stone-200 p-5 text-stone-900 shadow-xl backdrop:bg-black/40">
+          <form onSubmit={addFolder} className="space-y-3">
+            <h2 id="physics-folder-dialog-title" className="text-base font-bold">
+              {modalParent.level === 'chapter' ? 'Thêm bài học' : 'Thêm dạng bài'}
+            </h2>
+            <p className="text-sm text-stone-600">{modalParent.name}</p>
+            <label className="block space-y-1 text-sm font-medium">
+              <span>Tên thư mục</span>
+              <input autoFocus required value={newNodeName} onChange={event => setNewNodeName(event.target.value)}
+                className="w-full rounded-lg border border-stone-200 px-3 py-2 outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600" />
+            </label>
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" onClick={() => dialogRef.current?.close()}
+                className="rounded-lg px-3 py-2 text-sm hover:bg-stone-100">Hủy</button>
+              <button type="submit" disabled={!newNodeName.trim()}
+                className="rounded-lg bg-amber-800 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-50">
+                Thêm thư mục
+              </button>
+            </div>
+          </form>
+        </dialog>
       )}
     </div>
   );
