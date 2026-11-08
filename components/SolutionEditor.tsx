@@ -654,13 +654,14 @@ interface SolutionEditorProps {
   switchToMarkdown?: () => void;
   switchToExamPaper?: () => void;
   hideTopBar?: boolean;
+  studyPlacement?: React.ReactNode;
   studyGrade?: number;
   studyQuestionType?: StudyQuestionType;
 }
 
 export default function SolutionEditor({
   blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar,
-  studyGrade, studyQuestionType
+  studyPlacement, studyGrade, studyQuestionType
 }: SolutionEditorProps) {
   const splitImportedQuestions = !!saveBlog && !studyGrade;
   const [examName,   setExamName]   = useState("");
@@ -1089,6 +1090,47 @@ export default function SolutionEditor({
   // ─────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────
+  const scopedLayout = !!studyPlacement;
+  const publishControl = (
+    <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 text-xs font-semibold text-stone-700">
+      <input type="checkbox" className="peer sr-only" checked={isPublished} onChange={e => setIsPublished(e.target.checked)} />
+      <span aria-hidden="true" className="relative h-5 w-9 rounded-full bg-stone-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:size-4 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-amber-700 peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-600 peer-focus-visible:ring-offset-2" />
+      Công khai cho học sinh
+    </label>
+  );
+
+
+  const gradeControl = (
+    <div role="group" aria-label="Khối" className="flex flex-wrap items-center gap-2">
+      <span className="text-sm font-medium text-stone-700">Khối</span>
+      <div className="flex flex-wrap gap-1 rounded-lg border border-stone-200 bg-stone-50 p-1">
+        {[{ lab: 'Tất cả', val: 0 }, { lab: '12', val: 12 }, { lab: '11', val: 11 }, { lab: '10', val: 10 }].map(g => (
+          <button key={g.val} type="button" aria-pressed={grade === g.val} onClick={() => setGrade(g.val)}
+            className={'min-h-8 rounded-md px-2.5 text-xs font-semibold '
+              + (grade === g.val ? 'bg-amber-100 text-amber-950' : 'text-stone-600 hover:bg-stone-100')}>
+            {g.lab}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const levelControl = (
+    <div role="group" aria-label="Mức độ" className="flex min-w-0 flex-wrap items-center gap-2">
+      <span className="text-sm font-medium text-stone-700">Mức độ</span>
+      <div className="flex min-w-0 flex-wrap gap-1 rounded-lg border border-stone-200 bg-stone-50 p-1">
+        {['—', 'Mức 1', 'Mức 2', 'Mức 3', 'Mức 4'].map((label, value) => (
+          <button key={value} type="button" aria-pressed={level === value} onClick={() => setLevel(value)}
+            aria-label={value === 0 ? 'Chưa chọn mức độ' : label}
+            className={'min-h-8 rounded-md px-2.5 text-xs font-semibold '
+              + (level === value ? 'bg-amber-100 text-amber-950' : 'text-stone-600 hover:bg-stone-100')}>
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div className={hideTopBar ? "space-y-6 font-sans" : "max-w-[1920px] w-full mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20 font-sans"}>
       <style>{`.katex { color: #1A1A1A !important; }`}</style>
@@ -1131,62 +1173,44 @@ export default function SolutionEditor({
       </div>
       )}
 
-      {/* ── Publish settings ── */}
-      <div className="bg-white p-4 rounded-2xl border border-[#E9E9E7] shadow-sm flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 relative z-10">
-        <div className="flex items-center gap-3 shrink-0">
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" className="sr-only peer" checked={isPublished} onChange={e => setIsPublished(e.target.checked)} />
-            <div className="w-[34px] h-[20px] bg-[#CFCFCB] rounded-full peer peer-checked:after:translate-x-[14px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600" />
-          </label>
-          <span className="text-xs font-semibold" style={{ color: isPublished ? '#448361' : '#787774' }}>
-            {isPublished ? '✓ Công khai' : '✎ Nháp'}
-          </span>
-        </div>
-        {!studyGrade && <>
-        <div className="hidden lg:block w-px h-6 bg-[#E9E9E7]" />
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs font-bold text-[#AEACA8] uppercase">Khối</span>
-          <div className="flex bg-[#F7F6F3] p-1 rounded-lg border border-[#E9E9E7]">
-            {[{ lab: 'Tất cả', val: 0 }, { lab: '12', val: 12 }, { lab: '11', val: 11 }, { lab: '10', val: 10 }].map(g => (
-              <button key={g.val} type="button" onClick={() => setGrade(g.val)}
-                className="px-3 py-1.5 text-xs font-semibold rounded-md transition-all"
-                style={{ background: grade === g.val ? '#6B7CDB' : 'transparent', color: grade === g.val ? '#fff' : '#787774' }}>
-                {g.lab}
-              </button>
-            ))}
+      {scopedLayout ? (
+        <section aria-labelledby="solution-placement-heading"
+          className="min-w-0 space-y-3 rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm sm:p-4">
+          <h2 id="solution-placement-heading" className="text-sm font-bold text-stone-900">Vị trí trong Góc Học Tập</h2>
+          {studyPlacement}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-stone-100 pt-3">
+            {!studyGrade && gradeControl}
+            {levelControl}
           </div>
-        </div>
-        </>}
-        <div className="hidden lg:block w-px h-6 bg-[#E9E9E7]" />
-        <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1">
-          <div className="flex items-center gap-2 flex-1">
-            <span className="text-xs font-bold text-[#AEACA8] uppercase shrink-0">Chuyên mục</span>
-            <input type="text" list="sol-cat-list" placeholder="Chọn hoặc nhập..."
-              className="w-full p-2.5 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm font-medium"
-              value={category} onChange={e => setCategory(e.target.value)} />
-            <datalist id="sol-cat-list">{CATEGORIES.map(c => <option key={c} value={c} />)}</datalist>
-          </div>
-          <div className="hidden md:block w-px h-6 bg-[#E9E9E7]" />
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs font-bold text-[#AEACA8] uppercase">Mức độ</span>
-            <div className="flex bg-[#F7F6F3] p-1 rounded-lg border border-[#E9E9E7]">
-              {[
-                { val: 0, lab: '—', col: '#AEACA8' },
-                { val: 1, lab: 'Mức 1', col: '#448361' },
-                { val: 2, lab: 'Mức 2', col: '#6B7CDB' },
-                { val: 3, lab: 'Mức 3', col: '#D9730D' },
-                { val: 4, lab: 'Mức 4', col: '#9065B0' },
-              ].map(m => (
-                <button key={m.val} type="button" onClick={() => setLevel(m.val)}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-md transition-all"
-                  style={{ background: level === m.val ? m.col : 'transparent', color: level === m.val ? '#fff' : '#787774' }}>
-                  {m.lab}
-                </button>
-              ))}
+        </section>
+      ) : (
+        <>
+          <div className="bg-white p-4 rounded-2xl border border-[#E9E9E7] shadow-sm flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 relative z-10">
+            <div className="flex items-center gap-3 shrink-0">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={isPublished} onChange={e => setIsPublished(e.target.checked)} />
+                <div className="w-[34px] h-[20px] bg-[#CFCFCB] rounded-full peer peer-checked:after:translate-x-[14px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600" />
+              </label>
+              <span className="text-xs font-semibold" style={{ color: isPublished ? '#448361' : '#787774' }}>
+                {isPublished ? '✓ Công khai' : '✎ Nháp'}
+              </span>
+            </div>
+            {!studyGrade && gradeControl}
+            <div className="hidden lg:block w-px h-6 bg-[#E9E9E7]" />
+            <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1">
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-xs font-bold text-[#AEACA8] uppercase shrink-0">Chuyên mục</span>
+                <input type="text" list="sol-cat-list" placeholder="Chọn hoặc nhập..."
+                  className="w-full p-2.5 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm font-medium"
+                  value={category} onChange={e => setCategory(e.target.value)} />
+                <datalist id="sol-cat-list">{CATEGORIES.map(c => <option key={c} value={c} />)}</datalist>
+              </div>
+              <div className="hidden md:block w-px h-6 bg-[#E9E9E7]" />
+              {levelControl}
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* ── Main grid ── */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
@@ -1733,6 +1757,7 @@ export default function SolutionEditor({
 
           {/* Nút lưu */}
           <div className="flex items-center gap-3 flex-wrap">
+            {scopedLayout && publishControl}
             {blog && deleteBlog && (
               <button
                 onClick={async () => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BlogPost, StudyLesson, StudyQuestionType, StudySection } from '../types';
 import { getStudyChapter, isStudyQuestionType, STUDY_CHAPTERS, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import {
-    ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
+    ChevronDown, ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
     ImageIcon, Link as LinkIcon, HelpCircle, AlignLeft, AlignCenter,
     AlignRight, AlignJustify, Type, Hash, Quote, Code2, Table,
     X, CheckCircle, AlertCircle, RefreshCw
@@ -227,6 +227,54 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
         { icon: <AlignJustify className="w-4 h-4" />, tip: 'Căn đều', action: () => insertTextAtCursor('<div align="justify">\n\n', '\n\n</div>') },
     ];
 
+    const studyPlacement = (
+        <div className="grid gap-3 sm:grid-cols-2">
+            <label className="min-w-0 space-y-1 text-sm font-medium text-stone-700">
+                <span>Chương</span>
+                <select value={chapterId} onChange={event => { setChapterId(event.target.value); setLessonId(''); }}
+                    className="block w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2">
+                    <option value="">Chưa phân vào chương</option>
+                    {STUDY_GRADES.map(grade => (
+                        <optgroup key={grade} label={'Vật lý ' + grade}>
+                            {STUDY_CHAPTERS.filter(option => option.grade === grade).map(option => (
+                                <option key={option.id} value={option.id}>{option.name}</option>
+                            ))}
+                        </optgroup>
+                    ))}
+                </select>
+            </label>
+            <label className="min-w-0 space-y-1 text-sm font-medium text-stone-700">
+                <span>Loại câu</span>
+                <select value={chapter ? studyType : ''} disabled={!chapter} required={!!chapter}
+                    onChange={event => {
+                        setStudyType(isStudyQuestionType(event.target.value) ? event.target.value : '');
+                        setLessonId('');
+                    }}
+                    className="block w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 disabled:bg-stone-100">
+                    <option value="">Chọn loại câu</option>
+                    {STUDY_QUESTION_TYPES.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+            </label>
+            <label className="min-w-0 space-y-1 text-sm font-medium text-stone-700 sm:col-span-2">
+                <span>Tên bài</span>
+                <span className={`relative flex min-h-10 items-center gap-3 rounded-lg border border-stone-200 px-2.5 py-2 focus-within:ring-2 focus-within:ring-amber-600 ${
+                    lessonOptions.length ? 'bg-white' : 'bg-stone-100 text-stone-500'
+                }`}>
+                    <span aria-hidden="true" className="min-w-0 flex-1 whitespace-normal [overflow-wrap:anywhere]">
+                        {lesson?.title ?? 'Chưa xếp vào tên bài'}
+                    </span>
+                    <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-stone-500" />
+                    <select value={lesson?.id ?? ''} disabled={lessonOptions.length === 0}
+                        onChange={event => setLessonId(event.target.value)}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-default">
+                        <option value="">Chưa xếp vào tên bài</option>
+                        {lessonOptions.map(option => <option key={option.id} value={option.id}>{option.title}</option>)}
+                    </select>
+                </span>
+            </label>
+        </div>
+    );
+
     return (
         <div className="max-w-[1920px] w-full mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20">
             {/* Toast */}
@@ -322,44 +370,10 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
             </div>
 
             {/* ═══ CONTENT ═══ */}
-            {editorMode !== 'exam_paper' && (
-                <fieldset className="grid gap-3 rounded-xl border border-stone-200 bg-white p-3 sm:grid-cols-3">
+            {editorMode === 'markdown' && (
+                <fieldset className="min-w-0 rounded-xl border border-stone-200 bg-white p-3">
                     <legend className="px-1 text-sm font-semibold text-stone-800">Vị trí trong Góc Học Tập</legend>
-                    <label className="space-y-1 text-sm font-medium text-stone-700">
-                        <span>Chương</span>
-                        <select value={chapterId} onChange={event => { setChapterId(event.target.value); setLessonId(''); }}
-                            className="block w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2">
-                            <option value="">Chưa phân vào chương</option>
-                            {STUDY_GRADES.map(grade => (
-                                <optgroup key={grade} label={'Vật lý ' + grade}>
-                                    {STUDY_CHAPTERS.filter(option => option.grade === grade).map(option => (
-                                        <option key={option.id} value={option.id}>{option.name}</option>
-                                    ))}
-                                </optgroup>
-                            ))}
-                        </select>
-                    </label>
-                    <label className="space-y-1 text-sm font-medium text-stone-700">
-                        <span>Loại câu</span>
-                        <select value={chapter ? studyType : ''} disabled={!chapter} required={!!chapter}
-                            onChange={event => {
-                                setStudyType(isStudyQuestionType(event.target.value) ? event.target.value : '');
-                                setLessonId('');
-                            }}
-                            className="block w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 disabled:bg-stone-100">
-                            <option value="">Chọn loại câu</option>
-                            {STUDY_QUESTION_TYPES.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-                        </select>
-                    </label>
-                    <label className="space-y-1 text-sm font-medium text-stone-700">
-                        <span>Tên bài</span>
-                        <select value={lesson?.id ?? ''} disabled={lessonOptions.length === 0}
-                            onChange={event => setLessonId(event.target.value)}
-                            className="block w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 disabled:bg-stone-100">
-                            <option value="">Chưa xếp vào tên bài</option>
-                            {lessonOptions.map(option => <option key={option.id} value={option.id}>{option.title}</option>)}
-                        </select>
-                    </label>
+                    {studyPlacement}
                 </fieldset>
             )}
             {editorMode === 'solution' && (
@@ -370,6 +384,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                     syncBlogs={syncBlogs}
                     deleteBlog={deleteBlog}
                     hideTopBar
+                    studyPlacement={studyPlacement}
                     studyGrade={chapter?.grade}
                     studyQuestionType={chapter && studyType ? studyType : undefined}
                 />
