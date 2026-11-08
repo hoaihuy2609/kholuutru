@@ -1,18 +1,58 @@
-import React, { useId, useState } from 'react';
+import React, { useDeferredValue, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   X, RotateCcw, Palette, Droplets, Sliders, Layout,
-  Layers, CheckSquare, Download, Loader2, Printer
+  Layers, CheckSquare, Download, Printer
 } from 'lucide-react';
 import {
   ExamStyleConfig, DEFAULT_EXAM_STYLE, SelectedQuestionItem,
   formatExamSectionNote, generateExamLatex, downloadTexFile,
-  printExamDirectlyToPdf
+  examPrintDocument, printExamDirectlyToPdf, renderExamPrintBody
 } from '../src/services/examLatexService';
 
 interface ExamStyleModalProps {
   isOpen: boolean;
   onClose: () => void;
   questions: SelectedQuestionItem[];
+}
+
+const previewFrameWidth = 210 * 96 / 25.4 + 18; // A4 plus room for the scrollbar.
+
+function ExamPrintPreview({ questions, config }: {
+  questions: SelectedQuestionItem[];
+  config: ExamStyleConfig;
+}) {
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const deferredConfig = useDeferredValue(config);
+  const frameHtml = useMemo(() => examPrintDocument(), []);
+  const bodyHtml = useMemo(() => renderExamPrintBody(questions, deferredConfig), [questions, deferredConfig]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const resize = () => {
+      if (viewport.clientWidth) setScale(Math.min(1, viewport.clientWidth / previewFrameWidth));
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(viewport);
+    resize();
+    return () => observer.disconnect();
+  }, []);
+
+  const updateFrame = () => {
+    const body = frameRef.current?.contentDocument?.body;
+    if (body) body.innerHTML = bodyHtml;
+  };
+  useEffect(updateFrame, [bodyHtml]);
+
+  return (
+    <div ref={viewportRef} className="relative mx-auto h-full max-w-[812px] overflow-hidden rounded border border-stone-200 bg-white shadow-sm">
+      <iframe ref={frameRef} title="Xem trước đề thi" sandbox="allow-same-origin" srcDoc={frameHtml}
+        onLoad={updateFrame} className="absolute left-0 top-0 origin-top-left border-0"
+        style={{ width: previewFrameWidth, height: 100 / scale + '%', transform: 'scale(' + scale + ')' }} />
+    </div>
+  );
 }
 
 function SectionNoteInput({ label, note, count, onChange }: {
@@ -42,8 +82,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
   questions,
 }) => {
   const [config, setConfig] = useState<ExamStyleConfig>(DEFAULT_EXAM_STYLE);
-  const [isCompiling, setIsCompiling] = useState(false);
-  const [compileStatus, setCompileStatus] = useState<string>('');
+  const [mobilePane, setMobilePane] = useState<'settings' | 'preview'>('settings');
   const titleId = useId();
 
   if (!isOpen) return null;
@@ -64,52 +103,10 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
     downloadTexFile(tex, `De_Thi_${config.subject}_Ma_${config.examCode}.tex`);
   };
 
-  // 2. Xuất file PDF TRỰC TIẾP TRONG WEB (100% Client-side, không qua bên thứ 3)
-  const handleExportPdf = async () => {
-    setIsCompiling(true);
-    setCompileStatus('Đang biên soạn đề thi...');
-    const tex = generateExamLatex(questions, config);
-
-    try {
-      // 1. Thử gọi backend local compiler nếu có
-      const res = await fetch('/api/compile-latex', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tex, fileName: `De_Thi_${config.subject}_Ma_${config.examCode}` }),
-      });
-
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `De_Thi_${config.subject}_Ma_${config.examCode}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        setCompileStatus('Đã tải file PDF về máy!');
-        setIsCompiling(false);
-        return;
-      }
-    } catch (_) {
-      // Fallback sang Engine in trực tiếp trong trình duyệt
-    }
-
-    // 2. Tự biên soạn và xuất PDF trực tiếp ngay trong trình duyệt (100% nội bộ)
-    setCompileStatus('Đang mở bản in PDF...');
-    printExamDirectlyToPdf(questions, config);
-
-    setTimeout(() => {
-      setIsCompiling(false);
-      setCompileStatus('');
-    }, 1000);
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/20 animate-fade-in">
       <div role="dialog" aria-labelledby={titleId}
-        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl md:max-h-[calc(100dvh-3rem)]">
+        className="flex h-[calc(100dvh-1.5rem)] w-full max-w-[1440px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl md:h-[calc(100dvh-3rem)]">
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stone-200 px-3 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-50 text-amber-800">
@@ -136,7 +133,17 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-stone-50 p-3 text-sm text-stone-900 sm:p-5">
+        <div className="flex shrink-0 gap-1 border-b border-stone-200 bg-stone-50 px-3 py-2 lg:hidden">
+          {(['settings', 'preview'] as const).map(pane => (
+            <button key={pane} type="button" aria-pressed={mobilePane === pane} onClick={() => setMobilePane(pane)}
+              className={'flex-1 rounded-md px-2 py-2 text-xs font-semibold ' + (mobilePane === pane
+                ? 'bg-amber-100 text-amber-950' : 'text-stone-600 hover:bg-stone-100')}>
+              {pane === 'settings' ? 'Tùy chỉnh' : 'Xem trước'}
+            </button>
+          ))}
+        </div>
+        <div className="min-h-0 flex-1 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className={(mobilePane === 'settings' ? '' : 'hidden lg:block ') + 'h-full min-h-0 space-y-3 overflow-y-auto overscroll-contain bg-stone-50 p-3 text-sm text-stone-900 sm:p-4'}>
 
           {/* ═══ MỤC 1. MẪU GIAO DIỆN & BẢNG MÀU LATEX ═══ */}
           <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-4">
@@ -467,6 +474,17 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
           </div>
 
         </div>
+        <section aria-label="Bản xem trước" className={(mobilePane === 'preview' ? 'flex ' : 'hidden lg:flex ')
+          + 'h-full min-h-0 min-w-0 flex-col bg-stone-100 lg:border-l lg:border-stone-200'}>
+          <div className="flex shrink-0 items-center justify-between border-b border-stone-200 bg-white px-4 py-2.5">
+            <h3 className="text-sm font-semibold text-stone-900">Xem trước đề thi</h3>
+            <span className="rounded-md bg-stone-100 px-2 py-1 text-xs font-medium text-stone-600">Khổ A4</span>
+          </div>
+          <div className="min-h-0 flex-1 p-2 sm:p-4">
+            <ExamPrintPreview questions={questions} config={config} />
+          </div>
+        </section>
+        </div>
 
         {/* ── FOOTER MODAL: NÚT XUẤT ĐỀ TRỰC TIẾP TRONG WEB ── */}
         <div className="grid shrink-0 gap-2 border-t border-stone-200 bg-white p-3 sm:flex sm:items-center sm:justify-between sm:px-5">
@@ -489,21 +507,11 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             {/* Nút chính: TỰ BIÊN SOẠN & XUẤT PDF TRỰC TIẾP TRONG WEB */}
             <button
               type="button"
-              onClick={handleExportPdf}
-              disabled={isCompiling}
-              className="inline-flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-lg bg-amber-800 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-50"
+              onClick={() => printExamDirectlyToPdf(questions, config)}
+              className="inline-flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-lg bg-amber-800 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-900"
             >
-              {isCompiling ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{compileStatus || 'Đang biên soạn...'}</span>
-                </>
-              ) : (
-                <>
-                  <Printer aria-hidden="true" className="size-4 shrink-0" />
-                  <span>Xuất đề thi ra PDF</span>
-                </>
-              )}
+              <Printer aria-hidden="true" className="size-4 shrink-0" />
+              <span>Xuất đề thi ra PDF</span>
             </button>
           </div>
         </div>
