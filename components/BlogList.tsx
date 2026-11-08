@@ -126,7 +126,7 @@ interface QuestionCardProps {
     blog: BlogPost;
     question: CardQuestionData | null;
     isAdmin: boolean;
-    onEditBlog?: (blog: BlogPost) => void;
+    onEdit?: () => void;
     onClick: () => void;
     isSelected?: boolean;
     onToggleSelect: () => void;
@@ -140,7 +140,7 @@ const cardTypes: Record<QuestionType, string> = {
 
 const cardControl = 'inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700';
 
-function QuestionCard({ blog, question, isAdmin, onEditBlog, onClick, isSelected = false, onToggleSelect }: QuestionCardProps) {
+function QuestionCard({ blog, question, isAdmin, onEdit, onClick, isSelected = false, onToggleSelect }: QuestionCardProps) {
     const [expanded, setExpanded] = useState(false);
     const [isClipped, setIsClipped] = useState(false);
     const contentId = useId();
@@ -219,8 +219,8 @@ function QuestionCard({ blog, question, isAdmin, onEditBlog, onClick, isSelected
                         {isSelected ? <Check aria-hidden="true" className="size-3.5" /> : <Plus aria-hidden="true" className="size-3.5" />}
                         {isSelected ? 'Đã chọn' : 'Thêm'}
                     </button>
-                    {isAdmin && onEditBlog && (
-                        <button type="button" onClick={() => onEditBlog(blog)} title="Chỉnh sửa bài viết"
+                    {isAdmin && onEdit && (
+                        <button type="button" onClick={onEdit} title="Chỉnh sửa bài viết"
                             className={cardControl + ' text-stone-700 hover:bg-stone-200'}>
                             <Pencil aria-hidden="true" className="size-3.5" /> Sửa
                         </button>
@@ -288,7 +288,7 @@ interface BlogListProps {
     isAdmin: boolean;
     studentGrade?: number | null;
     onReadBlog: (blog: BlogPost) => void;
-    onEditBlog?: (blog: BlogPost) => void;
+    onEditBlog?: (blog: BlogPost, questionIndex?: number) => void;
     onCreateBlog?: (section?: StudySection) => void;
     studyLessons: StudyLesson[];
     onSaveLesson?: (section: StudySection, title: string, id?: string) => Promise<StudyLesson | null>;
@@ -482,7 +482,7 @@ const BlogList: React.FC<BlogListProps> = ({
                         blog={blog}
                         question={toCardQuestion(question)}
                         isAdmin={isAdmin}
-                        onEditBlog={onEditBlog}
+                        onEdit={onEditBlog && (() => onEditBlog(blog, index))}
                         onClick={() => {
                             if (solution && question && expandQuestions && questions.length > 1) {
                                 const content = JSON.stringify({ ...solution, data: { ...solution.data, questions: [question] } });

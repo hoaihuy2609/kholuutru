@@ -501,12 +501,13 @@ interface SolutionEditorProps {
   studyDefaults?: { title: string; firstQuestionNumber: number };
   studyGrade?: number;
   studyQuestionType?: StudyQuestionType;
+  initialQuestionIndex?: number;
   initialQuestionGroup?: StudyQuestionGroup;
 }
 
 export default function SolutionEditor({
   blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar,
-  studyPlacement, studyDefaults, studyGrade, studyQuestionType, initialQuestionGroup
+  studyPlacement, studyDefaults, studyGrade, studyQuestionType, initialQuestionIndex = 0, initialQuestionGroup
 }: SolutionEditorProps) {
   const splitImportedQuestions = !!saveBlog && !studyGrade;
   const [examName,   setExamName]   = useState("");
@@ -775,18 +776,17 @@ export default function SolutionEditor({
         if (parsed.type === 'physics_solution' && parsed.data) {
           setExamName(parsed.data.exam_name || "");
 
-          if (parsed.data.questions?.length > 0) {
-            setQuestions(parsed.data.questions.map(normalizeQuestion));
-          } else {
-            // Backward compat: bài cũ chỉ có một câu ở root-level
-            setQuestions([normalizeQuestion(parsed.data)]);
-          }
+          // Bài cũ có thể chỉ lưu một câu ở cấp data.
+          const savedQuestions = Array.isArray(parsed.data.questions) && parsed.data.questions.length
+            ? parsed.data.questions : [parsed.data];
+          setQuestions(savedQuestions.map(normalizeQuestion));
+          setActiveQIdx(savedQuestions[initialQuestionIndex] ? initialQuestionIndex : 0);
         }
       } catch (e) {
         console.error("Failed to parse physics solution data", e);
       }
     }
-  }, [blog]);
+  }, [blog, initialQuestionIndex]);
 
   // ── Snippet insert ─────────────────────────────────────────
   const trackFocus = useCallback((fieldId: string, el: any) => {

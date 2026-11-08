@@ -396,6 +396,7 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const questionGroup = searchParams.get('group');
   const [createSection, setCreateSection] = useState<StudySection>();
+  const [editQuestionIndex, setEditQuestionIndex] = useState(0);
   const [studyLessons, setStudyLessons] = useState<StudyLesson[]>([]);
   const [lessonSync, setLessonSync] = useState<'syncing' | 'failed'>();
   const lessonSyncVersion = useRef(0);
@@ -441,6 +442,7 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   if ((activeAdminBlog || isCreatingBlog) && effectiveIsAdmin) {
     const back = () => {
       setActiveAdminBlog(null);
+      setEditQuestionIndex(0);
       setIsCreatingBlog(false);
       setCreateSection(undefined);
     };
@@ -457,7 +459,7 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     };
     return (
       <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-        <AdminBlogEditor blog={activeAdminBlog} initialSection={createSection}
+        <AdminBlogEditor blog={activeAdminBlog} initialSection={createSection} initialQuestionIndex={editQuestionIndex}
           initialQuestionGroup={createSection && supportsStudyGroups(createSection.questionType) && isStudyQuestionGroup(questionGroup) ? questionGroup : undefined}
           studyLessons={studyLessons} existingBlogs={allBlogs} saveBlog={cloud.saveBlog} deleteBlog={cloud.deleteBlog}
           syncBlogs={cloud.syncBlogs} onBack={back} onSaved={saved} />
@@ -483,7 +485,10 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   return (
     <ErrorBoundary><Suspense fallback={<LazyFallback />}>
       <BlogList isAdmin={effectiveIsAdmin} studentGrade={effectiveIsAdmin ? null : studentGrade} onReadBlog={setActiveBlog}
-        onEditBlog={effectiveIsAdmin ? setActiveAdminBlog : undefined} onCreateBlog={effectiveIsAdmin ? section => {
+        onEditBlog={effectiveIsAdmin ? (blog, questionIndex = 0) => {
+          setEditQuestionIndex(questionIndex);
+          setActiveAdminBlog(blog);
+        } : undefined} onCreateBlog={effectiveIsAdmin ? section => {
           setCreateSection(section);
           setIsCreatingBlog(true);
         } : undefined}

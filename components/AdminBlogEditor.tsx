@@ -18,6 +18,7 @@ import ExamPaperEditor from './ExamPaperEditor';
 interface AdminBlogEditorProps {
     blog: BlogPost | null;
     initialSection?: StudySection;
+    initialQuestionIndex?: number;
     initialQuestionGroup?: StudyQuestionGroup;
     studyLessons: StudyLesson[];
     existingBlogs: BlogPost[];
@@ -30,7 +31,7 @@ interface AdminBlogEditorProps {
 
 const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
-const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, initialQuestionGroup, studyLessons, existingBlogs, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
+const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, initialQuestionIndex, initialQuestionGroup, studyLessons, existingBlogs, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
     const [selectedMode, setEditorMode] = useState<'markdown' | 'solution' | 'exam_paper'>('markdown');
     const isLessonCreation = !blog && !!initialSection?.lessonId;
     const editorMode = isLessonCreation ? 'solution' : selectedMode;
@@ -384,6 +385,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
             {editorMode === 'solution' && (
                 <SolutionEditor
                     blog={blog}
+                    initialQuestionIndex={initialQuestionIndex}
                     onSaved={onSaved}
                     saveBlog={savePlacedBlog}
                     syncBlogs={syncBlogs}
