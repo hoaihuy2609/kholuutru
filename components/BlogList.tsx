@@ -230,7 +230,7 @@ function QuestionCard({ blog, question, isAdmin, onEditBlog, onClick, isSelected
             <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3.5 py-3.5 [container-type:inline-size] sm:px-4">
                 <div id={contentId} ref={viewportRef}
                     className="relative min-h-0 flex-1 overflow-hidden">
-                    <div ref={contentRef} className="latex-prose min-w-0 text-[15px] leading-relaxed text-stone-800">
+                    <div ref={contentRef} className="latex-prose min-w-0 text-base leading-relaxed text-stone-800">
                         {!hasQuestion ? (
                             <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{blog.summary || blog.title}</p>
                         ) : inlineImage ? (
