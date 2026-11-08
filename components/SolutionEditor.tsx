@@ -3,8 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import katex from "katex";
-import "katex/dist/katex.min.css";
+import { SolutionQuestions } from './SolutionRenderer';
 import { supabase } from "../src/lib/supabase";
 import { useUIStore } from "../src/stores/useUIStore";
 import { SolutionStep as Step, SolutionStatement as Statement, StudyQuestionType } from '../types';
@@ -15,7 +14,6 @@ import {
   FileCode, Download
 } from 'lucide-react';
 import { renderTikzToSvg, uploadSvgToTelegram } from "../src/services/tikzService";
-import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -155,6 +153,29 @@ const normalizeQuestion = (q: any): Question => {
     imageLayout: q.image_layout || q.imageLayout || 'auto',
   };
 };
+
+function serializeQuestion(q: Question, questionNo: string) {
+  return {
+    question_no:    questionNo,
+    question_text:  q.qText,
+    question_latex: q.qFormula,
+    type:           q.type,
+    solution:       q.solution || '',
+    tikz_code:      q.tikzCode || '',
+    image_svg:      q.imageSvg || '',
+    image_url:      q.imageUrl || '',
+    image_telegram_file_id: q.imageTelegramFileId || '',
+    image_layout:   q.imageLayout || 'auto',
+    // Tự luận: lưu cả solution và steps tương thích
+    steps:         q.type === 'tu_luan'    ? (q.solution ? [{ title: '', text: q.solution, formula: '', formula2: '' }] : q.steps) : [],
+    // Đúng/sai: lưu statements
+    statements:    q.type === 'dung_sai'   ? q.statements    : [],
+    // Trắc nghiệm: lưu choices + correctChoice + solutionSteps
+    choices:       q.type === 'trac_nghiem' ? q.choices       : [],
+    correctChoice: q.type === 'trac_nghiem' ? q.correctChoice : '',
+    solutionSteps: q.type === 'trac_nghiem' ? (q.solution ? [{ title: '', text: q.solution, formula: '', formula2: '' }] : q.solutionSteps) : [],
+  };
+}
 
 // Dữ liệu mẫu 3 câu thử nghiệm (có hình ảnh TikZ) trích từ đề Chuyên đề 1.1 Từ trường của dòng điện thẳng
 const SAMPLE_PHYSICS_EXAM_JSON = JSON.stringify({
@@ -320,139 +341,8 @@ function parseStatementsBatch(raw: string, currentStatements: Statement[]): Stat
 }
 
 // ─────────────────────────────────────────────────────────────
-// SUB-COMPONENTS (KaTeX, TextWithMath, AutoResizeTextarea)
+// SUB-COMPONENTS
 // ─────────────────────────────────────────────────────────────
-function KatexSpan({ tex, block = false }: { tex: string; block?: boolean }) {
-  const ref = useRef<HTMLDivElement | HTMLSpanElement>(null);
-  useEffect(() => {
-    if (!ref.current || !tex) return;
-    try { katex.render(tex, ref.current as HTMLElement, { throwOnError: false, displayMode: block }); }
-    catch (_) {}
-  }, [tex, block]);
-  return block
-    ? <div ref={ref as React.RefObject<HTMLDivElement>} style={{ textAlign: "center", padding: "6px 0", overflowX: "auto" }} />
-    : <span ref={ref as React.RefObject<HTMLSpanElement>} />;
-}
-
-const renderFormattedText = (text: string, baseKey: string | number): React.ReactNode[] => {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((chunk, j) => {
-    if (chunk.startsWith('**') && chunk.endsWith('**') && chunk.length >= 4) {
-      return <strong key={`${baseKey}-b-${j}`} className="font-bold text-[#1A1A1A]">{chunk.slice(2, -2)}</strong>;
-    }
-    return <span key={`${baseKey}-t-${j}`}>{chunk}</span>;
-  });
-};
-
-const renderInlineMath = (text: string) => {
-  if (!text) return [];
-
-  // Tự động nhận diện công thức toán nếu AI quên kẹp dấu $
-  let processed = text;
-  if (!processed.includes('$') && /\\(?:vec|frac|cdot|text|alpha|beta|omega|pi|Delta|mu|times|le|ge|neq|approx)|[A-Za-z]_[0-9A-Za-z]|\^[0-9]/.test(processed)) {
-    return [<KatexSpan key="auto-math" tex={processed.trim()} block={false} />];
-  }
-
-  return processed.split(/(\$(?!\$)[^$\n]+(?<!\$)\$|\\\([\s\S]*?\\\))/g).map((part, i) => {
-    if (part.startsWith('$') && part.endsWith('$') && part.length > 2 && !part.startsWith('$$')) {
-      return <KatexSpan key={i} tex={part.slice(1, -1).trim()} block={false} />;
-    }
-    if (part.startsWith('\\(') && part.endsWith('\\)') && part.length > 3) {
-      return <KatexSpan key={i} tex={part.slice(2, -2).trim()} block={false} />;
-    }
-    return <React.Fragment key={i}>{renderFormattedText(part, i)}</React.Fragment>;
-  });
-};
-
-function TextWithMath({ text }: { text: string }) {
-  if (!text) return null;
-  const normalized = text.replace(/\\n/g, '\n');
-  const clean = normalized.replace(/\[\/?justify\]/gi, '');
-  const rawLines = clean.split('\n');
-
-  const elements: React.ReactNode[] = [];
-  let inBlockMath = false;
-  let blockMathBuffer: string[] = [];
-
-  for (let idx = 0; idx < rawLines.length; idx++) {
-    const line = rawLines[idx];
-    const trimmed = line.trim();
-
-    if (!trimmed) {
-      if (!inBlockMath) {
-        elements.push(<div key={`empty-${idx}`} className="h-2" />);
-      }
-      continue;
-    }
-
-    // Dòng chứa công thức độc lập $$...$$ (căn giữa 100%, đứng riêng một dòng)
-    if (trimmed.startsWith('$$') && trimmed.endsWith('$$') && trimmed.length > 3) {
-      const tex = trimmed.slice(2, -2).trim();
-      elements.push(
-        <div key={`bm-${idx}`} className="my-2.5 text-center overflow-x-auto">
-          <KatexSpan tex={tex} block />
-        </div>
-      );
-      continue;
-    }
-
-    // Dòng chứa công thức độc lập \[...\]
-    if (trimmed.startsWith('\\[') && trimmed.endsWith('\\]') && trimmed.length > 3) {
-      const tex = trimmed.slice(2, -2).trim();
-      elements.push(
-        <div key={`bm-${idx}`} className="my-2.5 text-center overflow-x-auto">
-          <KatexSpan tex={tex} block />
-        </div>
-      );
-      continue;
-    }
-
-    // Multi-line block math bắt đầu bằng $$
-    if (trimmed.startsWith('$$')) {
-      inBlockMath = true;
-      blockMathBuffer = [trimmed.slice(2)];
-      continue;
-    }
-
-    if (inBlockMath) {
-      if (trimmed.endsWith('$$')) {
-        blockMathBuffer.push(trimmed.slice(0, -2));
-        const tex = blockMathBuffer.join('\n').trim();
-        elements.push(
-          <div key={`bmm-${idx}`} className="my-2.5 text-center overflow-x-auto">
-            <KatexSpan tex={tex} block />
-          </div>
-        );
-        blockMathBuffer = [];
-        inBlockMath = false;
-      } else {
-        blockMathBuffer.push(line);
-      }
-      continue;
-    }
-
-    // Thẻ [center]...[/center]
-    if (trimmed.startsWith('[center]') && trimmed.endsWith('[/center]')) {
-      const inner = trimmed.slice(8, -9);
-      elements.push(
-        <div key={`c-${idx}`} className="my-1 text-center">
-          {renderInlineMath(inner)}
-        </div>
-      );
-      continue;
-    }
-
-    // Dòng văn bản bình thường (tự động căn đều 2 bên mép, công thức $...$ nằm gọn gàng)
-    elements.push(
-      <div key={`t-${idx}`} style={{ textAlign: 'justify', textJustify: 'inter-word' }} className="leading-relaxed my-0.5">
-        {renderInlineMath(line)}
-      </div>
-    );
-  }
-
-  return <div className="space-y-1">{elements}</div>;
-}
-
-
 function AutoResizeTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -590,49 +480,6 @@ function StatementEditor({
 }
 
 // ─────────────────────────────────────────────────────────────
-// STEP PREVIEW (cho cả tự luận và bước chứng minh trong đúng/sai)
-// ─────────────────────────────────────────────────────────────
-function StepPreview({ step, index }: { step: Step; index: number }) {
-  return (
-    <div className="bg-white border border-[#E9E9E7] rounded-xl mb-3 overflow-hidden shadow-sm">
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-[#E9E9E7] bg-[#FCFCFA]">
-        <span className="font-mono text-[11px] font-bold bg-[#6B7CDB] text-white w-5 h-5 rounded-full flex items-center justify-center shrink-0">{index + 1}</span>
-        <span className="text-[12px] font-semibold text-[#1A1A1A]">{step.title ? <TextWithMath text={step.title} /> : <em className="text-[#AEACA8] font-normal">Chưa có tiêu đề</em>}</span>
-      </div>
-      <div className="p-3 flex flex-col gap-2">
-        {step.text    && <p className="text-[13px] text-[#57564F] leading-relaxed m-0 whitespace-pre-wrap"><TextWithMath text={step.text} /></p>}
-        {step.formula  && <KatexSpan tex={step.formula}  block />}
-        {step.formula2 && <KatexSpan tex={step.formula2} block />}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// STATEMENT PREVIEW (trong panel xem trước)
-// ─────────────────────────────────────────────────────────────
-function StatementPreview({ st }: { st: Statement }) {
-  const verdictEl =
-    st.verdict === true  ? <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">✓ ĐÚNG</span> :
-    st.verdict === false ? <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700 border border-red-300">✗ SAI</span> :
-                           <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 border border-gray-200">?</span>;
-
-  const borderColor = st.verdict === true ? 'border-emerald-300' : st.verdict === false ? 'border-red-300' : 'border-[#E9E9E7]';
-
-  return (
-    <div className={`bg-white border rounded-xl mb-3 overflow-hidden shadow-sm ${borderColor}`}>
-      <div className="flex items-center justify-between px-4 py-2 border-b border-[#E9E9E7] bg-[#FCFCFA]">
-        <span className="font-bold text-sm text-indigo-700">Mệnh đề {st.label.toUpperCase()}</span>
-        {verdictEl}
-      </div>
-      <div className="p-3 text-[14px] text-[#1A1A1A] leading-relaxed">
-        {st.claim && <TextWithMath text={st.claim} />}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────
 interface SolutionEditorProps {
@@ -690,6 +537,13 @@ export default function SolutionEditor({
     return studyDefaults && !blog?.id ? automatic : question.questionNo || automatic;
   };
   const activeNumber = questionNumber(activeQuestion, activeQIdx);
+  const previewQuestions = questions.map((question, index) => serializeQuestion(question, questionNumber(question, index)));
+  const hasPreview = previewQuestions.some(question =>
+    question.question_text || question.question_latex || question.image_svg || question.image_url
+    || question.image_telegram_file_id || question.solution || question.choices.some(Boolean)
+    || question.statements.some(statement => statement.claim || statement.claim_latex || convertStepsToSolution(statement.steps))
+    || convertStepsToSolution(question.steps) || convertStepsToSolution(question.solutionSteps)
+  );
   const [renderingTikz, setRenderingTikz] = useState(false);
   const [tikzError, setTikzError] = useState<string | null>(null);
 
@@ -1013,26 +867,8 @@ export default function SolutionEditor({
       }));
 
       // Serialize mỗi câu hỏi tùy theo type
-      const serializedQuestions = processedQuestions.map((q, index) => ({
-        question_no:    studyDefaults ? questionNumber(q, index) : q.questionNo,
-        question_text:  q.qText,
-        question_latex: q.qFormula,
-        type:           q.type,
-        solution:       q.solution || '',
-        tikz_code:      q.tikzCode || '',
-        image_svg:      q.imageSvg || '',
-        image_url:      q.imageUrl || '',
-        image_telegram_file_id: q.imageTelegramFileId || '',
-        image_layout:   q.imageLayout || 'auto',
-        // Tự luận: lưu cả solution và steps tương thích
-        steps:         q.type === 'tu_luan'    ? (q.solution ? [{ title: '', text: q.solution, formula: '', formula2: '' }] : q.steps) : [],
-        // Đúng/sai: lưu statements
-        statements:    q.type === 'dung_sai'   ? q.statements    : [],
-        // Trắc nghiệm: lưu choices + correctChoice + solutionSteps
-        choices:       q.type === 'trac_nghiem' ? q.choices       : [],
-        correctChoice: q.type === 'trac_nghiem' ? q.correctChoice : '',
-        solutionSteps: q.type === 'trac_nghiem' ? (q.solution ? [{ title: '', text: q.solution, formula: '', formula2: '' }] : q.solutionSteps) : [],
-      }));
+      const serializedQuestions = processedQuestions.map((q, index) =>
+        serializeQuestion(q, studyDefaults ? questionNumber(q, index) : q.questionNo));
 
       const savedExamName = studyDefaults ? examName.trim() || blog?.title || studyDefaults.title : examName;
       const solutionData = {
@@ -1138,7 +974,6 @@ export default function SolutionEditor({
 
   return (
     <div className={hideTopBar ? "space-y-6 font-sans" : "max-w-[1920px] w-full mx-auto p-4 md:p-8 space-y-6 animate-fade-in relative pb-20 font-sans"}>
-      <style>{`.katex { color: #1A1A1A !important; }`}</style>
 
       {/* ── Top Bar ── (hidden when parent manages it) */}
       {!hideTopBar && (
@@ -1595,155 +1430,15 @@ export default function SolutionEditor({
                 <Eye aria-hidden="true" className="size-4 text-amber-800" /> Xem trước kết quả
               </h3>
             </div>
-            <div className="min-w-0 flex-1 overflow-y-auto bg-stone-50 p-3.5 sm:p-4" style={{ fontFamily: "'KaTeX_Main', 'Computer Modern', serif" }}>
-              <style>{`.solution-editor-preview, .solution-editor-preview *:not(svg):not(svg *) { font-family: 'KaTeX_Main', 'Computer Modern', serif !important; } .solution-editor-preview .font-mono { font-family: monospace !important; }`}</style>
-              <div className="solution-editor-preview space-y-12">
-                {questions.map((q, qIdx) => (
-                  <div key={qIdx} className={`space-y-5 ${qIdx !== activeQIdx ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
-                    {(examName || q.questionNo || q.qText || q.qFormula || q.imageSvg || q.tikzCode) && (
-                      <div>
-                        {examName && <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-1.5">{examName}</div>}
-                        <div className="font-bold text-2xl text-indigo-900 mb-1">{questionNumber(q, qIdx)}</div>
-                        {/* Badge loại bài */}
-                        <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mb-3 ${q.type === 'dung_sai' ? 'bg-amber-100 text-amber-700 border border-amber-300' : q.type === 'trac_nghiem' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-indigo-100 text-indigo-700 border border-indigo-200'}`}>
-                          {q.type === 'dung_sai' ? 'Đúng / Sai' : q.type === 'trac_nghiem' ? 'Trắc nghiệm' : 'Trả lời ngắn'}
-                        </span>
-                        <div className="bg-white border-l-[3px] border-indigo-400 rounded-r-xl p-5 shadow-sm">
-                          {(() => {
-                            const hasImg = !!(q.imageSvg || q.imageUrl || q.imageTelegramFileId);
-                            const isRight = (q.imageLayout === 'right') || (q.imageLayout === 'auto');
-
-                            const imageElem = hasImg ? (
-                              <div className="w-full flex justify-center items-center py-1 px-2 bg-transparent overflow-x-auto">
-                                {q.imageSvg ? (
-                                  <div
-                                    className="max-w-full flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"
-                                    dangerouslySetInnerHTML={{ __html: q.imageSvg }}
-                                  />
-                                ) : q.imageUrl ? (
-                                  <img src={q.imageUrl} alt="Sơ đồ" className="max-w-full h-auto" />
-                                ) : q.imageTelegramFileId ? (
-                                  <img src={`${CLOUDFLARE_PROXY_URL}/getFile/${q.imageTelegramFileId}`} alt="Sơ đồ" className="max-w-full h-auto" />
-                                ) : null}
-                              </div>
-                            ) : null;
-
-                            const hasImagePlaceholder = hasImg && /\[image\]/i.test(q.qText || '');
-
-                            if (hasImagePlaceholder) {
-                              const parts = (q.qText || '').split(/\[image\]/i);
-                              const beforeText = parts[0] || '';
-                              const afterText = parts.slice(1).join('[image]') || '';
-                              return (
-                                <div>
-                                  {beforeText.trim() && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap"><TextWithMath text={beforeText} /></p>}
-                                  <div className="my-4">{imageElem}</div>
-                                  {afterText.trim() && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap"><TextWithMath text={afterText} /></p>}
-                                  {q.qFormula && <KatexSpan tex={q.qFormula} block />}
-                                </div>
-                              );
-                            }
-
-                            if (hasImg && isRight && (q.qText || q.qFormula)) {
-                              return (
-                                <div className="flex flex-col md:flex-row gap-5 items-start">
-                                  <div className="flex-1 min-w-0">
-                                    {q.qText && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap"><TextWithMath text={q.qText} /></p>}
-                                    {q.qFormula && <KatexSpan tex={q.qFormula} block />}
-                                  </div>
-                                  <div className="w-full md:w-[42%] max-w-[340px] shrink-0">
-                                    {imageElem}
-                                  </div>
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <div>
-                                {q.qText && <p className="text-[14px] text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap"><TextWithMath text={q.qText} /></p>}
-                                {q.qFormula && <KatexSpan tex={q.qFormula} block />}
-                                {hasImg && <div className={q.qText || q.qFormula ? "mt-4" : ""}>{imageElem}</div>}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Preview tự luận */}
-                    {q.type === 'tu_luan' && (q.solution || q.steps?.some((s: Step) => s.title || s.formula || s.text)) && (
-                      <div>
-                        <div className="text-[10px] font-mono text-[#AEACA8] uppercase tracking-[0.15em] flex items-center gap-3 mb-3">
-                          Lời giải chi tiết <div className="h-[1px] flex-1 bg-[#E9E9E7]" />
-                        </div>
-                        <div className="bg-white border border-[#E9E9E7] rounded-xl p-4 shadow-sm text-[14px] text-gray-800 leading-relaxed">
-                          <TextWithMath text={q.solution || convertStepsToSolution(q.steps)} />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Preview đúng/sai */}
-                    {q.type === 'dung_sai' && (
-                      <div className="space-y-4">
-                        {q.statements.some((s: Statement) => s.claim || s.claim_latex) && (
-                          <div>
-                            <div className="text-[10px] font-mono text-[#AEACA8] uppercase tracking-[0.15em] flex items-center gap-3 mb-3">
-                              Phân tích 4 mệnh đề <div className="h-[1px] flex-1 bg-[#E9E9E7]" />
-                            </div>
-                            {q.statements.map((st: Statement, i: number) =>
-                              (st.claim || st.claim_latex)
-                                ? <StatementPreview key={i} st={st} />
-                                : null
-                            )}
-                          </div>
-                        )}
-                        {(q.solution || q.statements.some(st => st.steps?.some(s => s.title || s.text || s.formula))) && (
-                          <div>
-                            <div className="text-[10px] font-mono text-[#AEACA8] uppercase tracking-[0.15em] flex items-center gap-3 mb-3">
-                              Hướng dẫn giải chi tiết <div className="h-[1px] flex-1 bg-[#E9E9E7]" />
-                            </div>
-                            <div className="bg-white border border-[#E9E9E7] rounded-xl p-4 shadow-sm text-[14px] text-gray-800 leading-relaxed">
-                              <TextWithMath text={q.solution || q.statements.map(st => `**Ý ${st.label.toUpperCase()}:**\n${convertStepsToSolution(st.steps)}`).filter(s => !s.endsWith(':**\n')).join('\n\n')} />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Preview trắc nghiệm */}
-                    {q.type === 'trac_nghiem' && (
-                      <div className="space-y-4">
-                        <div className="space-y-1.5">
-                          {['A','B','C','D'].map((lbl, ci) => q.choices?.[ci] ? (
-                            <div key={lbl} className="flex items-center gap-2 p-2 rounded-lg" style={{ background: q.correctChoice === lbl ? '#EAF3EE' : '#fff', border: `1px solid ${q.correctChoice === lbl ? '#44836150' : '#E9E9E7'}` }}>
-                              <span className="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0" style={{ background: q.correctChoice === lbl ? '#448361' : '#F1F0EC', color: q.correctChoice === lbl ? '#fff' : '#787774' }}>{lbl}</span>
-                              <span className="text-[13px] text-[#1A1A1A]"><TextWithMath text={q.choices[ci]} /></span>
-                              {q.correctChoice === lbl && <span className="ml-auto text-xs font-bold text-emerald-600">✓ Đúng</span>}
-                            </div>
-                          ) : null)}
-                        </div>
-                        {(q.solution || q.solutionSteps?.some((s: Step) => s.title || s.formula || s.text)) && (
-                          <div>
-                            <div className="text-[10px] font-mono text-[#AEACA8] uppercase tracking-[0.15em] flex items-center gap-3 mb-3">
-                              Lời giải chi tiết <div className="h-[1px] flex-1 bg-[#E9E9E7]" />
-                            </div>
-                            <div className="bg-white border border-[#E9E9E7] rounded-xl p-4 shadow-sm text-[14px] text-gray-800 leading-relaxed">
-                              <TextWithMath text={q.solution || convertStepsToSolution(q.solutionSteps)} />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {!examName && !activeQuestion.qText && !activeQuestion.qFormula && !activeQuestion.imageSvg && !activeQuestion.tikzCode && (
-                  <div className="flex flex-col items-center justify-center text-gray-400 mt-28 opacity-60">
-                    <Eye className="w-12 h-12 mb-4" />
-                    <p className="text-sm">Bắt đầu nhập liệu để xem trước...</p>
-                  </div>
-                )}
-              </div>
+            <div className="min-w-0 flex-1 overflow-y-auto bg-stone-50 p-3.5 sm:p-4">
+              {hasPreview ? (
+                <SolutionQuestions questions={previewQuestions} activeIndex={activeQIdx} />
+              ) : (
+                <div className="flex min-h-48 flex-col items-center justify-center gap-3 px-4 text-center text-stone-500">
+                  <Eye aria-hidden="true" className="size-8" />
+                  <p className="text-sm">Bắt đầu nhập liệu để xem trước...</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

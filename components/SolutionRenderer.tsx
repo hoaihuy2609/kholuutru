@@ -36,7 +36,6 @@ interface Question {
 }
 
 interface PhysicsSolutionData {
-  exam_name: string;
   questions?: Question[];
   // root-level backward compat
   question_no?: string;
@@ -50,13 +49,12 @@ interface PhysicsSolutionData {
 // ─────────────────────────────────────────────────────────────
 
 // Parse blog.content (JSON string) → danh sách Question đã normalize
-function parseContent(content: string): { examName: string; questions: Question[] } | null {
+function parseContent(content: string): Question[] | null {
   try {
     const parsed = JSON.parse(content);
     if (parsed.type !== 'physics_solution' || !parsed.data) return null;
 
     const data: PhysicsSolutionData = parsed.data;
-    const examName = typeof data.exam_name === 'string' ? data.exam_name : '';
 
     let questions: Question[];
 
@@ -91,7 +89,7 @@ function parseContent(content: string): { examName: string; questions: Question[
       }];
     }
 
-    return { examName, questions };
+    return questions;
   } catch {
     return null;
   }
@@ -315,10 +313,10 @@ function VerdictBadge({ verdict }: { verdict?: boolean | null }) {
 
 function AnswerRow({ label, badge, children }: { label: string; badge?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <li className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-x-2.5 gap-y-1 px-4 py-3 sm:grid-cols-[1.75rem_minmax(0,1fr)_auto] sm:gap-x-3 sm:px-5">
+    <li className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-x-2.5 gap-y-1 px-4 py-3 [@container_(min-width:28rem)]:grid-cols-[1.75rem_minmax(0,1fr)_auto] sm:px-5">
       <span className="grid size-7 place-items-center rounded-md bg-stone-100 text-sm font-bold text-stone-800">{label}</span>
       <div className={detailProse}>{children}</div>
-      {badge && <div className="col-start-2 justify-self-start sm:col-start-3 sm:justify-self-end">{badge}</div>}
+      {badge && <div className="col-start-2 justify-self-start [@container_(min-width:28rem)]:col-start-3 [@container_(min-width:28rem)]:justify-self-end">{badge}</div>}
     </li>
   );
 }
@@ -409,7 +407,7 @@ function QuestionHeader({ question }: { question: Question }) {
   const typeLabel = question.type === 'dung_sai' ? 'Đúng / Sai' : question.type === 'trac_nghiem' ? 'Trắc nghiệm' : 'Trả lời ngắn';
   const image = hasImage && (
     <figure className={'mx-auto flex w-full min-w-0 max-w-sm justify-center '
-      + (sideImage ? 'md:w-[38%] md:shrink-0' : '')}>
+      + (sideImage ? '[@container_(min-width:40rem)]:w-[38%] [@container_(min-width:40rem)]:shrink-0' : '')}>
       {question.image_svg ? (
         <div className="max-w-full [&>svg]:block [&>svg]:h-auto [&>svg]:max-w-full"
           dangerouslySetInnerHTML={{ __html: question.image_svg }} />
@@ -438,7 +436,7 @@ function QuestionHeader({ question }: { question: Question }) {
               {question.question_latex && <KatexBlock tex={question.question_latex} />}
             </div>
           ) : (
-            <div className={'flex flex-col gap-4 ' + (sideImage ? 'md:flex-row md:items-start' : '')}>
+            <div className={'flex flex-col gap-4 ' + (sideImage ? '[@container_(min-width:40rem)]:flex-row [@container_(min-width:40rem)]:items-start' : '')}>
               {hasText && (
                 <div className={detailProse + ' flex-1'}>
                   {question.question_text && <TextWithMath text={question.question_text} />}
@@ -459,13 +457,12 @@ function QuestionHeader({ question }: { question: Question }) {
 interface SolutionRendererProps {
   content: string;    // blog.content (JSON string)
   className?: string;
-  title?: string;
 }
 
-export default function SolutionRenderer({ content, className = "", title }: SolutionRendererProps) {
-  const parsed = parseContent(content);
+export default function SolutionRenderer({ content, className = "" }: SolutionRendererProps) {
+  const questions = parseContent(content);
 
-  if (!parsed) {
+  if (!questions) {
     return (
       <div className={`p-8 text-center text-gray-400 ${className}`}>
         <p className="text-sm">Không thể tải nội dung bài giải.</p>
@@ -473,15 +470,19 @@ export default function SolutionRenderer({ content, className = "", title }: Sol
     );
   }
 
-  const { examName, questions } = parsed;
+  return <SolutionQuestions questions={questions} className={className} />;
+}
 
+export function SolutionQuestions({ questions, activeIndex, className = '' }: {
+  questions: Question[];
+  activeIndex?: number;
+  className?: string;
+}) {
   return (
-    <div className={`solution-renderer latex-prose space-y-5 ${className}`}>
-      <h1 className="break-words text-xl font-bold leading-snug text-stone-900 sm:text-2xl">
-        {examName.trim() || title || 'Lời giải bài tập'}
-      </h1>
+    <div className={`solution-renderer latex-prose space-y-5 [container-type:inline-size] ${className}`}>
       {questions.map((q, idx) => (
-        <div key={idx} className={idx > 0 ? 'border-t border-stone-200 pt-5' : ''}>
+        <div key={idx} className={(idx > 0 ? 'border-t border-stone-200 pt-5 ' : '')
+          + (activeIndex !== undefined && idx !== activeIndex ? 'pointer-events-none opacity-40 grayscale' : '')}>
           {q.type === 'dung_sai'
             ? <DungSaiRenderer   question={q} />
             : q.type === 'trac_nghiem'

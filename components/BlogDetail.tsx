@@ -146,7 +146,7 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack, relatedBlogs = []
                 >
                     <ChevronLeft aria-hidden="true" className="size-4" /> Quay lại
                 </button>
-                <SolutionRenderer content={blog.content} title={blog.title} />
+                <SolutionRenderer content={blog.content} />
             </div>
         );
     }
