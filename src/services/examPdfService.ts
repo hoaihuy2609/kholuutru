@@ -2,7 +2,7 @@ import DOMPurify from 'dompurify';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import renderMathInElement from 'katex/contrib/auto-render';
-import 'katex/dist/katex.min.css';
+import katexStyles from 'katex/dist/katex.min.css?inline';
 import { CLOUDFLARE_PROXY_URL } from '../lib/telegram';
 import { buildExamPdfHtml, type ExamStyleConfig, type SelectedQuestionItem } from './examLatexService';
 
@@ -15,21 +15,34 @@ const contentWidth = pageWidth - 2 * horizontalMargin;
 const contentHeight = pageHeight - 2 * verticalMargin;
 
 export async function downloadExamPdf(questions: SelectedQuestionItem[], config: ExamStyleConfig) {
-  const staging = document.createElement('div');
-  staging.setAttribute('aria-hidden', 'true');
-  staging.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none;background:white;';
-  const source = document.createElement('div');
-  const page = document.createElement('div');
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.tabIndex = -1;
+  frame.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none;border:0;'
+    + 'width:' + Math.ceil(contentWidth * pixelsPerMm) + 'px;height:' + Math.ceil(contentHeight * pixelsPerMm) + 'px;';
+  document.body.append(frame);
+  const renderDocument = frame.contentDocument;
+  if (!renderDocument) {
+    frame.remove();
+    throw new Error('Không mở được vùng dựng PDF.');
+  }
+
+  const styles = renderDocument.createElement('style');
+  styles.textContent = 'html,body{margin:0}*{box-sizing:border-box}\n' + katexStyles;
+  renderDocument.head.append(styles);
+  const source = renderDocument.createElement('div');
+  source.setAttribute('data-html2canvas-ignore', '');
+  const page = renderDocument.createElement('div');
   const font = config.mathFont === 'Times New Roman' ? 'Times New Roman, serif' : 'KaTeX_Main, Times New Roman, serif';
   const textStyle = 'width:' + contentWidth * pixelsPerMm + 'px;display:flow-root;font:12pt/1.4 ' + font
     + ';color:#1a1a1a;overflow-wrap:break-word;';
   source.style.cssText = textStyle;
   page.style.cssText = textStyle + 'position:relative;';
-  const content = document.createElement('div');
+  const content = renderDocument.createElement('div');
   content.style.display = 'flow-root';
   page.append(content);
   if (config.enableWatermark && config.watermarkText.trim()) {
-    const watermark = document.createElement('div');
+    const watermark = renderDocument.createElement('div');
     watermark.textContent = config.watermarkText;
     watermark.style.cssText = 'position:absolute;top:50%;left:50%;width:90%;text-align:center;transform:translate(-50%,-50%) rotate(-30deg);font:700 36pt serif;color:rgba(0,0,0,.10);';
     page.prepend(watermark);
@@ -38,8 +51,6 @@ export async function downloadExamPdf(questions: SelectedQuestionItem[], config:
   source.innerHTML = DOMPurify.sanitize(buildExamPdfHtml(questions, config), {
     FORBID_TAGS: ['style', 'foreignObject'],
   });
-  staging.append(source, page);
-
   const imageUrls: string[] = [];
   try {
     for (const svg of source.querySelectorAll('svg')) {
@@ -80,8 +91,8 @@ export async function downloadExamPdf(questions: SelectedQuestionItem[], config:
       math.style.color = config.mathColor;
       math.style.fontSize = '1em';
     }
-    document.body.append(staging);
-    await document.fonts.ready;
+    renderDocument.body.append(source, page);
+    await renderDocument.fonts.ready;
 
     const pdf = new jsPDF({ format: 'a4', unit: 'mm', compress: true });
     let renderedPages = 0;
@@ -90,19 +101,22 @@ export async function downloadExamPdf(questions: SelectedQuestionItem[], config:
       page.style.minHeight = contentHeight * pixelsPerMm + 'px';
       const canvas = await html2canvas(page, {
         backgroundColor: '#ffffff',
-        scale: 2.5,
+        scale: 1.8,
         logging: false,
       });
       const ratio = Math.min(contentWidth / canvas.width, contentHeight / canvas.height);
       const width = canvas.width * ratio;
       if (renderedPages++) pdf.addPage();
-      pdf.addImage(canvas, 'PNG', (pageWidth - width) / 2, verticalMargin, width, canvas.height * ratio);
+      // Nén bằng trình duyệt để tránh mã hóa PNG lại bằng JavaScript.
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG',
+        (pageWidth - width) / 2, verticalMargin, width, canvas.height * ratio);
       canvas.width = 0;
       canvas.height = 0;
       content.replaceChildren();
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
     };
 
-    let block = document.createElement('div');
+    let block = renderDocument.createElement('div');
     block.style.display = 'flow-root';
     for (const element of Array.from(source.children)) {
       if (element.hasAttribute('data-new-page')) await renderPage();
@@ -116,14 +130,14 @@ export async function downloadExamPdf(questions: SelectedQuestionItem[], config:
         await renderPage();
         content.append(block);
       }
-      block = document.createElement('div');
+      block = renderDocument.createElement('div');
       block.style.display = 'flow-root';
     }
     if (block.childElementCount) content.append(block);
     await renderPage();
     pdf.save('De_Thi_' + config.subject + '_Ma_' + config.examCode + '.pdf');
   } finally {
-    staging.remove();
+    frame.remove();
     imageUrls.forEach(url => URL.revokeObjectURL(url));
   }
 }
