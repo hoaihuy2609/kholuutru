@@ -15,6 +15,7 @@ import {
   FileCode, Download
 } from 'lucide-react';
 import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
+import { MAX_QUESTION_IMAGE_WIDTH, MIN_QUESTION_IMAGE_WIDTH, normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { renderTikzToSvg, uploadQuestionImageToTelegram, uploadSvgToTelegram } from "../src/services/tikzService";
 
 // ─────────────────────────────────────────────────────────────
@@ -40,6 +41,7 @@ interface Question {
   imageTelegramFileId?: string; // Telegram file_id
   imageFile?: File;        // Ảnh cục bộ chưa lưu
   imageLayout?: 'auto' | 'right' | 'bottom'; // Bố cục ảnh
+  imageWidth?: number;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -157,6 +159,7 @@ const normalizeQuestion = (q: any): Question => {
     imageUrl: q.image_url || q.imageUrl || '',
     imageTelegramFileId: q.image_telegram_file_id || q.imageTelegramFileId || '',
     imageLayout: q.image_layout || q.imageLayout || 'auto',
+    imageWidth: normalizeQuestionImageWidth(q.image_width ?? q.imageWidth),
   };
 };
 
@@ -173,6 +176,7 @@ function serializeQuestion(q: Question, questionNo: string) {
     image_url:      q.imageUrl || '',
     image_telegram_file_id: q.imageTelegramFileId || '',
     image_layout:   q.imageLayout || 'auto',
+    image_width:    q.imageWidth,
     // Tự luận: lưu cả solution và steps tương thích
     steps:         q.type === 'tu_luan'    ? (q.solution ? [{ title: '', text: q.solution, formula: '', formula2: '' }] : q.steps) : [],
     // Đúng/sai: lưu statements
@@ -559,6 +563,7 @@ export default function SolutionEditor({
     || (CLOUDFLARE_PROXY_URL && activeQuestion.imageTelegramFileId
       ? CLOUDFLARE_PROXY_URL + '/getFile/' + encodeURIComponent(activeQuestion.imageTelegramFileId) : '');
   const hasIllustration = !!(activeQuestion.imageSvg || imageUrl);
+  const illustrationWidth = activeQuestion.imageWidth === undefined ? undefined : { width: activeQuestion.imageWidth + '%' };
   const questionNumber = (question: Question, index: number) => {
     const automatic = 'Câu ' + ((studyDefaults?.firstQuestionNumber ?? 1) + index);
     return studyDefaults && !blog?.id ? automatic : question.questionNo || automatic;
@@ -1327,7 +1332,7 @@ export default function SolutionEditor({
                           disabled={illustrationBusy}
                           onClick={() => {
                             setTikzError(null);
-                            updateQuestion({ imageFile: undefined, imageUrl: '', imageSvg: '', imageTelegramFileId: '', tikzCode: '' });
+                            updateQuestion({ imageFile: undefined, imageUrl: '', imageSvg: '', imageTelegramFileId: '', tikzCode: '', imageWidth: undefined });
                           }}
                           className="ml-2 text-[11px] text-rose-500 hover:underline"
                         >
@@ -1336,6 +1341,33 @@ export default function SolutionEditor({
                       </div>
                     )}
                   </div>
+
+                  {hasIllustration && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-stone-200 pt-2.5 text-xs">
+                      <label className="flex min-w-0 flex-[1_1_13rem] flex-wrap items-center gap-2 font-medium text-stone-700">
+                        Kích thước ảnh
+                        <input
+                          type="range"
+                          min={MIN_QUESTION_IMAGE_WIDTH}
+                          max={MAX_QUESTION_IMAGE_WIDTH}
+                          value={activeQuestion.imageWidth ?? MAX_QUESTION_IMAGE_WIDTH}
+                          aria-valuetext={activeQuestion.imageWidth === undefined ? 'Tự động' : activeQuestion.imageWidth + '%'}
+                          disabled={illustrationBusy}
+                          onChange={event => updateQ('imageWidth', event.currentTarget.valueAsNumber)}
+                          className="min-w-24 flex-1 accent-amber-800"
+                        />
+                      </label>
+                      <span className="w-10 text-right tabular-nums text-stone-700">
+                        {activeQuestion.imageWidth === undefined ? '—' : activeQuestion.imageWidth + '%'}
+                      </span>
+                      <button type="button"
+                        disabled={illustrationBusy || activeQuestion.imageWidth === undefined}
+                        onClick={() => updateQ('imageWidth', undefined)}
+                        className="rounded-md border border-stone-200 bg-white px-2 py-1 text-stone-700 hover:bg-amber-50 disabled:opacity-50">
+                        Về tự động
+                      </button>
+                    </div>
+                  )}
 
                   {tikzError && (
                     <div className="flex items-start gap-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
@@ -1351,11 +1383,13 @@ export default function SolutionEditor({
                       </div>
                       {activeQuestion.imageSvg ? (
                         <div
-                          className="max-w-full overflow-x-auto flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"
+                          className={'max-w-full overflow-x-auto flex justify-center [&>svg]:max-w-full [&>svg]:h-auto'
+                            + (illustrationWidth ? ' [&>svg]:w-full' : '')}
+                          style={illustrationWidth}
                           dangerouslySetInnerHTML={{ __html: activeQuestion.imageSvg }}
                         />
                       ) : (
-                        <img src={imageUrl} alt="Hình minh họa câu hỏi" className="max-h-60 max-w-full object-contain" />
+                        <img src={imageUrl} alt="Hình minh họa câu hỏi" style={illustrationWidth} className="max-h-60 max-w-full object-contain" />
                       )}
                     </div>
                   )}

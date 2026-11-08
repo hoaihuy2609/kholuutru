@@ -8,6 +8,7 @@ import ChapterStudyList from './ChapterStudyList';
 import { getStudyChapter, isStudyQuestionGroup, isStudyQuestionType, parseStudyQuestionNumber, STUDY_GRADES, studySectionParams, supportsStudyGroups } from '../src/utils/studyLibrary';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
+import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
@@ -66,7 +67,7 @@ type QuestionType = StudyQuestionType;
 
 interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
     'type' | 'choices' | 'correctChoice' | 'statements' | 'solution' | 'steps' | 'solutionSteps'
-    | 'tikzCode' | 'imageSvg' | 'imageUrl' | 'imageTelegramFileId' | 'imageLayout'>> {
+    | 'tikzCode' | 'imageSvg' | 'imageUrl' | 'imageTelegramFileId' | 'imageLayout' | 'imageWidth'>> {
     question_no?: string;
     question_groups?: StudyQuestionGroup[];
     question_text?: string;
@@ -76,6 +77,7 @@ interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
     image_url?: string;
     image_telegram_file_id?: string;
     image_layout?: SelectedQuestionItem['imageLayout'];
+    image_width?: number;
 }
 
 interface CardQuestionData {
@@ -87,6 +89,7 @@ interface CardQuestionData {
     imageUrl?: string;
     imageTelegramFileId?: string;
     imageLayout?: SelectedQuestionItem['imageLayout'];
+    imageWidth?: number;
 }
 
 function parsePhysicsSolution(content: string): { type: 'physics_solution'; data: StoredQuestion & { questions?: StoredQuestion[] } } | null {
@@ -115,6 +118,7 @@ function toCardQuestion(question?: StoredQuestion): CardQuestionData | null {
         imageUrl: question.image_url || question.imageUrl || '',
         imageTelegramFileId: question.image_telegram_file_id || question.imageTelegramFileId || '',
         imageLayout: question.image_layout || question.imageLayout || 'auto',
+        imageWidth: normalizeQuestionImageWidth(question.image_width ?? question.imageWidth),
     };
 }
 
@@ -188,6 +192,7 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
     const parts = hasImage ? text.split(/\[image\]/i) : [text];
     const inlineImage = parts.length > 1;
     const sideImage = hasImage && !inlineImage && !!(text || formula) && question?.imageLayout !== 'bottom';
+    const imageWidth = question?.imageWidth === undefined ? undefined : { width: question.imageWidth + '%' };
     const metadata = [
         blog.grade ? 'Lớp ' + blog.grade : 'Chung',
         isAdmin && !blog.is_published ? 'Nháp' : '',
@@ -197,10 +202,13 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
             + (sideImage ? '[@container_(min-width:26rem)]:w-[38%] [@container_(min-width:26rem)]:shrink-0' : '')}>
             {question?.imageSvg ? (
                 <div className={'max-w-full [&>svg]:block [&>svg]:h-auto [&>svg]:max-w-full '
-                    + (expanded ? '[&>svg]:max-h-48' : '[&>svg]:max-h-32 sm:[&>svg]:max-h-40')}
+                    + (expanded ? '[&>svg]:max-h-48' : '[&>svg]:max-h-32 sm:[&>svg]:max-h-40')
+                    + (imageWidth ? ' [&>svg]:w-full' : '')}
+                    style={imageWidth}
                     dangerouslySetInnerHTML={{ __html: question.imageSvg }} />
             ) : (
                 <img src={imageSrc} alt="Hình vẽ minh họa"
+                    style={imageWidth}
                     className={'max-w-full object-contain ' + (expanded ? 'max-h-48' : 'max-h-32 sm:max-h-40')} />
             )}
         </figure>
@@ -492,6 +500,7 @@ const BlogList: React.FC<BlogListProps> = ({
                     imageUrl: card?.imageUrl,
                     imageTelegramFileId: card?.imageTelegramFileId,
                     imageLayout: card?.imageLayout,
+                    imageWidth: card?.imageWidth,
                 });
             });
         }

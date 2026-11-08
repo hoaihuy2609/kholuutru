@@ -3,6 +3,7 @@
 import renderMathInElement from 'katex/contrib/auto-render';
 import katexStyles from 'katex/dist/katex.min.css?inline';
 import { CLOUDFLARE_PROXY_URL } from '../lib/telegram';
+import { normalizeQuestionImageWidth } from '../utils/questionImage';
 
 export interface ExamStyleConfig {
   // 1. Mẫu giao diện & Bảng màu LaTeX
@@ -106,6 +107,7 @@ export interface SelectedQuestionItem {
   imageUrl?: string;
   imageTelegramFileId?: string;
   imageLayout?: 'auto' | 'right' | 'bottom';
+  imageWidth?: number;
 }
 
 /**
@@ -443,16 +445,13 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
   const primaryColor = config.isCustomColor ? config.customColor : config.themeColor;
 
   const renderQuestionImageHtml = (q: SelectedQuestionItem) => {
-    if (!q.imageSvg && !q.imageUrl && !q.imageTelegramFileId) return '';
-    let inner = '';
-    if (q.imageSvg) {
-      inner = `<img src="data:image/svg+xml,${encodeURIComponent(q.imageSvg)}" alt="Hình minh họa" style="max-width: 100%; height: auto;" />`;
-    } else {
-      const imageUrl = q.imageUrl || (CLOUDFLARE_PROXY_URL && q.imageTelegramFileId
+    const imageUrl = q.imageSvg ? 'data:image/svg+xml,' + encodeURIComponent(q.imageSvg)
+      : q.imageUrl || (CLOUDFLARE_PROXY_URL && q.imageTelegramFileId
         ? CLOUDFLARE_PROXY_URL + '/getFile/' + encodeURIComponent(q.imageTelegramFileId) : '');
-      if (imageUrl) inner = `<img src="${escapeHtml(imageUrl)}" alt="Hình minh họa" style="max-width: 100%; height: auto;" />`;
-    }
-    return inner ? `<div style="display: flex; justify-content: center; align-items: center; background: transparent;">${inner}</div>` : '';
+    if (!imageUrl) return '';
+    const width = normalizeQuestionImageWidth(q.imageWidth);
+    const widthStyle = width === undefined ? '' : ` width: ${width}%;`;
+    return `<div style="display: flex; justify-content: center; align-items: center; background: transparent;"><img src="${escapeHtml(imageUrl)}" alt="Hình minh họa" style="max-width: 100%; height: auto;${widthStyle}" /></div>`;
   };
 
   const renderQuestionHeaderPdf = (q: SelectedQuestionItem, qNum: number) => {

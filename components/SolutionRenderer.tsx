@@ -11,6 +11,7 @@ import katex from "katex";
 import "katex/dist/katex.min.css";
 import { SolutionStep as Step, SolutionStatement as Statement } from '../types';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
+import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
 
 interface Question {
   question_no: string;
@@ -28,25 +29,33 @@ interface Question {
   image_url?: string;
   image_telegram_file_id?: string;
   image_layout?: 'auto' | 'right' | 'bottom';
+  image_width?: number;
   tikzCode?: string;
   imageSvg?: string;
   imageUrl?: string;
   imageTelegramFileId?: string;
   imageLayout?: 'auto' | 'right' | 'bottom';
+  imageWidth?: number;
 }
 
-interface PhysicsSolutionData {
+interface PhysicsSolutionData extends Partial<Question> {
   questions?: Question[];
-  // root-level backward compat
-  question_no?: string;
-  question_text?: string;
-  question_latex?: string;
-  steps?: Step[];
 }
 
 // ─────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────
+
+function normalizeIllustration(question: Partial<Question>) {
+  return {
+    tikz_code: question.tikz_code || question.tikzCode || '',
+    image_svg: question.image_svg || question.imageSvg || '',
+    image_url: question.image_url || question.imageUrl || '',
+    image_telegram_file_id: question.image_telegram_file_id || question.imageTelegramFileId || '',
+    image_layout: question.image_layout || question.imageLayout || 'auto' as const,
+    image_width: normalizeQuestionImageWidth(question.image_width ?? question.imageWidth),
+  };
+}
 
 // Parse blog.content (JSON string) → danh sách Question đã normalize
 function parseContent(content: string): Question[] | null {
@@ -70,11 +79,7 @@ function parseContent(content: string): Question[] | null {
         correctChoice:  q.correctChoice  || '',
         solutionSteps:  q.solutionSteps  || [],
         solution:       q.solution       || "",
-        tikz_code:      q.tikz_code || q.tikzCode || "",
-        image_svg:      q.image_svg || q.imageSvg || "",
-        image_url:      q.image_url || q.imageUrl || "",
-        image_telegram_file_id: q.image_telegram_file_id || q.imageTelegramFileId || "",
-        image_layout:   q.image_layout || q.imageLayout || "auto",
+        ...normalizeIllustration(q),
       }));
     } else {
       // Backward compat: câu duy nhất ở root-level, không có `type`
@@ -85,7 +90,8 @@ function parseContent(content: string): Question[] | null {
         type:           'tu_luan',
         steps:       data.steps || [],
         statements:  [],
-        solution:    (data as any).solution || "",
+        solution:    data.solution || "",
+        ...normalizeIllustration(data),
       }];
     }
 
@@ -404,17 +410,19 @@ function QuestionHeader({ question }: { question: Question }) {
   const afterImage = parts.slice(1).join('[image]');
   const hasText = !!(question.question_text || question.question_latex);
   const sideImage = hasImage && hasText && !inlineImage && question.image_layout !== 'bottom';
+  const imageWidth = question.image_width === undefined ? undefined : { width: question.image_width + '%' };
   const typeLabel = question.type === 'dung_sai' ? 'Đúng / Sai' : question.type === 'trac_nghiem' ? 'Trắc nghiệm' : 'Trả lời ngắn';
   const image = hasImage && (
     <figure className={'mx-auto flex w-full min-w-0 max-w-sm justify-center '
       + (sideImage ? '[@container_(min-width:40rem)]:w-[38%] [@container_(min-width:40rem)]:shrink-0' : '')}>
       {question.image_svg ? (
-        <div className="max-w-full [&>svg]:block [&>svg]:h-auto [&>svg]:max-w-full"
+        <div className={'max-w-full [&>svg]:block [&>svg]:h-auto [&>svg]:max-w-full' + (imageWidth ? ' [&>svg]:w-full' : '')}
+          style={imageWidth}
           dangerouslySetInnerHTML={{ __html: question.image_svg }} />
       ) : (
         <img
           src={question.image_url || CLOUDFLARE_PROXY_URL + '/getFile/' + question.image_telegram_file_id}
-          alt="Sơ đồ câu hỏi" className="h-auto max-w-full"
+          alt="Sơ đồ câu hỏi" className="h-auto max-w-full" style={imageWidth}
         />
       )}
     </figure>
