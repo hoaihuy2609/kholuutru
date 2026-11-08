@@ -35,5 +35,9 @@ export function isStudyQuestionType(value?: string | null): value is StudyQuesti
 }
 
 export function studySectionParams(section: StudySection) {
-  return { folder: section.chapterId, type: section.questionType };
+  return {
+    folder: section.chapterId,
+    type: section.questionType,
+    ...(section.lessonId ? { lesson: section.lessonId } : {}),
+  };
 }

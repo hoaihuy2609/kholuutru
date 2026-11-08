@@ -700,6 +700,8 @@ export const useCloudStorage = () => {
         submitQuestionVote: notificationService.submitQuestionVote,
         getQuestionVotes: notificationService.getQuestionVotes,
         getBlogs: blogService.getBlogs,
+        getStudyLibrary: blogService.getStudyLibrary,
+        saveStudyLesson: blogService.saveStudyLesson,
         saveBlog: blogService.saveBlog,
         deleteBlog: blogService.deleteBlog,
         syncBlogs: blogService.syncBlogs,

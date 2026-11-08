@@ -1,10 +1,17 @@
 import { supabase } from '../lib/supabase';
-import { dbGet, dbSet } from '../lib/db';
+import { dbGet, dbSet, dbUpdate } from '../lib/db';
 import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
 import { xorObfuscate, xorDeobfuscate } from '../lib/crypto';
-import { BlogPost } from '../../types';
+import { BlogPost, StudyLesson, StudyLibrary, StudySection } from '../../types';
+import { getStudyChapter, isStudyQuestionType } from '../utils/studyLibrary';
 
 const BLOG_LOCAL_KEY = 'physivault_blogs_local';
+const BLOG_READER_KEY = 'physivault_blogs_reader';
+type BlogRecord = BlogPost | StudyLesson;
+
+const isStudyLesson = (record: BlogRecord): record is StudyLesson =>
+    'kind' in record && record.kind === 'study_lesson';
+const isBlogPost = (record: BlogRecord): record is BlogPost => !isStudyLesson(record);
 
 // ── Cloudflare Worker URL (dùng chung Worker với vault-index) ──
 const VAULT_WORKER_URL = import.meta.env.VITE_VAULT_WORKER_URL || '';
@@ -49,95 +56,146 @@ async function purgeBlogCache(): Promise<void> {
     } catch { /* purge lỗi không ảnh hưởng luồng chính */ }
 }
 
-export const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> => {
+const getBlogRecords = async (isAdmin: boolean): Promise<BlogRecord[]> => {
+    const cacheKey = isAdmin ? BLOG_LOCAL_KEY : BLOG_READER_KEY;
+    const getCached = async (): Promise<BlogRecord[]> => {
+        const cached: BlogRecord[] | undefined = await dbGet(cacheKey);
+        if (cached || isAdmin) return cached ?? [];
+        const oldCache: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
+        return oldCache.filter(record => isBlogPost(record) && record.is_published);
+    };
     try {
-        if (isAdmin) {
-            const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-            if (local.length > 0) return local;
-        }
+        const cached = await getCached();
+        const lastFetch = Number(localStorage.getItem('pv_blog_last_fetch') || '0');
+        if (cached.length && (isAdmin || Date.now() - lastFetch < 15 * 60 * 1000)) return cached;
 
-        // ✅ PERF: Cache 15 phút — học sinh không spam Supabase mỗi lần vào trang Blog
-        if (!isAdmin) {
-            const lastBlogFetch = parseInt(localStorage.getItem('pv_blog_last_fetch') || '0', 10);
-            if (Date.now() - lastBlogFetch < 15 * 60 * 1000) {
-                const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-                if (local.length > 0) return local.filter(b => b.is_published);
-            }
-        }
-
-        // Ưu tiên: Cloudflare Worker Cache (300s TTL) → Supabase fallback
         const fileId = await getBlogIndexFileId();
-        if (!fileId) {
-            const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-            return isAdmin ? local : local.filter(b => b.is_published);
+        if (!fileId) return cached;
+
+        const records = await fetchBlogRecords(fileId);
+        if (isAdmin) {
+            // A local edit from another tab can land while the remote index loads.
+            let current = records;
+            await dbUpdate<BlogRecord[]>(cacheKey, local => {
+                current = local?.length ? local : records;
+                return current;
+            });
+            return current;
         }
-
-        const arrayBuf = await fetchViaCloudflareProxy(fileId);
-        const str = new TextDecoder().decode(arrayBuf);
-        const firstChar = str.charCodeAt(0);
-        const blogs: BlogPost[] = (firstChar === 91 || firstChar === 123) ? JSON.parse(str) : JSON.parse(xorDeobfuscate(str));
-
-        await dbSet(BLOG_LOCAL_KEY, blogs);
+        await dbSet(cacheKey, records);
         localStorage.setItem('pv_blog_last_fetch', String(Date.now()));
-        return isAdmin ? blogs : blogs.filter(b => b.is_published);
-    } catch (e) {
-        console.warn('[Blog] Fetch thất bại, dùng cache local:', e);
-        const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-        return isAdmin ? local : local.filter(b => b.is_published);
+        return records;
+    } catch (error) {
+        console.warn('[Blog] Fetch thất bại, dùng cache local:', error);
+        return getCached();
     }
 };
 
+async function fetchBlogRecords(fileId: string): Promise<BlogRecord[]> {
+    const buffer = await fetchViaCloudflareProxy(fileId);
+    const text = new TextDecoder().decode(buffer);
+    const firstChar = text.charCodeAt(0);
+    return (firstChar === 91 || firstChar === 123) ? JSON.parse(text) : JSON.parse(xorDeobfuscate(text));
+}
+
+export const getStudyLibrary = async (isAdmin: boolean): Promise<StudyLibrary> => {
+    const records = await getBlogRecords(isAdmin);
+    return {
+        blogs: records.filter(isBlogPost).filter(blog => isAdmin || blog.is_published),
+        lessons: records.filter(isStudyLesson),
+    };
+};
+
+export const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> =>
+    (await getStudyLibrary(isAdmin)).blogs;
 
 export const saveBlog = async (blog: Partial<BlogPost>): Promise<BlogPost | null> => {
     try {
-        const localBlogs: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-        let saved: BlogPost;
+        let saved: BlogPost | null = null;
+        await dbUpdate<BlogRecord[]>(BLOG_LOCAL_KEY, (records = []) => {
+            const section = blog.studySection;
+            if (section?.lessonId && !records.some(record => isStudyLesson(record)
+                && record.id === section.lessonId && record.studySection.chapterId === section.chapterId
+                && record.studySection.questionType === section.questionType)) return records;
 
-        if (blog.id) {
-            const idx = localBlogs.findIndex(b => b.id === blog.id);
-            if (idx === -1) return null;
-            saved = { ...localBlogs[idx], ...blog, updated_at: new Date().toISOString() };
-            localBlogs[idx] = saved;
-        } else {
+            const now = new Date().toISOString();
+            if (blog.id) {
+                return records.map(record => {
+                    if (!isBlogPost(record) || record.id !== blog.id) return record;
+                    saved = { ...record, ...blog, updated_at: now };
+                    return saved;
+                });
+            }
             saved = {
-                id: crypto.randomUUID ? crypto.randomUUID() : `blog_${Date.now()}`,
+                id: crypto.randomUUID ? crypto.randomUUID() : 'blog_' + Date.now(),
                 title: blog.title || '', summary: blog.summary || '', content: blog.content || '',
                 cover_image: blog.cover_image || '', category: blog.category || '',
                 tags: blog.tags || [], is_published: blog.is_published || false,
                 grade: blog.grade ?? 0, level: blog.level ?? 0,
-                ...(blog.studySection ? { studySection: blog.studySection } : {}),
-                created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+                ...(section ? { studySection: section } : {}),
+                created_at: now, updated_at: now,
             };
-            localBlogs.unshift(saved);
-        }
-
-        await dbSet(BLOG_LOCAL_KEY, localBlogs);
+            return [saved, ...records];
+        });
         return saved;
-    } catch (e) { console.error('[Blog] Lỗi saveBlog:', e); return null; }
+    } catch (error) {
+        console.error('[Blog] Lỗi saveBlog:', error);
+        return null;
+    }
+};
+
+export const saveStudyLesson = async (section: StudySection, title: string, id?: string): Promise<StudyLesson | null> => {
+    const chapter = getStudyChapter(section.chapterId);
+    const name = title.trim();
+    if (!chapter || !name || !isStudyQuestionType(section.questionType)) return null;
+    try {
+        let saved: StudyLesson | null = null;
+        await dbUpdate<BlogRecord[]>(BLOG_LOCAL_KEY, (records = []) => {
+            if (id) {
+                return records.map(record => {
+                    if (!isStudyLesson(record) || record.id !== id || record.studySection.chapterId !== chapter.id
+                        || record.studySection.questionType !== section.questionType) return record;
+                    saved = { ...record, title: name };
+                    return saved;
+                });
+            }
+            saved = {
+                kind: 'study_lesson', id: crypto.randomUUID(), title: name, grade: chapter.grade,
+                studySection: { chapterId: chapter.id, questionType: section.questionType }, is_published: false,
+            };
+            return [...records, saved];
+        });
+        return saved;
+    } catch (error) {
+        console.error('[Blog] Lỗi lưu tên bài:', error);
+        return null;
+    }
 };
 
 export const deleteBlog = async (id: string): Promise<boolean> => {
     try {
-        let localBlogs: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-        localBlogs = localBlogs.filter(b => b.id !== id);
-        await dbSet(BLOG_LOCAL_KEY, localBlogs);
+        await dbUpdate<BlogRecord[]>(BLOG_LOCAL_KEY, (records = []) =>
+            records.filter(record => isStudyLesson(record) || record.id !== id));
         return true;
-    } catch (e) { console.error('[Blog] Lỗi deleteBlog:', e); return false; }
+    } catch (error) {
+        console.error('[Blog] Lỗi deleteBlog:', error);
+        return false;
+    }
 };
 
-export const syncBlogs = async (onProgress?: (pct: number) => void): Promise<{ success: boolean; fileId?: string; blogCount: number }> => {
+const uploadBlogRecords = async (onProgress?: (pct: number) => void): Promise<{ success: boolean; fileId?: string; blogCount: number }> => {
     try {
         if (onProgress) onProgress(5);
-        const localBlogs: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-
-        const jsonStr = xorObfuscate(JSON.stringify(localBlogs));
+        const records: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
+        const blogCount = records.filter(isBlogPost).length;
+        const jsonStr = xorObfuscate(JSON.stringify(records));
         if (onProgress) onProgress(20);
 
         const blob = new Blob([jsonStr], { type: 'application/json' });
         const formData = new FormData();
         formData.append('chat_id', TELEGRAM_CHAT_ID);
         formData.append('document', blob, `blog_vault_v1.json`);
-        formData.append('caption', `[BLOG-V1] ${localBlogs.length} bài viết | ${new Date().toLocaleString('vi-VN')}`);
+        formData.append('caption', `[BLOG-V1] ${blogCount} bài viết | ${new Date().toLocaleString('vi-VN')}`);
 
         const uploadRes = await fetch(`${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`, {
             method: 'POST', headers: { 'Authorization': ADMIN_AUTH_HEADER }, body: formData
@@ -148,10 +206,15 @@ export const syncBlogs = async (onProgress?: (pct: number) => void): Promise<{ s
 
         const { error: upsertErr } = await supabase.rpc('admin_upsert_blog_index', {
             p_telegram_file_id: newFileId,
-            p_blog_count: localBlogs.length,
+            p_blog_count: blogCount,
         });
         if (upsertErr) throw upsertErr;
         if (onProgress) onProgress(95);
+        // Keep this browser's reader preview in step with a successful publication.
+        try {
+            await dbSet(BLOG_READER_KEY, records);
+            localStorage.setItem('pv_blog_last_fetch', String(Date.now()));
+        } catch { /* The remote index has already been saved. */ }
 
         // Purge Cloudflare Worker cache ngay sau khi đăng bài mới
         purgeBlogCache().catch(() => {});
@@ -159,11 +222,20 @@ export const syncBlogs = async (onProgress?: (pct: number) => void): Promise<{ s
         try { fetchViaCloudflareProxy(newFileId).catch(() => { }); } catch { }
 
         if (onProgress) onProgress(100);
-        return { success: true, fileId: newFileId, blogCount: localBlogs.length };
+        return { success: true, fileId: newFileId, blogCount };
     } catch (e: any) {
         console.error('[Blog Sync] Lỗi:', e);
         return { success: false, blogCount: 0 };
     }
+};
+
+let pendingBlogSync: ReturnType<typeof uploadBlogRecords> | undefined;
+
+export const syncBlogs = (onProgress?: (pct: number) => void) => {
+    const sync = (pendingBlogSync ?? Promise.resolve()).then(() => uploadBlogRecords(onProgress));
+    pendingBlogSync = sync;
+    void sync.then(() => { if (pendingBlogSync === sync) pendingBlogSync = undefined; });
+    return sync;
 };
 
 export const fetchBlogsForEditing = async (): Promise<{ blogs: BlogPost[]; loaded: boolean }> => {
@@ -171,19 +243,15 @@ export const fetchBlogsForEditing = async (): Promise<{ blogs: BlogPost[]; loade
         // Ưu tiên: Cloudflare Worker Cache (300s TTL) → Supabase fallback
         const fileId = await getBlogIndexFileId();
         if (!fileId) {
-            const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-            return { blogs: local, loaded: false };
+            const local: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
+            return { blogs: local.filter(isBlogPost), loaded: false };
         }
-        const arrayBuf = await fetchViaCloudflareProxy(fileId);
-        const str = new TextDecoder().decode(arrayBuf);
-        const firstChar = str.charCodeAt(0);
-        const blogs: BlogPost[] = (firstChar === 91 || firstChar === 123) ? JSON.parse(str) : JSON.parse(xorDeobfuscate(str));
-
-        await dbSet(BLOG_LOCAL_KEY, blogs);
-        return { blogs, loaded: true };
+        const records = await fetchBlogRecords(fileId);
+        await dbSet(BLOG_LOCAL_KEY, records);
+        return { blogs: records.filter(isBlogPost), loaded: true };
     } catch (e) {
         console.warn('[Blog] fetchBlogsForEditing thất bại, dùng local:', e);
-        const local: BlogPost[] = await dbGet(BLOG_LOCAL_KEY) || [];
-        return { blogs: local, loaded: false };
+        const local: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
+        return { blogs: local.filter(isBlogPost), loaded: false };
     }
 };

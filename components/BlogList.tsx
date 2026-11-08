@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { BlogPost, StudyQuestionType, StudySection } from '../types';
+import { BlogPost, StudyLesson, StudyLibrary, StudyQuestionType, StudySection } from '../types';
 import { BookOpen, Plus, Search, SlidersHorizontal, Image, FileText, Check, Sparkles, ChevronLeft, ChevronDown, Folder, X, RotateCcw } from 'lucide-react';
 import ExamStyleModal from './ExamStyleModal';
 import TreeTableOfContents, { normalizeSearchText } from './TreeTableOfContents';
@@ -417,8 +417,12 @@ interface BlogListProps {
     onReadBlog: (blog: BlogPost) => void;
     onEditBlog?: (blog: BlogPost) => void;
     onCreateBlog?: (section?: StudySection) => void;
-    onBlogsLoaded?: (blogs: BlogPost[]) => void;
-    getBlogs: (isAdmin: boolean) => Promise<BlogPost[]>;
+    studyLessons: StudyLesson[];
+    onSaveLesson?: (section: StudySection, title: string, id?: string) => Promise<StudyLesson | null>;
+    lessonSync?: 'syncing' | 'failed';
+    onRetryLessonSync?: () => void;
+    onLibraryLoaded: (library: StudyLibrary) => void;
+    getStudyLibrary: (isAdmin: boolean) => Promise<StudyLibrary>;
 }
 
 const estimateReadTime = (content: string): number =>
@@ -530,7 +534,10 @@ function FilterGroup({ label, children }: { label: string; children: React.React
     );
 }
 
-const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, onEditBlog, onCreateBlog, onBlogsLoaded, getBlogs }) => {
+const BlogList: React.FC<BlogListProps> = ({
+    isAdmin, studentGrade, onReadBlog, onEditBlog, onCreateBlog, studyLessons,
+    onSaveLesson, lessonSync, onRetryLessonSync, onLibraryLoaded, getStudyLibrary,
+}) => {
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -597,15 +604,23 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     }, [blogs, selectedBlogIds]);
 
     useEffect(() => {
+        let cancelled = false;
         const fetchBlogs = async () => {
             setLoading(true);
-            const data = await getBlogs(isAdmin);
-            setBlogs(data);
-            if (onBlogsLoaded) onBlogsLoaded(data);
-            setLoading(false);
+            try {
+                const data = await getStudyLibrary(isAdmin);
+                if (cancelled) return;
+                setBlogs(data.blogs);
+                onLibraryLoaded(data);
+            } catch (error) {
+                console.error('[Blog] Không tải được thư viện:', error);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
         };
-        fetchBlogs();
-    }, [isAdmin]);
+        void fetchBlogs();
+        return () => { cancelled = true; };
+    }, [getStudyLibrary, isAdmin, onLibraryLoaded]);
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchQuery), 200);
@@ -625,19 +640,29 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     const selectedFolderId = activeChapter?.id ?? (gradeFilter ? 'grade-' + gradeFilter : undefined);
     const type = searchParams.get('type');
     const selectedType = activeChapter && isStudyQuestionType(type) ? type : undefined;
+    const selectedLessonId = selectedType ? searchParams.get('lesson') ?? undefined : undefined;
+    const chapterLessons = studyLessons.filter(lesson => lesson.studySection.chapterId === activeChapter?.id);
 
     const { chapterCounts, gradeCounts } = useMemo(() => {
         const chapterCounts = new Map<string, number>();
         const gradeCounts = new Map<number, number>();
+        const lessonsById = new Map(studyLessons.map(lesson => [lesson.id, lesson.studySection]));
+        for (const lesson of studyLessons) {
+            const { chapterId } = lesson.studySection;
+            chapterCounts.set(chapterId, (chapterCounts.get(chapterId) ?? 0) + 1);
+        }
         for (const blog of visibleBlogs) {
             gradeCounts.set(blog.grade, (gradeCounts.get(blog.grade) ?? 0) + 1);
             const section = blog.studySection;
             if (section && blog.category !== 'exam_paper' && isStudyQuestionType(section.questionType)) {
-                chapterCounts.set(section.chapterId, (chapterCounts.get(section.chapterId) ?? 0) + 1);
+                const parent = section.lessonId ? lessonsById.get(section.lessonId) : undefined;
+                if (parent?.chapterId !== section.chapterId || parent.questionType !== section.questionType) {
+                    chapterCounts.set(section.chapterId, (chapterCounts.get(section.chapterId) ?? 0) + 1);
+                }
             }
         }
         return { chapterCounts, gradeCounts };
-    }, [visibleBlogs]);
+    }, [studyLessons, visibleBlogs]);
     const chapterBlogs = useMemo(() => activeChapter ? visibleBlogs.filter(blog =>
         blog.category !== 'exam_paper' && blog.studySection?.chapterId === activeChapter.id
         && isStudyQuestionType(blog.studySection.questionType)
@@ -817,9 +842,15 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                     </div>
 
                     {activeChapter ? (
-                        <ChapterStudyList chapter={activeChapter} selectedType={selectedType} blogs={chapterBlogs} loading={loading}
+                        <ChapterStudyList key={activeChapter.id + ':' + (selectedType ?? '')}
+                            chapter={activeChapter} selectedType={selectedType} selectedLessonId={selectedLessonId}
+                            blogs={chapterBlogs} lessons={chapterLessons} loading={loading}
                             onSelectType={questionType => setSearchParams(studySectionParams({ chapterId: activeChapter.id, questionType }))}
-                            onRead={onReadBlog} onCreate={isAdmin ? onCreateBlog : undefined} onEdit={isAdmin ? onEditBlog : undefined} />
+                            onSelectLesson={lessonId => {
+                                if (selectedType) setSearchParams(studySectionParams({ chapterId: activeChapter.id, questionType: selectedType, lessonId }));
+                            }}
+                            onRead={onReadBlog} onCreate={isAdmin ? onCreateBlog : undefined} onEdit={isAdmin ? onEditBlog : undefined}
+                            onSaveLesson={onSaveLesson} lessonSync={lessonSync} onRetryLessonSync={onRetryLessonSync} />
                     ) : (<>
                     <section aria-labelledby="question-filter-heading" className="space-y-2 rounded-xl border border-stone-200 bg-white p-2.5 shadow-sm sm:px-3">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">

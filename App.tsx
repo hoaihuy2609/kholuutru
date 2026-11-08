@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useCallback, Suspense, useState, useRef } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate, useLocation, useSearchParams } from 'react-router-dom';
-import { GradeLevel, Lesson, Exam, BlogPost, StudySection } from './types';
+import { GradeLevel, Lesson, Exam, BlogPost, StudyLesson, StudySection } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Toast from './components/Toast';
@@ -395,6 +395,9 @@ function ExamRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const [, setSearchParams] = useSearchParams();
   const [createSection, setCreateSection] = useState<StudySection>();
+  const [studyLessons, setStudyLessons] = useState<StudyLesson[]>([]);
+  const [lessonSync, setLessonSync] = useState<'syncing' | 'failed'>();
+  const lessonSyncVersion = useRef(0);
   const isAdmin = useUIStore(state => state.isAdmin);
   const previewMode = useUIStore(state => state.previewMode);
   const effectiveIsAdmin = isAdmin && !previewMode;
@@ -413,6 +416,27 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     setIsCreatingBlog: state.setIsCreatingBlog,
     setAllBlogs: state.setAllBlogs,
   })));
+  const syncStudyLessons = async () => {
+    const version = ++lessonSyncVersion.current;
+    setLessonSync('syncing');
+    const result = await cloud.syncBlogs();
+    if (version === lessonSyncVersion.current) setLessonSync(result.success ? undefined : 'failed');
+  };
+
+  const saveLesson = async (section: StudySection, title: string, id?: string) => {
+    const saved = await cloud.saveStudyLesson(section, title, id);
+    if (saved) {
+      setStudyLessons(previous => [...previous.filter(lesson => lesson.id !== saved.id), saved]);
+      void syncStudyLessons();
+    }
+    return saved;
+  };
+
+  const handleLibraryLoaded = useCallback(({ blogs, lessons }: { blogs: BlogPost[]; lessons: StudyLesson[] }) => {
+    setAllBlogs(blogs);
+    setStudyLessons(lessons);
+  }, [setAllBlogs]);
+
   if ((activeAdminBlog || isCreatingBlog) && effectiveIsAdmin) {
     const back = () => {
       setActiveAdminBlog(null);
@@ -425,7 +449,7 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     };
     return (
       <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-        <AdminBlogEditor blog={activeAdminBlog} initialSection={createSection} saveBlog={cloud.saveBlog} deleteBlog={cloud.deleteBlog}
+        <AdminBlogEditor blog={activeAdminBlog} initialSection={createSection} studyLessons={studyLessons} saveBlog={cloud.saveBlog} deleteBlog={cloud.deleteBlog}
           syncBlogs={cloud.syncBlogs} onBack={back} onSaved={saved} />
       </Suspense></ErrorBoundary>
     );
@@ -435,7 +459,8 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     const related = allBlogs.filter(blog => {
       if (blog.id === activeBlog.id || !blog.is_published) return false;
       if (section) {
-        return blog.studySection?.chapterId === section.chapterId && blog.studySection.questionType === section.questionType;
+        return blog.studySection?.chapterId === section.chapterId && blog.studySection.questionType === section.questionType
+          && blog.studySection.lessonId === section.lessonId;
       }
       return blog.category === activeBlog.category || (blog.tags || []).some(tag => (activeBlog.tags || []).includes(tag));
     }).slice(0, 4);
@@ -451,7 +476,11 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
         onEditBlog={effectiveIsAdmin ? setActiveAdminBlog : undefined} onCreateBlog={effectiveIsAdmin ? section => {
           setCreateSection(section);
           setIsCreatingBlog(true);
-        } : undefined} onBlogsLoaded={setAllBlogs} getBlogs={cloud.getBlogs} />
+        } : undefined}
+        studyLessons={studyLessons} onSaveLesson={effectiveIsAdmin ? saveLesson : undefined}
+        lessonSync={effectiveIsAdmin ? lessonSync : undefined} onRetryLessonSync={effectiveIsAdmin ? syncStudyLessons : undefined}
+        onLibraryLoaded={handleLibraryLoaded}
+        getStudyLibrary={cloud.getStudyLibrary} />
     </Suspense></ErrorBoundary>
   );
 }

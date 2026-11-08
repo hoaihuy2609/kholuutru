@@ -152,6 +152,21 @@ export type StudyQuestionType = 'trac_nghiem' | 'dung_sai' | 'tu_luan';
 export interface StudySection {
   chapterId: string;
   questionType: StudyQuestionType;
+  lessonId?: string;
+}
+
+export interface StudyLesson {
+  kind: 'study_lesson';
+  id: string;
+  title: string;
+  grade: number;
+  studySection: Omit<StudySection, 'lessonId'>;
+  is_published: false;
+}
+
+export interface StudyLibrary {
+  blogs: BlogPost[];
+  lessons: StudyLesson[];
 }
 
 export interface BlogPost {

@@ -46,6 +46,25 @@ export const dbSet = async (key: string, value: any): Promise<void> => {
     });
 };
 
+export const dbUpdate = async <T>(key: string, update: (current: T | undefined) => T): Promise<void> => {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.get(key);
+        request.onsuccess = () => {
+            try {
+                store.put(update(request.result), key);
+            } catch (error) {
+                reject(error);
+                tx.abort();
+            }
+        };
+        tx.oncomplete = () => resolve();
+        tx.onabort = () => reject(tx.error);
+    });
+};
+
 export const dbSetBatch = async (entries: [string, any][]): Promise<void> => {
     const db = await openDB();
     return new Promise((resolve, reject) => {

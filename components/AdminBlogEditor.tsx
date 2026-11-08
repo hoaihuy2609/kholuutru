@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BlogPost, StudyQuestionType, StudySection } from '../types';
+import { BlogPost, StudyLesson, StudyQuestionType, StudySection } from '../types';
 import { getStudyChapter, isStudyQuestionType, STUDY_CHAPTERS, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import {
     ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
@@ -18,6 +18,7 @@ import ExamPaperEditor from './ExamPaperEditor';
 interface AdminBlogEditorProps {
     blog: BlogPost | null;
     initialSection?: StudySection;
+    studyLessons: StudyLesson[];
     onBack: () => void;
     onSaved: (blog: BlogPost) => void;
     saveBlog: (blog: Partial<BlogPost>) => Promise<BlogPost | null>;
@@ -27,12 +28,16 @@ interface AdminBlogEditorProps {
 
 const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
-const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
+const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, studyLessons, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
     const [editorMode, setEditorMode] = useState<'markdown' | 'solution' | 'exam_paper'>('markdown');
     const placement = blog?.studySection ?? initialSection;
     const [chapterId, setChapterId] = useState(placement?.chapterId ?? '');
     const [studyType, setStudyType] = useState<StudyQuestionType | ''>(placement?.questionType ?? '');
+    const [lessonId, setLessonId] = useState(placement?.lessonId ?? '');
     const chapter = getStudyChapter(chapterId);
+    const lessonOptions = studyLessons.filter(lesson =>
+        lesson.studySection.chapterId === chapterId && lesson.studySection.questionType === studyType);
+    const lesson = lessonOptions.find(option => option.id === lessonId);
     const [pendingSync, setPendingSync] = useState(false); // flag cần sync lên Telegram
     const [isSyncingBlog, setIsSyncingBlog] = useState(false);
 
@@ -105,7 +110,10 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                 showToast('Chọn loại câu để lưu bài vào chương.', 'error');
                 return Promise.resolve(null);
             }
-            return saveBlog({ ...payload, grade: chapter.grade, studySection: { chapterId: chapter.id, questionType: studyType } });
+            return saveBlog({
+                ...payload, grade: chapter.grade,
+                studySection: { chapterId: chapter.id, questionType: studyType, ...(lesson ? { lessonId: lesson.id } : {}) },
+            });
         }
         return saveBlog(blog?.studySection ? { ...payload, studySection: null } : payload);
     };
@@ -311,11 +319,11 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
 
             {/* ═══ CONTENT ═══ */}
             {editorMode !== 'exam_paper' && (
-                <fieldset className="grid gap-3 rounded-xl border border-stone-200 bg-white p-3 sm:grid-cols-2">
+                <fieldset className="grid gap-3 rounded-xl border border-stone-200 bg-white p-3 sm:grid-cols-3">
                     <legend className="px-1 text-sm font-semibold text-stone-800">Vị trí trong Góc Học Tập</legend>
                     <label className="space-y-1 text-sm font-medium text-stone-700">
                         <span>Chương</span>
-                        <select value={chapterId} onChange={event => setChapterId(event.target.value)}
+                        <select value={chapterId} onChange={event => { setChapterId(event.target.value); setLessonId(''); }}
                             className="block w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2">
                             <option value="">Chưa phân vào chương</option>
                             {STUDY_GRADES.map(grade => (
@@ -330,10 +338,22 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                     <label className="space-y-1 text-sm font-medium text-stone-700">
                         <span>Loại câu</span>
                         <select value={chapter ? studyType : ''} disabled={!chapter} required={!!chapter}
-                            onChange={event => setStudyType(isStudyQuestionType(event.target.value) ? event.target.value : '')}
+                            onChange={event => {
+                                setStudyType(isStudyQuestionType(event.target.value) ? event.target.value : '');
+                                setLessonId('');
+                            }}
                             className="block w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 disabled:bg-stone-100">
                             <option value="">Chọn loại câu</option>
                             {STUDY_QUESTION_TYPES.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                    </label>
+                    <label className="space-y-1 text-sm font-medium text-stone-700">
+                        <span>Tên bài</span>
+                        <select value={lesson?.id ?? ''} disabled={lessonOptions.length === 0}
+                            onChange={event => setLessonId(event.target.value)}
+                            className="block w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 disabled:bg-stone-100">
+                            <option value="">Chưa xếp vào tên bài</option>
+                            {lessonOptions.map(option => <option key={option.id} value={option.id}>{option.title}</option>)}
                         </select>
                     </label>
                 </fieldset>
