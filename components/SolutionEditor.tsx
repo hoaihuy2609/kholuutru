@@ -554,46 +554,37 @@ function StatementEditor({
   onUpdate: (si: number, val: Statement) => void;
   onFocus: (fieldId: string, el: any) => void;
 }) {
-  const verdictStyle = {
-    true:  { btn: 'bg-emerald-50 border-emerald-400 text-emerald-700 font-bold', ring: 'ring-2 ring-emerald-200' },
-    false: { btn: 'bg-red-50 border-red-400 text-red-700 font-bold',           ring: 'ring-2 ring-red-200'     },
-    null:  { btn: 'bg-[#F7F6F3] border-[#E9E9E7] text-[#787774]',             ring: '' },
-  };
-  const curStyle = verdictStyle[String(st.verdict) as 'true' | 'false' | 'null'];
-
   return (
-    <div className={`bg-white border rounded-xl overflow-hidden shadow-sm transition-all ${curStyle.ring} ${st.verdict === true ? 'border-emerald-300' : st.verdict === false ? 'border-red-300' : 'border-[#E9E9E7]'}`}>
-      <div className="flex items-center justify-between px-4 py-2.5 bg-[#FCFCFA] border-b border-[#E9E9E7]">
-        <span className="font-bold text-sm text-indigo-700 tracking-wide flex items-center gap-2">
-          <span className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-800">
+    <div className="space-y-2 px-3 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="flex items-center gap-2 text-sm font-semibold text-stone-800">
+          <span className="grid size-6 place-items-center rounded-md bg-amber-50 text-xs font-bold text-amber-900">
             {st.label.toUpperCase()}
           </span>
           Mệnh đề {st.label.toUpperCase()}
         </span>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[#787774] font-semibold">Kết luận:</span>
-          <button
-            type="button"
+        <div className="flex items-center gap-1.5">
+          <button type="button" aria-pressed={st.verdict === true}
             onClick={() => onUpdate(si, { ...st, verdict: st.verdict === true ? null : true })}
-            className={`px-3 py-1 rounded-lg text-xs border transition-all ${st.verdict === true ? verdictStyle.true.btn : 'bg-[#F7F6F3] border-[#E9E9E7] text-[#787774] hover:border-emerald-300 hover:text-emerald-600'}`}
-          >✓ Đúng</button>
-          <button
-            type="button"
+            className={'min-h-8 rounded-md border px-2.5 text-xs font-semibold '
+              + (st.verdict === true ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-stone-200 text-stone-700 hover:bg-emerald-50')}>
+            ✓ Đúng
+          </button>
+          <button type="button" aria-pressed={st.verdict === false}
             onClick={() => onUpdate(si, { ...st, verdict: st.verdict === false ? null : false })}
-            className={`px-3 py-1 rounded-lg text-xs border transition-all ${st.verdict === false ? verdictStyle.false.btn : 'bg-[#F7F6F3] border-[#E9E9E7] text-[#787774] hover:border-red-300 hover:text-red-600'}`}
-          >✗ Sai</button>
+            className={'min-h-8 rounded-md border px-2.5 text-xs font-semibold '
+              + (st.verdict === false ? 'border-red-300 bg-red-50 text-red-800' : 'border-stone-200 text-stone-700 hover:bg-red-50')}>
+            ✗ Sai
+          </button>
         </div>
       </div>
-      <div className="p-3">
-        <AutoResizeTextarea
-          rows={2}
-          className="w-full p-2.5 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm text-gray-800 transition-colors"
-          placeholder={`Nội dung mệnh đề ${st.label.toUpperCase()}... (hỗ trợ công thức $...$)`}
-          value={st.claim}
-          onChange={e => onUpdate(si, { ...st, claim: e.target.value })}
-          onFocus={e => onFocus(`stmt-${si}`, e.target)}
-        />
-      </div>
+      <AutoResizeTextarea rows={2}
+        className="w-full rounded-lg border border-stone-200 px-2.5 py-2 text-sm text-stone-800 outline-none focus:border-amber-600"
+        placeholder={'Nội dung mệnh đề ' + st.label.toUpperCase() + '… (hỗ trợ công thức $…$)'}
+        value={st.claim}
+        onChange={e => onUpdate(si, { ...st, claim: e.target.value })}
+        onFocus={e => onFocus('stmt-' + si, e.target)}
+      />
     </div>
   );
 }
@@ -655,13 +646,14 @@ interface SolutionEditorProps {
   switchToExamPaper?: () => void;
   hideTopBar?: boolean;
   studyPlacement?: React.ReactNode;
+  studyDefaults?: { title: string; firstQuestionNumber: number };
   studyGrade?: number;
   studyQuestionType?: StudyQuestionType;
 }
 
 export default function SolutionEditor({
   blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar,
-  studyPlacement, studyGrade, studyQuestionType
+  studyPlacement, studyDefaults, studyGrade, studyQuestionType
 }: SolutionEditorProps) {
   const splitImportedQuestions = !!saveBlog && !studyGrade;
   const [examName,   setExamName]   = useState("");
@@ -693,6 +685,11 @@ export default function SolutionEditor({
   };
 
   const activeQuestion = questions[activeQIdx] ?? emptyQuestion();
+  const questionNumber = (question: Question, index: number) => {
+    const automatic = 'Câu ' + ((studyDefaults?.firstQuestionNumber ?? 1) + index);
+    return studyDefaults && !blog?.id ? automatic : question.questionNo || automatic;
+  };
+  const activeNumber = questionNumber(activeQuestion, activeQIdx);
   const [renderingTikz, setRenderingTikz] = useState(false);
   const [tikzError, setTikzError] = useState<string | null>(null);
 
@@ -995,7 +992,7 @@ export default function SolutionEditor({
 
   // ── Save ───────────────────────────────────────────────────
   const handleSave = async () => {
-    if (!examName.trim() || questions.some(q => !q.questionNo)) {
+    if (!studyDefaults && (!examName.trim() || questions.some(q => !q.questionNo))) {
       showToast("Vui lòng nhập tên đề và số câu cho tất cả các câu!", "error");
       return;
     }
@@ -1016,8 +1013,8 @@ export default function SolutionEditor({
       }));
 
       // Serialize mỗi câu hỏi tùy theo type
-      const serializedQuestions = processedQuestions.map(q => ({
-        question_no:    q.questionNo,
+      const serializedQuestions = processedQuestions.map((q, index) => ({
+        question_no:    studyDefaults ? questionNumber(q, index) : q.questionNo,
         question_text:  q.qText,
         question_latex: q.qFormula,
         type:           q.type,
@@ -1037,20 +1034,21 @@ export default function SolutionEditor({
         solutionSteps: q.type === 'trac_nghiem' ? (q.solution ? [{ title: '', text: q.solution, formula: '', formula2: '' }] : q.solutionSteps) : [],
       }));
 
+      const savedExamName = studyDefaults ? examName.trim() || blog?.title || studyDefaults.title : examName;
       const solutionData = {
         type: 'physics_solution',
         data: {
-          exam_name: examName,
+          exam_name: savedExamName,
           questions: serializedQuestions,
           // Backward compat: giữ root-level của câu đầu
-          question_no:    questions[0].questionNo,
+          question_no:    serializedQuestions[0].question_no,
           question_text:  questions[0].qText,
           question_latex: questions[0].qFormula,
           steps:          questions[0].type === 'tu_luan' ? questions[0].steps : [],
         }
       };
 
-      const titleStr = studyGrade ? examName.trim() : questions.length === 1
+      const titleStr = studyGrade ? savedExamName.trim() : questions.length === 1
         ? `[Giải chi tiết] ${examName} - ${questions[0].questionNo}`
         : `[Giải chi tiết] ${examName} (${questions.length} câu)`;
 
@@ -1129,6 +1127,13 @@ export default function SolutionEditor({
         ))}
       </div>
     </div>
+  );
+  const importControl = (
+    <button type="button" onClick={() => setShowJsonModal(true)}
+      className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-950 hover:bg-amber-100"
+      title="Nạp đề thi từ JSON, hỗ trợ cả hình vẽ TikZ">
+      <FileCode aria-hidden="true" className="size-4" /> Nhập từ JSON
+    </button>
   );
 
   return (
@@ -1213,26 +1218,29 @@ export default function SolutionEditor({
       )}
 
       {/* ── Main grid ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-12">
 
         {/* ════════ EDITOR ════════ */}
-        <div className="xl:col-span-6 flex flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-5 xl:col-span-7">
 
           {/* Thông tin đề + Tabs câu */}
-          <div className="p-6 rounded-2xl bg-white border border-[#E9E9E7] shadow-sm space-y-5">
-            <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2 text-lg">
-              <BookOpen className="w-5 h-5 text-indigo-500" /> Thông tin đề thi
-            </h3>
-            <div>
+          <div className="space-y-4 rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm sm:p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-stone-900">
+                <BookOpen aria-hidden="true" className="size-4 text-amber-800" /> Soạn câu hỏi
+              </h3>
+              {studyDefaults && importControl}
+            </div>
+            {!studyDefaults && <div>
               <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Tên đề thi / Nguồn</label>
               <input className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm transition-colors"
                 placeholder="VD: THPT QG 2024"
                 value={examName} onChange={e => setExamName(e.target.value)} />
-            </div>
+            </div>}
 
             {/* Tabs */}
-            <div className="pt-2 border-t border-[#E9E9E7]">
-              <div className="flex items-center flex-wrap gap-2 mb-4">
+            <div className="space-y-3 border-t border-stone-100 pt-3">
+              {!studyDefaults && <div className="flex flex-wrap items-center gap-2">
                 {questions.map((q, idx) => (
                   <button key={idx} onClick={() => setActiveQIdx(idx)}
                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeQIdx === idx ? 'bg-indigo-600 text-white shadow-sm' : 'bg-[#F7F6F3] text-[#787774] border border-[#E9E9E7] hover:bg-white'}`}>
@@ -1253,51 +1261,59 @@ export default function SolutionEditor({
                   className="px-3 py-2 rounded-lg text-sm font-semibold border-2 border-dashed border-[#DCDCDA] text-[#787774] hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1">
                   <Plus className="w-4 h-4" /> Thêm câu
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setShowJsonModal(true)}
-                  className="px-3 py-2 rounded-lg text-sm font-semibold border border-[#E9E9E7] bg-white text-[#37352F] hover:bg-[#F7F6F3] hover:border-[#DCDCDA] transition-all flex items-center gap-1.5 shadow-sm"
-                  title="Nạp toàn bộ đề thi từ JSON (hỗ trợ trắc nghiệm, đúng sai, trả lời ngắn và tự động vẽ TikZ)"
-                >
-                  <FileCode className="w-4 h-4 text-indigo-600" /> Nhập từ JSON
-                </button>
-              </div>
+                {importControl}
+              </div>}
 
               {/* Info câu đang active */}
               <div className="space-y-4">
                 {/* Loại câu hỏi — 3 nút */}
-                <div className="flex items-center justify-between p-3 rounded-xl bg-[#F7F6F3] border border-[#E9E9E7]">
-                  <span className="text-sm font-semibold text-[#57564F]">Loại câu hỏi</span>
-                  <div className="flex gap-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                  <span className="text-sm font-semibold text-stone-700">Loại câu hỏi</span>
+                  <div className="flex flex-wrap gap-1.5">
                     {([
-                      { val: 'tu_luan'     as QuestionType, label: 'Trả lời ngắn', bg: '#6B7CDB', ring: '#EEF0FB' },
-                      { val: 'dung_sai'    as QuestionType, label: 'Đúng / Sai',   bg: '#D9730D', ring: '#FFF3E8' },
-                      { val: 'trac_nghiem' as QuestionType, label: 'Trắc nghiệm', bg: '#448361', ring: '#EAF3EE' },
+                      { val: 'tu_luan', label: 'Trả lời ngắn' },
+                      { val: 'dung_sai', label: 'Đúng / Sai' },
+                      { val: 'trac_nghiem', label: 'Trắc nghiệm' },
                     ] as const).map(opt => (
-                      <button key={opt.val}
+                      <button key={opt.val} type="button" aria-pressed={activeQuestion.type === opt.val}
                         onClick={() => updateQ('type', opt.val)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all border"
-                        style={{
-                          background: activeQuestion.type === opt.val ? opt.bg : '#fff',
-                          color:      activeQuestion.type === opt.val ? '#fff' : '#787774',
-                          borderColor: activeQuestion.type === opt.val ? opt.bg : '#E9E9E7',
-                        }}>
+                        className={'min-h-8 rounded-md border px-2.5 text-xs font-semibold transition-colors '
+                          + (activeQuestion.type === opt.val ? 'border-amber-300 bg-amber-100 text-amber-950' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-100')}>
                         {opt.label}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div>
+                {studyDefaults ? (
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="font-semibold text-stone-700">Số câu</span>
+                    {questions.length > 1 ? (
+                      <>
+                        <select aria-label="Câu đang soạn" value={activeQIdx} onChange={e => setActiveQIdx(Number(e.target.value))}
+                          className="rounded-md border border-stone-200 bg-white px-2 py-1 text-sm text-stone-800">
+                          {questions.map((question, index) => <option key={index} value={index}>{questionNumber(question, index)}</option>)}
+                        </select>
+                        <button type="button" onClick={() => removeQuestion(activeQIdx)} aria-label="Xóa câu đang soạn"
+                          className="grid size-8 place-items-center rounded-md text-stone-600 hover:bg-red-50 hover:text-red-700">
+                          <Trash2 aria-hidden="true" className="size-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 font-semibold text-amber-950">{activeNumber}</span>
+                    )}
+                    {!blog?.id && <span className="text-xs text-stone-600">Tự động</span>}
+                  </div>
+                ) : <div>
                   <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Số bài / Số câu</label>
                   <input className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm transition-colors"
                     placeholder="VD: Câu 4"
                     value={activeQuestion.questionNo} onChange={e => updateQ('questionNo', e.target.value)} />
-                </div>
+                </div>}
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Mô tả đề bài (Text)</label>
+                  <label className="mb-1.5 block text-sm font-semibold text-stone-800">Mô tả đề bài</label>
                   <AutoResizeTextarea rows={2}
-                    className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm text-gray-700 transition-colors"
+                    className="w-full rounded-lg border border-stone-200 p-3 text-sm text-stone-800 outline-none focus:border-amber-600"
                     placeholder={activeQuestion.type === 'dung_sai'
                       ? "VD: Trong ống tia điện tử, người ta tạo ra chùm tia electron nhờ điện áp U = 2,70 kV..."
                       : "Một vật dao động điều hòa..."}
@@ -1305,8 +1321,8 @@ export default function SolutionEditor({
                 </div>
 
                 {/* ── Khung vẽ hình TikZ / LaTeX tinh gọn, tối giản ── */}
-                <div className="p-3.5 rounded-xl border border-[#E9E9E7] bg-white space-y-2.5">
-                  <div className="flex items-center justify-between">
+                <div className="space-y-2.5 rounded-lg border border-stone-200 bg-stone-50 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-[#1A1A1A]">Hình vẽ minh họa (TikZ)</span>
                       <span className="text-[11px] text-[#787774] font-normal">(tùy chọn)</span>
@@ -1324,7 +1340,7 @@ export default function SolutionEditor({
 
                   <AutoResizeTextarea
                     rows={3}
-                    className="w-full p-2.5 rounded-lg border border-[#E9E9E7] bg-[#FAFAFA] focus:bg-white outline-none focus:border-[#1A1A1A] text-xs font-mono text-gray-800 transition-colors"
+                    className="w-full rounded-lg border border-stone-200 bg-white p-2.5 font-mono text-xs text-stone-800 outline-none focus:border-amber-600"
                     placeholder={`VD:\n\\begin{tikzpicture}\n  \\draw[thick, ->] (0,0) -- (3,0) node[right] {$x$};\n  \\draw[thick, ->] (0,0) -- (0,3) node[above] {$y$};\n  \\draw[red, thick] (0,0) circle (1.2);\n\\end{tikzpicture}`}
                     value={activeQuestion.tikzCode || ''}
                     onChange={e => updateQ('tikzCode', e.target.value)}
@@ -1352,7 +1368,7 @@ export default function SolutionEditor({
                     </button>
 
                     {activeQuestion.imageSvg && (
-                      <div className="flex items-center gap-1.5 text-xs">
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs">
                         <span className="text-[#787774] text-[11px]">Bố cục:</span>
                         {(['auto', 'right', 'bottom'] as const).map(l => (
                           <button
@@ -1388,8 +1404,8 @@ export default function SolutionEditor({
 
                   {/* Ảnh render tức thì ngay trong ô nhập */}
                   {activeQuestion.imageSvg && (
-                    <div className="mt-3 p-3 bg-white border border-indigo-200 rounded-lg flex flex-col items-center shadow-sm">
-                      <div className="text-[11px] text-indigo-600 font-semibold mb-2 flex items-center gap-1.5 self-start">
+                    <div className="mt-3 flex flex-col items-center rounded-lg border border-stone-200 bg-white p-3">
+                      <div className="mb-2 flex items-center gap-1.5 self-start text-xs font-semibold text-amber-900">
                         <CheckCircle2 className="w-3.5 h-3.5" /> Ảnh vector SVG đã sẵn sàng:
                       </div>
                       <div
@@ -1406,14 +1422,14 @@ export default function SolutionEditor({
 
           {/* ── TỰ LUẬN: Lời giải chi tiết (1 ô duy nhất) ── */}
           {activeQuestion.type === 'tu_luan' && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2 text-lg">
-                  <Layers className="w-5 h-5 text-indigo-500" /> Lời giải chi tiết — {activeQuestion.questionNo || `Câu ${activeQIdx + 1}`}
+            <div className="space-y-3 rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm sm:p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-stone-900">
+                  <Layers aria-hidden="true" className="size-4 text-amber-800" /> Lời giải chi tiết — {activeNumber}
                 </h3>
                 <span className="text-xs text-[#787774]">Tự động căn đều & nhận diện Text + LaTeX ($...$, $$...$$)</span>
               </div>
-              <div className="bg-white border border-[#E9E9E7] rounded-xl p-3 shadow-sm focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-50 transition-all">
+              <div className="rounded-lg border border-stone-200 p-2 focus-within:border-amber-600">
                 <AutoResizeTextarea
                   rows={8}
                   className="w-full p-2 outline-none text-sm text-gray-800 font-sans leading-relaxed"
@@ -1429,14 +1445,14 @@ export default function SolutionEditor({
 
           {/* ── ĐÚNG/SAI: 4 mệnh đề riêng + 1 ô giải chung ── */}
           {activeQuestion.type === 'dung_sai' && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2 text-lg">
-                <Layers className="w-5 h-5 text-amber-500" /> 4 Mệnh đề Đúng / Sai — {activeQuestion.questionNo || `Câu ${activeQIdx + 1}`}
+            <div className="space-y-3 rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm sm:p-4">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-stone-900">
+                <Layers aria-hidden="true" className="size-4 text-amber-800" /> 4 Mệnh đề Đúng / Sai — {activeNumber}
               </h3>
 
               {/* Khung dán nhanh 4 mệnh đề */}
-              <div className="bg-[#FAF9F6] border border-[#E9E9E7] rounded-xl p-3 space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-[#787774]">
+              <div className="space-y-2 rounded-lg border border-stone-200 bg-stone-50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-1 text-xs text-stone-600">
                   <span className="font-semibold text-[#1A1A1A]">Dán nhanh 4 mệnh đề (a, b, c, d)</span>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] text-[#9B9A97]">Tự động phân bổ xuống 4 ô bên dưới</span>
@@ -1452,8 +1468,8 @@ export default function SolutionEditor({
                   </div>
                 </div>
                 <textarea
-                  rows={5}
-                  style={{ minHeight: '125px' }}
+                  rows={3}
+                  style={{ minHeight: '90px' }}
                   className="w-full p-3 bg-white rounded-lg border border-[#E9E9E7] text-sm text-[#1A1A1A] placeholder:text-[#9B9A97] outline-none focus:border-[#1A1A1A] transition-colors resize-y leading-relaxed font-sans"
                   placeholder="Dán cụm 4 mệnh đề vào đây (VD: a) ... b) ... c) ... d) hoặc 4 dòng riêng). Chữ sẽ tự động nhảy vào từng ô bên dưới."
                   value={quickBatchInput}
@@ -1461,21 +1477,21 @@ export default function SolutionEditor({
                 />
               </div>
 
-              <div className="space-y-3">
+              <div className="divide-y divide-stone-100 rounded-lg border border-stone-200">
                 {activeQuestion.statements.map((st, si) => (
                   <StatementEditor key={si} st={st} si={si} onUpdate={updStatement} onFocus={trackFocus} />
                 ))}
               </div>
 
               {/* 1 ô giải chung cho Đúng/Sai */}
-              <div className="pt-3 border-t border-[#E9E9E7] space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-bold text-[#787774] uppercase tracking-wider">
+              <div className="space-y-2 border-t border-stone-100 pt-3">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <div className="text-sm font-semibold text-stone-800">
                     Hướng dẫn giải chi tiết (chung cho 4 mệnh đề)
                   </div>
                   <span className="text-xs text-[#787774]">Hỗ trợ Text & LaTeX ($...$, $$...$$)</span>
                 </div>
-                <div className="bg-white border border-[#E9E9E7] rounded-xl p-3 shadow-sm focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-50 transition-all">
+                <div className="rounded-lg border border-stone-200 p-2 focus-within:border-amber-600">
                   <AutoResizeTextarea
                     rows={8}
                     className="w-full p-2 outline-none text-sm text-gray-800 font-sans leading-relaxed"
@@ -1492,14 +1508,14 @@ export default function SolutionEditor({
 
           {/* ── TRẮC NGHIỆM: 4 đáp án + 1 ô giải chi tiết ── */}
           {activeQuestion.type === 'trac_nghiem' && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2 text-lg">
-                <Layers className="w-5 h-5 text-emerald-500" /> 4 Phương án lựa chọn — {activeQuestion.questionNo || `Câu ${activeQIdx + 1}`}
+            <div className="space-y-3 rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm sm:p-4">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-stone-900">
+                <Layers aria-hidden="true" className="size-4 text-amber-800" /> 4 Phương án lựa chọn — {activeNumber}
               </h3>
 
               {/* Khung dán nhanh 4 đáp án */}
               <div className="bg-[#FAF9F6] border border-[#E9E9E7] rounded-xl p-3 space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-[#787774]">
+                <div className="flex flex-wrap items-center justify-between gap-1 text-xs text-stone-600">
                   <span className="font-semibold text-[#1A1A1A]">Dán nhanh 4 đáp án (A, B, C, D)</span>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] text-[#9B9A97]">Tự động phân bổ xuống 4 ô bên dưới</span>
@@ -1539,7 +1555,7 @@ export default function SolutionEditor({
                       }}
                     >{lbl}</button>
                     <input
-                      className="flex-1 p-2.5 rounded-lg border outline-none focus:border-emerald-400 text-sm transition-colors"
+                      className="min-w-0 flex-1 rounded-lg border p-2.5 text-sm outline-none focus:border-emerald-400"
                       style={{ borderColor: activeQuestion.correctChoice === lbl ? '#44836150' : '#E9E9E7', background: activeQuestion.correctChoice === lbl ? '#EAF3EE' : '#fff' }}
                       placeholder={`Đáp án ${lbl}... (hỗ trợ gõ $...$ công thức)`}
                       value={activeQuestion.choices[ci] || ''}
@@ -1551,7 +1567,7 @@ export default function SolutionEditor({
 
               {/* 1 ô giải chi tiết cho Trắc nghiệm */}
               <div className="pt-3 border-t border-[#E9E9E7] space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-1">
                   <div className="text-xs font-bold text-[#787774] uppercase tracking-wider">Lời giải chi tiết</div>
                   <span className="text-xs text-[#787774]">Hỗ trợ Text & LaTeX ($...$, $$...$$)</span>
                 </div>
@@ -1572,14 +1588,14 @@ export default function SolutionEditor({
         </div>
 
         {/* ════════ PREVIEW ════════ */}
-        <div className="xl:col-span-6 h-[calc(100vh-200px)] sticky top-20">
-          <div className="h-full border border-[#E9E9E7] rounded-2xl bg-white shadow-sm flex flex-col overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#E9E9E7] flex justify-between items-center bg-[#FCFCFA] shrink-0">
+        <div className="min-w-0 xl:sticky xl:top-20 xl:col-span-5 xl:h-[calc(100dvh-7rem)]">
+          <div className="flex h-full min-h-64 flex-col overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+            <div className="flex shrink-0 items-center justify-between border-b border-stone-100 bg-stone-50 px-3.5 py-3 sm:px-4">
               <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2">
-                <Eye className="w-4 h-4 text-indigo-500" /> Xem trước kết quả
+                <Eye aria-hidden="true" className="size-4 text-amber-800" /> Xem trước kết quả
               </h3>
             </div>
-            <div className="p-6 overflow-y-auto flex-1 bg-[#F7F6F3]" style={{ fontFamily: "'KaTeX_Main', 'Computer Modern', serif" }}>
+            <div className="min-w-0 flex-1 overflow-y-auto bg-stone-50 p-3.5 sm:p-4" style={{ fontFamily: "'KaTeX_Main', 'Computer Modern', serif" }}>
               <style>{`.solution-editor-preview, .solution-editor-preview *:not(svg):not(svg *) { font-family: 'KaTeX_Main', 'Computer Modern', serif !important; } .solution-editor-preview .font-mono { font-family: monospace !important; }`}</style>
               <div className="solution-editor-preview space-y-12">
                 {questions.map((q, qIdx) => (
@@ -1587,7 +1603,7 @@ export default function SolutionEditor({
                     {(examName || q.questionNo || q.qText || q.qFormula || q.imageSvg || q.tikzCode) && (
                       <div>
                         {examName && <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-1.5">{examName}</div>}
-                        <div className="font-bold text-2xl text-indigo-900 mb-1">{q.questionNo || `Câu ${qIdx + 1}`}</div>
+                        <div className="font-bold text-2xl text-indigo-900 mb-1">{questionNumber(q, qIdx)}</div>
                         {/* Badge loại bài */}
                         <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mb-3 ${q.type === 'dung_sai' ? 'bg-amber-100 text-amber-700 border border-amber-300' : q.type === 'trac_nghiem' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-indigo-100 text-indigo-700 border border-indigo-200'}`}>
                           {q.type === 'dung_sai' ? 'Đúng / Sai' : q.type === 'trac_nghiem' ? 'Trắc nghiệm' : 'Trả lời ngắn'}
@@ -1756,7 +1772,7 @@ export default function SolutionEditor({
           )}
 
           {/* Nút lưu */}
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-stone-200 bg-white p-3 shadow-sm sm:p-4">
             {scopedLayout && publishControl}
             {blog && deleteBlog && (
               <button
@@ -1776,7 +1792,7 @@ export default function SolutionEditor({
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-8 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60 shadow-sm"
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-amber-800 px-3.5 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-60 sm:ml-auto"
             >
               <Save className="w-4 h-4" />
               {saving ? 'Đang lưu & sync...' : (blog ? 'Cập nhật Lời Giải' : 'Đăng bài Lời Giải')}

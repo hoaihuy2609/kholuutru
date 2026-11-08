@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BlogPost, StudyLesson, StudyQuestionType, StudySection } from '../types';
-import { getStudyChapter, isStudyQuestionType, STUDY_CHAPTERS, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
+import { getStudyChapter, isStudyQuestionType, nextStudyQuestionNumber, STUDY_CHAPTERS, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import {
     ChevronDown, ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
     ImageIcon, Link as LinkIcon, HelpCircle, AlignLeft, AlignCenter,
@@ -19,6 +19,7 @@ interface AdminBlogEditorProps {
     blog: BlogPost | null;
     initialSection?: StudySection;
     studyLessons: StudyLesson[];
+    existingBlogs: BlogPost[];
     onBack: () => void;
     onSaved: (blog: BlogPost) => void;
     saveBlog: (blog: Partial<BlogPost>) => Promise<BlogPost | null>;
@@ -28,7 +29,7 @@ interface AdminBlogEditorProps {
 
 const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
-const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, studyLessons, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
+const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, studyLessons, existingBlogs, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
     const [selectedMode, setEditorMode] = useState<'markdown' | 'solution' | 'exam_paper'>('markdown');
     const isLessonCreation = !blog && !!initialSection?.lessonId;
     const editorMode = isLessonCreation ? 'solution' : selectedMode;
@@ -40,6 +41,9 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
     const lessonOptions = studyLessons.filter(lesson =>
         lesson.studySection.chapterId === chapterId && lesson.studySection.questionType === studyType);
     const lesson = lessonOptions.find(option => option.id === lessonId);
+    const firstQuestionNumber = useMemo(() => chapter && studyType
+        ? nextStudyQuestionNumber(existingBlogs, { chapterId: chapter.id, questionType: studyType, lessonId: lesson?.id })
+        : 1, [chapter, studyType, lesson?.id, existingBlogs]);
     const [pendingSync, setPendingSync] = useState(false); // flag cần sync lên Telegram
     const [isSyncingBlog, setIsSyncingBlog] = useState(false);
 
@@ -385,6 +389,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                     deleteBlog={deleteBlog}
                     hideTopBar
                     studyPlacement={studyPlacement}
+                    studyDefaults={chapter ? { title: lesson?.title || chapter.name, firstQuestionNumber } : undefined}
                     studyGrade={chapter?.grade}
                     studyQuestionType={chapter && studyType ? studyType : undefined}
                 />

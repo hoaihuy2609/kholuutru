@@ -1,4 +1,4 @@
-import type { StudyQuestionType, StudySection } from '../../types';
+import type { BlogPost, StudyQuestionType, StudySection } from '../../types';
 
 export const STUDY_GRADES = [10, 11, 12];
 
@@ -40,4 +40,27 @@ export function studySectionParams(section: StudySection) {
     type: section.questionType,
     ...(section.lessonId ? { lesson: section.lessonId } : {}),
   };
+}
+
+export function nextStudyQuestionNumber(blogs: BlogPost[], section: StudySection) {
+  let count = 0;
+  let highest = 0;
+  for (const blog of blogs) {
+    const placement = blog.studySection;
+    if (placement?.chapterId !== section.chapterId || placement.questionType !== section.questionType
+      || placement.lessonId !== section.lessonId) continue;
+
+    try {
+      const { type, data } = JSON.parse(blog.content);
+      if (type !== 'physics_solution' || !data) continue;
+      const questions = Array.isArray(data.questions) && data.questions.length ? data.questions : [data];
+      count += questions.length;
+      for (const question of questions) {
+        const match = /^(?:Câu\s+)?(\d+)$/i.exec(String(question?.question_no ?? '').trim());
+        const number = match ? Number(match[1]) : 0;
+        if (Number.isSafeInteger(number) && number < Number.MAX_SAFE_INTEGER) highest = Math.max(highest, number);
+      }
+    } catch { /* Other article formats do not reserve a question number. */ }
+  }
+  return Math.max(count, highest) + 1;
 }

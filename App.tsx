@@ -449,7 +449,7 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     };
     return (
       <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-        <AdminBlogEditor blog={activeAdminBlog} initialSection={createSection} studyLessons={studyLessons} saveBlog={cloud.saveBlog} deleteBlog={cloud.deleteBlog}
+        <AdminBlogEditor blog={activeAdminBlog} initialSection={createSection} studyLessons={studyLessons} existingBlogs={allBlogs} saveBlog={cloud.saveBlog} deleteBlog={cloud.deleteBlog}
           syncBlogs={cloud.syncBlogs} onBack={back} onSaved={saved} />
       </Suspense></ErrorBoundary>
     );
