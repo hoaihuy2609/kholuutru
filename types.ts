@@ -147,6 +147,13 @@ export interface NotificationFetch {
 
 // ── Blog Types ──────────────────────────────────────────
 
+export type StudyQuestionType = 'trac_nghiem' | 'dung_sai' | 'tu_luan';
+
+export interface StudySection {
+  chapterId: string;
+  questionType: StudyQuestionType;
+}
+
 export interface BlogPost {
   id: string;
   title: string;
@@ -158,6 +165,7 @@ export interface BlogPost {
   is_published: boolean;
   grade: number; // 10, 11, 12 hoặc 0 (Tất cả — mặc định)
   level?: number;  // 1–4: Mức độ khó (Nhận biết / Thông hiếu / Vận dụng / Vận dụng cao)
+  studySection?: StudySection | null;
   created_at: string;
   updated_at: string;
 }

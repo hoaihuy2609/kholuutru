@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { BlogPost } from '../types';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { BlogPost, StudyQuestionType, StudySection } from '../types';
 import { BookOpen, Plus, Search, SlidersHorizontal, Image, FileText, Check, Sparkles, ChevronLeft, ChevronDown, Folder, X, RotateCcw } from 'lucide-react';
 import ExamStyleModal from './ExamStyleModal';
-import TreeTableOfContents, { findNodePath, indexFolderBlogs, loadPhysicsTree, normalizeSearchText, savePhysicsTree, selectTreeNode, TreeNode } from './TreeTableOfContents';
+import TreeTableOfContents, { normalizeSearchText } from './TreeTableOfContents';
+import ChapterStudyList from './ChapterStudyList';
+import { getStudyChapter, isStudyQuestionType, STUDY_GRADES, studySectionParams } from '../src/utils/studyLibrary';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import katex from 'katex';
@@ -61,7 +63,7 @@ function TextWithMathCard({ text }: { text: string }) {
 }
 
 // Parse blog.content → lấy câu hỏi đầu tiên để hiển thị trên card
-type QuestionType = 'tu_luan' | 'dung_sai' | 'trac_nghiem';
+type QuestionType = StudyQuestionType;
 
 interface CardQuestionData {
     questionNo: string;
@@ -414,7 +416,7 @@ interface BlogListProps {
     studentGrade?: number | null;
     onReadBlog: (blog: BlogPost) => void;
     onEditBlog?: (blog: BlogPost) => void;
-    onCreateBlog?: () => void;
+    onCreateBlog?: (section?: StudySection) => void;
     onBlogsLoaded?: (blogs: BlogPost[]) => void;
     getBlogs: (isAdmin: boolean) => Promise<BlogPost[]>;
 }
@@ -535,8 +537,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const questionSearch = useRef<HTMLInputElement>(null);
     const filterHeading = useRef<HTMLHeadingElement>(null);
-    const [treeData, setTreeData] = useState(loadPhysicsTree);
-    const [selectedFolderId, setSelectedFolderId] = useState<string>();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [showMobileTree, setShowMobileTree] = useState(false);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const mobileTreeOpener = useRef<HTMLButtonElement>(null);
@@ -613,24 +614,38 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
 
     const visibleBlogs = useMemo(() => blogs.filter(blog => {
         if (isAdmin) return true;
-        return blog.category !== 'exam_paper' && (!studentGrade || !blog.grade || blog.grade === studentGrade);
+        return blog.is_published && blog.category !== 'exam_paper' && (!studentGrade || !blog.grade || blog.grade === studentGrade);
     }), [blogs, isAdmin, studentGrade]);
 
-    const visibleTree = useMemo(
-        () => !isAdmin && studentGrade ? treeData.filter(node => node.grade === studentGrade) : treeData,
-        [treeData, isAdmin, studentGrade]
-    );
-    const folderBlogs = useMemo(() => indexFolderBlogs(visibleTree, visibleBlogs), [visibleTree, visibleBlogs]);
-    const activeTreeNode = useMemo(() => {
-        const path = findNodePath(visibleTree, selectedFolderId);
-        const node = path.at(-1);
-        return node ? selectTreeNode(node, path[0].grade) : null;
-    }, [visibleTree, selectedFolderId]);
-    const gradeFilter = activeTreeNode?.grade ?? 0;
-    const selectedFolderIds = activeTreeNode?.id ? folderBlogs.get(activeTreeNode.id) : undefined;
+    const grades = !isAdmin && studentGrade ? [studentGrade] : STUDY_GRADES;
+    const folder = searchParams.get('folder');
+    const chapter = getStudyChapter(folder);
+    const activeChapter = chapter && grades.includes(chapter.grade) ? chapter : undefined;
+    const gradeFilter = activeChapter?.grade ?? grades.find(grade => folder === 'grade-' + grade) ?? 0;
+    const selectedFolderId = activeChapter?.id ?? (gradeFilter ? 'grade-' + gradeFilter : undefined);
+    const type = searchParams.get('type');
+    const selectedType = activeChapter && isStudyQuestionType(type) ? type : undefined;
+
+    const { chapterCounts, gradeCounts } = useMemo(() => {
+        const chapterCounts = new Map<string, number>();
+        const gradeCounts = new Map<number, number>();
+        for (const blog of visibleBlogs) {
+            gradeCounts.set(blog.grade, (gradeCounts.get(blog.grade) ?? 0) + 1);
+            const section = blog.studySection;
+            if (section && blog.category !== 'exam_paper' && isStudyQuestionType(section.questionType)) {
+                chapterCounts.set(section.chapterId, (chapterCounts.get(section.chapterId) ?? 0) + 1);
+            }
+        }
+        return { chapterCounts, gradeCounts };
+    }, [visibleBlogs]);
+    const chapterBlogs = useMemo(() => activeChapter ? visibleBlogs.filter(blog =>
+        blog.category !== 'exam_paper' && blog.studySection?.chapterId === activeChapter.id
+        && isStudyQuestionType(blog.studySection.questionType)
+    ) : [], [activeChapter, visibleBlogs]);
+
     const inScopeBlogs = useMemo(
-        () => selectedFolderIds ? visibleBlogs.filter(blog => selectedFolderIds.has(blog.id)) : visibleBlogs,
-        [visibleBlogs, selectedFolderIds]
+        () => activeChapter ? [] : gradeFilter ? visibleBlogs.filter(blog => blog.grade === gradeFilter) : visibleBlogs,
+        [activeChapter, visibleBlogs, gradeFilter]
     );
 
     useEffect(() => {
@@ -643,13 +658,12 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
         mobileTreeOpener.current?.focus();
     };
 
-    const handleTreeChange = (tree: TreeNode[]) => {
-        setTreeData(tree);
-        savePhysicsTree(tree);
+    const selectFolder = (id?: string) => {
+        setSearchParams(id ? { folder: id } : {});
     };
 
     const selectGrade = (grade: number) => {
-        setSelectedFolderId(visibleTree.find(folder => folder.grade === grade)?.id);
+        selectFolder(grade ? 'grade-' + grade : undefined);
     };
 
     const questionIndex = useMemo(() => inScopeBlogs.map(indexQuestion), [inScopeBlogs]);
@@ -659,7 +673,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
     );
     const isAnyFilterActive = questionTypeFilter !== 'all' || levelFilter !== 0 || hasImageFilter || !!searchQuery.trim();
     const advancedCount = Number(questionTypeFilter !== 'all') + Number(levelFilter !== 0);
-    const gradeTabs = [0, ...[12, 11, 10].filter(grade => visibleTree.some(node => node.grade === grade))];
+    const gradeTabs = [0, ...[...grades].reverse()];
 
     const clearQuestionSearch = () => {
         setSearchQuery('');
@@ -715,9 +729,9 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                     </div>
                 </div>
 
-                {isAdmin && onCreateBlog && (
+                {isAdmin && onCreateBlog && !activeChapter && (
                     <button
-                        onClick={onCreateBlog}
+                        onClick={() => onCreateBlog()}
                         style={{
                             padding: '9px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
                             background: '#1A1A1A', color: '#fff', border: 'none', cursor: 'pointer',
@@ -767,16 +781,15 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                             </button>
                         </div>
                         <TreeTableOfContents
-                            treeData={visibleTree}
-                            folderBlogs={folderBlogs}
+                            grades={grades}
+                            chapterCounts={chapterCounts}
+                            gradeCounts={gradeCounts}
                             totalCount={visibleBlogs.length}
-                            selectedItem={activeTreeNode ?? { type: 'all' }}
-                            onSelect={selection => {
-                                setSelectedFolderId(selection.id);
+                            selectedId={selectedFolderId}
+                            onSelect={id => {
+                                selectFolder(id);
                                 closeMobileTree();
                             }}
-                            onTreeChange={handleTreeChange}
-                            isAdmin={isAdmin}
                         />
                     </div>
                 </aside>
@@ -796,13 +809,18 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                             <Folder className="w-4 h-4 fill-[#F5A623] text-[#D9730D]" />
                             <span>Mục lục ({visibleBlogs.length} câu)</span>
                         </button>
-                        {activeTreeNode && (
+                        {gradeFilter > 0 && (
                             <span className="text-xs font-semibold text-[#8C4A00] truncate max-w-[160px]">
-                                {activeTreeNode.name}
+                                {activeChapter?.name ?? 'VẬT LÝ ' + gradeFilter}
                             </span>
                         )}
                     </div>
 
+                    {activeChapter ? (
+                        <ChapterStudyList chapter={activeChapter} selectedType={selectedType} blogs={chapterBlogs} loading={loading}
+                            onSelectType={questionType => setSearchParams(studySectionParams({ chapterId: activeChapter.id, questionType }))}
+                            onRead={onReadBlog} onCreate={isAdmin ? onCreateBlog : undefined} onEdit={isAdmin ? onEditBlog : undefined} />
+                    ) : (<>
                     <section aria-labelledby="question-filter-heading" className="space-y-2 rounded-xl border border-stone-200 bg-white p-2.5 shadow-sm sm:px-3">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                             <div className="flex shrink-0 items-center gap-1.5">
@@ -872,12 +890,12 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                     </section>
 
                     {/* Thanh Breadcrumb khi đang chọn một thư mục bất kỳ trong cây */}
-                    {activeTreeNode && (
+                    {gradeFilter > 0 && (
                         <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#FDF4E7] border border-[#F6E1C4] text-xs">
                             <div className="flex items-center gap-2 min-w-0 pr-2">
                                 <Folder className="w-4 h-4 fill-[#F5A623] text-[#D9730D] shrink-0" />
                                 <span className="text-[#8C4A00] font-bold truncate">
-                                    {activeTreeNode.name}
+                                    VẬT LÝ {gradeFilter}
                                 </span>
                                 <span className="text-[11px] font-semibold text-[#8C4A00] bg-[#FAEDE0] px-2 py-0.5 rounded-full shrink-0">
                                     {filteredBlogs.length} câu
@@ -939,6 +957,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                             })}
                         </div>
                     )}
+                    </>)}
                 </div>
             </div>
 

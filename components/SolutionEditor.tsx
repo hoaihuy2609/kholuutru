@@ -7,7 +7,7 @@ import katex from "katex";
 import "katex/dist/katex.min.css";
 import { supabase } from "../src/lib/supabase";
 import { useUIStore } from "../src/stores/useUIStore";
-import { SolutionStep as Step, SolutionStatement as Statement } from '../types';
+import { SolutionStep as Step, SolutionStatement as Statement, StudyQuestionType } from '../types';
 import {
   ChevronLeft, Save, Trash2, ArrowUp, ArrowDown,
   Plus, Eye, BookOpen, Layers, X, ToggleLeft, ToggleRight,
@@ -20,7 +20,7 @@ import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
 // ─────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────
-type QuestionType = 'tu_luan' | 'dung_sai' | 'trac_nghiem';
+type QuestionType = StudyQuestionType;
 
 interface Question {
   questionNo: string;
@@ -71,11 +71,11 @@ const emptyStatement = (label: 'a' | 'b' | 'c' | 'd'): Statement => ({
   steps: [emptyStep()],
 });
 
-const emptyQuestion = (): Question => ({
+const emptyQuestion = (type: StudyQuestionType = 'tu_luan'): Question => ({
   questionNo: "",
   qText: "",
   qFormula: "",
-  type: "tu_luan",
+  type,
   solution: "",
   steps: [emptyStep()],
   statements: STMT_LABELS.map(emptyStatement),
@@ -654,13 +654,17 @@ interface SolutionEditorProps {
   switchToMarkdown?: () => void;
   switchToExamPaper?: () => void;
   hideTopBar?: boolean;
+  studyGrade?: number;
+  studyQuestionType?: StudyQuestionType;
 }
 
 export default function SolutionEditor({
-  blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar
+  blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar,
+  studyGrade, studyQuestionType
 }: SolutionEditorProps) {
+  const splitImportedQuestions = !!saveBlog && !studyGrade;
   const [examName,   setExamName]   = useState("");
-  const [questions,  setQuestions]  = useState<Question[]>([emptyQuestion()]);
+  const [questions,  setQuestions]  = useState<Question[]>(() => [emptyQuestion(studyQuestionType)]);
   const [activeQIdx, setActiveQIdx] = useState(0);
   const [saving,     setSaving]     = useState(false);
 
@@ -832,7 +836,7 @@ export default function SolutionEditor({
 
       // TÍN HIỆU TỰ ĐỘNG TÁCH CARD:
       // Nếu JSON chứa từ 2 câu hỏi trở lên (normalizedList.length > 1) và có hàm saveBlog
-      if (normalizedList.length > 1 && saveBlog) {
+      if (normalizedList.length > 1 && splitImportedQuestions && saveBlog) {
         let createdCount = 0;
         for (let i = 0; i < normalizedList.length; i++) {
           const q = normalizedList[i];
@@ -894,13 +898,13 @@ export default function SolutionEditor({
         showToast(`Phát hiện ${createdCount} câu hỏi -> Đã tự động tách thành ${createdCount} Cards riêng biệt thành công!`, 'success');
         if (onBack) onBack();
       } else {
-        // Nếu chỉ có 1 câu: Nạp vào trình soạn bình thường để lưu thành 1 Card
+        // Một bài trong chương giữ nguyên các câu hỏi nhập cùng nhau.
         setQuestions(normalizedList);
         setActiveQIdx(0);
         setShowJsonModal(false);
 
         const svgNote = renderedCount > 0 ? ` (đã sinh tự động ${renderedCount} hình vẽ vector SVG)` : '';
-        showToast(`Đã nạp 1 câu hỏi vào trình soạn${svgNote}!`, 'success');
+        showToast(`Đã nạp ${normalizedList.length} câu hỏi vào trình soạn${svgNote}!`, 'success');
       }
     } catch (err: any) {
       showToast(err.message || 'Lỗi khi nhập dữ liệu JSON', 'error');
@@ -957,7 +961,7 @@ export default function SolutionEditor({
     setQuestions(prev => prev.map((q, i) => i === activeQIdx ? { ...q, [key]: val } : q));
 
   const addQuestion = () => {
-    setQuestions(prev => [...prev, emptyQuestion()]);
+    setQuestions(prev => [...prev, emptyQuestion(studyQuestionType)]);
     setActiveQIdx(questions.length);
   };
 
@@ -990,7 +994,7 @@ export default function SolutionEditor({
 
   // ── Save ───────────────────────────────────────────────────
   const handleSave = async () => {
-    if (!examName || questions.some(q => !q.questionNo)) {
+    if (!examName.trim() || questions.some(q => !q.questionNo)) {
       showToast("Vui lòng nhập tên đề và số câu cho tất cả các câu!", "error");
       return;
     }
@@ -1045,7 +1049,7 @@ export default function SolutionEditor({
         }
       };
 
-      const titleStr = questions.length === 1
+      const titleStr = studyGrade ? examName.trim() : questions.length === 1
         ? `[Giải chi tiết] ${examName} - ${questions[0].questionNo}`
         : `[Giải chi tiết] ${examName} (${questions.length} câu)`;
 
@@ -1138,6 +1142,7 @@ export default function SolutionEditor({
             {isPublished ? '✓ Công khai' : '✎ Nháp'}
           </span>
         </div>
+        {!studyGrade && <>
         <div className="hidden lg:block w-px h-6 bg-[#E9E9E7]" />
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs font-bold text-[#AEACA8] uppercase">Khối</span>
@@ -1151,6 +1156,7 @@ export default function SolutionEditor({
             ))}
           </div>
         </div>
+        </>}
         <div className="hidden lg:block w-px h-6 bg-[#E9E9E7]" />
         <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1">
           <div className="flex items-center gap-2 flex-1">
@@ -1840,7 +1846,9 @@ export default function SolutionEditor({
                       <span className="text-emerald-600 font-medium flex items-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Phát hiện {parsedPreview.count} câu hỏi {parsedPreview.tikzCount > 0 ? `(${parsedPreview.tikzCount} hình TikZ)` : ''}
-                        {parsedPreview.count > 1 ? ` — Sẽ tự động tách thành ${parsedPreview.count} Cards riêng biệt` : ' — Nạp vào 1 Card'}
+                        {parsedPreview.count > 1 && splitImportedQuestions
+                          ? ` — Sẽ tự động tách thành ${parsedPreview.count} Cards riêng biệt`
+                          : ' — Nạp vào cùng một bài'}
                       </span>
                     )}
                   </div>
@@ -1878,12 +1886,12 @@ export default function SolutionEditor({
                 {importingJson ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    Đang xử lý & lưu Cards...
+                    Đang xử lý…
                   </>
                 ) : (
                   <>
                     <Download className="w-3.5 h-3.5" />
-                    {parsedPreview && parsedPreview.count > 1
+                    {parsedPreview && parsedPreview.count > 1 && splitImportedQuestions
                       ? `Tự động tách & Tạo ${parsedPreview.count} Cards`
                       : 'Nạp vào trình soạn'}
                   </>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BlogPost } from '../types';
+import { BlogPost, StudyQuestionType, StudySection } from '../types';
+import { getStudyChapter, isStudyQuestionType, STUDY_CHAPTERS, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import {
     ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
     ImageIcon, Link as LinkIcon, HelpCircle, AlignLeft, AlignCenter,
@@ -16,6 +17,7 @@ import ExamPaperEditor from './ExamPaperEditor';
 
 interface AdminBlogEditorProps {
     blog: BlogPost | null;
+    initialSection?: StudySection;
     onBack: () => void;
     onSaved: (blog: BlogPost) => void;
     saveBlog: (blog: Partial<BlogPost>) => Promise<BlogPost | null>;
@@ -25,8 +27,12 @@ interface AdminBlogEditorProps {
 
 const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
-const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
+const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
     const [editorMode, setEditorMode] = useState<'markdown' | 'solution' | 'exam_paper'>('markdown');
+    const placement = blog?.studySection ?? initialSection;
+    const [chapterId, setChapterId] = useState(placement?.chapterId ?? '');
+    const [studyType, setStudyType] = useState<StudyQuestionType | ''>(placement?.questionType ?? '');
+    const chapter = getStudyChapter(chapterId);
     const [pendingSync, setPendingSync] = useState(false); // flag cần sync lên Telegram
     const [isSyncingBlog, setIsSyncingBlog] = useState(false);
 
@@ -93,11 +99,22 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
         handleChange('tags', val.split(',').map(t => t.trim()).filter(t => t));
     };
 
+    const savePlacedBlog = (payload: Partial<BlogPost>) => {
+        if (payload.category !== 'exam_paper' && chapter) {
+            if (!studyType) {
+                showToast('Chọn loại câu để lưu bài vào chương.', 'error');
+                return Promise.resolve(null);
+            }
+            return saveBlog({ ...payload, grade: chapter.grade, studySection: { chapterId: chapter.id, questionType: studyType } });
+        }
+        return saveBlog(blog?.studySection ? { ...payload, studySection: null } : payload);
+    };
+
     const handleSave = async () => {
         if (!formData.title?.trim()) { showToast('Vui lòng nhập tiêu đề!', 'error'); return; }
         if (!formData.content?.trim()) { showToast('Vui lòng nhập nội dung!', 'error'); return; }
         setIsSaving(true);
-        const saved = await saveBlog(formData);
+        const saved = await savePlacedBlog(formData);
         setIsSaving(false);
         if (saved) {
             // Nếu bài đã published → auto-sync luôn để học sinh thấy ngay
@@ -118,7 +135,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                 setPendingSync(true);
             }
             onSaved(saved);
-        } else {
+        } else if (!chapter || studyType) {
             showToast('Lưu thất bại, vui lòng thử lại.', 'error');
         }
     };
@@ -245,7 +262,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                         { key: 'markdown' as const, label: 'Markdown' },
                         { key: 'solution' as const, label: 'Lời Giải (LaTeX)' },
                         { key: 'exam_paper' as const, label: 'Soạn Đề' },
-                    ]).map(tab => (
+                    ]).filter(tab => !chapter || tab.key !== 'exam_paper').map(tab => (
                         <button
                             key={tab.key}
                             onClick={() => setEditorMode(tab.key)}
@@ -293,20 +310,50 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
             </div>
 
             {/* ═══ CONTENT ═══ */}
+            {editorMode !== 'exam_paper' && (
+                <fieldset className="grid gap-3 rounded-xl border border-stone-200 bg-white p-3 sm:grid-cols-2">
+                    <legend className="px-1 text-sm font-semibold text-stone-800">Vị trí trong Góc Học Tập</legend>
+                    <label className="space-y-1 text-sm font-medium text-stone-700">
+                        <span>Chương</span>
+                        <select value={chapterId} onChange={event => setChapterId(event.target.value)}
+                            className="block w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2">
+                            <option value="">Chưa phân vào chương</option>
+                            {STUDY_GRADES.map(grade => (
+                                <optgroup key={grade} label={'Vật lý ' + grade}>
+                                    {STUDY_CHAPTERS.filter(option => option.grade === grade).map(option => (
+                                        <option key={option.id} value={option.id}>{option.name}</option>
+                                    ))}
+                                </optgroup>
+                            ))}
+                        </select>
+                    </label>
+                    <label className="space-y-1 text-sm font-medium text-stone-700">
+                        <span>Loại câu</span>
+                        <select value={chapter ? studyType : ''} disabled={!chapter} required={!!chapter}
+                            onChange={event => setStudyType(isStudyQuestionType(event.target.value) ? event.target.value : '')}
+                            className="block w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 disabled:bg-stone-100">
+                            <option value="">Chọn loại câu</option>
+                            {STUDY_QUESTION_TYPES.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                    </label>
+                </fieldset>
+            )}
             {editorMode === 'solution' && (
                 <SolutionEditor
                     blog={blog}
                     onSaved={onSaved}
-                    saveBlog={saveBlog}
+                    saveBlog={savePlacedBlog}
                     syncBlogs={syncBlogs}
                     deleteBlog={deleteBlog}
                     hideTopBar
+                    studyGrade={chapter?.grade}
+                    studyQuestionType={chapter && studyType ? studyType : undefined}
                 />
             )}
 
             {editorMode === 'exam_paper' && (
                 <ExamPaperEditor
-                    saveBlog={saveBlog}
+                    saveBlog={savePlacedBlog}
                     syncBlogs={syncBlogs}
                     deleteBlog={deleteBlog}
                     existingBlog={blog}
@@ -460,7 +507,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                         </div>
 
                         {/* Grade Selection */}
-                        <div>
+                        {!chapter && <div>
                             <label className="block text-sm font-semibold mb-1.5 text-[#1A1A1A]">Khối lớp</label>
                             <div className="grid grid-cols-2 gap-2">
                                 {[
@@ -484,7 +531,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, onBack, onSaved
                                     </button>
                                 ))}
                             </div>
-                        </div>
+                        </div>}
 
                         {/* Category */}
                         <div>
