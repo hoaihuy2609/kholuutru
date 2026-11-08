@@ -483,9 +483,9 @@ const BlogList: React.FC<BlogListProps> = ({
             const displayed = inLesson && questions.length ? questions : [questions[0]];
             return displayed.map((question, index) => ({
                 blog, question, index, solution, questionCount: questions.length,
-                number: parseStudyQuestionNumber(question?.question_no) ?? -1,
+                number: parseStudyQuestionNumber(question?.question_no) ?? Number.MAX_SAFE_INTEGER,
             })).filter(card => !matches || matches.get(blog.id)?.has(card.index));
-        }).sort((first, second) => second.number - first.number);
+        }).sort((first, second) => first.number - second.number);
 
         return (
             <div className={'grid grid-cols-1 items-start gap-3.5 ' + (inLesson ? 'lg:grid-cols-2 lg:gap-5' : 'md:grid-cols-2')}>
@@ -673,6 +673,9 @@ const BlogList: React.FC<BlogListProps> = ({
                 });
             }}
             onRead={readChapterPost} onCreate={isAdmin ? onCreateBlog : undefined} onEdit={isAdmin ? onEditBlog : undefined}
+            countQuestions={post => groupMatches
+                ? groupMatches.get(post.id)?.size ?? 0
+                : getStoredQuestions(parsePhysicsSolution(post.content)).filter(Boolean).length}
             renderLessonPosts={posts => renderQuestionCards(posts, true, groupMatches)}
             onSaveLesson={onSaveLesson} lessonSync={lessonSync} onRetryLessonSync={onRetryLessonSync} />
     );

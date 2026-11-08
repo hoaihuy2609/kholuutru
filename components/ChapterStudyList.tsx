@@ -39,7 +39,7 @@ function PostRows({ posts, onRead, onEdit }: {
 export default function ChapterStudyList({
   chapter, selectedType, selectedLessonId, selectedGroup, groupMatches, blogs, lessons, loading,
   onSelectType, onSelectGroup, onSelectLesson,
-  onRead, onCreate, onEdit, onSaveLesson, lessonSync, onRetryLessonSync, renderLessonPosts,
+  onRead, onCreate, onEdit, onSaveLesson, lessonSync, onRetryLessonSync, countQuestions, renderLessonPosts,
 }: {
   chapter: { id: string; name: string; grade: number };
   selectedType?: StudyQuestionType;
@@ -55,6 +55,7 @@ export default function ChapterStudyList({
   onRead: (blog: BlogPost) => void;
   onCreate?: (section: StudySection) => void;
   onEdit?: (blog: BlogPost) => void;
+  countQuestions: (blog: BlogPost) => number;
   renderLessonPosts: (posts: BlogPost[]) => React.ReactNode;
   onSaveLesson?: (section: StudySection, title: string, id?: string) => Promise<StudyLesson | null>;
   lessonSync?: 'syncing' | 'failed';
@@ -261,7 +262,7 @@ export default function ChapterStudyList({
                         <Folder aria-hidden="true" className="size-5 shrink-0 text-amber-800" />
                         <span className="min-w-0 flex-1 break-words text-sm font-semibold text-stone-900">{lesson.title}</span>
                         <span className="shrink-0 rounded bg-stone-100 px-1.5 py-0.5 text-xs text-stone-600">
-                          {matchingPosts(postsByLesson.get(lesson.id) ?? []).length} nội dung
+                          {(postsByLesson.get(lesson.id) ?? []).reduce((total, post) => total + countQuestions(post), 0)} câu
                         </span>
                         <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-stone-500" />
                       </button>
