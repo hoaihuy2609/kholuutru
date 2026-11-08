@@ -782,7 +782,7 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                 </aside>
 
                 {/* ── CỘT PHẢI: BỘ LỌC + DANH SÁCH BÀI TẬP ── */}
-                <div className="flex-1 min-w-0 w-full space-y-4">
+                <div className="flex w-full min-w-0 flex-1 flex-col gap-4">
                     {/* Nút mở Mục lục trên Mobile / Tablet */}
                     <div className="lg:hidden flex items-center justify-between bg-white p-3 rounded-xl border border-[#E9E9E7] shadow-2xs">
                         <button
@@ -802,27 +802,6 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                             </span>
                         )}
                     </div>
-
-                    {/* Thanh Breadcrumb khi đang chọn một thư mục bất kỳ trong cây */}
-                    {activeTreeNode && (
-                        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#FDF4E7] border border-[#F6E1C4] text-xs">
-                            <div className="flex items-center gap-2 min-w-0 pr-2">
-                                <Folder className="w-4 h-4 fill-[#F5A623] text-[#D9730D] shrink-0" />
-                                <span className="text-[#8C4A00] font-bold truncate">
-                                    {activeTreeNode.name}
-                                </span>
-                                <span className="text-[11px] font-semibold text-[#8C4A00] bg-[#FAEDE0] px-2 py-0.5 rounded-full shrink-0">
-                                    {filteredBlogs.length} câu
-                                </span>
-                            </div>
-                            <button
-                                onClick={() => selectGrade(0)}
-                                className="text-xs font-bold text-[#8C4A00] hover:text-[#5C3000] underline shrink-0 cursor-pointer"
-                            >
-                                ✕ Xem tất cả
-                            </button>
-                        </div>
-                    )}
 
                     <section aria-labelledby="question-filter-heading" className="space-y-2 rounded-xl border border-stone-200 bg-white p-2.5 shadow-sm sm:px-3">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
@@ -891,6 +870,27 @@ const BlogList: React.FC<BlogListProps> = ({ isAdmin, studentGrade, onReadBlog, 
                             </FilterGroup>
                         </div>
                     </section>
+
+                    {/* Thanh Breadcrumb khi đang chọn một thư mục bất kỳ trong cây */}
+                    {activeTreeNode && (
+                        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#FDF4E7] border border-[#F6E1C4] text-xs">
+                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                                <Folder className="w-4 h-4 fill-[#F5A623] text-[#D9730D] shrink-0" />
+                                <span className="text-[#8C4A00] font-bold truncate">
+                                    {activeTreeNode.name}
+                                </span>
+                                <span className="text-[11px] font-semibold text-[#8C4A00] bg-[#FAEDE0] px-2 py-0.5 rounded-full shrink-0">
+                                    {filteredBlogs.length} câu
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => selectGrade(0)}
+                                className="text-xs font-bold text-[#8C4A00] hover:text-[#5C3000] underline shrink-0 cursor-pointer"
+                            >
+                                ✕ Xem tất cả
+                            </button>
+                        </div>
+                    )}
 
                     {/* Content */}
                     {loading ? (
