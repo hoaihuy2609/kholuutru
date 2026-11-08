@@ -1,7 +1,7 @@
 import React, { useId, useState } from 'react';
 import {
   X, RotateCcw, Palette, Droplets, Sliders, Layout,
-  Layers, CheckSquare, FileText, Download, Loader2, Printer
+  Layers, CheckSquare, Download, Loader2, Printer
 } from 'lucide-react';
 import {
   ExamStyleConfig, DEFAULT_EXAM_STYLE, SelectedQuestionItem,
@@ -347,76 +347,10 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             )}
           </div>
 
-          {/* ═══ MỤC 4. CẤU HÌNH HEADER & FOOTER ═══ */}
-          <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-amber-950">
-              <FileText className="w-4 h-4" /> 4. Đầu trang và chân trang
-            </div>
-
-            {/* Header Box */}
-            <div className="p-3 rounded-lg border border-stone-200 bg-stone-50 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-xs text-stone-700">Tiêu đề đầu trang (Header)</span>
-                <div className="flex items-center gap-1.5 text-xs text-stone-600">
-                  <span>Kẻ viền:</span>
-                  <input
-                    type="number"
-                    value={config.headerRuleWidth}
-                    onChange={e => updateConfig('headerRuleWidth', parseFloat(e.target.value) || 0)}
-                    className="w-12 p-1 rounded border border-stone-200 text-center text-xs"
-                  />
-                  <span>pt</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  value={config.headerLeft}
-                  onChange={e => updateConfig('headerLeft', e.target.value)}
-                  placeholder="Header Trái..."
-                  className="w-full p-2 rounded border border-stone-200 text-xs font-mono bg-white"
-                />
-                <input
-                  type="text"
-                  value={config.headerRight}
-                  onChange={e => updateConfig('headerRight', e.target.value)}
-                  placeholder="Header Phải (VD: Thầy Cô biên soạn)..."
-                  className="w-full p-2 rounded border border-stone-200 text-xs font-mono bg-white"
-                />
-              </div>
-            </div>
-
-            {/* Footer Box */}
-            <div className="p-3 rounded-lg border border-stone-200 bg-stone-50 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-xs text-stone-700">Chân trang (Footer)</span>
-                <div className="flex items-center gap-1.5 text-xs text-stone-600">
-                  <span>Kẻ viền:</span>
-                  <input
-                    type="number"
-                    value={config.footerRuleWidth}
-                    onChange={e => updateConfig('footerRuleWidth', parseFloat(e.target.value) || 0)}
-                    className="w-12 p-1 rounded border border-stone-200 text-center text-xs"
-                  />
-                  <span>pt</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  value={config.footerCenter}
-                  onChange={e => updateConfig('footerCenter', e.target.value)}
-                  placeholder="Footer Giữa (VD: Trang \thepage / \pageref{LastPage})"
-                  className="w-full p-2 rounded border border-stone-200 text-xs font-mono bg-white"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* ═══ MỤC 5. Nội dung xuất kèm ═══ */}
+          {/* ═══ MỤC 4. Nội dung xuất kèm ═══ */}
           <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-amber-950">
-              <CheckSquare className="w-4 h-4" /> 5. Nội dung xuất kèm
+              <CheckSquare className="w-4 h-4" /> 4. Nội dung xuất kèm
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
@@ -458,11 +392,11 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             </div>
           </div>
 
-          {/* ═══ MỤC 6. Tiêu đề phần thi (CHUẨN BỘ GD) ═══ */}
+          {/* ═══ MỤC 5. Tiêu đề phần thi (CHUẨN BỘ GD) ═══ */}
           <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-4">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-sm font-semibold text-amber-950">
-                <Layers className="w-4 h-4" /> 6. Tiêu đề phần thi
+                <Layers className="w-4 h-4" /> 5. Tiêu đề phần thi
               </span>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input

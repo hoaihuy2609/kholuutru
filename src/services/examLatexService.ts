@@ -24,27 +24,17 @@ export interface ExamStyleConfig {
   duration: number; // 50
   questionPrefix: string; // 'Câu'
 
-  // 4. Cấu hình Header & Footer
-  headerLeft: string;
-  headerCenter: string;
-  headerRight: string;
-  headerRuleWidth: number; // pt
-  footerLeft: string;
-  footerCenter: string;
-  footerRight: string;
-  footerRuleWidth: number; // pt
-
-  // 5. Thư viện giao diện mẫu
+  // Thư viện giao diện mẫu
   choice4Template: string;
   trueFalseTemplate: string;
   shortAnswerTemplate: string;
   sectionTemplate: string;
 
-  // 6. Tùy chọn xuất bản
+  // 4. Nội dung xuất kèm
   exportAnswerTable: boolean; // Xuất bảng đáp án ở cuối trang
   exportDetailedSolution: boolean; // Xuất lời giải chi tiết
 
-  // 7. Tiêu đề phần thi
+  // 5. Tiêu đề phần thi
   enableSectionTitles: boolean;
   choice4Title: string;
   choice4Note: string;
@@ -75,16 +65,6 @@ export const DEFAULT_EXAM_STYLE: ExamStyleConfig = {
   subject: 'Vật lý',
   duration: 50,
   questionPrefix: 'Câu',
-
-  headerLeft: '{\\large \\faFolder}\\,$\\mid$,KỲ THI THỬ TN THPT NĂM 2026',
-  headerCenter: '',
-  headerRight: 'THẦY DƯƠNG MINH ĐỨC',
-  headerRuleWidth: 1,
-
-  footerLeft: '',
-  footerCenter: '\\MakeUppercase{Trang}~\\thepage\\ / \\pageref{LastPage}',
-  footerRight: '',
-  footerRuleWidth: 1,
 
   choice4Template: 'Mẫu 0 (Mặc định)',
   trueFalseTemplate: 'Mẫu 0 (Mặc định)',
@@ -192,7 +172,6 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
 \\usepackage{amsmath,amssymb}
 \\usepackage[a4paper,left=18mm,right=18mm,top=22mm,bottom=22mm]{geometry}
 \\usepackage{xcolor}
-\\usepackage{fancyhdr}
 \\usepackage{lastpage}
 \\usepackage{enumitem}
 \\usepackage{tikz}
@@ -201,17 +180,7 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
 % Màu chủ đạo
 \\definecolor{primaryColor}{HTML}{${primaryColorHex}}
 
-% Cấu hình Header & Footer
-\\pagestyle{fancy}
-\\fancyhf{}
-\\renewcommand{\\headrulewidth}{${config.headerRuleWidth}pt}
-\\renewcommand{\\footrulewidth}{${config.footerRuleWidth}pt}
-\\fancyhead[L]{${config.headerLeft || ''}}
-\\fancyhead[C]{${config.headerCenter || ''}}
-\\fancyhead[R]{${config.headerRight || ''}}
-\\fancyfoot[L]{${config.footerLeft || ''}}
-\\fancyfoot[C]{${config.footerCenter || '\\MakeUppercase{Trang}~\\thepage\\ / \\pageref{LastPage}'}}
-\\fancyfoot[R]{${config.footerRight || ''}}
+\\pagestyle{empty}
 
 \\begin{document}
 `;
