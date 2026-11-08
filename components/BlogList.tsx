@@ -192,7 +192,7 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
         <div className="overflow-x-auto whitespace-pre-wrap text-justify [overflow-wrap:anywhere]"><TextWithMathCard text={value} /></div>
     ) : null;
     const height = large
-        ? (expanded ? 'min-h-[280px] lg:min-h-[360px] ' : 'h-[280px] lg:h-[360px] ')
+        ? (expanded ? 'min-h-[280px] lg:min-h-[230px] ' : 'h-[280px] lg:h-[230px] ')
         : (expanded ? 'min-h-[250px] sm:min-h-[280px] ' : 'h-[250px] sm:h-[280px] ');
     const readLabel = question ? 'Xem lời giải' : 'Đọc bài';
 
