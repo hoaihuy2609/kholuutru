@@ -15,7 +15,7 @@ import { useExamStore, useBlogStore } from './src/stores/useContentStore';
 import { useShallow } from 'zustand/react/shallow';
 import { syncPendingOnStartup } from './src/services/examService';
 import { syncServerTime } from './src/lib/serverTime';
-import { studySectionParams } from './src/utils/studyLibrary';
+import { isStudyQuestionGroup, studySectionParams, supportsStudyGroups } from './src/utils/studyLibrary';
 
 const ChapterView = React.lazy(() => import('./components/ChapterView'));
 const LessonView = React.lazy(() => import('./components/LessonView'));
@@ -393,7 +393,8 @@ function ExamRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 }
 
 function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const questionGroup = searchParams.get('group');
   const [createSection, setCreateSection] = useState<StudySection>();
   const [studyLessons, setStudyLessons] = useState<StudyLesson[]>([]);
   const [lessonSync, setLessonSync] = useState<'syncing' | 'failed'>();
@@ -444,12 +445,21 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
       setCreateSection(undefined);
     };
     const saved = (blog: BlogPost) => {
-      if (blog.studySection) setSearchParams(studySectionParams(blog.studySection), { replace: true });
+      if (blog.studySection) {
+        const params = new URLSearchParams(studySectionParams(blog.studySection));
+        if (supportsStudyGroups(blog.studySection.questionType)) {
+          const sameType = searchParams.get('type') === blog.studySection.questionType;
+          params.set('group', sameType && isStudyQuestionGroup(questionGroup) ? questionGroup : 'all');
+        }
+        setSearchParams(params, { replace: true });
+      }
       back();
     };
     return (
       <ErrorBoundary><Suspense fallback={<LazyFallback />}>
-        <AdminBlogEditor blog={activeAdminBlog} initialSection={createSection} studyLessons={studyLessons} existingBlogs={allBlogs} saveBlog={cloud.saveBlog} deleteBlog={cloud.deleteBlog}
+        <AdminBlogEditor blog={activeAdminBlog} initialSection={createSection}
+          initialQuestionGroup={createSection && supportsStudyGroups(createSection.questionType) && isStudyQuestionGroup(questionGroup) ? questionGroup : undefined}
+          studyLessons={studyLessons} existingBlogs={allBlogs} saveBlog={cloud.saveBlog} deleteBlog={cloud.deleteBlog}
           syncBlogs={cloud.syncBlogs} onBack={back} onSaved={saved} />
       </Suspense></ErrorBoundary>
     );

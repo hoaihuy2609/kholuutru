@@ -1,4 +1,4 @@
-import type { BlogPost, StudyQuestionType, StudySection } from '../../types';
+import type { BlogPost, StudyQuestionGroup, StudyQuestionType, StudySection } from '../../types';
 
 export const STUDY_GRADES = [10, 11, 12];
 
@@ -32,6 +32,19 @@ export const STUDY_QUESTION_TYPES: { value: StudyQuestionType; label: string }[]
 
 export function isStudyQuestionType(value?: string | null): value is StudyQuestionType {
   return STUDY_QUESTION_TYPES.some(option => option.value === value);
+}
+
+export const STUDY_QUESTION_GROUPS = [
+  { value: 'ly_thuyet', label: 'Lý thuyết' },
+  { value: 'tinh_toan', label: 'Tính toán' },
+] as const;
+
+export function isStudyQuestionGroup(value: unknown): value is StudyQuestionGroup {
+  return STUDY_QUESTION_GROUPS.some(group => group.value === value);
+}
+
+export function supportsStudyGroups(type?: StudyQuestionType) {
+  return type === 'trac_nghiem' || type === 'dung_sai';
 }
 
 export function studySectionParams(section: StudySection) {

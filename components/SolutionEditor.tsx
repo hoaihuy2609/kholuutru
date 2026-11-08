@@ -6,7 +6,8 @@ import { createPortal } from "react-dom";
 import { SolutionQuestions } from './SolutionRenderer';
 import { supabase } from "../src/lib/supabase";
 import { useUIStore } from "../src/stores/useUIStore";
-import { SolutionStep as Step, SolutionStatement as Statement, StudyQuestionType } from '../types';
+import { SolutionStep as Step, SolutionStatement as Statement, StudyQuestionGroup, StudyQuestionType } from '../types';
+import { isStudyQuestionGroup, STUDY_QUESTION_GROUPS, supportsStudyGroups } from '../src/utils/studyLibrary';
 import {
   ChevronLeft, Save, Trash2, ArrowUp, ArrowDown,
   Plus, Eye, BookOpen, Layers, X, ToggleLeft, ToggleRight,
@@ -25,6 +26,7 @@ interface Question {
   qText: string;
   qFormula: string;
   type: QuestionType;
+  groups: StudyQuestionGroup[];
   solution: string;        // Ô lời giải chi tiết duy nhất (hỗ trợ text & LaTeX)
   steps: Step[];           // backward compat
   statements: Statement[]; // dùng khi type === 'dung_sai'
@@ -69,11 +71,12 @@ const emptyStatement = (label: 'a' | 'b' | 'c' | 'd'): Statement => ({
   steps: [emptyStep()],
 });
 
-const emptyQuestion = (type: StudyQuestionType = 'tu_luan'): Question => ({
+const emptyQuestion = (type: StudyQuestionType = 'tu_luan', group?: StudyQuestionGroup): Question => ({
   questionNo: "",
   qText: "",
   qFormula: "",
   type,
+  groups: group && supportsStudyGroups(type) ? [group] : [],
   solution: "",
   steps: [emptyStep()],
   statements: STMT_LABELS.map(emptyStatement),
@@ -140,6 +143,7 @@ const normalizeQuestion = (q: any): Question => {
     qText:      q.question_text || q.qText || "",
     qFormula:   q.question_latex || q.qFormula || "",
     type:       qType,
+    groups: Array.isArray(q.question_groups) ? q.question_groups.filter(isStudyQuestionGroup) : [],
     solution:   sol,
     steps:      q.steps?.length > 0 ? q.steps : [emptyStep()],
     statements: normalizedStatements,
@@ -160,6 +164,7 @@ function serializeQuestion(q: Question, questionNo: string) {
     question_text:  q.qText,
     question_latex: q.qFormula,
     type:           q.type,
+    ...(supportsStudyGroups(q.type) && q.groups.length ? { question_groups: q.groups } : {}),
     solution:       q.solution || '',
     tikz_code:      q.tikzCode || '',
     image_svg:      q.imageSvg || '',
@@ -496,15 +501,16 @@ interface SolutionEditorProps {
   studyDefaults?: { title: string; firstQuestionNumber: number };
   studyGrade?: number;
   studyQuestionType?: StudyQuestionType;
+  initialQuestionGroup?: StudyQuestionGroup;
 }
 
 export default function SolutionEditor({
   blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar,
-  studyPlacement, studyDefaults, studyGrade, studyQuestionType
+  studyPlacement, studyDefaults, studyGrade, studyQuestionType, initialQuestionGroup
 }: SolutionEditorProps) {
   const splitImportedQuestions = !!saveBlog && !studyGrade;
   const [examName,   setExamName]   = useState("");
-  const [questions,  setQuestions]  = useState<Question[]>(() => [emptyQuestion(studyQuestionType)]);
+  const [questions,  setQuestions]  = useState<Question[]>(() => [emptyQuestion(studyQuestionType, initialQuestionGroup)]);
   const [activeQIdx, setActiveQIdx] = useState(0);
   const [saving,     setSaving]     = useState(false);
 
@@ -662,7 +668,13 @@ export default function SolutionEditor({
         throw new Error('Danh sách câu hỏi trong JSON rỗng.');
       }
 
-      const normalizedList: Question[] = rawQuestions.map(normalizeQuestion);
+      const normalizedList: Question[] = rawQuestions.map(raw => {
+        const question = normalizeQuestion(raw);
+        if (initialQuestionGroup && supportsStudyGroups(question.type) && !Array.isArray(raw.question_groups)) {
+          question.groups = [initialQuestionGroup];
+        }
+        return question;
+      });
 
       // Tự động render TikZ sang SVG nếu có tikzCode mà chưa có imageSvg
       let renderedCount = 0;
@@ -692,23 +704,7 @@ export default function SolutionEditor({
         let createdCount = 0;
         for (let i = 0; i < normalizedList.length; i++) {
           const q = normalizedList[i];
-          const singleSerialized = {
-            question_no:    q.questionNo || `Câu ${i + 1}`,
-            question_text:  q.qText,
-            question_latex: q.qFormula,
-            type:           q.type,
-            solution:       q.solution || '',
-            tikz_code:      q.tikzCode || '',
-            image_svg:      q.imageSvg || '',
-            image_url:      q.imageUrl || '',
-            image_telegram_file_id: q.imageTelegramFileId || '',
-            image_layout:   q.imageLayout || 'auto',
-            steps:          q.type === 'tu_luan' ? (q.solution ? [{ title: '', text: q.solution, formula: '', formula2: '' }] : q.steps) : [],
-            statements:     q.type === 'dung_sai' ? q.statements : [],
-            choices:        q.type === 'trac_nghiem' ? q.choices : [],
-            correctChoice:  q.type === 'trac_nghiem' ? q.correctChoice : '',
-            solutionSteps:  q.type === 'trac_nghiem' ? (q.solution ? [{ title: '', text: q.solution, formula: '', formula2: '' }] : q.solutionSteps) : [],
-          };
+          const singleSerialized = serializeQuestion(q, q.questionNo || `Câu ${i + 1}`);
 
           const singleSolutionData = {
             type: 'physics_solution',
@@ -813,7 +809,7 @@ export default function SolutionEditor({
     setQuestions(prev => prev.map((q, i) => i === activeQIdx ? { ...q, [key]: val } : q));
 
   const addQuestion = () => {
-    setQuestions(prev => [...prev, emptyQuestion(studyQuestionType)]);
+    setQuestions(prev => [...prev, emptyQuestion(studyQuestionType, initialQuestionGroup)]);
     setActiveQIdx(questions.length);
   };
 
@@ -1119,6 +1115,26 @@ export default function SolutionEditor({
                     ))}
                   </div>
                 </div>
+
+                {supportsStudyGroups(activeQuestion.type) && (
+                  <div role="group" aria-label="Nhóm nội dung" className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <span className="text-sm font-semibold text-stone-700">Nhóm nội dung</span>
+                    {STUDY_QUESTION_GROUPS.map(({ value, label }) => {
+                      const checked = activeQuestion.groups.includes(value);
+                      return (
+                        <label key={value} className={'inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-md border px-2 text-xs font-semibold '
+                          + (checked ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-stone-200 text-stone-700 hover:bg-stone-50')}>
+                          <input type="checkbox" checked={checked} className="accent-amber-800"
+                            onChange={event => updateQ('groups', event.target.checked
+                              ? [...activeQuestion.groups, value]
+                              : activeQuestion.groups.filter(group => group !== value))} />
+                          {label}
+                        </label>
+                      );
+                    })}
+                    <span className="text-xs text-stone-600">Có thể chọn cả hai</span>
+                  </div>
+                )}
 
                 {studyDefaults ? (
                   <div className="flex flex-wrap items-center gap-2 text-sm">

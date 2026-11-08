@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText, Folder, ListChecks, Pencil, Plus, Scale, TextCursorInput } from 'lucide-react';
-import type { BlogPost, StudyLesson, StudyQuestionType, StudySection } from '../types';
-import { STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
+import { ChevronDown, ChevronLeft, ChevronRight, FileText, Folder, ListChecks, Pencil, Plus, Scale, TextCursorInput } from 'lucide-react';
+import type { BlogPost, StudyLesson, StudyQuestionGroup, StudyQuestionType, StudySection } from '../types';
+import { STUDY_QUESTION_GROUPS, STUDY_QUESTION_TYPES, supportsStudyGroups } from '../src/utils/studyLibrary';
 
 const typeIcons = { trac_nghiem: ListChecks, dung_sai: Scale, tu_luan: TextCursorInput };
 const focusStyle = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700';
@@ -37,16 +37,20 @@ function PostRows({ posts, onRead, onEdit }: {
 }
 
 export default function ChapterStudyList({
-  chapter, selectedType, selectedLessonId, blogs, lessons, loading, onSelectType, onSelectLesson,
+  chapter, selectedType, selectedLessonId, selectedGroup, groupMatches, blogs, lessons, loading,
+  onSelectType, onSelectGroup, onSelectLesson,
   onRead, onCreate, onEdit, onSaveLesson, lessonSync, onRetryLessonSync, renderLessonPosts,
 }: {
   chapter: { id: string; name: string; grade: number };
   selectedType?: StudyQuestionType;
   selectedLessonId?: string;
+  selectedGroup?: StudyQuestionGroup | 'all';
+  groupMatches?: ReadonlyMap<string, ReadonlySet<number>>;
   blogs: BlogPost[];
   lessons: StudyLesson[];
   loading: boolean;
   onSelectType: (type: StudyQuestionType) => void;
+  onSelectGroup: (group: StudyQuestionGroup | 'all') => void;
   onSelectLesson: (id?: string) => void;
   onRead: (blog: BlogPost) => void;
   onCreate?: (section: StudySection) => void;
@@ -77,10 +81,17 @@ export default function ChapterStudyList({
     postsByLesson.set(parent.id, posts);
   }
   const type = STUDY_QUESTION_TYPES.find(option => option.value === selectedType);
+  const groupLabel = STUDY_QUESTION_GROUPS.find(group => group.value === selectedGroup)?.label;
+  const matchingPosts = (posts: BlogPost[]) => groupMatches ? posts.filter(post => groupMatches.has(post.id)) : posts;
   const sectionLessons = lessons.filter(lesson => lesson.studySection.questionType === selectedType)
     .sort((first, second) => titleOrder.compare(first.title, second.title));
+  const visibleLessons = sectionLessons.filter(lesson => {
+    const posts = postsByLesson.get(lesson.id) ?? [];
+    return !groupMatches || matchingPosts(posts).length > 0 || (onSaveLesson && posts.length === 0);
+  });
   const activeLesson = sectionLessons.find(lesson => lesson.id === selectedLessonId);
-  const lessonPosts = activeLesson ? postsByLesson.get(activeLesson.id) ?? [] : [];
+  const lessonPosts = activeLesson ? matchingPosts(postsByLesson.get(activeLesson.id) ?? []) : [];
+  const visibleLoosePosts = type ? matchingPosts(loosePosts[type.value]) : [];
 
   const openNameEditor = (lesson: StudyLesson | 'new') => {
     setName(lesson === 'new' ? '' : lesson.title);
@@ -118,22 +129,49 @@ export default function ChapterStudyList({
           {STUDY_QUESTION_TYPES.map(({ value, label }) => {
             const Icon = typeIcons[value];
             const active = value === selectedType;
+            const grouped = supportsStudyGroups(value);
+            const groupsId = 'study-groups-' + value;
             return (
-              <button key={value} type="button" aria-pressed={active} onClick={() => onSelectType(value)}
-                className={'flex min-h-12 items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-sm font-semibold '
-                  + focusStyle + (active ? ' border-amber-300 bg-amber-50 text-amber-950' : ' border-stone-200 text-stone-700 hover:bg-stone-50')}>
-                <Icon aria-hidden="true" className="size-4 shrink-0 text-amber-800" />
-                <span className="flex-1">{label}</span>
-                {!loading && <span className="shrink-0 rounded bg-stone-100 px-1.5 py-0.5 text-xs tabular-nums">
-                  {lessons.filter(lesson => lesson.studySection.questionType === value).length + loosePosts[value].length}
-                </span>}
-              </button>
+              <div key={value}>
+                <button type="button" aria-pressed={grouped ? undefined : active}
+                  aria-expanded={grouped ? active : undefined} aria-controls={grouped ? groupsId : undefined}
+                  onClick={() => onSelectType(value)}
+                  className={'flex min-h-12 w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-sm font-semibold '
+                    + focusStyle + (active ? ' border-amber-300 bg-amber-50 text-amber-950' : ' border-stone-200 text-stone-700 hover:bg-stone-50')}>
+                  <Icon aria-hidden="true" className="size-4 shrink-0 text-amber-800" />
+                  <span className="flex-1">{label}</span>
+                  {!loading && <span className="shrink-0 rounded bg-stone-100 px-1.5 py-0.5 text-xs tabular-nums">
+                    {lessons.filter(lesson => lesson.studySection.questionType === value).length + loosePosts[value].length}
+                  </span>}
+                  {grouped && <ChevronDown aria-hidden="true" className={'size-4 shrink-0 ' + (active ? 'rotate-180' : '')} />}
+                </button>
+                {grouped && (
+                  <div id={groupsId} hidden={!active} role="group" aria-label={'Nhóm nội dung · ' + label}>
+                    <div className="ml-3 mt-2 flex flex-wrap gap-1.5 border-l border-amber-200 pl-2">
+                      {STUDY_QUESTION_GROUPS.map(group => (
+                        <button key={group.value} type="button" aria-pressed={selectedGroup === group.value}
+                          onClick={() => onSelectGroup(group.value)}
+                          className={'min-h-9 rounded-md border px-2.5 text-xs font-semibold ' + focusStyle
+                            + (selectedGroup === group.value ? ' border-amber-300 bg-amber-50 text-amber-950'
+                              : ' border-stone-200 text-stone-700 hover:bg-stone-50')}>
+                          {group.label}
+                        </button>
+                      ))}
+                      <button type="button" aria-pressed={selectedGroup === 'all'} onClick={() => onSelectGroup('all')}
+                        className={'min-h-9 rounded px-1.5 text-xs font-semibold text-amber-900 hover:underline ' + focusStyle
+                          + (selectedGroup === 'all' ? ' bg-amber-50 underline' : '')}>
+                        Xem tất cả
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
       </section>
 
-      {type && (
+      {type && (!supportsStudyGroups(type.value) || selectedGroup) && (
         <section aria-labelledby="study-list-title" className="rounded-xl border border-stone-200 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-3.5 py-2.5">
             <div>
@@ -144,7 +182,7 @@ export default function ChapterStudyList({
                 </button>
               )}
               <h3 id="study-list-title" className="text-sm font-bold text-stone-900">
-                {activeLesson ? activeLesson.title : 'Danh sách bài · ' + type.label}
+                {activeLesson ? activeLesson.title : ['Danh sách bài', type.label, groupLabel].filter(Boolean).join(' · ')}
               </h3>
             </div>
             {!loading && activeLesson && onCreate && (
@@ -198,16 +236,16 @@ export default function ChapterStudyList({
               : <p className="px-3.5 py-8 text-center text-sm text-stone-600">Bài này chưa có nội dung.</p>
           ) : (
             <>
-              {sectionLessons.length > 0 && (
+              {visibleLessons.length > 0 && (
                 <ul aria-label="Tên các bài" className="divide-y divide-stone-100">
-                  {sectionLessons.map(lesson => (
+                  {visibleLessons.map(lesson => (
                     <li key={lesson.id} className="flex items-center gap-1 px-2 py-0.5 hover:bg-stone-50">
                       <button type="button" onClick={() => { setNameEditor(null); onSelectLesson(lesson.id); }}
                         className={'flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-2 text-left ' + focusStyle}>
                         <Folder aria-hidden="true" className="size-5 shrink-0 text-amber-800" />
                         <span className="min-w-0 flex-1 break-words text-sm font-semibold text-stone-900">{lesson.title}</span>
                         <span className="shrink-0 rounded bg-stone-100 px-1.5 py-0.5 text-xs text-stone-600">
-                          {postsByLesson.get(lesson.id)?.length ?? 0} nội dung
+                          {matchingPosts(postsByLesson.get(lesson.id) ?? []).length} nội dung
                         </span>
                         <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-stone-500" />
                       </button>
@@ -222,13 +260,13 @@ export default function ChapterStudyList({
                   ))}
                 </ul>
               )}
-              {loosePosts[type.value].length > 0 && (
+              {visibleLoosePosts.length > 0 && (
                 <div className="border-t border-stone-100">
                   <h4 className="px-3.5 py-2 text-xs font-semibold text-stone-600">Nội dung chưa xếp vào tên bài</h4>
-                  <PostRows posts={loosePosts[type.value]} onRead={onRead} onEdit={onEdit} />
+                  <PostRows posts={visibleLoosePosts} onRead={onRead} onEdit={onEdit} />
                 </div>
               )}
-              {!sectionLessons.length && !loosePosts[type.value].length && (
+              {!visibleLessons.length && !visibleLoosePosts.length && (
                 <p className="px-3.5 py-8 text-center text-sm text-stone-600">Mục này chưa có tên bài.</p>
               )}
             </>

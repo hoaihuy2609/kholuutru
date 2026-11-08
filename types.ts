@@ -148,6 +148,7 @@ export interface NotificationFetch {
 // ── Blog Types ──────────────────────────────────────────
 
 export type StudyQuestionType = 'trac_nghiem' | 'dung_sai' | 'tu_luan';
+export type StudyQuestionGroup = 'ly_thuyet' | 'tinh_toan';
 
 export interface StudySection {
   chapterId: string;

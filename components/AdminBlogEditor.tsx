@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { BlogPost, StudyLesson, StudyQuestionType, StudySection } from '../types';
+import { BlogPost, StudyLesson, StudyQuestionGroup, StudyQuestionType, StudySection } from '../types';
 import { getStudyChapter, isStudyQuestionType, nextStudyQuestionNumber, STUDY_CHAPTERS, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import {
     ChevronDown, ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
@@ -18,6 +18,7 @@ import ExamPaperEditor from './ExamPaperEditor';
 interface AdminBlogEditorProps {
     blog: BlogPost | null;
     initialSection?: StudySection;
+    initialQuestionGroup?: StudyQuestionGroup;
     studyLessons: StudyLesson[];
     existingBlogs: BlogPost[];
     onBack: () => void;
@@ -29,7 +30,7 @@ interface AdminBlogEditorProps {
 
 const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
-const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, studyLessons, existingBlogs, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
+const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, initialQuestionGroup, studyLessons, existingBlogs, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
     const [selectedMode, setEditorMode] = useState<'markdown' | 'solution' | 'exam_paper'>('markdown');
     const isLessonCreation = !blog && !!initialSection?.lessonId;
     const editorMode = isLessonCreation ? 'solution' : selectedMode;
@@ -392,6 +393,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                     studyDefaults={chapter ? { title: lesson?.title || chapter.name, firstQuestionNumber } : undefined}
                     studyGrade={chapter?.grade}
                     studyQuestionType={chapter && studyType ? studyType : undefined}
+                    initialQuestionGroup={initialQuestionGroup}
                 />
             )}
 
