@@ -687,15 +687,14 @@ const BlogList: React.FC<BlogListProps> = ({
         lesson.id === selectedLessonId && lesson.studySection.questionType === selectedType
     );
 
-    if (isLessonOpen) {
-        return (
-            <div className="mx-auto w-full max-w-[1720px] pb-12" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
+    return (
+        <>
+        {isLessonOpen ? (
+            <div className={'mx-auto w-full max-w-[1720px] ' + (selectedQuestions.length ? 'pb-28' : 'pb-12')}
+                style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
                 {chapterStudyList}
             </div>
-        );
-    }
-
-    return (
+        ) : (
         <div className="w-full max-w-[1720px] mx-auto p-4 md:p-6 lg:p-8 animate-fade-in relative pb-20" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
             {/* Nút quay lại trang chủ (khi góc học tập mở full-screen) */}
             <div style={{ marginBottom: '16px' }}>
@@ -947,6 +946,9 @@ const BlogList: React.FC<BlogListProps> = ({
                 </div>
             </div>
 
+        </div>
+        )}
+
             {/* ── FLOATING BAR: Khi có câu hỏi được chọn ── */}
             {selectedQuestions.length > 0 && (
                 <div
@@ -1027,7 +1029,7 @@ const BlogList: React.FC<BlogListProps> = ({
                 onClose={() => setIsExamModalOpen(false)}
                 questions={selectedQuestions}
             />
-        </div>
+        </>
     );
 };
 
