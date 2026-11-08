@@ -1,5 +1,5 @@
 // src/services/tikzService.ts
-// Service chuyên trách biên dịch mã TikZ qua Kroki API và upload SVG lên Telegram Storage
+// Biên dịch TikZ qua Kroki và lưu hình minh họa trên Telegram.
 
 import { TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
 
@@ -97,17 +97,25 @@ export async function renderTikzToSvg(tikzCode: string): Promise<TikzRenderResul
  * Trả về telegram file_id vĩnh viễn.
  */
 export async function uploadSvgToTelegram(svgContent: string, fileName: string = 'question_diagram.svg'): Promise<string | null> {
+  const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+  return uploadIllustrationToTelegram(blob, fileName, '[TIKZ-SVG]');
+}
+
+export function uploadQuestionImageToTelegram(file: File): Promise<string | null> {
+  return uploadIllustrationToTelegram(file, file.name, '[QUESTION-IMAGE]');
+}
+
+async function uploadIllustrationToTelegram(blob: Blob, fileName: string, label: string): Promise<string | null> {
   if (!TELEGRAM_CHAT_ID || !CLOUDFLARE_PROXY_URL) {
     console.warn('[tikzService] Telegram chưa cấu hình, bỏ qua upload.');
     return null;
   }
 
   try {
-    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
     const formData = new FormData();
     formData.append('chat_id', TELEGRAM_CHAT_ID);
     formData.append('document', blob, fileName);
-    formData.append('caption', `[TIKZ-SVG] ${fileName}`);
+    formData.append('caption', `${label} ${fileName}`);
 
     const res = await fetch(`${CLOUDFLARE_PROXY_URL}/proxy/sendDocument`, {
       method: 'POST',
@@ -128,7 +136,7 @@ export async function uploadSvgToTelegram(svgContent: string, fileName: string =
     }
     return null;
   } catch (err) {
-    console.error('[tikzService] Lỗi khi upload ảnh SVG lên Telegram:', err);
+    console.error('[tikzService] Lỗi khi tải hình minh họa lên Telegram:', err);
     return null;
   }
 }

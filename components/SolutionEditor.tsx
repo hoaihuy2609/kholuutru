@@ -14,7 +14,8 @@ import {
   Image as ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle,
   FileCode, Download
 } from 'lucide-react';
-import { renderTikzToSvg, uploadSvgToTelegram } from "../src/services/tikzService";
+import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
+import { renderTikzToSvg, uploadQuestionImageToTelegram, uploadSvgToTelegram } from "../src/services/tikzService";
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -37,6 +38,7 @@ interface Question {
   imageSvg?: string;       // Chuỗi SVG sau khi render
   imageUrl?: string;       // URL ảnh (nếu có)
   imageTelegramFileId?: string; // Telegram file_id
+  imageFile?: File;        // Ảnh cục bộ chưa lưu
   imageLayout?: 'auto' | 'right' | 'bottom'; // Bố cục ảnh
 }
 
@@ -539,12 +541,33 @@ export default function SolutionEditor({
   };
 
   const activeQuestion = questions[activeQIdx] ?? emptyQuestion();
+  const imageInput = useRef<HTMLInputElement>(null);
+  const uploadedImageIds = useRef(new WeakMap<File, string>());
+  const [imagePreview, setImagePreview] = useState<{ file: File; url: string }>();
+  const imageFile = activeQuestion.imageFile;
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview(undefined);
+      return;
+    }
+    const url = URL.createObjectURL(imageFile);
+    setImagePreview({ file: imageFile, url });
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
+  const localImageUrl = imagePreview?.file === imageFile ? imagePreview?.url : undefined;
+  const imageUrl = localImageUrl || activeQuestion.imageUrl
+    || (CLOUDFLARE_PROXY_URL && activeQuestion.imageTelegramFileId
+      ? CLOUDFLARE_PROXY_URL + '/getFile/' + encodeURIComponent(activeQuestion.imageTelegramFileId) : '');
+  const hasIllustration = !!(activeQuestion.imageSvg || imageUrl);
   const questionNumber = (question: Question, index: number) => {
     const automatic = 'Câu ' + ((studyDefaults?.firstQuestionNumber ?? 1) + index);
     return studyDefaults && !blog?.id ? automatic : question.questionNo || automatic;
   };
   const activeNumber = questionNumber(activeQuestion, activeQIdx);
-  const previewQuestions = questions.map((question, index) => serializeQuestion(question, questionNumber(question, index)));
+  const previewQuestions = questions.map((question, index) => serializeQuestion(
+    index === activeQIdx && localImageUrl ? { ...question, imageUrl: localImageUrl } : question,
+    questionNumber(question, index),
+  ));
   const hasPreview = previewQuestions.some(question =>
     question.question_text || question.question_latex || question.image_svg || question.image_url
     || question.image_telegram_file_id || question.solution || question.choices.some(Boolean)
@@ -553,6 +576,21 @@ export default function SolutionEditor({
   );
   const [renderingTikz, setRenderingTikz] = useState(false);
   const [tikzError, setTikzError] = useState<string | null>(null);
+  const illustrationBusy = saving || renderingTikz;
+
+  const attachImage = (file: File) => {
+    if (illustrationBusy) return;
+    if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
+      showToast('Vui lòng dùng ảnh PNG hoặc JPG.', 'error');
+      return;
+    }
+    if (!file.size || file.size > 5 * 1024 * 1024) {
+      showToast('Ảnh phải có dung lượng lớn hơn 0 và tối đa 5 MB.', 'error');
+      return;
+    }
+    setTikzError(null);
+    updateQuestion({ imageFile: file, imageUrl: '', imageSvg: '', imageTelegramFileId: '', tikzCode: '' });
+  };
 
   // Khung dán nhanh cả 4 đáp án / 4 mệnh đề
   const [quickBatchInput, setQuickBatchInput] = useState('');
@@ -591,10 +629,14 @@ export default function SolutionEditor({
     setTikzError(null);
     try {
       const res = await renderTikzToSvg(activeQuestion.tikzCode);
-      updateQ('imageSvg', res.svg);
-      if (!activeQuestion.imageLayout || activeQuestion.imageLayout === 'auto') {
-        updateQ('imageLayout', res.recommendedLayout);
-      }
+      updateQuestion({
+        imageSvg: res.svg,
+        imageFile: undefined,
+        imageUrl: '',
+        imageTelegramFileId: '',
+        imageLayout: !activeQuestion.imageLayout || activeQuestion.imageLayout === 'auto'
+          ? res.recommendedLayout : activeQuestion.imageLayout,
+      });
       showToast(`Đã vẽ hình thành công! Bố cục: ${res.recommendedLayout === 'right' ? 'Cột bên phải' : 'Ở dưới căn giữa'}`, 'success');
     } catch (err: any) {
       const msg = err.message || 'Lỗi khi biên dịch mã TikZ';
@@ -805,16 +847,19 @@ export default function SolutionEditor({
   }, []);
 
   // ── Question-level helpers ─────────────────────────────────
-  const updateQ = (key: keyof Question, val: any) =>
-    setQuestions(prev => prev.map((q, i) => i === activeQIdx ? { ...q, [key]: val } : q));
+  const updateQuestion = (fields: Partial<Question>) =>
+    setQuestions(prev => prev.map((q, i) => i === activeQIdx ? { ...q, ...fields } : q));
+
+  const updateQ = (key: keyof Question, val: any) => updateQuestion({ [key]: val });
 
   const addQuestion = () => {
+    if (illustrationBusy) return;
     setQuestions(prev => [...prev, emptyQuestion(studyQuestionType, initialQuestionGroup)]);
     setActiveQIdx(questions.length);
   };
 
   const removeQuestion = (idx: number) => {
-    if (questions.length <= 1) return;
+    if (illustrationBusy || questions.length <= 1) return;
     if (!window.confirm("Bạn có chắc muốn xóa câu này?")) return;
     setQuestions(prev => prev.filter((_, i) => i !== idx));
     if (activeQIdx >= idx && activeQIdx > 0) setActiveQIdx(activeQIdx - 1);
@@ -842,14 +887,22 @@ export default function SolutionEditor({
 
   // ── Save ───────────────────────────────────────────────────
   const handleSave = async () => {
+    if (illustrationBusy) return;
     if (!studyDefaults && (!examName.trim() || questions.some(q => !q.questionNo))) {
       showToast("Vui lòng nhập tên đề và số câu cho tất cả các câu!", "error");
       return;
     }
     setSaving(true);
     try {
-      // Upload SVG lên Telegram nếu chưa có file_id
+      // Ảnh tải lên cần có file_id trước khi lưu. SVG vẫn có thể dùng bản nhúng.
       const processedQuestions = await Promise.all(questions.map(async (q, idx) => {
+        if (q.imageFile) {
+          const file = q.imageFile;
+          const fileId = uploadedImageIds.current.get(file) ?? await uploadQuestionImageToTelegram(file);
+          if (!fileId) return q;
+          uploadedImageIds.current.set(file, fileId);
+          return { ...q, imageFile: undefined, imageTelegramFileId: fileId };
+        }
         let tId = q.imageTelegramFileId;
         if (q.imageSvg && !tId) {
           try {
@@ -861,6 +914,10 @@ export default function SolutionEditor({
         }
         return { ...q, imageTelegramFileId: tId };
       }));
+      const failedImageIndex = processedQuestions.findIndex(q => q.imageFile);
+      if (failedImageIndex >= 0) {
+        throw new Error(`Không tải được ảnh của ${questionNumber(questions[failedImageIndex], failedImageIndex)} lên Telegram. Vui lòng thử lưu lại.`);
+      }
 
       // Serialize mỗi câu hỏi tùy theo type
       const serializedQuestions = processedQuestions.map((q, index) =>
@@ -961,7 +1018,7 @@ export default function SolutionEditor({
     </div>
   );
   const importControl = (
-    <button type="button" onClick={() => setShowJsonModal(true)}
+    <button type="button" disabled={illustrationBusy} onClick={() => setShowJsonModal(true)}
       className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-950 hover:bg-amber-100"
       title="Nạp đề thi từ JSON, hỗ trợ cả hình vẽ TikZ">
       <FileCode aria-hidden="true" className="size-4" /> Nhập từ JSON
@@ -1000,7 +1057,7 @@ export default function SolutionEditor({
               <Trash2 className="w-4 h-4" /> Xóa bài
             </button>
           )}
-          <button onClick={handleSave} disabled={saving}
+          <button onClick={handleSave} disabled={illustrationBusy}
             className="px-6 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60 shadow-sm">
             <Save className="w-4 h-4" />
             {saving ? 'Đang lưu...' : (blog ? 'Cập nhật' : 'Đăng bài')}
@@ -1088,7 +1145,7 @@ export default function SolutionEditor({
                     )}
                   </button>
                 ))}
-                <button onClick={addQuestion}
+                <button onClick={addQuestion} disabled={illustrationBusy}
                   className="px-3 py-2 rounded-lg text-sm font-semibold border-2 border-dashed border-[#DCDCDA] text-[#787774] hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1">
                   <Plus className="w-4 h-4" /> Thêm câu
                 </button>
@@ -1145,7 +1202,7 @@ export default function SolutionEditor({
                           className="rounded-md border border-stone-200 bg-white px-2 py-1 text-sm text-stone-800">
                           {questions.map((question, index) => <option key={index} value={index}>{questionNumber(question, index)}</option>)}
                         </select>
-                        <button type="button" onClick={() => removeQuestion(activeQIdx)} aria-label="Xóa câu đang soạn"
+                        <button type="button" disabled={illustrationBusy} onClick={() => removeQuestion(activeQIdx)} aria-label="Xóa câu đang soạn"
                           className="grid size-8 place-items-center rounded-md text-stone-600 hover:bg-red-50 hover:text-red-700">
                           <Trash2 aria-hidden="true" className="size-4" />
                         </button>
@@ -1171,26 +1228,54 @@ export default function SolutionEditor({
                     value={activeQuestion.qText} onChange={e => updateQ('qText', e.target.value)} />
                 </div>
 
-                {/* ── Khung vẽ hình TikZ / LaTeX tinh gọn, tối giản ── */}
-                <div className="space-y-2.5 rounded-lg border border-stone-200 bg-stone-50 p-3">
+                <div
+                  role="group"
+                  aria-label="Hình minh họa"
+                  tabIndex={0}
+                  onPaste={event => {
+                    const file = Array.from(event.clipboardData.files).find(item => item.type.startsWith('image/'));
+                    if (!file) return;
+                    event.preventDefault();
+                    attachImage(file);
+                  }}
+                  className="space-y-2.5 rounded-lg border border-stone-200 bg-stone-50 p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-600"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-[#1A1A1A]">Hình vẽ minh họa (TikZ)</span>
+                      <span className="text-xs font-semibold text-[#1A1A1A]">Hình minh họa</span>
                       <span className="text-[11px] text-[#787774] font-normal">(tùy chọn)</span>
                     </div>
-                    {activeQuestion.imageSvg && (
-                      <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Đã có hình
-                      </span>
-                    )}
+                    <input
+                      ref={imageInput}
+                      type="file"
+                      accept="image/png,image/jpeg"
+                      aria-label="Chọn ảnh PNG hoặc JPG"
+                      hidden
+                      onChange={event => {
+                        const file = event.currentTarget.files?.[0];
+                        event.currentTarget.value = '';
+                        if (file) attachImage(file);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={illustrationBusy}
+                      onClick={() => imageInput.current?.click()}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-stone-800 hover:bg-amber-50 disabled:opacity-60"
+                    >
+                      <ImageIcon aria-hidden="true" className="size-3.5 text-amber-800" />
+                      {hasIllustration ? 'Thay ảnh' : 'Chèn ảnh'}
+                    </button>
                   </div>
 
                   <p className="text-[11px] text-[#787774] leading-relaxed">
-                    Dán mã TikZ để tự động vẽ hình. Gõ <code className="bg-[#F1F0EC] text-[#1A1A1A] px-1 py-0.5 rounded font-mono font-medium">[image]</code> vào đề bài nếu muốn chèn giữa các đoạn.
+                    Bấm vào vùng này rồi nhấn Ctrl+V để dán ảnh, hoặc chọn ảnh PNG/JPG tối đa 5 MB. Gõ <code className="bg-[#F1F0EC] text-[#1A1A1A] px-1 py-0.5 rounded font-mono font-medium">[image]</code> vào đề bài để đặt hình giữa các đoạn.
                   </p>
 
                   <AutoResizeTextarea
                     rows={3}
+                    aria-label="Mã TikZ"
+                    disabled={illustrationBusy}
                     className="w-full rounded-lg border border-stone-200 bg-white p-2.5 font-mono text-xs text-stone-800 outline-none focus:border-amber-600"
                     placeholder={`VD:\n\\begin{tikzpicture}\n  \\draw[thick, ->] (0,0) -- (3,0) node[right] {$x$};\n  \\draw[thick, ->] (0,0) -- (0,3) node[above] {$y$};\n  \\draw[red, thick] (0,0) circle (1.2);\n\\end{tikzpicture}`}
                     value={activeQuestion.tikzCode || ''}
@@ -1202,9 +1287,9 @@ export default function SolutionEditor({
                     <button
                       type="button"
                       onClick={handleRenderTikz}
-                      disabled={renderingTikz || !activeQuestion.tikzCode?.trim()}
+                      disabled={illustrationBusy || !activeQuestion.tikzCode?.trim()}
                       className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        renderingTikz || !activeQuestion.tikzCode?.trim()
+                        illustrationBusy || !activeQuestion.tikzCode?.trim()
                           ? 'bg-[#F1F0EC] text-[#AEACA8] cursor-not-allowed border border-[#E2E1DD]'
                           : 'bg-[#1A1A1A] hover:bg-[#333] text-white cursor-pointer active:scale-95 shadow-sm'
                       }`}
@@ -1218,13 +1303,15 @@ export default function SolutionEditor({
                       )}
                     </button>
 
-                    {activeQuestion.imageSvg && (
+                    {hasIllustration && (
                       <div className="flex flex-wrap items-center gap-1.5 text-xs">
                         <span className="text-[#787774] text-[11px]">Bố cục:</span>
                         {(['auto', 'right', 'bottom'] as const).map(l => (
                           <button
                             key={l}
                             type="button"
+                            disabled={illustrationBusy}
+                            aria-pressed={(activeQuestion.imageLayout || 'auto') === l}
                             onClick={() => updateQ('imageLayout', l)}
                             className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-all ${
                               (activeQuestion.imageLayout || 'auto') === l
@@ -1237,7 +1324,11 @@ export default function SolutionEditor({
                         ))}
                         <button
                           type="button"
-                          onClick={() => { updateQ('imageSvg', ''); updateQ('tikzCode', ''); }}
+                          disabled={illustrationBusy}
+                          onClick={() => {
+                            setTikzError(null);
+                            updateQuestion({ imageFile: undefined, imageUrl: '', imageSvg: '', imageTelegramFileId: '', tikzCode: '' });
+                          }}
                           className="ml-2 text-[11px] text-rose-500 hover:underline"
                         >
                           Xóa hình
@@ -1253,16 +1344,19 @@ export default function SolutionEditor({
                     </div>
                   )}
 
-                  {/* Ảnh render tức thì ngay trong ô nhập */}
-                  {activeQuestion.imageSvg && (
+                  {hasIllustration && (
                     <div className="mt-3 flex flex-col items-center rounded-lg border border-stone-200 bg-white p-3">
                       <div className="mb-2 flex items-center gap-1.5 self-start text-xs font-semibold text-amber-900">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Ảnh vector SVG đã sẵn sàng:
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Xem trước hình
                       </div>
-                      <div
-                        className="max-w-full overflow-x-auto flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"
-                        dangerouslySetInnerHTML={{ __html: activeQuestion.imageSvg }}
-                      />
+                      {activeQuestion.imageSvg ? (
+                        <div
+                          className="max-w-full overflow-x-auto flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"
+                          dangerouslySetInnerHTML={{ __html: activeQuestion.imageSvg }}
+                        />
+                      ) : (
+                        <img src={imageUrl} alt="Hình minh họa câu hỏi" className="max-h-60 max-w-full object-contain" />
+                      )}
                     </div>
                   )}
                 </div>
@@ -1502,7 +1596,7 @@ export default function SolutionEditor({
             )}
             <button
               onClick={handleSave}
-              disabled={saving}
+              disabled={illustrationBusy}
               className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-amber-800 px-3.5 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-60 sm:ml-auto"
             >
               <Save className="w-4 h-4" />
