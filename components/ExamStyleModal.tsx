@@ -84,6 +84,19 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
   const [config, setConfig] = useState<ExamStyleConfig>(DEFAULT_EXAM_STYLE);
   const [mobilePane, setMobilePane] = useState<'settings' | 'preview'>('settings');
   const titleId = useId();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!isOpen || !dialog) return;
+    dialog.showModal();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -104,9 +117,9 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/20 animate-fade-in">
-      <div role="dialog" aria-labelledby={titleId}
-        className="flex h-[calc(100dvh-1.5rem)] w-full max-w-[1440px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl md:h-[calc(100dvh-3rem)]">
+    <dialog ref={dialogRef} aria-labelledby={titleId}
+      onCancel={event => { event.preventDefault(); onClose(); }}
+      className="fixed inset-0 m-0 h-[100dvh] max-h-none w-full max-w-none flex-col overflow-hidden border-0 bg-white p-0 open:flex">
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stone-200 px-3 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-50 text-amber-800">
@@ -142,7 +155,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             </button>
           ))}
         </div>
-        <div className="min-h-0 flex-1 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className="min-h-0 flex-1 lg:grid lg:grid-cols-[clamp(20rem,34vw,30rem)_minmax(0,1fr)]">
         <div className={(mobilePane === 'settings' ? '' : 'hidden lg:block ') + 'h-full min-h-0 space-y-3 overflow-y-auto overscroll-contain bg-stone-50 p-3 text-sm text-stone-900 sm:p-4'}>
 
           {/* ═══ MỤC 1. MẪU GIAO DIỆN & BẢNG MÀU LATEX ═══ */}
@@ -516,8 +529,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
           </div>
         </div>
 
-      </div>
-    </div>
+    </dialog>
   );
 };
 
