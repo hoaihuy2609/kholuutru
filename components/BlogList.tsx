@@ -5,7 +5,7 @@ import { BookOpen, Plus, Search, SlidersHorizontal, Image, FileText, Check, Penc
 import ExamStyleModal from './ExamStyleModal';
 import TreeTableOfContents, { normalizeSearchText } from './TreeTableOfContents';
 import ChapterStudyList from './ChapterStudyList';
-import { getStudyChapter, isStudyQuestionGroup, isStudyQuestionType, STUDY_GRADES, studySectionParams, supportsStudyGroups } from '../src/utils/studyLibrary';
+import { getStudyChapter, isStudyQuestionGroup, isStudyQuestionType, parseStudyQuestionNumber, STUDY_GRADES, studySectionParams, supportsStudyGroups } from '../src/utils/studyLibrary';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import katex from 'katex';
@@ -126,6 +126,7 @@ interface QuestionCardProps {
     blog: BlogPost;
     question: CardQuestionData | null;
     isAdmin: boolean;
+    large?: boolean;
     onEdit?: () => void;
     onClick: () => void;
     isSelected?: boolean;
@@ -140,7 +141,7 @@ const cardTypes: Record<QuestionType, string> = {
 
 const cardControl = 'inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700';
 
-function QuestionCard({ blog, question, isAdmin, onEdit, onClick, isSelected = false, onToggleSelect }: QuestionCardProps) {
+function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick, isSelected = false, onToggleSelect }: QuestionCardProps) {
     const [expanded, setExpanded] = useState(false);
     const [isClipped, setIsClipped] = useState(false);
     const contentId = useId();
@@ -188,8 +189,11 @@ function QuestionCard({ blog, question, isAdmin, onEdit, onClick, isSelected = f
         </figure>
     );
     const renderText = (value: string) => value.trim() ? (
-        <div className="overflow-x-auto whitespace-pre-wrap [overflow-wrap:anywhere]"><TextWithMathCard text={value} /></div>
+        <div className="overflow-x-auto whitespace-pre-wrap text-justify [overflow-wrap:anywhere]"><TextWithMathCard text={value} /></div>
     ) : null;
+    const height = large
+        ? (expanded ? 'min-h-[280px] lg:min-h-[360px] ' : 'h-[280px] lg:h-[360px] ')
+        : (expanded ? 'min-h-[250px] sm:min-h-[280px] ' : 'h-[250px] sm:h-[280px] ');
     const readLabel = question ? 'Xem lời giải' : 'Đọc bài';
 
     return (
@@ -201,7 +205,7 @@ function QuestionCard({ blog, question, isAdmin, onEdit, onClick, isSelected = f
                 onClick();
             }}
             className={'flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-colors hover:border-amber-300 '
-                + (expanded ? 'min-h-[250px] sm:min-h-[280px] ' : 'h-[250px] sm:h-[280px] ')
+                + height
                 + (isSelected ? 'border-amber-400 ring-1 ring-inset ring-amber-200' : 'border-stone-200')}>
             <header className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-stone-100 bg-stone-50 px-3 sm:px-3.5">
                 <div className="flex min-w-0 items-center gap-2">
@@ -228,10 +232,12 @@ function QuestionCard({ blog, question, isAdmin, onEdit, onClick, isSelected = f
                 </div>
             </header>
 
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3.5 py-3.5 [container-type:inline-size] sm:px-4">
+            <div className={'flex min-h-0 min-w-0 flex-1 flex-col px-3.5 py-3.5 [container-type:inline-size] sm:px-4 '
+                + (large ? 'lg:p-5' : '')}>
                 <div id={contentId} ref={viewportRef}
                     className="relative min-h-0 flex-1 overflow-hidden">
-                    <div ref={contentRef} className="latex-prose min-w-0 text-base leading-relaxed text-stone-800">
+                    <div ref={contentRef} className={'latex-prose min-w-0 text-base leading-relaxed text-stone-800 '
+                        + (large ? 'lg:text-lg' : '')}>
                         {!hasQuestion ? (
                             <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{blog.summary || blog.title}</p>
                         ) : inlineImage ? (
@@ -470,21 +476,29 @@ const BlogList: React.FC<BlogListProps> = ({
         return selected;
     }, [blogs, selectedCardIndexes]);
 
-    const renderQuestionCards = (posts: BlogPost[], expandQuestions = false, matches?: ReadonlyMap<string, ReadonlySet<number>>) => (
-        <div className="grid grid-cols-1 items-start gap-3.5 md:grid-cols-2">
-            {posts.flatMap(blog => {
-                const solution = parsePhysicsSolution(blog.content);
-                const questions = getStoredQuestions(solution);
-                const displayed = expandQuestions && questions.length ? questions : [questions[0]];
-                return displayed.map((question, index) => (!matches || matches.get(blog.id)?.has(index)) && (
+    const renderQuestionCards = (posts: BlogPost[], inLesson = false, matches?: ReadonlyMap<string, ReadonlySet<number>>) => {
+        const cards = posts.flatMap(blog => {
+            const solution = parsePhysicsSolution(blog.content);
+            const questions = getStoredQuestions(solution);
+            const displayed = inLesson && questions.length ? questions : [questions[0]];
+            return displayed.map((question, index) => ({
+                blog, question, index, solution, questionCount: questions.length,
+                number: parseStudyQuestionNumber(question?.question_no) ?? -1,
+            })).filter(card => !matches || matches.get(blog.id)?.has(card.index));
+        }).sort((first, second) => second.number - first.number);
+
+        return (
+            <div className={'grid grid-cols-1 items-start gap-3.5 ' + (inLesson ? 'lg:grid-cols-2 lg:gap-5' : 'md:grid-cols-2')}>
+                {cards.map(({ blog, question, index, solution, questionCount }) => (
                     <QuestionCard
                         key={questionKey(blog.id, index)}
                         blog={blog}
                         question={toCardQuestion(question)}
                         isAdmin={isAdmin}
+                        large={inLesson}
                         onEdit={onEditBlog && (() => onEditBlog(blog, index))}
                         onClick={() => {
-                            if (solution && question && expandQuestions && questions.length > 1) {
+                            if (solution && question && inLesson && questionCount > 1) {
                                 const content = JSON.stringify({ ...solution, data: { ...solution.data, questions: [question] } });
                                 onReadBlog({ ...blog, content });
                             } else {
@@ -494,10 +508,10 @@ const BlogList: React.FC<BlogListProps> = ({
                         isSelected={selectedCardIndexes.get(blog.id)?.has(index)}
                         onToggleSelect={() => handleToggleSelect(blog.id, index)}
                     />
-                ));
-            })}
-        </div>
-    );
+                ))}
+            </div>
+        );
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -639,6 +653,41 @@ const BlogList: React.FC<BlogListProps> = ({
         filterHeading.current?.focus();
     };
 
+    const chapterStudyList = activeChapter && (
+        <ChapterStudyList key={activeChapter.id + ':' + (selectedType ?? '') + ':' + (selectedGroup ?? '')}
+            chapter={activeChapter} selectedType={selectedType} selectedLessonId={selectedLessonId}
+            selectedGroup={selectedGroup} groupMatches={groupMatches}
+            blogs={chapterBlogs} lessons={chapterLessons} loading={loading}
+            onSelectType={questionType => setSearchParams(
+                questionType === selectedType && supportsStudyGroups(questionType)
+                    ? { folder: activeChapter.id }
+                    : studySectionParams({ chapterId: activeChapter.id, questionType })
+            )}
+            onSelectGroup={group => {
+                if (selectedType) setSearchParams({ ...studySectionParams({ chapterId: activeChapter.id, questionType: selectedType }), group });
+            }}
+            onSelectLesson={lessonId => {
+                if (selectedType) setSearchParams({
+                    ...studySectionParams({ chapterId: activeChapter.id, questionType: selectedType, lessonId }),
+                    ...(selectedGroup ? { group: selectedGroup } : {}),
+                });
+            }}
+            onRead={readChapterPost} onCreate={isAdmin ? onCreateBlog : undefined} onEdit={isAdmin ? onEditBlog : undefined}
+            renderLessonPosts={posts => renderQuestionCards(posts, true, groupMatches)}
+            onSaveLesson={onSaveLesson} lessonSync={lessonSync} onRetryLessonSync={onRetryLessonSync} />
+    );
+    const isLessonOpen = chapterLessons.some(lesson =>
+        lesson.id === selectedLessonId && lesson.studySection.questionType === selectedType
+    );
+
+    if (isLessonOpen) {
+        return (
+            <div className="mx-auto w-full max-w-[1720px] pb-12" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
+                {chapterStudyList}
+            </div>
+        );
+    }
+
     return (
         <div className="w-full max-w-[1720px] mx-auto p-4 md:p-6 lg:p-8 animate-fade-in relative pb-20" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
             {/* Nút quay lại trang chủ (khi góc học tập mở full-screen) */}
@@ -767,29 +816,7 @@ const BlogList: React.FC<BlogListProps> = ({
                         )}
                     </div>
 
-                    {activeChapter ? (
-                        <ChapterStudyList key={activeChapter.id + ':' + (selectedType ?? '') + ':' + (selectedGroup ?? '')}
-                            chapter={activeChapter} selectedType={selectedType} selectedLessonId={selectedLessonId}
-                            selectedGroup={selectedGroup} groupMatches={groupMatches}
-                            blogs={chapterBlogs} lessons={chapterLessons} loading={loading}
-                            onSelectType={questionType => setSearchParams(
-                                questionType === selectedType && supportsStudyGroups(questionType)
-                                    ? { folder: activeChapter.id }
-                                    : studySectionParams({ chapterId: activeChapter.id, questionType })
-                            )}
-                            onSelectGroup={group => {
-                                if (selectedType) setSearchParams({ ...studySectionParams({ chapterId: activeChapter.id, questionType: selectedType }), group });
-                            }}
-                            onSelectLesson={lessonId => {
-                                if (selectedType) setSearchParams({
-                                    ...studySectionParams({ chapterId: activeChapter.id, questionType: selectedType, lessonId }),
-                                    ...(selectedGroup ? { group: selectedGroup } : {}),
-                                });
-                            }}
-                            onRead={readChapterPost} onCreate={isAdmin ? onCreateBlog : undefined} onEdit={isAdmin ? onEditBlog : undefined}
-                            renderLessonPosts={posts => renderQuestionCards(posts, true, groupMatches)}
-                            onSaveLesson={onSaveLesson} lessonSync={lessonSync} onRetryLessonSync={onRetryLessonSync} />
-                    ) : (<>
+                    {activeChapter ? chapterStudyList : (<>
                     <section aria-labelledby="question-filter-heading" className="space-y-2 rounded-xl border border-stone-200 bg-white p-2.5 shadow-sm sm:px-3">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                             <div className="flex shrink-0 items-center gap-1.5">

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, FileText, Folder, ListChecks, Pencil, Plus, Scale, TextCursorInput } from 'lucide-react';
 import type { BlogPost, StudyLesson, StudyQuestionGroup, StudyQuestionType, StudySection } from '../types';
 import { STUDY_QUESTION_GROUPS, STUDY_QUESTION_TYPES, supportsStudyGroups } from '../src/utils/studyLibrary';
@@ -90,8 +90,16 @@ export default function ChapterStudyList({
     return !groupMatches || matchingPosts(posts).length > 0 || (onSaveLesson && posts.length === 0);
   });
   const activeLesson = sectionLessons.find(lesson => lesson.id === selectedLessonId);
+  const activeLessonId = activeLesson?.id;
+  const lessonHeading = useRef<HTMLHeadingElement>(null);
   const lessonPosts = activeLesson ? matchingPosts(postsByLesson.get(activeLesson.id) ?? []) : [];
   const visibleLoosePosts = type ? matchingPosts(loosePosts[type.value]) : [];
+
+  useEffect(() => {
+    if (!activeLessonId) return;
+    lessonHeading.current?.focus({ preventScroll: true });
+    lessonHeading.current?.scrollIntoView({ block: 'start' });
+  }, [activeLessonId]);
 
   const openNameEditor = (lesson: StudyLesson | 'new') => {
     setName(lesson === 'new' ? '' : lesson.title);
@@ -120,7 +128,7 @@ export default function ChapterStudyList({
 
   return (
     <>
-      <section aria-labelledby="study-chapter-title" className="space-y-3 rounded-xl border border-stone-200 bg-white p-3.5 sm:p-4">
+      {!activeLesson && <section aria-labelledby="study-chapter-title" className="space-y-3 rounded-xl border border-stone-200 bg-white p-3.5 sm:p-4">
         <div>
           <p className="text-xs font-semibold text-amber-800">Vật lý {chapter.grade}</p>
           <h2 id="study-chapter-title" className="mt-1 text-base font-bold text-stone-900">{chapter.name}</h2>
@@ -169,21 +177,29 @@ export default function ChapterStudyList({
             );
           })}
         </div>
-      </section>
+      </section>}
 
       {type && (!supportsStudyGroups(type.value) || selectedGroup) && (
         <section aria-labelledby="study-list-title" className="rounded-xl border border-stone-200 bg-white">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-3.5 py-2.5">
-            <div>
+          <div className={'flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-3.5 py-2.5 '
+            + (activeLesson ? 'sm:px-5 sm:py-4' : '')}>
+            <div className="min-w-0">
               {activeLesson && (
                 <button type="button" onClick={() => onSelectLesson()}
                   className={'mb-1 inline-flex items-center gap-1 rounded text-xs font-semibold text-amber-900 hover:underline ' + focusStyle}>
                   <ChevronLeft aria-hidden="true" className="size-3.5" /> Danh sách bài
                 </button>
               )}
-              <h3 id="study-list-title" className="text-sm font-bold text-stone-900">
-                {activeLesson ? activeLesson.title : ['Danh sách bài', type.label, groupLabel].filter(Boolean).join(' · ')}
-              </h3>
+              {activeLesson ? (
+                <h1 id="study-list-title" ref={lessonHeading} tabIndex={-1}
+                  className="scroll-mt-28 break-words text-lg font-bold text-stone-900 sm:text-xl">
+                  {activeLesson.title}
+                </h1>
+              ) : (
+                <h3 id="study-list-title" className="text-sm font-bold text-stone-900">
+                  {['Danh sách bài', type.label, groupLabel].filter(Boolean).join(' · ')}
+                </h3>
+              )}
             </div>
             {!loading && activeLesson && onCreate && (
               <button type="button" className={addButton}
@@ -229,7 +245,7 @@ export default function ChapterStudyList({
             <p role="status" className="px-3.5 py-8 text-center text-sm text-stone-600">Đang tải danh sách bài…</p>
           ) : activeLesson ? (
             lessonPosts.length ? (
-              <div className="p-3.5">
+              <div className="p-3.5 sm:p-5">
                 {renderLessonPosts([...lessonPosts].sort((first, second) => titleOrder.compare(first.title, second.title)))}
               </div>
             )

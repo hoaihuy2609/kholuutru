@@ -55,6 +55,12 @@ export function studySectionParams(section: StudySection) {
   };
 }
 
+export function parseStudyQuestionNumber(label: unknown) {
+  const match = /^(?:Câu\s+)?(\d+)[.:]?$/i.exec(String(label ?? '').trim());
+  const number = match ? Number(match[1]) : NaN;
+  return Number.isSafeInteger(number) && number < Number.MAX_SAFE_INTEGER ? number : undefined;
+}
+
 export function nextStudyQuestionNumber(blogs: BlogPost[], section: StudySection) {
   let count = 0;
   let highest = 0;
@@ -69,9 +75,7 @@ export function nextStudyQuestionNumber(blogs: BlogPost[], section: StudySection
       const questions = Array.isArray(data.questions) && data.questions.length ? data.questions : [data];
       count += questions.length;
       for (const question of questions) {
-        const match = /^(?:Câu\s+)?(\d+)$/i.exec(String(question?.question_no ?? '').trim());
-        const number = match ? Number(match[1]) : 0;
-        if (Number.isSafeInteger(number) && number < Number.MAX_SAFE_INTEGER) highest = Math.max(highest, number);
+        highest = Math.max(highest, parseStudyQuestionNumber(question?.question_no) ?? 0);
       }
     } catch { /* Other article formats do not reserve a question number. */ }
   }
