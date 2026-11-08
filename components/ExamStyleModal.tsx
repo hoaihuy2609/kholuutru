@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import {
   X, RotateCcw, Palette, Droplets, Sliders, Layout,
-  Layers, CheckSquare, FileText, Download, ExternalLink,
-  ChevronDown, Check, Sparkles, Loader2, Printer
+  Layers, CheckSquare, FileText, Download, Loader2, Printer
 } from 'lucide-react';
 import {
   ExamStyleConfig, DEFAULT_EXAM_STYLE, SelectedQuestionItem,
-  generateExamLatex, downloadTexFile, openInOverleaf,
+  generateExamLatex, downloadTexFile,
   printExamDirectlyToPdf
 } from '../src/services/examLatexService';
 
@@ -24,6 +23,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
   const [config, setConfig] = useState<ExamStyleConfig>(DEFAULT_EXAM_STYLE);
   const [isCompiling, setIsCompiling] = useState(false);
   const [compileStatus, setCompileStatus] = useState<string>('');
+  const titleId = useId();
 
   if (!isOpen) return null;
 
@@ -87,61 +87,64 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/20 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden border border-[#E9E9E7]">
-        
-        {/* ── HEADER MODAL (Đỏ đô Pimax) ── */}
-        <div className="px-6 py-4 flex items-center justify-between text-white shrink-0 shadow-md" style={{ background: '#7B1113' }}>
-          <div className="flex items-center gap-3">
-            <Sliders className="w-5 h-5 text-amber-300" />
-            <h2 className="text-lg font-bold tracking-wide">Tùy biến Style &amp; Layout</h2>
+      <div role="dialog" aria-labelledby={titleId}
+        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl md:max-h-[calc(100dvh-3rem)]">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stone-200 px-3 py-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-50 text-amber-800">
+              <Sliders aria-hidden="true" className="size-4" />
+            </span>
+            <h2 id={titleId} className="text-base font-bold leading-tight text-stone-900 sm:text-lg">Tùy chỉnh đề thi</h2>
           </div>
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={handleResetDefault}
-              className="px-3 py-1 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 border border-white/20 transition-all flex items-center gap-1.5"
+              className="flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-stone-200 px-2 text-xs font-semibold text-stone-700 hover:bg-stone-50 sm:px-2.5"
             >
-              <RotateCcw className="w-3.5 h-3.5" /> MẶC ĐỊNH
+              <RotateCcw aria-hidden="true" className="size-3.5" /> Mặc định
             </button>
             <button
+              type="button"
               onClick={onClose}
-              className="p-1 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition-colors"
+              aria-label="Đóng tùy chỉnh đề thi"
+              className="grid size-9 place-items-center rounded-md text-stone-600 hover:bg-stone-100 hover:text-stone-900"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* ── BODY SCROLLABLE (7 MỤC) ── */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#FCFCFA] text-[#1A1A1A] text-sm">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-stone-50 p-3 text-sm text-stone-900 sm:p-5">
 
           {/* ═══ MỤC 1. MẪU GIAO DIỆN & BẢNG MÀU LATEX ═══ */}
-          <div className="bg-white p-5 rounded-xl border border-[#E9E9E7] shadow-sm space-y-4">
-            <div className="text-xs font-bold text-[#7B1113] uppercase tracking-wider flex items-center gap-2">
-              <Palette className="w-4 h-4" /> 1. MẪU GIAO DIỆN &amp; BẢNG MÀU LATEX
+          <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+              <Palette className="w-4 h-4" /> 1. Màu sắc và phông chữ
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#57564F] mb-2">Màu chủ đạo đề thi:</label>
-              <div className="grid grid-cols-2 gap-3">
+              <label className="block text-xs font-semibold text-stone-700 mb-2">Màu chủ đạo đề thi:</label>
+              <div className="grid gap-2 sm:grid-cols-2">
                 {/* Pimax Red */}
                 <div
                   onClick={() => updateConfig('isCustomColor', false)}
-                  className={`p-3 rounded-xl border-2 cursor-pointer flex items-center gap-3 transition-all ${
-                    !config.isCustomColor ? 'border-[#7B1113] bg-[#FFF8F8]' : 'border-[#E9E9E7] hover:border-gray-300'
+                  className={`p-2.5 rounded-lg border cursor-pointer flex items-center gap-3 transition-all ${
+                    !config.isCustomColor ? 'border-amber-400 bg-amber-50' : 'border-stone-200 hover:border-stone-300'
                   }`}
                 >
                   <div className="w-8 h-8 rounded-lg bg-[#920000] shrink-0 shadow-sm" />
                   <div>
                     <div className="font-bold text-xs">Pimax Red</div>
-                    <div className="text-[11px] text-[#787774]">#920000 (Mặc định)</div>
+                    <div className="text-[11px] text-stone-600">#920000 (Mặc định)</div>
                   </div>
                 </div>
 
                 {/* Tùy chọn màu */}
                 <div
                   onClick={() => updateConfig('isCustomColor', true)}
-                  className={`p-3 rounded-xl border-2 cursor-pointer flex items-center justify-between transition-all ${
-                    config.isCustomColor ? 'border-[#7B1113] bg-[#FFF8F8]' : 'border-[#E9E9E7] hover:border-gray-300'
+                  className={`p-2.5 rounded-lg border cursor-pointer flex items-center justify-between transition-all ${
+                    config.isCustomColor ? 'border-amber-400 bg-amber-50' : 'border-stone-200 hover:border-stone-300'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -156,7 +159,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                     />
                     <div>
                       <div className="font-bold text-xs">Tùy chọn màu</div>
-                      <div className="text-[11px] text-[#787774] font-mono">{config.customColor}</div>
+                      <div className="text-[11px] text-stone-600 font-mono">{config.customColor}</div>
                     </div>
                   </div>
                 </div>
@@ -164,8 +167,8 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             </div>
 
             {/* Màu công thức toán */}
-            <div className="flex items-center justify-between p-3 rounded-lg border border-[#E9E9E7] bg-[#FAFAFA]">
-              <span className="text-xs font-semibold text-[#57564F]">Màu công thức toán</span>
+            <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-stone-200 bg-stone-50">
+              <span className="text-xs font-semibold text-stone-700">Màu công thức toán</span>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -173,20 +176,20 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                   onChange={e => updateConfig('mathColor', e.target.value)}
                   className="w-6 h-6 rounded cursor-pointer border-0 p-0"
                 />
-                <span className="text-xs font-mono font-bold text-[#7B1113]">{config.mathColor}</span>
+                <span className="text-xs font-mono font-bold text-amber-950">{config.mathColor}</span>
               </div>
             </div>
 
             {/* Gói Font Toán học */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-[#57564F]">Gói Font Toán học:</label>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">3 Font</span>
+                <label className="text-xs font-semibold text-stone-700">Gói Font Toán học:</label>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600">3 Font</span>
               </div>
               <select
                 value={config.mathFont}
                 onChange={e => updateConfig('mathFont', e.target.value)}
-                className="w-full p-2.5 rounded-lg border border-[#E9E9E7] bg-white text-xs font-medium outline-none focus:border-[#7B1113]"
+                className="w-full p-2.5 rounded-lg border border-stone-200 bg-white text-xs font-medium outline-none focus:border-amber-700"
               >
                 <option value="Latin Modern">Latin Modern (Chuẩn Overleaf)</option>
                 <option value="Computer Modern">Computer Modern (Cổ điển)</option>
@@ -195,20 +198,21 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             </div>
           </div>
 
-          {/* ═══ MỤC 2. WATERMARK ═══ */}
-          <div className="bg-white p-5 rounded-xl border border-[#E9E9E7] shadow-sm space-y-3">
+          {/* ═══ MỤC 2. Hình mờ ═══ */}
+          <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#7B1113] uppercase tracking-wider flex items-center gap-2">
-                <Droplets className="w-4 h-4" /> 2. WATERMARK
+              <span className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+                <Droplets className="w-4 h-4" /> 2. Hình mờ
               </span>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   className="sr-only peer"
                   checked={config.enableWatermark}
+                  aria-label="Bật hình mờ"
                   onChange={e => updateConfig('enableWatermark', e.target.checked)}
                 />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#7B1113]" />
+                <div className="w-9 h-5 bg-stone-200 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-700 peer-focus-visible:ring-offset-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-800" />
               </label>
             </div>
             {config.enableWatermark && (
@@ -217,25 +221,26 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                 value={config.watermarkText}
                 onChange={e => updateConfig('watermarkText', e.target.value)}
                 placeholder="Nhập nội dung Watermark..."
-                className="w-full p-2.5 rounded-lg border border-[#E9E9E7] text-xs outline-none focus:border-[#7B1113]"
+                className="w-full p-2.5 rounded-lg border border-stone-200 text-xs outline-none focus:border-amber-700"
               />
             )}
           </div>
 
           {/* ═══ MỤC 3. THUỘC TÍNH KHUNG ĐỀ (BOX & CONTENT) ═══ */}
-          <div className="bg-white p-5 rounded-xl border border-[#E9E9E7] shadow-sm space-y-4">
+          <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#7B1113] uppercase tracking-wider flex items-center gap-2">
-                <Layout className="w-4 h-4" /> 3. THUỘC TÍNH KHUNG ĐỀ (BOX &amp; CONTENT)
+              <span className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+                <Layout className="w-4 h-4" /> 3. Thông tin và khung đề
               </span>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   className="sr-only peer"
                   checked={config.enableBox}
+                  aria-label="Bật khung đề"
                   onChange={e => updateConfig('enableBox', e.target.checked)}
                 />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#7B1113]" />
+                <div className="w-9 h-5 bg-stone-200 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-700 peer-focus-visible:ring-offset-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-800" />
               </label>
             </div>
 
@@ -243,77 +248,77 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
               <div className="space-y-3 pt-2">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold text-[#787774] mb-1">Tiêu đề cấp trên</label>
+                    <label className="block text-xs font-semibold text-stone-600 mb-1">Tiêu đề cấp trên</label>
                     <input
                       type="text"
                       value={config.headerTitle}
                       onChange={e => updateConfig('headerTitle', e.target.value)}
                       placeholder="VD: SỞ GD&ĐT AN GIANG"
-                      className="w-full p-2.5 rounded-lg border border-[#E9E9E7] text-xs font-medium outline-none focus:border-[#7B1113]"
+                      className="w-full p-2.5 rounded-lg border border-stone-200 text-xs font-medium outline-none focus:border-amber-700"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#787774] mb-1">Mã đề</label>
+                    <label className="block text-xs font-semibold text-stone-600 mb-1">Mã đề</label>
                     <input
                       type="text"
                       value={config.examCode}
                       onChange={e => updateConfig('examCode', e.target.value)}
                       placeholder="101"
-                      className="w-full p-2.5 rounded-lg border border-[#E9E9E7] text-xs font-medium outline-none focus:border-[#7B1113]"
+                      className="w-full p-2.5 rounded-lg border border-stone-200 text-xs font-medium outline-none focus:border-amber-700"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#787774] mb-1">Tên trường / Đơn vị</label>
+                  <label className="block text-xs font-semibold text-stone-600 mb-1">Tên trường / Đơn vị</label>
                   <input
                     type="text"
                     value={config.schoolName}
                     onChange={e => updateConfig('schoolName', e.target.value)}
                     placeholder="VD: TRƯỜNG THPT CHUYÊN THỰC HÀNH"
-                    className="w-full p-2.5 rounded-lg border border-[#E9E9E7] text-xs font-medium outline-none focus:border-[#7B1113]"
+                    className="w-full p-2.5 rounded-lg border border-stone-200 text-xs font-medium outline-none focus:border-amber-700"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#787774] mb-1">Tên kỳ thi / Đề thi</label>
+                  <label className="block text-xs font-semibold text-stone-600 mb-1">Tên kỳ thi / Đề thi</label>
                   <input
                     type="text"
                     value={config.examName}
                     onChange={e => updateConfig('examName', e.target.value)}
                     placeholder="VD: KỲ THI THỬ TỐT NGHIỆP THPT"
-                    className="w-full p-2.5 rounded-lg border border-[#E9E9E7] text-xs font-medium outline-none focus:border-[#7B1113]"
+                    className="w-full p-2.5 rounded-lg border border-stone-200 text-xs font-medium outline-none focus:border-amber-700"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-[#787774] mb-1">Môn thi</label>
+                    <label className="block text-xs font-semibold text-stone-600 mb-1">Môn thi</label>
                     <input
                       type="text"
                       value={config.subject}
                       onChange={e => updateConfig('subject', e.target.value)}
                       placeholder="Vật lý"
-                      className="w-full p-2.5 rounded-lg border border-[#E9E9E7] text-xs font-medium outline-none focus:border-[#7B1113]"
+                      className="w-full p-2.5 rounded-lg border border-stone-200 text-xs font-medium outline-none focus:border-amber-700"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#787774] mb-1">Thời gian (phút)</label>
+                    <label className="block text-xs font-semibold text-stone-600 mb-1">Thời gian (phút)</label>
                     <input
                       type="number"
                       value={config.duration}
                       onChange={e => updateConfig('duration', parseInt(e.target.value, 10) || 50)}
-                      className="w-full p-2.5 rounded-lg border border-[#E9E9E7] text-xs font-medium outline-none focus:border-[#7B1113]"
+                      className="w-full p-2.5 rounded-lg border border-stone-200 text-xs font-medium outline-none focus:border-amber-700"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#787774] mb-1">Tiền tố nhãn câu</label>
+                    <label className="block text-xs font-semibold text-stone-600 mb-1">Tiền tố nhãn câu</label>
                     <input
                       type="text"
                       value={config.questionPrefix}
                       onChange={e => updateConfig('questionPrefix', e.target.value)}
                       placeholder="Câu"
-                      className="w-full p-2.5 rounded-lg border border-[#E9E9E7] text-xs font-medium outline-none focus:border-[#7B1113]"
+                      className="w-full p-2.5 rounded-lg border border-stone-200 text-xs font-medium outline-none focus:border-amber-700"
                     />
                   </div>
                 </div>
@@ -322,22 +327,22 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
           </div>
 
           {/* ═══ MỤC 4. CẤU HÌNH HEADER & FOOTER ═══ */}
-          <div className="bg-white p-5 rounded-xl border border-[#E9E9E7] shadow-sm space-y-4">
-            <div className="text-xs font-bold text-[#7B1113] uppercase tracking-wider flex items-center gap-2">
-              <FileText className="w-4 h-4" /> 4. CẤU HÌNH HEADER &amp; FOOTER
+          <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+              <FileText className="w-4 h-4" /> 4. Đầu trang và chân trang
             </div>
 
             {/* Header Box */}
-            <div className="p-4 rounded-xl border border-[#E9E9E7] bg-[#FAFAFA] space-y-3">
+            <div className="p-3 rounded-lg border border-stone-200 bg-stone-50 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-xs text-[#57564F]">Tiêu đề đầu trang (Header)</span>
-                <div className="flex items-center gap-1.5 text-xs text-[#787774]">
+                <span className="font-semibold text-xs text-stone-700">Tiêu đề đầu trang (Header)</span>
+                <div className="flex items-center gap-1.5 text-xs text-stone-600">
                   <span>Kẻ viền:</span>
                   <input
                     type="number"
                     value={config.headerRuleWidth}
                     onChange={e => updateConfig('headerRuleWidth', parseFloat(e.target.value) || 0)}
-                    className="w-12 p-1 rounded border border-[#E9E9E7] text-center text-xs"
+                    className="w-12 p-1 rounded border border-stone-200 text-center text-xs"
                   />
                   <span>pt</span>
                 </div>
@@ -348,29 +353,29 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                   value={config.headerLeft}
                   onChange={e => updateConfig('headerLeft', e.target.value)}
                   placeholder="Header Trái..."
-                  className="w-full p-2 rounded border border-[#E9E9E7] text-xs font-mono bg-white"
+                  className="w-full p-2 rounded border border-stone-200 text-xs font-mono bg-white"
                 />
                 <input
                   type="text"
                   value={config.headerRight}
                   onChange={e => updateConfig('headerRight', e.target.value)}
                   placeholder="Header Phải (VD: Thầy Cô biên soạn)..."
-                  className="w-full p-2 rounded border border-[#E9E9E7] text-xs font-mono bg-white"
+                  className="w-full p-2 rounded border border-stone-200 text-xs font-mono bg-white"
                 />
               </div>
             </div>
 
             {/* Footer Box */}
-            <div className="p-4 rounded-xl border border-[#E9E9E7] bg-[#FAFAFA] space-y-3">
+            <div className="p-3 rounded-lg border border-stone-200 bg-stone-50 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-xs text-[#57564F]">Chân trang (Footer)</span>
-                <div className="flex items-center gap-1.5 text-xs text-[#787774]">
+                <span className="font-semibold text-xs text-stone-700">Chân trang (Footer)</span>
+                <div className="flex items-center gap-1.5 text-xs text-stone-600">
                   <span>Kẻ viền:</span>
                   <input
                     type="number"
                     value={config.footerRuleWidth}
                     onChange={e => updateConfig('footerRuleWidth', parseFloat(e.target.value) || 0)}
-                    className="w-12 p-1 rounded border border-[#E9E9E7] text-center text-xs"
+                    className="w-12 p-1 rounded border border-stone-200 text-center text-xs"
                   />
                   <span>pt</span>
                 </div>
@@ -381,125 +386,128 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                   value={config.footerCenter}
                   onChange={e => updateConfig('footerCenter', e.target.value)}
                   placeholder="Footer Giữa (VD: Trang \thepage / \pageref{LastPage})"
-                  className="w-full p-2 rounded border border-[#E9E9E7] text-xs font-mono bg-white"
+                  className="w-full p-2 rounded border border-stone-200 text-xs font-mono bg-white"
                 />
               </div>
             </div>
           </div>
 
-          {/* ═══ MỤC 6. TÙY CHỌN XUẤT BẢN (OUTPUT OPTIONS) ═══ */}
-          <div className="bg-white p-5 rounded-xl border border-[#E9E9E7] shadow-sm space-y-3">
-            <div className="text-xs font-bold text-[#7B1113] uppercase tracking-wider flex items-center gap-2">
-              <CheckSquare className="w-4 h-4" /> 6. TÙY CHỌN XUẤT BẢN (OUTPUT OPTIONS)
+          {/* ═══ MỤC 5. Nội dung xuất kèm ═══ */}
+          <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+              <CheckSquare className="w-4 h-4" /> 5. Nội dung xuất kèm
             </div>
 
-            <div className="space-y-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               {/* Xuất bảng đáp án */}
-              <div className="flex items-center justify-between p-3 rounded-lg border border-[#E9E9E7] bg-[#FAFAFA]">
+              <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-stone-200 bg-stone-50">
                 <div>
-                  <div className="font-semibold text-xs text-[#1A1A1A]">Xuất bảng đáp án</div>
-                  <div className="text-[11px] text-[#787774]">Chèn bảng đáp án tổng hợp ở cuối đề thi</div>
+                  <div className="font-semibold text-xs text-stone-900">Xuất bảng đáp án</div>
+                  <div className="text-[11px] text-stone-600">Chèn bảng đáp án tổng hợp ở cuối đề thi</div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
                     className="sr-only peer"
                     checked={config.exportAnswerTable}
+                    aria-label="Xuất bảng đáp án"
                     onChange={e => updateConfig('exportAnswerTable', e.target.checked)}
                   />
-                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#7B1113]" />
+                  <div className="w-9 h-5 bg-stone-200 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-700 peer-focus-visible:ring-offset-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-800" />
                 </label>
               </div>
 
               {/* Xuất lời giải chi tiết */}
-              <div className="flex items-center justify-between p-3 rounded-lg border border-[#E9E9E7] bg-[#FAFAFA]">
+              <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-stone-200 bg-stone-50">
                 <div>
-                  <div className="font-semibold text-xs text-[#1A1A1A]">Xuất lời giải chi tiết</div>
-                  <div className="text-[11px] text-[#787774]">Đính kèm hướng dẫn giải chi tiết cho từng câu hỏi</div>
+                  <div className="font-semibold text-xs text-stone-900">Xuất lời giải chi tiết</div>
+                  <div className="text-[11px] text-stone-600">Đính kèm hướng dẫn giải chi tiết cho từng câu hỏi</div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
                     className="sr-only peer"
                     checked={config.exportDetailedSolution}
+                    aria-label="Xuất lời giải chi tiết"
                     onChange={e => updateConfig('exportDetailedSolution', e.target.checked)}
                   />
-                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#7B1113]" />
+                  <div className="w-9 h-5 bg-stone-200 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-700 peer-focus-visible:ring-offset-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-800" />
                 </label>
               </div>
             </div>
           </div>
 
-          {/* ═══ MỤC 7. TIÊU ĐỀ PHẦN THI (CHUẨN BỘ GD) ═══ */}
-          <div className="bg-white p-5 rounded-xl border border-[#E9E9E7] shadow-sm space-y-4">
+          {/* ═══ MỤC 6. Tiêu đề phần thi (CHUẨN BỘ GD) ═══ */}
+          <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#7B1113] uppercase tracking-wider flex items-center gap-2">
-                <Layers className="w-4 h-4" /> 7. TIÊU ĐỀ PHẦN THI
+              <span className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+                <Layers className="w-4 h-4" /> 6. Tiêu đề phần thi
               </span>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   className="sr-only peer"
                   checked={config.enableSectionTitles}
+                  aria-label="Hiện tiêu đề phần thi"
                   onChange={e => updateConfig('enableSectionTitles', e.target.checked)}
                 />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#7B1113]" />
+                <div className="w-9 h-5 bg-stone-200 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-700 peer-focus-visible:ring-offset-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-800" />
               </label>
             </div>
 
             {config.enableSectionTitles && (
               <div className="space-y-3 pt-2">
                 {/* Phần Trắc nghiệm 4 PA */}
-                <div className="p-3 rounded-lg border border-[#E9E9E7] bg-[#FAFAFA] space-y-2">
-                  <label className="block text-xs font-semibold text-[#57564F]">Tiêu đề — Trắc nghiệm 4 PA</label>
+                <div className="p-3 rounded-lg border border-stone-200 bg-stone-50 space-y-2">
+                  <label className="block text-xs font-semibold text-stone-700">Tiêu đề — Trắc nghiệm 4 PA</label>
                   <input
                     type="text"
                     value={config.choice4Title}
                     onChange={e => updateConfig('choice4Title', e.target.value)}
-                    className="w-full p-2 rounded border border-[#E9E9E7] text-xs bg-white"
+                    className="w-full p-2 rounded border border-stone-200 text-xs bg-white"
                   />
                   <input
                     type="text"
                     value={config.choice4Note}
                     onChange={e => updateConfig('choice4Note', e.target.value)}
                     placeholder="Ghi chú in nghiêng..."
-                    className="w-full p-2 rounded border border-[#E9E9E7] text-xs italic bg-white"
+                    className="w-full p-2 rounded border border-stone-200 text-xs italic bg-white"
                   />
                 </div>
 
                 {/* Phần Đúng / Sai */}
-                <div className="p-3 rounded-lg border border-[#E9E9E7] bg-[#FAFAFA] space-y-2">
-                  <label className="block text-xs font-semibold text-[#57564F]">Tiêu đề — Đúng / Sai</label>
+                <div className="p-3 rounded-lg border border-stone-200 bg-stone-50 space-y-2">
+                  <label className="block text-xs font-semibold text-stone-700">Tiêu đề — Đúng / Sai</label>
                   <input
                     type="text"
                     value={config.trueFalseTitle}
                     onChange={e => updateConfig('trueFalseTitle', e.target.value)}
-                    className="w-full p-2 rounded border border-[#E9E9E7] text-xs bg-white"
+                    className="w-full p-2 rounded border border-stone-200 text-xs bg-white"
                   />
                   <input
                     type="text"
                     value={config.trueFalseNote}
                     onChange={e => updateConfig('trueFalseNote', e.target.value)}
                     placeholder="Ghi chú in nghiêng..."
-                    className="w-full p-2 rounded border border-[#E9E9E7] text-xs italic bg-white"
+                    className="w-full p-2 rounded border border-stone-200 text-xs italic bg-white"
                   />
                 </div>
 
                 {/* Phần III: Trả lời ngắn */}
-                <div className="p-3 rounded-lg border border-[#E9E9E7] bg-[#FAFAFA] space-y-2">
-                  <label className="block text-xs font-semibold text-[#57564F]">Tiêu đề — Phần III (Trả lời ngắn)</label>
+                <div className="p-3 rounded-lg border border-stone-200 bg-stone-50 space-y-2">
+                  <label className="block text-xs font-semibold text-stone-700">Tiêu đề — Phần III (Trả lời ngắn)</label>
                   <input
                     type="text"
                     value={config.essayTitle}
                     onChange={e => updateConfig('essayTitle', e.target.value)}
-                    className="w-full p-2 rounded border border-[#E9E9E7] text-xs bg-white"
+                    className="w-full p-2 rounded border border-stone-200 text-xs bg-white"
                   />
                   <input
                     type="text"
                     value={config.essayNote}
                     onChange={e => updateConfig('essayNote', e.target.value)}
                     placeholder="Ghi chú in nghiêng..."
-                    className="w-full p-2 rounded border border-[#E9E9E7] text-xs italic bg-white"
+                    className="w-full p-2 rounded border border-stone-200 text-xs italic bg-white"
                   />
                 </div>
               </div>
@@ -509,27 +517,29 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
         </div>
 
         {/* ── FOOTER MODAL: NÚT XUẤT ĐỀ TRỰC TIẾP TRONG WEB ── */}
-        <div className="px-6 py-4 bg-white border-t border-[#E9E9E7] flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div className="text-xs text-[#787774]">
-            Đã chọn: <b className="text-[#1A1A1A]">{questions.length}</b> câu hỏi vào đề
+        <div className="grid shrink-0 gap-2 border-t border-stone-200 bg-white p-3 sm:flex sm:items-center sm:justify-between sm:px-5">
+          <div className="flex items-center gap-2 text-xs font-semibold text-stone-700">
+            <span className="rounded-full bg-amber-100 px-2 py-1 font-bold tabular-nums text-amber-950">{questions.length}</span>
+            <span>câu hỏi đã chọn</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="grid grid-cols-[auto_1fr] gap-2 sm:flex">
             {/* Tải .tex */}
             <button
+              type="button"
               onClick={handleDownloadTex}
               title="Tải mã nguồn TeX về máy"
-              className="px-3 py-2 rounded-xl text-xs font-semibold border border-[#E9E9E7] hover:bg-gray-50 text-[#57564F] transition-all flex items-center gap-1.5"
+              className="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-stone-200 px-2.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 sm:px-3"
             >
               <Download className="w-3.5 h-3.5" /> Mã nguồn .tex
             </button>
 
             {/* Nút chính: TỰ BIÊN SOẠN & XUẤT PDF TRỰC TIẾP TRONG WEB */}
             <button
+              type="button"
               onClick={handleExportPdf}
               disabled={isCompiling}
-              className="px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-md hover:opacity-95 transition-all flex items-center gap-2 disabled:opacity-50"
-              style={{ background: '#7B1113' }}
+              className="inline-flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-lg bg-amber-800 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-50"
             >
               {isCompiling ? (
                 <>
@@ -538,8 +548,8 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                 </>
               ) : (
                 <>
-                  <Printer className="w-4 h-4 text-amber-300" />
-                  <span>XUẤT ĐỀ THI RA PDF</span>
+                  <Printer aria-hidden="true" className="size-4 shrink-0" />
+                  <span>Xuất đề thi ra PDF</span>
                 </>
               )}
             </button>
