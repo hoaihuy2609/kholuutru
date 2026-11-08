@@ -12,7 +12,7 @@ import {
   ChevronLeft, Save, Trash2, ArrowUp, ArrowDown,
   Plus, Eye, BookOpen, Layers, X, ToggleLeft, ToggleRight,
   Image as ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle,
-  FileCode, Download, Copy, Check
+  FileCode, Download
 } from 'lucide-react';
 import { renderTikzToSvg, uploadSvgToTelegram } from "../src/services/tikzService";
 import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
@@ -207,79 +207,6 @@ const SAMPLE_PHYSICS_EXAM_JSON = JSON.stringify({
     }
   ]
 }, null, 2);
-
-const AI_PROMPT_TEMPLATE = `Bạn là chuyên gia chuyển đổi và số hóa đề thi Vật lý sang cấu trúc dữ liệu JSON để nạp vào hệ thống website.
-
-HÃY ĐỌC NỘI DUNG HOẶC HÌNH ẢNH ĐỀ THI ĐƯỢC CUNG CẤP VÀ CHUYỂN TOÀN BỘ SANG ĐỊNH DẠNG JSON THEO CÁC QUY TẮC SAU:
-
-1. QUY TẮC CÚ PHÁP JSON VÀ LATEX:
-- Đầu ra phải là chuỗi JSON thuần hợp lệ (chỉ trả về khối mã json, không giải thích ngoài lề).
-- Trong chuỗi JSON, tất cả dấu gạch chéo ngược của LaTeX phải escape thành 2 dấu gạch chéo ngược: ví dụ \\\\frac, \\\\cdot, \\\\alpha, \\\\vec, \\\\text{...}.
-- MỌI CÔNG THỨC TOÁN (kể cả trong choices, statements) BẮT BUỘC PHẢI KẸP GIỮA $ ... $ hoặc $$ ... $$. Tuyệt đối không để công thức trần không có $.
-- Trong solution: Công thức căn giữa $$ ... $$ phải đứng riêng một dòng, không viết dính chữ ngay sau $$.
-
-2. PHÂN LOẠI 3 DẠNG CÂU HỎI:
-- type: "trac_nghiem" (Trắc nghiệm 4 phương án):
-  + choices: mảng đúng 4 phần tử tương ứng A, B, C, D (kẹp công thức trong $, ví dụ "$\\\\vec{F}_1 + \\\\vec{F}_2 = \\\\vec{0}$", không ghi lại chữ "A.", "B." ở đầu đáp án).
-  + correctChoice: chữ cái đáp án đúng, viết hoa ("A", "B", "C", hoặc "D").
-  + solution: hướng dẫn giải chi tiết.
-- type: "dung_sai" (Đúng / Sai 4 ý a, b, c, d):
-  + statements: mảng 4 mệnh đề [a, b, c, d]. Mỗi mệnh đề có label ("a","b","c","d"), claim (nội dung mệnh đề), verdict (true nếu Đúng, false nếu Sai).
-  + solution: hướng dẫn giải chi tiết cho từng ý.
-- type: "tu_luan" (Tự luận hoặc trả lời ngắn):
-  + solution: hướng dẫn giải chi tiết kèm công thức và kết quả.
-
-3. HÌNH ẢNH VÀ ĐỒ THỊ (CỰC KỲ QUAN TRỌNG):
-- NẾU ẢNH HOẶC ĐỀ THI CÓ HÌNH VẼ (khung dây, mạch điện, đồ thị, vectơ từ trường/lực): BẮT BUỘC PHẢI DỰNG LẠI HÌNH BẰNG MÃ TIKZ LATEX đặt vào trường tikzCode (escape thành \\\\begin{tikzpicture}...\\\\end{tikzpicture}). KHÔNG ĐƯỢC ĐỂ TRỐNG TRONG KHI ĐỀ BÀI CÓ HÌNH.
-- imageLayout: "right" (ảnh đặt bên phải) hoặc "bottom" (ảnh đặt bên dưới).
-- Chỉ khi đề hoàn toàn không có hình vẽ mới để tikzCode: "".
-
-4. CẤU TRÚC JSON MẪU BẮT BUỘC:
-{
-  "exam_name": "[Tên đề thi hoặc chuyên đề]",
-  "questions": [
-    {
-      "questionNo": "Câu 1",
-      "type": "trac_nghiem",
-      "qText": "Một dòng điện thẳng dài $I = 5\\\\text{ A}$ đặt trong không khí. Cảm ứng từ tại điểm $M$ cách dây $r = 4\\\\text{ cm}$ có độ lớn là:",
-      "choices": [
-        "2{,}5 \\\\cdot 10^{-5}\\\\text{ T}",
-        "1{,}5 \\\\cdot 10^{-5}\\\\text{ T}",
-        "4{,}0 \\\\cdot 10^{-5}\\\\text{ T}",
-        "2{,}0 \\\\cdot 10^{-5}\\\\text{ T}"
-      ],
-      "correctChoice": "A",
-      "solution": "**Hướng dẫn giải:**\\n- Áp dụng công thức: $$B = 2 \\\\cdot 10^{-7} \\\\cdot \\\\frac{I}{r}$$\\n- Thay số ta được $B_M = 2{,}5 \\\\cdot 10^{-5}\\\\text{ T}$. Chọn đáp án A.",
-      "tikzCode": "",
-      "imageLayout": "auto"
-    },
-    {
-      "questionNo": "Câu 2",
-      "type": "dung_sai",
-      "qText": "Một lượng khí lí tưởng xác định biến đổi trạng thái theo chu trình...",
-      "statements": [
-        { "label": "a", "claim": "Quá trình (1) đến (2) là đẳng tích.", "verdict": true },
-        { "label": "b", "claim": "Nhiệt độ khí ở trạng thái (2) giảm so với (1).", "verdict": false },
-        { "label": "c", "claim": "Công chất khí thực hiện trong chu trình là A > 0.", "verdict": true },
-        { "label": "d", "claim": "Nội năng toàn chu trình không đổi.", "verdict": true }
-      ],
-      "solution": "**Hướng dẫn giải:**\\n- Ý a (Đúng) vì thể tích không đổi.\\n- Ý b (Sai) vì áp suất tăng...",
-      "tikzCode": "",
-      "imageLayout": "auto"
-    },
-    {
-      "questionNo": "Câu 3",
-      "type": "tu_luan",
-      "qText": "Một vật dao động điều hòa với phương trình $x = 4\\\\cos(2\\\\pi t)\\\\text{ cm}$. Xác định tốc độ cực đại của vật.",
-      "solution": "**Hướng dẫn giải:**\\n- Tốc độ cực đại: $$v_{\\\\max} = \\\\omega A = 8\\\\pi\\\\text{ cm/s}$$\\n- Đáp số: $8\\\\pi\\\\text{ cm/s}$.",
-      "tikzCode": "",
-      "imageLayout": "auto"
-    }
-  ]
-}
-
-BÂY GIỜ HÃY CHUYỂN ĐỔI ĐỀ THI SAU ĐÂY SANG JSON:
-[Dán nội dung hoặc ảnh đề thi vào đây]`;
 
 // ── BATCH OPTION PARSERS (Dán nhanh 4 đáp án / 4 mệnh đề) ───
 function parseMultipleChoiceBatch(raw: string): { choices: string[]; correctChoice?: string } {
@@ -819,14 +746,6 @@ export default function SolutionEditor({
   const [showJsonModal, setShowJsonModal] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [importingJson, setImportingJson] = useState(false);
-  const [copiedPrompt, setCopiedPrompt] = useState(false);
-
-  const handleCopyAiPrompt = () => {
-    navigator.clipboard.writeText(AI_PROMPT_TEMPLATE);
-    setCopiedPrompt(true);
-    showToast('Đã sao chép prompt cho AI vào clipboard!', 'success');
-    setTimeout(() => setCopiedPrompt(false), 2000);
-  };
 
   // Phân tích cú pháp JSON thời gian thực để báo trạng thái trên giao diện
   const parsedPreview = useMemo(() => {
@@ -911,12 +830,78 @@ export default function SolutionEditor({
         setExamName(importedExamName);
       }
 
-      setQuestions(normalizedList);
-      setActiveQIdx(0);
-      setShowJsonModal(false);
+      // TÍN HIỆU TỰ ĐỘNG TÁCH CARD:
+      // Nếu JSON chứa từ 2 câu hỏi trở lên (normalizedList.length > 1) và có hàm saveBlog
+      if (normalizedList.length > 1 && saveBlog) {
+        let createdCount = 0;
+        for (let i = 0; i < normalizedList.length; i++) {
+          const q = normalizedList[i];
+          const singleSerialized = {
+            question_no:    q.questionNo || `Câu ${i + 1}`,
+            question_text:  q.qText,
+            question_latex: q.qFormula,
+            type:           q.type,
+            solution:       q.solution || '',
+            tikz_code:      q.tikzCode || '',
+            image_svg:      q.imageSvg || '',
+            image_url:      q.imageUrl || '',
+            image_telegram_file_id: q.imageTelegramFileId || '',
+            image_layout:   q.imageLayout || 'auto',
+            steps:          q.type === 'tu_luan' ? (q.solution ? [{ title: '', text: q.solution, formula: '', formula2: '' }] : q.steps) : [],
+            statements:     q.type === 'dung_sai' ? q.statements : [],
+            choices:        q.type === 'trac_nghiem' ? q.choices : [],
+            correctChoice:  q.type === 'trac_nghiem' ? q.correctChoice : '',
+            solutionSteps:  q.type === 'trac_nghiem' ? (q.solution ? [{ title: '', text: q.solution, formula: '', formula2: '' }] : q.solutionSteps) : [],
+          };
 
-      const svgNote = renderedCount > 0 ? ` (đã sinh tự động ${renderedCount} hình vẽ vector SVG)` : '';
-      showToast(`Đã nạp thành công ${normalizedList.length} câu hỏi vào trình soạn${svgNote}!`, 'success');
+          const singleSolutionData = {
+            type: 'physics_solution',
+            data: {
+              exam_name: importedExamName || examName || 'Bài tập Vật lý',
+              questions: [singleSerialized],
+              question_no: singleSerialized.question_no,
+              question_text: singleSerialized.question_text,
+              question_latex: singleSerialized.question_latex,
+              steps: singleSerialized.steps,
+            }
+          };
+
+          const postTitle = importedExamName
+            ? `[${importedExamName}] - ${singleSerialized.question_no}`
+            : `[Lời giải] - ${singleSerialized.question_no}`;
+
+          // Nếu đang sửa bài cũ, câu đầu tiên cập nhật bài cũ, các câu sau tạo mới
+          const isFirstOfExisting = (i === 0 && blog?.id);
+
+          const payload = {
+            id: isFirstOfExisting ? blog.id : undefined,
+            title: postTitle,
+            summary: (q.qText || '').substring(0, 150) || 'Hướng dẫn giải chi tiết bằng LaTeX.',
+            content: JSON.stringify(singleSolutionData),
+            category: category || 'Lời giải',
+            is_published: true,
+            tags: [],
+            level: level || 1,
+            grade: grade || 0,
+          };
+
+          await saveBlog(payload);
+          createdCount++;
+        }
+
+        if (syncBlogs) await syncBlogs();
+        setShowJsonModal(false);
+        showToast(`Phát hiện ${createdCount} câu hỏi -> Đã tự động tách thành ${createdCount} Cards riêng biệt thành công!`, 'success');
+        if (onBack) onBack();
+      } else {
+        // Nếu chỉ có 1 câu: Nạp vào trình soạn bình thường để lưu thành 1 Card
+        setQuestions(normalizedList);
+        setActiveQIdx(0);
+        setShowJsonModal(false);
+
+        const svgNote = renderedCount > 0 ? ` (đã sinh tự động ${renderedCount} hình vẽ vector SVG)` : '';
+        showToast(`Đã nạp 1 câu hỏi vào trình soạn${svgNote}!`, 'success');
+      }
     } catch (err: any) {
       showToast(err.message || 'Lỗi khi nhập dữ liệu JSON', 'error');
     } finally {
@@ -1855,6 +1840,7 @@ export default function SolutionEditor({
                       <span className="text-emerald-600 font-medium flex items-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Phát hiện {parsedPreview.count} câu hỏi {parsedPreview.tikzCount > 0 ? `(${parsedPreview.tikzCount} hình TikZ)` : ''}
+                        {parsedPreview.count > 1 ? ` — Sẽ tự động tách thành ${parsedPreview.count} Cards riêng biệt` : ' — Nạp vào 1 Card'}
                       </span>
                     )}
                   </div>
@@ -1867,37 +1853,9 @@ export default function SolutionEditor({
                   value={jsonInput}
                   onChange={e => setJsonInput(e.target.value)}
                   placeholder={`{\n  "exam_name": "Chuyên đề Từ trường...",\n  "questions": [\n    {\n      "questionNo": "Câu 1",\n      "type": "trac_nghiem",\n      "qText": "Nội dung câu hỏi...",\n      "choices": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],\n      "correctChoice": "A",\n      "solution": "Lời giải chi tiết...",\n      "tikzCode": "\\\\begin{tikzpicture}...\\\\end{tikzpicture}"\n    }\n  ]\n}`}
-                  className="w-full h-72 p-3.5 rounded-xl font-mono text-xs bg-[#FAFAFA] border border-[#E9E9E7] text-[#1A1A1A] focus:outline-none focus:bg-white focus:border-[#2383E2] transition-colors resize-y leading-relaxed"
+                  className="w-full h-80 p-3.5 rounded-xl font-mono text-xs bg-[#FAFAFA] border border-[#E9E9E7] text-[#1A1A1A] focus:outline-none focus:bg-white focus:border-[#2383E2] transition-colors resize-y leading-relaxed"
                   spellCheck={false}
                 />
-              </div>
-
-              {/* Format Guide */}
-              <div className="p-3.5 rounded-xl bg-[#F7F6F3] border border-[#E9E9E7] text-[12px] text-[#787774] leading-relaxed">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <p className="font-semibold text-[#37352F]">Hướng dẫn cấu trúc JSON:</p>
-                  <button
-                    type="button"
-                    onClick={handleCopyAiPrompt}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#37352F] bg-white hover:bg-[#EFEFED] border border-[#D3D1CB] transition-colors shadow-xs shrink-0 cursor-pointer"
-                    title="Sao chép prompt cho AI"
-                  >
-                    {copiedPrompt ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="text-emerald-600">Đã sao chép</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5 text-[#57564F]" />
-                        <span>Sao chép prompt</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-                <p>• Hỗ trợ đối tượng <code>&#123; exam_name, questions: [...] &#125;</code> hoặc mảng trực tiếp <code>[...]</code>.</p>
-                <p>• Các trường mỗi câu: <code>questionNo</code>, <code>type</code> (<code>'trac_nghiem'</code> | <code>'dung_sai'</code> | <code>'tu_luan'</code>), <code>qText</code>, <code>choices</code>, <code>correctChoice</code>, <code>statements</code>, <code>solution</code>, <code>tikzCode</code>.</p>
-                <p>• Hệ thống sẽ tự động gọi Kroki API để sinh ảnh vector SVG chất lượng cao cho các câu có mã <code>tikzCode</code>.</p>
               </div>
             </div>
 
@@ -1907,7 +1865,7 @@ export default function SolutionEditor({
                 type="button"
                 onClick={() => setShowJsonModal(false)}
                 disabled={importingJson}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#57564F] hover:bg-[#EFEFED] border border-[#E9E9E7] transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#57564F] hover:bg-[#EFEFED] border border-[#E9E9E7] transition-colors disabled:opacity-50 cursor-pointer"
               >
                 Đóng
               </button>
@@ -1915,17 +1873,19 @@ export default function SolutionEditor({
                 type="button"
                 onClick={handleImportJson}
                 disabled={!jsonInput.trim() || importingJson}
-                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm"
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
               >
                 {importingJson ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    Đang xử lý & vẽ hình...
+                    Đang xử lý & lưu Cards...
                   </>
                 ) : (
                   <>
                     <Download className="w-3.5 h-3.5" />
-                    Nạp vào trình soạn
+                    {parsedPreview && parsedPreview.count > 1
+                      ? `Tự động tách & Tạo ${parsedPreview.count} Cards`
+                      : 'Nạp vào trình soạn'}
                   </>
                 )}
               </button>
