@@ -86,7 +86,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/20 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden border border-[#E9E9E7]">
         
         {/* ── HEADER MODAL (Đỏ đô Pimax) ── */}

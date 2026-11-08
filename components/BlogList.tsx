@@ -695,7 +695,8 @@ const BlogList: React.FC<BlogListProps> = ({
                 {chapterStudyList}
             </div>
         ) : (
-        <div className="w-full max-w-[1720px] mx-auto p-4 md:p-6 lg:p-8 animate-fade-in relative pb-20" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
+        <div className={'w-full max-w-[1720px] mx-auto p-4 md:p-6 lg:p-8 animate-fade-in relative '
+            + (selectedQuestions.length ? 'pb-28 sm:pb-20' : 'pb-20')} style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
             {/* Nút quay lại trang chủ (khi góc học tập mở full-screen) */}
             <div style={{ marginBottom: '16px' }}>
                 <button
@@ -951,73 +952,22 @@ const BlogList: React.FC<BlogListProps> = ({
 
             {/* ── FLOATING BAR: Khi có câu hỏi được chọn ── */}
             {selectedQuestions.length > 0 && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        bottom: '24px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        zIndex: 40,
-                        background: '#1A1A1A',
-                        color: '#fff',
-                        padding: '10px 20px',
-                        borderRadius: '16px',
-                        boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '16px',
-                        maxWidth: '92vw',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600 }}>
-                        <span style={{
-                            minWidth: '22px', height: '22px', borderRadius: '50%',
-                            background: '#7B1113', color: '#fff',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '11px', fontWeight: 700, padding: '0 6px',
-                        }}>
+                <div className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1.5 rounded-xl border border-stone-200 bg-white p-2 shadow-lg sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:flex sm:-translate-x-1/2 sm:gap-2">
+                    <div role="status" className="flex items-center gap-2 px-2 text-sm font-semibold text-stone-800 sm:whitespace-nowrap">
+                        <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-bold tabular-nums text-amber-950">
                             {selectedQuestions.length}
                         </span>
                         <span>câu hỏi đã chọn</span>
                     </div>
 
-                    <button
-                        onClick={() => setSelectedCardIndexes(new Map())}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#AEACA8',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            textDecoration: 'underline',
-                            padding: '4px 8px',
-                        }}
-                    >
+                    <button type="button" onClick={() => setSelectedCardIndexes(new Map())}
+                        className="min-h-9 whitespace-nowrap rounded-md px-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 hover:text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700">
                         Bỏ chọn
                     </button>
 
-                    <button
-                        onClick={() => setIsExamModalOpen(true)}
-                        style={{
-                            background: '#7B1113',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '10px',
-                            padding: '8px 16px',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 4px 12px rgba(123, 17, 19, 0.4)',
-                            transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#920000'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#7B1113'; }}
-                    >
-                        <Sparkles style={{ width: '15px', height: '15px', color: '#FCD34D' }} />
+                    <button type="button" onClick={() => setIsExamModalOpen(true)}
+                        className="col-span-2 inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-amber-800 px-3 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
+                        <Sparkles aria-hidden="true" className="size-4" />
                         <span>Biên soạn đề (LaTeX)</span>
                     </button>
                 </div>
