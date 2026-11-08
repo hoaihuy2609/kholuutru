@@ -169,7 +169,7 @@ function QuestionCard({ blog, question, isAdmin, onEditBlog, onClick, isSelected
     const inlineImage = parts.length > 1;
     const sideImage = hasImage && !inlineImage && !!(text || formula) && question?.imageLayout !== 'bottom';
     const image = hasImage && (
-        <figure className={'mx-auto flex w-full min-w-0 max-w-sm items-center justify-center self-start rounded-lg border border-stone-200 bg-stone-50 p-2.5 '
+        <figure className={'mx-auto flex w-full min-w-0 max-w-sm items-center justify-center self-start '
             + (sideImage ? '[@container_(min-width:26rem)]:w-[38%] [@container_(min-width:26rem)]:shrink-0' : '')}>
             {question?.imageSvg ? (
                 <div className="max-w-full [&>svg]:block [&>svg]:h-auto [&>svg]:max-h-48 [&>svg]:max-w-full"
