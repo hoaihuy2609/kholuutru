@@ -1,7 +1,7 @@
 import React, { useDeferredValue, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   X, RotateCcw, Palette, Droplets, Sliders, Layout,
-  Layers, CheckSquare, Download, Printer
+  Layers, CheckSquare, ChevronDown, Download, Printer
 } from 'lucide-react';
 import {
   ExamStyleConfig, DEFAULT_EXAM_STYLE, SelectedQuestionItem,
@@ -47,7 +47,7 @@ function ExamPrintPreview({ questions, config }: {
   useEffect(updateFrame, [bodyHtml]);
 
   return (
-    <div ref={viewportRef} className="relative mx-auto h-full max-w-[812px] overflow-hidden rounded border border-stone-200 bg-white shadow-sm">
+    <div ref={viewportRef} className="relative mx-auto h-full max-w-[812px] overflow-hidden bg-white">
       <iframe ref={frameRef} title="Xem trước đề thi" sandbox="allow-same-origin" srcDoc={frameHtml}
         onLoad={updateFrame} className="absolute left-0 top-0 origin-top-left border-0"
         style={{ width: previewFrameWidth, height: 100 / scale + '%', transform: 'scale(' + scale + ')' }} />
@@ -83,7 +83,9 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
 }) => {
   const [config, setConfig] = useState<ExamStyleConfig>(DEFAULT_EXAM_STYLE);
   const [mobilePane, setMobilePane] = useState<'settings' | 'preview'>('settings');
+  const [sectionTitlesExpanded, setSectionTitlesExpanded] = useState(false);
   const titleId = useId();
+  const sectionTitlesId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -120,26 +122,39 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
     <dialog ref={dialogRef} aria-labelledby={titleId}
       onCancel={event => { event.preventDefault(); onClose(); }}
       className="fixed inset-0 m-0 h-[100dvh] max-h-none w-full max-w-none flex-col overflow-hidden border-0 bg-white p-0 open:flex">
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stone-200 px-3 py-3 sm:px-5">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stone-200 px-2 py-1.5 sm:px-5">
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-50 text-amber-800">
+            <span className="hidden size-8 shrink-0 place-items-center text-amber-800 sm:grid">
               <Sliders aria-hidden="true" className="size-4" />
             </span>
-            <h2 id={titleId} className="text-base font-bold leading-tight text-stone-900 sm:text-lg">Tùy chỉnh đề thi</h2>
+            <h2 id={titleId} className="truncate text-sm font-bold leading-tight text-stone-900 sm:text-base">Tùy chỉnh đề thi</h2>
+            <span className="hidden shrink-0 text-xs text-stone-600 md:inline">{questions.length} câu đã chọn</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <button
               type="button"
               onClick={handleResetDefault}
-              className="flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-stone-200 px-2 text-xs font-semibold text-stone-700 hover:bg-stone-50 sm:px-2.5"
+              aria-label="Khôi phục mặc định"
+              title="Khôi phục mặc định"
+              className="flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-xs font-semibold text-stone-700 hover:bg-stone-100"
             >
-              <RotateCcw aria-hidden="true" className="size-3.5" /> Mặc định
+              <RotateCcw aria-hidden="true" className="size-4" /> <span className="hidden sm:inline">Mặc định</span>
+            </button>
+            <button type="button" onClick={handleDownloadTex} aria-label="Tải mã nguồn .tex"
+              className="inline-flex min-h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2 text-xs font-semibold text-stone-700 hover:bg-stone-100">
+              <Download aria-hidden="true" className="hidden size-4 sm:block" />
+              <span className="hidden sm:inline">Mã nguồn</span> .tex
+            </button>
+            <button type="button" onClick={() => printExamDirectlyToPdf(questions, config)} aria-label="Xuất đề thi ra PDF"
+              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md bg-amber-800 px-2.5 text-xs font-semibold text-white hover:bg-amber-900 sm:px-3">
+              <Printer aria-hidden="true" className="hidden size-4 sm:block" />
+              <span><span className="hidden sm:inline">Xuất </span>PDF</span>
             </button>
             <button
               type="button"
               onClick={onClose}
               aria-label="Đóng tùy chỉnh đề thi"
-              className="grid size-9 place-items-center rounded-md text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+              className="grid size-8 place-items-center rounded-md text-stone-600 hover:bg-stone-100 hover:text-stone-900"
             >
               <X className="w-5 h-5" />
             </button>
@@ -155,11 +170,11 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             </button>
           ))}
         </div>
-        <div className="min-h-0 flex-1 lg:grid lg:grid-cols-[clamp(20rem,34vw,30rem)_minmax(0,1fr)]">
-        <div className={(mobilePane === 'settings' ? '' : 'hidden lg:block ') + 'h-full min-h-0 space-y-3 overflow-y-auto overscroll-contain bg-stone-50 p-3 text-sm text-stone-900 sm:p-4'}>
+        <div className="min-h-0 flex-1 lg:grid lg:grid-cols-[clamp(20rem,32vw,27rem)_minmax(0,1fr)]">
+        <div className={(mobilePane === 'settings' ? '' : 'hidden lg:block ') + 'h-full min-h-0 divide-y divide-stone-200 overflow-y-auto overscroll-contain px-3 text-sm text-stone-900 sm:px-5'}>
 
           {/* ═══ MỤC 1. MẪU GIAO DIỆN & BẢNG MÀU LATEX ═══ */}
-          <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-4">
+          <div className="space-y-3 py-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-amber-950">
               <Palette className="w-4 h-4" /> 1. Màu sắc và phông chữ
             </div>
@@ -208,7 +223,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             </div>
 
             {/* Màu công thức toán */}
-            <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-stone-200 bg-stone-50">
+            <div className="flex items-center justify-between gap-3 py-2">
               <span className="text-xs font-semibold text-stone-700">Màu công thức toán</span>
               <div className="flex items-center gap-2">
                 <input
@@ -223,10 +238,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
 
             {/* Gói Font Toán học */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-stone-700">Gói Font Toán học:</label>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600">3 Font</span>
-              </div>
+              <label className="mb-1.5 block text-xs font-semibold text-stone-700">Phông chữ toán</label>
               <select
                 value={config.mathFont}
                 onChange={e => updateConfig('mathFont', e.target.value)}
@@ -240,7 +252,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
           </div>
 
           {/* ═══ MỤC 2. Hình mờ ═══ */}
-          <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-3">
+          <div className="space-y-2 py-3">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-sm font-semibold text-amber-950">
                 <Droplets className="w-4 h-4" /> 2. Hình mờ
@@ -268,7 +280,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
           </div>
 
           {/* ═══ MỤC 3. THUỘC TÍNH KHUNG ĐỀ (BOX & CONTENT) ═══ */}
-          <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-4">
+          <div className="space-y-3 py-3">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-sm font-semibold text-amber-950">
                 <Layout className="w-4 h-4" /> 3. Thông tin và khung đề
@@ -368,14 +380,14 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
           </div>
 
           {/* ═══ MỤC 4. Nội dung xuất kèm ═══ */}
-          <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-3">
+          <div className="space-y-2 py-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-amber-950">
               <CheckSquare className="w-4 h-4" /> 4. Nội dung xuất kèm
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="divide-y divide-stone-100">
               {/* Xuất bảng đáp án */}
-              <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-stone-200 bg-stone-50">
+              <div className="flex items-center justify-between gap-3 py-2">
                 <div>
                   <div className="font-semibold text-xs text-stone-900">Xuất bảng đáp án</div>
                   <div className="text-[11px] text-stone-600">Chèn bảng đáp án tổng hợp ở cuối đề thi</div>
@@ -393,7 +405,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
               </div>
 
               {/* Xuất lời giải chi tiết */}
-              <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-stone-200 bg-stone-50">
+              <div className="flex items-center justify-between gap-3 py-2">
                 <div>
                   <div className="font-semibold text-xs text-stone-900">Xuất lời giải chi tiết</div>
                   <div className="text-[11px] text-stone-600">Đính kèm hướng dẫn giải chi tiết cho từng câu hỏi</div>
@@ -413,11 +425,14 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
           </div>
 
           {/* ═══ MỤC 5. Tiêu đề phần thi (CHUẨN BỘ GD) ═══ */}
-          <div className="rounded-xl border border-stone-200 bg-white p-3 sm:p-4 space-y-4">
+          <div className="space-y-3 py-3">
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-sm font-semibold text-amber-950">
-                <Layers className="w-4 h-4" /> 5. Tiêu đề phần thi
-              </span>
+              <button type="button" aria-expanded={sectionTitlesExpanded && config.enableSectionTitles} aria-controls={sectionTitlesId}
+                onClick={() => setSectionTitlesExpanded(expanded => !expanded)} disabled={!config.enableSectionTitles}
+                className="flex min-h-8 items-center gap-2 rounded text-sm font-semibold text-amber-950 hover:text-amber-800 disabled:opacity-60">
+                <Layers aria-hidden="true" className="size-4" /> 5. Tiêu đề phần thi
+                <ChevronDown aria-hidden="true" className={'size-3.5 ' + (sectionTitlesExpanded && config.enableSectionTitles ? 'rotate-180' : '')} />
+              </button>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -431,9 +446,9 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             </div>
 
             {config.enableSectionTitles && (
-              <div className="space-y-3 pt-2">
+              <div id={sectionTitlesId} hidden={!sectionTitlesExpanded} className="space-y-3">
                 {/* Phần Trắc nghiệm 4 PA */}
-                <div className="p-3 rounded-lg border border-stone-200 bg-stone-50 space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-stone-700">Tiêu đề — Trắc nghiệm 4 PA</label>
                   <input
                     type="text"
@@ -450,7 +465,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                 </div>
 
                 {/* Phần Đúng / Sai */}
-                <div className="p-3 rounded-lg border border-stone-200 bg-stone-50 space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-stone-700">Tiêu đề — Đúng / Sai</label>
                   <input
                     type="text"
@@ -467,7 +482,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                 </div>
 
                 {/* Phần III: Trả lời ngắn */}
-                <div className="p-3 rounded-lg border border-stone-200 bg-stone-50 space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-stone-700">Tiêu đề — Phần III (Trả lời ngắn)</label>
                   <input
                     type="text"
@@ -489,44 +504,10 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
         </div>
         <section aria-label="Bản xem trước" className={(mobilePane === 'preview' ? 'flex ' : 'hidden lg:flex ')
           + 'h-full min-h-0 min-w-0 flex-col bg-stone-100 lg:border-l lg:border-stone-200'}>
-          <div className="flex shrink-0 items-center justify-between border-b border-stone-200 bg-white px-4 py-2.5">
-            <h3 className="text-sm font-semibold text-stone-900">Xem trước đề thi</h3>
-            <span className="rounded-md bg-stone-100 px-2 py-1 text-xs font-medium text-stone-600">Khổ A4</span>
-          </div>
-          <div className="min-h-0 flex-1 p-2 sm:p-4">
+          <div className="min-h-0 flex-1 px-1 sm:px-3">
             <ExamPrintPreview questions={questions} config={config} />
           </div>
         </section>
-        </div>
-
-        {/* ── FOOTER MODAL: NÚT XUẤT ĐỀ TRỰC TIẾP TRONG WEB ── */}
-        <div className="grid shrink-0 gap-2 border-t border-stone-200 bg-white p-3 sm:flex sm:items-center sm:justify-between sm:px-5">
-          <div className="flex items-center gap-2 text-xs font-semibold text-stone-700">
-            <span className="rounded-full bg-amber-100 px-2 py-1 font-bold tabular-nums text-amber-950">{questions.length}</span>
-            <span>câu hỏi đã chọn</span>
-          </div>
-
-          <div className="grid grid-cols-[auto_1fr] gap-2 sm:flex">
-            {/* Tải .tex */}
-            <button
-              type="button"
-              onClick={handleDownloadTex}
-              title="Tải mã nguồn TeX về máy"
-              className="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-stone-200 px-2.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 sm:px-3"
-            >
-              <Download className="w-3.5 h-3.5" /> Mã nguồn .tex
-            </button>
-
-            {/* Nút chính: TỰ BIÊN SOẠN & XUẤT PDF TRỰC TIẾP TRONG WEB */}
-            <button
-              type="button"
-              onClick={() => printExamDirectlyToPdf(questions, config)}
-              className="inline-flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-lg bg-amber-800 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-900"
-            >
-              <Printer aria-hidden="true" className="size-4 shrink-0" />
-              <span>Xuất đề thi ra PDF</span>
-            </button>
-          </div>
         </div>
 
     </dialog>
