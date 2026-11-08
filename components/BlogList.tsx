@@ -118,6 +118,24 @@ function toCardQuestion(question?: StoredQuestion): CardQuestionData | null {
     };
 }
 
+function getBlogCards(blog: BlogPost) {
+    const solution = parsePhysicsSolution(blog.content);
+    const questions = getStoredQuestions(solution);
+    return (questions.length ? questions : [undefined]).flatMap((question, index) =>
+        questions.length && !question ? [] : [{
+            blog,
+            question,
+            index,
+            solution,
+            questionCount: questions.length,
+            data: toCardQuestion(question),
+            number: parseStudyQuestionNumber(question?.question_no) ?? Number.MAX_SAFE_INTEGER,
+        }]
+    );
+}
+
+type BlogCard = ReturnType<typeof getBlogCards>[number];
+
 function questionKey(blogId: string, index: number) {
     return JSON.stringify([blogId, index]);
 }
@@ -326,15 +344,15 @@ const levelOptions = [
     { value: 4, label: 'Vận dụng cao' },
 ] as const;
 
-function indexQuestion(blog: BlogPost) {
-    const question = toCardQuestion(getStoredQuestions(parsePhysicsSolution(blog.content))[0]);
+function indexQuestion(card: BlogCard) {
+    const { blog, data: question, questionCount } = card;
     return {
-        blog,
+        card,
         type: question?.type ?? 'tu_luan',
         level: blog.level ?? 0,
         hasImage: !!(question?.imageSvg || question?.imageUrl || question?.imageTelegramFileId),
         searchFields: [
-            blog.title, blog.summary, blog.category, ...(blog.tags || []),
+            blog.title, questionCount > 1 ? undefined : blog.summary, blog.category, ...(blog.tags || []),
             question?.questionText, question?.questionLatex,
         ].filter((value): value is string => typeof value === 'string' && value.length > 0)
             .map(normalizeSearchText),
@@ -348,13 +366,13 @@ function filterQuestions(
     difficulty: number,
     imagesOnly: boolean,
 ) {
-    const filteredBlogs: BlogPost[] = [];
+    const filteredCards: BlogCard[] = [];
     const typeCounts = { all: 0, trac_nghiem: 0, dung_sai: 0, tu_luan: 0 };
     const levelCounts = [0, 0, 0, 0, 0];
     let withImage = 0;
     const query = normalizeSearchText(search);
 
-    for (const { blog, type, level, hasImage, searchFields } of questions) {
+    for (const { card, type, level, hasImage, searchFields } of questions) {
         if (query && !searchFields.some(field => field.includes(query))) continue;
         const matchesType = questionType === 'all' || questionType === type;
         const matchesLevel = difficulty === 0 || difficulty === level;
@@ -370,10 +388,10 @@ function filterQuestions(
             if (Number.isInteger(level) && level >= 1 && level <= 4) levelCounts[level]++;
         }
         if (matchesType && matchesLevel && hasImage) withImage++;
-        if (matchesType && matchesLevel && matchesImage) filteredBlogs.push(blog);
+        if (matchesType && matchesLevel && matchesImage) filteredCards.push(card);
     }
 
-    return { filteredBlogs, typeCounts, levelCounts, withImage };
+    return { filteredCards, typeCounts, levelCounts, withImage };
 }
 
 const filterFocus = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700';
@@ -480,29 +498,21 @@ const BlogList: React.FC<BlogListProps> = ({
         return selected;
     }, [blogs, selectedCardIndexes]);
 
-    const renderQuestionCards = (posts: BlogPost[], inLesson = false, matches?: ReadonlyMap<string, ReadonlySet<number>>) => {
-        const cards = posts.flatMap(blog => {
-            const solution = parsePhysicsSolution(blog.content);
-            const questions = getStoredQuestions(solution);
-            const displayed = inLesson && questions.length ? questions : [questions[0]];
-            return displayed.map((question, index) => ({
-                blog, question, index, solution, questionCount: questions.length,
-                number: parseStudyQuestionNumber(question?.question_no) ?? Number.MAX_SAFE_INTEGER,
-            })).filter(card => !matches || matches.get(blog.id)?.has(card.index));
-        }).sort((first, second) => first.number - second.number);
+    const renderQuestionCards = (cards: BlogCard[], inLesson = false) => {
+        const sortedCards = [...cards].sort((first, second) => first.number - second.number);
 
         return (
             <div className={'grid grid-cols-1 items-start gap-3.5 ' + (inLesson ? 'lg:grid-cols-2 lg:gap-5' : 'md:grid-cols-2')}>
-                {cards.map(({ blog, question, index, solution, questionCount }) => (
+                {sortedCards.map(({ blog, question, index, solution, questionCount, data }) => (
                     <QuestionCard
                         key={questionKey(blog.id, index)}
                         blog={blog}
-                        question={toCardQuestion(question)}
+                        question={data}
                         isAdmin={isAdmin}
                         large={inLesson}
                         onEdit={onEditBlog && (() => onEditBlog(blog, index))}
                         onClick={() => {
-                            if (solution && question && inLesson && questionCount > 1) {
+                            if (solution && question && questionCount > 1) {
                                 const content = JSON.stringify({ ...solution, data: { ...solution.data, questions: [question] } });
                                 onReadBlog({ ...blog, content });
                             } else {
@@ -545,6 +555,7 @@ const BlogList: React.FC<BlogListProps> = ({
         if (isAdmin) return true;
         return blog.is_published && blog.category !== 'exam_paper' && (!studentGrade || !blog.grade || blog.grade === studentGrade);
     }), [blogs, isAdmin, studentGrade]);
+    const visibleCards = useMemo(() => visibleBlogs.flatMap(getBlogCards), [visibleBlogs]);
 
     const grades = !isAdmin && studentGrade ? [studentGrade] : STUDY_GRADES;
     const folder = searchParams.get('folder');
@@ -561,16 +572,14 @@ const BlogList: React.FC<BlogListProps> = ({
         : undefined;
     const chapterLessons = studyLessons.filter(lesson => lesson.studySection.chapterId === activeChapter?.id);
 
-    const { chapterCounts, gradeCounts } = useMemo(() => {
+    const chapterCounts = useMemo(() => {
         const chapterCounts = new Map<string, number>();
-        const gradeCounts = new Map<number, number>();
         const lessonsById = new Map(studyLessons.map(lesson => [lesson.id, lesson.studySection]));
         for (const lesson of studyLessons) {
             const { chapterId } = lesson.studySection;
             chapterCounts.set(chapterId, (chapterCounts.get(chapterId) ?? 0) + 1);
         }
         for (const blog of visibleBlogs) {
-            gradeCounts.set(blog.grade, (gradeCounts.get(blog.grade) ?? 0) + 1);
             const section = blog.studySection;
             if (section && blog.category !== 'exam_paper' && isStudyQuestionType(section.questionType)) {
                 const parent = section.lessonId ? lessonsById.get(section.lessonId) : undefined;
@@ -579,8 +588,15 @@ const BlogList: React.FC<BlogListProps> = ({
                 }
             }
         }
-        return { chapterCounts, gradeCounts };
+        return chapterCounts;
     }, [studyLessons, visibleBlogs]);
+    const gradeCounts = useMemo(() => {
+        const counts = new Map<number, number>();
+        for (const { blog } of visibleCards) {
+            counts.set(blog.grade, (counts.get(blog.grade) ?? 0) + 1);
+        }
+        return counts;
+    }, [visibleCards]);
     const chapterBlogs = useMemo(() => activeChapter ? visibleBlogs.filter(blog =>
         blog.category !== 'exam_paper' && blog.studySection?.chapterId === activeChapter.id
         && isStudyQuestionType(blog.studySection.questionType)
@@ -612,10 +628,11 @@ const BlogList: React.FC<BlogListProps> = ({
         onReadBlog({ ...blog, content });
     };
 
-    const inScopeBlogs = useMemo(
-        () => activeChapter ? [] : gradeFilter ? visibleBlogs.filter(blog => blog.grade === gradeFilter) : visibleBlogs,
-        [activeChapter, visibleBlogs, gradeFilter]
-    );
+    const questionIndex = useMemo(() => {
+        if (activeChapter) return [];
+        const cards = gradeFilter ? visibleCards.filter(({ blog }) => blog.grade === gradeFilter) : visibleCards;
+        return cards.map(indexQuestion);
+    }, [activeChapter, visibleCards, gradeFilter]);
 
     useEffect(() => {
         if (showMobileTree) mobileTreeClose.current?.focus();
@@ -635,8 +652,7 @@ const BlogList: React.FC<BlogListProps> = ({
         selectFolder(grade ? 'grade-' + grade : undefined);
     };
 
-    const questionIndex = useMemo(() => inScopeBlogs.map(indexQuestion), [inScopeBlogs]);
-    const { filteredBlogs, typeCounts, levelCounts, withImage } = useMemo(
+    const { filteredCards, typeCounts, levelCounts, withImage } = useMemo(
         () => filterQuestions(questionIndex, debouncedSearch, questionTypeFilter, levelFilter, hasImageFilter),
         [questionIndex, debouncedSearch, questionTypeFilter, levelFilter, hasImageFilter]
     );
@@ -680,7 +696,10 @@ const BlogList: React.FC<BlogListProps> = ({
             countQuestions={post => groupMatches
                 ? groupMatches.get(post.id)?.size ?? 0
                 : getStoredQuestions(parsePhysicsSolution(post.content)).filter(Boolean).length}
-            renderLessonPosts={posts => renderQuestionCards(posts, true, groupMatches)}
+            renderLessonPosts={posts => renderQuestionCards(
+                posts.flatMap(getBlogCards).filter(({ blog, index }) => !groupMatches || groupMatches.get(blog.id)?.has(index)),
+                true,
+            )}
             onSaveLesson={onSaveLesson} lessonSync={lessonSync} onRetryLessonSync={onRetryLessonSync} />
     );
     const isLessonOpen = chapterLessons.some(lesson =>
@@ -791,7 +810,7 @@ const BlogList: React.FC<BlogListProps> = ({
                             grades={grades}
                             chapterCounts={chapterCounts}
                             gradeCounts={gradeCounts}
-                            totalCount={visibleBlogs.length}
+                            totalCount={visibleCards.length}
                             selectedId={selectedFolderId}
                             onSelect={id => {
                                 selectFolder(id);
@@ -814,7 +833,7 @@ const BlogList: React.FC<BlogListProps> = ({
                             className="flex items-center gap-2 text-xs font-bold text-[#8C4A00] bg-[#FDF6ED] px-3.5 py-2 rounded-lg border border-[#F3DFC1]"
                         >
                             <Folder className="w-4 h-4 fill-[#F5A623] text-[#D9730D]" />
-                            <span>Mục lục ({visibleBlogs.length} câu)</span>
+                            <span>Mục lục ({visibleCards.length} câu)</span>
                         </button>
                         {gradeFilter > 0 && (
                             <span className="text-xs font-semibold text-[#8C4A00] truncate max-w-[160px]">
@@ -830,7 +849,7 @@ const BlogList: React.FC<BlogListProps> = ({
                                 <SlidersHorizontal aria-hidden="true" className="hidden size-3.5 text-amber-800 sm:block" />
                                 <h2 ref={filterHeading} tabIndex={-1} id="question-filter-heading" className="sr-only text-xs font-bold text-stone-900 sm:not-sr-only">Bộ lọc</h2>
                                 <span role="status" className="rounded bg-stone-100 px-1.5 py-0.5 text-xs tabular-nums text-stone-700">
-                                    {loading ? 'Đang tải…' : filteredBlogs.length.toLocaleString('vi-VN') + ' kết quả'}
+                                    {loading ? 'Đang tải…' : filteredCards.length.toLocaleString('vi-VN') + ' kết quả'}
                                 </span>
                             </div>
                             <div className="relative order-first min-w-0 basis-full sm:order-none sm:flex-[1_1_12rem]">
@@ -901,7 +920,7 @@ const BlogList: React.FC<BlogListProps> = ({
                                     VẬT LÝ {gradeFilter}
                                 </span>
                                 <span className="text-[11px] font-semibold text-[#8C4A00] bg-[#FAEDE0] px-2 py-0.5 rounded-full shrink-0">
-                                    {filteredBlogs.length} câu
+                                    {filteredCards.length} câu
                                 </span>
                             </div>
                             <button
@@ -919,7 +938,7 @@ const BlogList: React.FC<BlogListProps> = ({
                             <div className="animate-spin" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid #EEF0FB', borderTopColor: '#6B7CDB' }} />
                             <p style={{ fontSize: '13px', color: '#AEACA8', fontWeight: 500 }}>Đang tải bài viết...</p>
                         </div>
-                    ) : filteredBlogs.length === 0 ? (
+                    ) : filteredCards.length === 0 ? (
                         <div style={{
                             textAlign: 'center', padding: '64px 24px', borderRadius: '12px',
                             border: '1px solid #E9E9E7', background: '#fff'
@@ -931,9 +950,9 @@ const BlogList: React.FC<BlogListProps> = ({
                                 <BookOpen style={{ width: '22px', height: '22px', color: '#CFCFCB' }} />
                             </div>
                             <h3 className="mb-1.5 text-base font-semibold text-stone-900">
-                                {inScopeBlogs.length > 0 ? 'Không có câu hỏi phù hợp' : 'Chưa có câu hỏi trong mục này'}
+                                {questionIndex.length > 0 ? 'Không có câu hỏi phù hợp' : 'Chưa có câu hỏi trong mục này'}
                             </h3>
-                            {inScopeBlogs.length > 0 && (
+                            {questionIndex.length > 0 && (
                                 <button type="button" onClick={handleResetAllFilters}
                                     className={`mt-2 min-h-10 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-900 hover:bg-amber-100 ${filterFocus}`}>
                                     Xóa bộ lọc
@@ -941,7 +960,7 @@ const BlogList: React.FC<BlogListProps> = ({
                             )}
                         </div>
                     ) : (
-                        renderQuestionCards(filteredBlogs)
+                        renderQuestionCards(filteredCards)
                     )}
                     </>)}
                 </div>
