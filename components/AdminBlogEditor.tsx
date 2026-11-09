@@ -33,9 +33,21 @@ interface AdminBlogEditorProps {
 
 const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
+type EditorMode = 'markdown' | 'solution' | 'exam_paper';
+
+function storedEditorMode(content?: string): EditorMode {
+    try {
+        const type = JSON.parse(content || '{}')?.type;
+        if (type === 'physics_solution') return 'solution';
+        if (type === 'exam_paper') return 'exam_paper';
+    } catch { /* Plain-text posts use Markdown. */ }
+    return 'markdown';
+}
+
 const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, matrixDraft, initialQuestionIndex, initialQuestionGroup, studyLessons, existingBlogs, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
-    const [selectedMode, setEditorMode] = useState<'markdown' | 'solution' | 'exam_paper'>('markdown');
-    const opensSolutionDirectly = !!matrixDraft || (!blog && !!initialSection?.lessonId);
+    const storedMode = useMemo(() => storedEditorMode(blog?.content), [blog?.content]);
+    const [selectedMode, setEditorMode] = useState(storedMode);
+    const opensSolutionDirectly = storedMode === 'solution' || !!matrixDraft || (!blog && !!initialSection?.lessonId);
     const editorMode = opensSolutionDirectly ? 'solution' : selectedMode;
     const placement = blog?.studySection ?? initialSection ?? (matrixDraft && matrixDraftPlacement(matrixDraft, studyLessons));
     const [chapterId, setChapterId] = useState(placement?.chapterId ?? '');
@@ -81,21 +93,9 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                 is_published: blog.is_published,
                 grade: blog.grade ?? 0,
             });
-            
-            try {
-                const parsed = JSON.parse(blog.content || '{}');
-                if (parsed.type === 'physics_solution') {
-                    setEditorMode('solution');
-                } else if (parsed.type === 'exam_paper') {
-                    setEditorMode('exam_paper');
-                }
-            } catch (e) {
-                setEditorMode('markdown');
-            }
-        } else {
-            setEditorMode('markdown');
         }
-    }, [blog]);
+        setEditorMode(storedMode);
+    }, [blog, storedMode]);
 
     useEffect(() => {
         const words = (formData.content || '').trim().split(/\s+/).filter(w => w).length;

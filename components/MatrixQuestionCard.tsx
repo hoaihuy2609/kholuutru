@@ -103,7 +103,7 @@ export function MatrixSolutionDialog({ candidate, onClose }: { candidate: Matrix
         <dialog ref={dialog} aria-labelledby={titleId}
             onCancel={event => { event.preventDefault(); onClose(); }}
             onClick={event => { if (event.target === event.currentTarget) onClose(); }}
-            className="fixed inset-0 m-auto h-[94dvh] max-h-none w-[96vw] max-w-none overflow-hidden rounded-xl border border-stone-200 bg-stone-50 p-0 shadow-xl backdrop:bg-black/25 open:flex open:flex-col lg:inset-y-0 lg:left-auto lg:right-0 lg:m-0 lg:h-[100dvh] lg:w-[min(48vw,46rem)] lg:rounded-r-none">
+            className="fixed inset-0 m-auto h-[94dvh] max-h-none w-[min(96vw,1100px)] max-w-none overflow-hidden rounded-xl border border-stone-200 bg-stone-50 p-0 shadow-xl backdrop:bg-black/25 open:flex open:flex-col sm:h-[min(90dvh,900px)]">
             <header className="flex items-center justify-between gap-3 border-b border-stone-200 bg-white px-4 py-3">
                 <h2 id={titleId} className="font-bold">Lời giải · {candidate.item.questionNo}</h2>
                 <button type="button" aria-label="Đóng lời giải" className={action} onClick={onClose}><X aria-hidden="true" className="size-4" /></button>
