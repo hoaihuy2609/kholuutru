@@ -44,6 +44,14 @@ export function questionOutcomes(value: unknown): string[] {
     })).values()];
 }
 
+export function importedQuestionOutcomes(value: unknown): string[] {
+    if (typeof value === 'string') return questionOutcomes(value.split('\n'));
+    if (Array.isArray(value) && value.every(item => typeof item === 'string')) {
+        return questionOutcomes(value.flatMap(item => item.split('\n')));
+    }
+    throw new Error('learning_outcomes cần là một chuỗi hoặc danh sách các chuỗi.');
+}
+
 export function matrixQuestionType(text: string): MatrixQuestionType {
     const key = normalizeMatrixText(text);
     if (/\b(?:4 (?:phuong an|dap an|pa|lua chon)|nhieu (?:lua chon|phuong an))\b/.test(key)) return 'trac_nghiem';

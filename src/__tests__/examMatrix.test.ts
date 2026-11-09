@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { matrixDraftPlacement, matrixMatch, matrixMatchScore, matrixOutcomeOptions, matrixReferences, matrixSlots, type MatrixQuestionDraft, type MatrixRow } from '../utils/examMatrix';
+import { importedQuestionOutcomes, matrixDraftPlacement, matrixMatch, matrixMatchScore, matrixOutcomeOptions, matrixReferences, matrixSlots, type MatrixQuestionDraft, type MatrixRow } from '../utils/examMatrix';
 import { parsePdfMatrix, type MatrixPage } from '../utils/pdfExamMatrix';
 
 describe('exam matrix', () => {
+    it('normalizes imported requirements and rejects invalid JSON field values', () => {
+        const first = 'Nêu được khái niệm từ trường';
+        const second = 'Mô tả được từ phổ';
+        expect(importedQuestionOutcomes([first, '', first, second])).toEqual([first, second]);
+        expect(importedQuestionOutcomes(`${first}\r\n${second}`)).toEqual([first, second]);
+        expect(() => importedQuestionOutcomes([first, 1])).toThrow('learning_outcomes');
+        expect(() => importedQuestionOutcomes(null)).toThrow('learning_outcomes');
+    });
+
     it('reports the exact matrix line and stored outcome that qualified a suggestion', () => {
         const row: MatrixRow = {
             section: 'Phần 1', topic: 'Điện trường', type: 'trac_nghiem', level: 1, count: 1, references: ['C1'],

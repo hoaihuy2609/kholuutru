@@ -18,10 +18,59 @@ import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
 import { MAX_QUESTION_IMAGE_WIDTH, MIN_QUESTION_IMAGE_WIDTH, normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { renderTikzToSvg, uploadQuestionImageToTelegram, uploadSvgToTelegram } from "../src/services/tikzService";
 import { pdfSolutionText, type PdfQuestionSource } from '../src/utils/pdfExamQuestions';
-import { matrixMatchScore, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
+import { importedQuestionOutcomes, matrixMatchScore, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
 import type { ReviewedPdfQuestion } from './PdfExamImport';
 
 const PdfExamImport = React.lazy(() => import('./PdfExamImport'));
+
+function OutcomesJsonInput({ onApply }: { onApply: (outcomes: string[]) => void }) {
+  const panel = useRef<HTMLDetailsElement>(null);
+  const [json, setJson] = useState('');
+  const [error, setError] = useState('');
+
+  function apply() {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      setError('Cú pháp JSON chưa hợp lệ.');
+      return;
+    }
+    try {
+      const value = parsed && typeof parsed === 'object' && 'learning_outcomes' in parsed
+        ? parsed.learning_outcomes : parsed;
+      const outcomes = importedQuestionOutcomes(value);
+      if (!outcomes.length) {
+        setError('JSON cần có ít nhất một yêu cầu cần đạt.');
+        return;
+      }
+      onApply(outcomes);
+      setJson('');
+      setError('');
+      if (panel.current) panel.current.open = false;
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Không đọc được yêu cầu cần đạt.');
+    }
+  }
+
+  return (
+    <details ref={panel} className="rounded-md border border-stone-200 px-2.5 py-1.5 text-sm">
+      <summary className="cursor-pointer font-semibold text-amber-900">Nhập yêu cầu từ JSON</summary>
+      <div className="mt-2 space-y-2">
+        <textarea aria-label="JSON yêu cầu cần đạt" rows={3} spellCheck={false}
+          className="block w-full rounded-md border border-stone-200 p-2 font-mono text-xs"
+          placeholder={'["Nêu được khái niệm từ trường"]'}
+          value={json} onChange={event => { setJson(event.target.value); setError(''); }} />
+        <p className="text-xs text-stone-600">Các yêu cầu sẽ được thêm vào câu đang soạn.</p>
+        {error && <p role="alert" className="text-xs text-red-700">{error}</p>}
+        <button type="button" disabled={!json.trim()} onClick={apply}
+          className="rounded-md bg-amber-800 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+          Thêm vào câu này
+        </button>
+      </div>
+    </details>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -208,6 +257,7 @@ const SAMPLE_PHYSICS_EXAM_JSON = JSON.stringify({
     {
       questionNo: "Câu 1",
       type: "trac_nghiem",
+      learning_outcomes: ["Tính được độ lớn cảm ứng từ do dòng điện thẳng dài gây ra tại một điểm."],
       qText: "Một dòng điện có cường độ $I = 5\\text{ A}$ chạy trong một dây dẫn thẳng, dài đặt trong không khí. Hai điểm $M, N$ nằm trong mặt phẳng vuông góc với dây dẫn và cùng cách dòng điện một khoảng $r = 4\\text{ cm} = 0{,}04\\text{ m}$ như hình vẽ. Cảm ứng từ tại điểm $M$ có độ lớn là:",
       choices: [
         "2{,}5 \\cdot 10^{-5}\\text{ T}",
@@ -223,6 +273,7 @@ const SAMPLE_PHYSICS_EXAM_JSON = JSON.stringify({
     {
       questionNo: "Câu 6",
       type: "trac_nghiem",
+      learning_outcomes: ["Xác định được vị trí có cảm ứng từ tổng hợp bằng không do các dòng điện thẳng song song gây ra."],
       qText: "Trong mặt phẳng tọa độ $Oxy$ nằm ngang, ba dòng điện thẳng dài vô hạn cùng song song với trục $Oy$. Dòng $I_1 = I_2 = 10\\text{ A}$ chạy theo chiều dương của trục $Oy$, dòng $I_3 = 45\\text{ A}$ chạy theo chiều ngược lại như hình vẽ. Ba dây cắt trục $Ox$ lần lượt tại $x_1 = -4\\text{ cm}$, $x_2 = 0\\text{ cm}$, $x_3 = 4\\text{ cm}$. Điểm $M$ thuộc trục $Ox$ có hoành độ $x$ hữu hạn sao cho cảm ứng từ tổng hợp bằng không. Giá trị của $x$ là:",
       choices: [
         "-5\\text{ cm} \\text{ hoặc } 4\\text{ cm}",
@@ -238,6 +289,7 @@ const SAMPLE_PHYSICS_EXAM_JSON = JSON.stringify({
     {
       questionNo: "Câu 11",
       type: "trac_nghiem",
+      learning_outcomes: ["Xác định được vị trí có cảm ứng từ tổng hợp bằng không do hai dòng điện thẳng vuông góc gây ra."],
       qText: "Hai dòng điện thẳng dài đặt vuông góc với nhau, cách điện với nhau tại điểm bắt chéo, cùng nằm trong một mặt phẳng. Dòng $I_1$ đặt dọc theo trục $Ox$, dòng $I_2$ dọc theo trục $Oy$ sao cho $I_1 = 2I_2$. Chiều các dòng đó cùng chiều với các trục tọa độ như hình vẽ. Nếu điểm $M$ thuộc đường thẳng $y = ax$, có cảm ứng từ bằng 0 thì hệ số góc $a$ bằng:",
       choices: [
         "a = 2",
@@ -735,8 +787,15 @@ export default function SolutionEditor({
         throw new Error('Danh sách câu hỏi trong JSON rỗng.');
       }
 
-      const normalizedList: Question[] = rawQuestions.map(raw => {
+      const normalizedList: Question[] = rawQuestions.map((raw, index) => {
         const question = normalizeQuestion(raw);
+        if (raw.learning_outcomes !== undefined) {
+          try {
+            question.outcomeText = importedQuestionOutcomes(raw.learning_outcomes).join('\n');
+          } catch (error) {
+            throw new Error(`Câu thứ ${index + 1}. ${(error as Error).message}`);
+          }
+        }
         if (initialQuestionGroup && supportsStudyGroups(question.type) && !Array.isArray(raw.question_groups)) {
           question.groups = [initialQuestionGroup];
         }
@@ -1316,6 +1375,10 @@ export default function SolutionEditor({
                     placeholder="Ví dụ: Nêu được khái niệm điện trường"
                     value={activeQuestion.outcomeText} onChange={e => updateQ('outcomeText', e.target.value)} />
                   <p className="text-xs text-stone-600">Mỗi dòng một yêu cầu. Web dùng các yêu cầu này để tìm câu theo ma trận.</p>
+                  <OutcomesJsonInput key={`${blog?.id ?? 'new'}:${activeQIdx}`} onApply={outcomes => {
+                    updateQ('outcomeText', questionOutcomes([...activeQuestion.outcomeText.split('\n'), ...outcomes]).join('\n'));
+                    showToast('Đã thêm yêu cầu cần đạt vào câu đang soạn.');
+                  }} />
                   {savedOutcomes.length > 0 && <select aria-label="Thêm yêu cầu đã lưu" value=""
                     className="max-w-full rounded-md border border-stone-200 bg-white p-2 text-sm"
                     onChange={e => {
@@ -1772,7 +1835,7 @@ export default function SolutionEditor({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-[#1A1A1A]">Nhập đề thi từ JSON</h3>
-                  <p className="text-xs text-[#787774]">Dán cấu trúc JSON để nạp nhanh đề thi, đáp án, lời giải và tự động render hình vẽ TikZ</p>
+                  <p className="text-xs text-[#787774]">Thêm <code>learning_outcomes</code> vào từng câu để nạp cả yêu cầu cần đạt.</p>
                 </div>
               </div>
               <button
@@ -1836,7 +1899,7 @@ export default function SolutionEditor({
                 <textarea
                   value={jsonInput}
                   onChange={e => setJsonInput(e.target.value)}
-                  placeholder={`{\n  "exam_name": "Chuyên đề Từ trường...",\n  "questions": [\n    {\n      "questionNo": "Câu 1",\n      "type": "trac_nghiem",\n      "qText": "Nội dung câu hỏi...",\n      "choices": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],\n      "correctChoice": "A",\n      "solution": "Lời giải chi tiết...",\n      "tikzCode": "\\\\begin{tikzpicture}...\\\\end{tikzpicture}"\n    }\n  ]\n}`}
+                  placeholder={`{\n  "exam_name": "Chuyên đề Từ trường...",\n  "questions": [\n    {\n      "questionNo": "Câu 1",\n      "type": "trac_nghiem",\n      "qText": "Nội dung câu hỏi...",\n      "learning_outcomes": ["Nêu được khái niệm từ trường"],\n      "choices": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],\n      "correctChoice": "A",\n      "solution": "Lời giải chi tiết...",\n      "tikzCode": "\\\\begin{tikzpicture}...\\\\end{tikzpicture}"\n    }\n  ]\n}`}
                   className="w-full h-80 p-3.5 rounded-xl font-mono text-xs bg-[#FAFAFA] border border-[#E9E9E7] text-[#1A1A1A] focus:outline-none focus:bg-white focus:border-[#2383E2] transition-colors resize-y leading-relaxed"
                   spellCheck={false}
                 />
