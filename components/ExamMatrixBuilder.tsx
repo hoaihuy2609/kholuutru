@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Check, ChevronDown, ChevronLeft, FileUp, Plus, Trash2 } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronDown, ChevronLeft, FileUp, Plus, Table2, Trash2 } from 'lucide-react';
 import { STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import { MATRIX_LEVELS, matrixMatchScore, matrixReferences, matrixSlots, normalizeMatrixText, type MatrixQuestionType, type MatrixRow } from '../src/utils/examMatrix';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
@@ -75,6 +75,10 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
     const [activeId, setActiveId] = useState('');
     const [openSection, setOpenSection] = useState<string | null>(null);
     const [collapsedReviewSections, setCollapsedReviewSections] = useState<Set<string>>(() => new Set());
+    const [reviewTarget, setReviewTarget] = useState<{ label: string; rowKeys: Set<number> }>();
+    const reviewTable = useRef<HTMLTableElement>(null);
+    const slotTitle = useRef<HTMLButtonElement>(null);
+    const returningToSlot = useRef(false);
     const [previewId, setPreviewId] = useState('');
     const [limit, setLimit] = useState(15);
 
@@ -120,6 +124,15 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
         || (!!row.referenceText.trim() && (row.references.length !== row.count
             || (row.countUnit === 'statement' && row.references.some(reference => !/[a-d]$/.test(reference))))));
 
+    useEffect(() => {
+        const target = reviewing
+            ? reviewTarget && reviewTable.current?.querySelector<HTMLTableRowElement>('tr[data-review-target]')
+            : returningToSlot.current ? slotTitle.current : null;
+        returningToSlot.current = false;
+        target?.focus({ preventScroll: true });
+        target?.scrollIntoView({ block: reviewing ? 'start' : 'nearest', inline: 'nearest' });
+    }, [reviewing, reviewTarget]);
+
     function reviseRows(update: (current: ReturnType<typeof editable>[]) => ReturnType<typeof editable>[]) {
         setRows(update);
         setSelection({});
@@ -150,6 +163,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                 setSelection({});
                 setActiveId('');
                 setCollapsedReviewSections(new Set());
+                setReviewTarget(undefined);
             }
             const summary = result.rows.length
                 ? `Đọc được ${result.rows.length} dòng yêu cầu. Hãy đối chiếu với PDF, nhất là loại và số lượng câu.`
@@ -179,6 +193,22 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
         setLimit(15);
     }
 
+    function reviewActiveSlot() {
+        if (!slot) return;
+        const targetRows = rows.filter(row => slot.rows.includes(row));
+        for (const row of targetRows) expandReviewSection(normalizeMatrixText(row.section));
+        setReviewTarget({ label: slot.label, rowKeys: new Set(targetRows.map(row => row.key)) });
+        setReviewing(true);
+    }
+
+    function startSelecting() {
+        if (!slot || busy || incomplete) return;
+        returningToSlot.current = !!reviewTarget;
+        activate(slot.id);
+        setReviewTarget(undefined);
+        setReviewing(false);
+    }
+
     function choose(id: string) {
         if (!slot) return;
         setSelection(previous => {
@@ -204,7 +234,10 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                     <h1 className="text-2xl font-bold">Soạn đề theo ma trận</h1>
                     <p className="mt-1 text-sm text-stone-600">Rà bản đặc tả, rồi chọn câu trong kho cho từng vị trí.</p>
                 </div>
-                {!reviewing && <button className={button} onClick={() => setReviewing(true)}>Rà lại ma trận</button>}
+                {!reviewing && <button className={button} onClick={() => {
+                    setReviewTarget(undefined);
+                    setReviewing(true);
+                }}>Rà lại ma trận</button>}
             </div>
 
             {reviewing ? <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-4">
@@ -244,7 +277,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                     </select>
                 </label>)}
                 <div className="overflow-x-auto">
-                    <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+                    <table ref={reviewTable} className="w-full min-w-[900px] border-collapse text-left text-sm">
                         <thead className="bg-stone-100 text-stone-700"><tr>
                             {['Phần', 'Chủ đề', 'Yêu cầu cần đạt', 'Loại câu', 'Mức độ', 'Số câu / ý', 'Vị trí', ''].map(label =>
                                 <th className="px-2 py-2 font-semibold" key={label}>{label}</th>)}
@@ -268,41 +301,52 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                                         </button>
                                     </th>
                                 </tr>
-                                {expanded && group.entries.map(({ row, index }) => <tr key={row.key} className="border-b border-stone-100 align-top">
-                                    <td className="w-24 p-1"><input className={input} aria-label={`Phần dòng ${index + 1}`} defaultValue={row.section}
-                                        onKeyDown={event => {
-                                            if (event.key === 'Enter' && !event.nativeEvent.isComposing) event.currentTarget.blur();
-                                        }}
-                                        onBlur={event => {
-                                            const section = event.currentTarget.value.trim();
-                                            if (section === row.section) return;
-                                            expandReviewSection(normalizeMatrixText(section));
-                                            updateRow(row.key, { section });
-                                        }} />
-                                        {row.page && <span className="px-1 text-xs text-stone-500">Trang {row.page}</span>}</td>
-                                    <td className="w-44 p-1"><MatrixTextarea aria-label={`Chủ đề dòng ${index + 1}`} value={row.topic}
-                                        onChange={event => updateRow(row.key, { topic: event.target.value })} /></td>
-                                    <td className="min-w-52 p-1"><MatrixTextarea aria-label={`Yêu cầu cần đạt dòng ${index + 1}`} value={row.outcome}
-                                        onChange={event => updateRow(row.key, { outcome: event.target.value })} />
-                                        {row.sourceNote && <p className="text-xs text-amber-900">{row.sourceNote}</p>}</td>
-                                    <td className="w-44 p-1"><select className={input} aria-label={`Loại câu dòng ${index + 1}`} value={row.type}
-                                        onChange={event => updateRow(row.key, { type: event.target.value as MatrixQuestionType })}>
-                                        {questionTypes.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-                                    </select></td>
-                                    <td className="w-36 p-1"><select className={input} aria-label={`Mức độ dòng ${index + 1}`} value={row.level}
-                                        onChange={event => updateRow(row.key, { level: Number(event.target.value) })}>
-                                        {MATRIX_LEVELS.map((level, value) => <option key={level} value={value}>{level}</option>)}
-                                    </select></td>
-                                    <td className="w-20 p-1"><input type="number" min={1} max={99} className={input} aria-label={`Số câu dòng ${index + 1}`}
-                                        value={row.count || ''} onChange={event => updateRow(row.key, { count: Math.min(99, Math.max(0, Math.trunc(Number(event.target.value)))) })} /></td>
-                                    <td className="w-28 p-1"><input className={input} placeholder="C6, C7" aria-label={`Vị trí dòng ${index + 1}`} value={row.referenceText}
-                                        onChange={event => {
-                                            const referenceText = event.target.value;
-                                            updateRow(row.key, { referenceText, references: matrixReferences(referenceText) });
-                                        }} /></td>
-                                    <td className="p-1"><button className={button} aria-label={`Xóa dòng ${index + 1}`}
-                                        onClick={() => reviseRows(current => current.filter(entry => entry.key !== row.key))}><Trash2 className="size-4" /></button></td>
-                                </tr>)}
+                                {expanded && group.entries.map(({ row, index }) => {
+                                    const targeted = reviewTarget?.rowKeys.has(row.key);
+                                    return <tr key={row.key} data-review-target={targeted || undefined}
+                                        tabIndex={targeted ? -1 : undefined}
+                                        className={'scroll-mt-24 border-b align-top ' + (targeted ? 'border-amber-200 bg-amber-50' : 'border-stone-100')}>
+                                        <td className="w-24 p-1"><input className={input} aria-label={`Phần dòng ${index + 1}`} defaultValue={row.section}
+                                            onKeyDown={event => {
+                                                if (event.key === 'Enter' && !event.nativeEvent.isComposing) event.currentTarget.blur();
+                                            }}
+                                            onBlur={event => {
+                                                const section = event.currentTarget.value.trim();
+                                                if (section === row.section) return;
+                                                expandReviewSection(normalizeMatrixText(section));
+                                                updateRow(row.key, { section });
+                                            }} />
+                                            {row.page && <span className="px-1 text-xs text-stone-500">Trang {row.page}</span>}
+                                            {targeted && <div className="space-y-1 px-1 pt-1 text-xs text-amber-900">
+                                                <p className="font-semibold">Đối chiếu {reviewTarget?.label}</p>
+                                                <button type="button" disabled={busy || incomplete || !slot} onClick={startSelecting}
+                                                    className="text-left font-semibold underline underline-offset-2 disabled:opacity-50">Về chọn câu</button>
+                                            </div>}
+                                        </td>
+                                        <td className="w-44 p-1"><MatrixTextarea aria-label={`Chủ đề dòng ${index + 1}`} value={row.topic}
+                                            onChange={event => updateRow(row.key, { topic: event.target.value })} /></td>
+                                        <td className="min-w-52 p-1"><MatrixTextarea aria-label={`Yêu cầu cần đạt dòng ${index + 1}`} value={row.outcome}
+                                            onChange={event => updateRow(row.key, { outcome: event.target.value })} />
+                                            {row.sourceNote && <p className="text-xs text-amber-900">{row.sourceNote}</p>}</td>
+                                        <td className="w-44 p-1"><select className={input} aria-label={`Loại câu dòng ${index + 1}`} value={row.type}
+                                            onChange={event => updateRow(row.key, { type: event.target.value as MatrixQuestionType })}>
+                                            {questionTypes.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                                        </select></td>
+                                        <td className="w-36 p-1"><select className={input} aria-label={`Mức độ dòng ${index + 1}`} value={row.level}
+                                            onChange={event => updateRow(row.key, { level: Number(event.target.value) })}>
+                                            {MATRIX_LEVELS.map((level, value) => <option key={level} value={value}>{level}</option>)}
+                                        </select></td>
+                                        <td className="w-20 p-1"><input type="number" min={1} max={99} className={input} aria-label={`Số câu dòng ${index + 1}`}
+                                            value={row.count || ''} onChange={event => updateRow(row.key, { count: Math.min(99, Math.max(0, Math.trunc(Number(event.target.value)))) })} /></td>
+                                        <td className="w-28 p-1"><input className={input} placeholder="C6, C7" aria-label={`Vị trí dòng ${index + 1}`} value={row.referenceText}
+                                            onChange={event => {
+                                                const referenceText = event.target.value;
+                                                updateRow(row.key, { referenceText, references: matrixReferences(referenceText) });
+                                            }} /></td>
+                                        <td className="p-1"><button className={button} aria-label={`Xóa dòng ${index + 1}`}
+                                            onClick={() => reviseRows(current => current.filter(entry => entry.key !== row.key))}><Trash2 className="size-4" /></button></td>
+                                    </tr>;
+                                })}
                             </tbody>;
                         })}
                     </table>
@@ -313,10 +357,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                         reviseRows(current => [...current, emptyRow()]);
                     }}><Plus className="size-4" /> Thêm dòng</button>
                     {incomplete && <span className="text-sm text-stone-600">Kiểm tra yêu cầu, loại câu và số lượng vị trí. Với các dòng đếm theo ý, dùng mã như C1a, C1b.</span>}
-                    <button className={primary} disabled={busy || !slots.length || incomplete} onClick={() => {
-                        activate(slot?.id ?? slots[0].id);
-                        setReviewing(false);
-                    }}>Tìm câu theo ma trận</button>
+                    <button className={primary} disabled={busy || !slots.length || incomplete} onClick={startSelecting}>Tìm câu theo ma trận</button>
                 </div>
             </section> : slot && <div className="grid items-start gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
                 <aside className="rounded-xl border border-stone-200 bg-white">
@@ -364,7 +405,13 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                 </aside>
                 <section className="space-y-3">
                     <div className="space-y-2 rounded-xl border border-stone-200 bg-white p-4">
-                        <h2 className="text-lg font-bold">{slot.label}</h2>
+                        <h2 className="text-lg font-bold">
+                            <button ref={slotTitle} type="button" onClick={reviewActiveSlot} aria-label={`Đối chiếu ${slot.label} trong bảng ma trận`}
+                                className="inline-flex items-center gap-2 rounded text-left hover:text-amber-800 hover:underline">
+                                {slot.label}
+                                <Table2 aria-hidden="true" className="size-4 shrink-0 text-amber-800" />
+                            </button>
+                        </h2>
                         {slot.rows.map(row => <div className="text-sm" key={rows.indexOf(row as typeof rows[number])}>
                             <p className="text-stone-600">{[row.topic, typeLabel(row.type), row.level ? MATRIX_LEVELS[row.level] : 'Mọi mức độ'].filter(Boolean).join(' · ')}</p>
                             <p className="mt-0.5 whitespace-pre-line font-semibold">{row.outcome}</p>
