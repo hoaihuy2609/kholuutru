@@ -23,7 +23,10 @@ function between(edges: number[], point: number) {
 }
 
 function cellText(fragments: PdfTextFragment[]) {
-    return layoutPdfText(fragments).text.replace(/\s+/g, ' ').trim();
+    return layoutPdfText(fragments).text
+        .split(/\n(?=\s*[-–•]\s+)/)
+        .map(line => line.replace(/\s+/g, ' ').trim())
+        .join('\n');
 }
 
 function createGrid({ rules, fragments }: MatrixPage) {
@@ -68,8 +71,8 @@ export function parsePdfMatrix(pages: MatrixPage[]) {
     const unreadPages: number[] = [];
     const grades = new Set<number>();
     const sectionTypes = new Map<string, Set<MatrixQuestionType>>();
-    const levels = new Map<string, number>();
-    let topic = '';
+    const topicByColumn = new Map<string, string>();
+    const statementSections = new Set<string>();
     let currentLevel = 0;
 
     const grids = pages.map(createGrid);
@@ -89,6 +92,10 @@ export function parsePdfMatrix(pages: MatrixPage[]) {
             const types = sectionTypes.get(match[1]) ?? new Set();
             types.add(type);
             sectionTypes.set(match[1], types);
+            const counts = /\b(\d+) cau (?:tuong ung )?(\d+) y\b/.exec(match[2]);
+            if (type === 'dung_sai' && counts && Number(counts[2]) > Number(counts[1])) {
+                statementSections.add(match[1]);
+            }
         }
     });
 
@@ -129,8 +136,13 @@ export function parsePdfMatrix(pages: MatrixPage[]) {
             seen.add(requirement.bottom);
             const label = normalizeMatrixText(requirement.text);
             if (/^(?:tong|ti le|ty le)\b/.test(label)) continue;
-            const topics = topicColumns.map(x => grid.cell(x, y).text).filter(value => value && !topicHeader.test(normalizeMatrixText(value)));
-            topic = [...new Set(topics)].join(' · ') || topic;
+            const topics = topicColumns.map(x => {
+                const column = labels[grid.columns.indexOf(x)];
+                const value = grid.cell(x, y).text;
+                if (value && !topicHeader.test(normalizeMatrixText(value))) topicByColumn.set(column, value);
+                return topicByColumn.get(column);
+            }).filter(Boolean);
+            const topic = [...new Set(topics)].join(' · ');
             const headingLevel = matrixLevel(requirement.text);
             if (headingLevel) {
                 currentLevel = headingLevel;
@@ -153,7 +165,8 @@ export function parsePdfMatrix(pages: MatrixPage[]) {
                 const type = matrixQuestionType(typeCell) || headerType || sectionType;
                 const columnLevel = heading.map(matrixLevel).find(Boolean) || rowLevel;
                 const isReference = heading.some(value => referenceHeader.test(value));
-                const isCount = !isReference && (heading.some(value => countHeader.test(value)) || !!headerType || !!genericObjective);
+                const isPartCount = headers.some(value => sectionName.test(normalizeMatrixText(value)));
+                const isCount = !isReference && (heading.some(value => countHeader.test(value)) || !!headerType || !!genericObjective || isPartCount);
                 if (!isCount && !isReference) return;
                 const value = grid.cell(x, y).text;
                 const refs = isReference ? matrixReferences(value) : [];
@@ -179,6 +192,10 @@ export function parsePdfMatrix(pages: MatrixPage[]) {
             for (const entry of values) {
                 entry.references = [...new Set(entry.references)];
                 entry.count ||= entry.references.length;
+                if (entry.type === 'dung_sai' && !entry.references.length && statementSections.has(normalizeMatrixText(entry.section))) {
+                    entry.countUnit = 'statement';
+                    entry.sourceNote = 'PDF đếm theo ý. Gán mã như C1a, C1b để ghép các ý thành câu Đúng/Sai.';
+                }
                 rows.push(entry);
             }
         }

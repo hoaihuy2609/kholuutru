@@ -21,7 +21,7 @@ describe('exam matrix', () => {
             page: 1, section: '', topic: 'Điện trường', outcome: 'Nêu được khái niệm điện trường',
             level: 1, type: 'trac_nghiem', count: 2, references: [],
         }]);
-        expect(matrixSlots(rows)).toHaveLength(2);
+        expect(matrixSlots(rows).slots).toHaveLength(2);
         const genericPage = {
             ...page,
             fragments: page.fragments.map(fragment => fragment.text === 'TN 4 PA' ? { ...fragment, text: 'TNKQ' } : fragment),
@@ -38,8 +38,32 @@ describe('exam matrix', () => {
             base,
             { ...base, section: 'Phần II', type: 'written', references: ['C1a'] },
             { ...base, section: 'Phần II', type: 'written', references: ['C1b'] },
-        ]).map(slot => slot.rows.length)).toEqual([1, 2]);
+        ]).slots.map(slot => slot.rows.length)).toEqual([1, 2]);
         expect(matrixReferences('Câu 6–8, C 9 a')).toEqual(['C6', 'C7', 'C8', 'C9a']);
+    });
+
+    it('reads counts from a part header and holds true/false statements until all four have positions', () => {
+        const fragments = [
+            { x: 5, y: 104, text: '+ Phần II. Trắc nghiệm đúng sai: 2 Câu = 8 ý' },
+            { x: 5, y: 66, text: 'Mức độ đánh giá' },
+            { x: 305, y: 66, text: 'Phần II' },
+            { x: 5, y: 20, text: 'Nêu được khái niệm điện trường' },
+            { x: 305, y: 20, text: '4' },
+        ].map(fragment => ({ ...fragment, width: 40, height: 11 }));
+        const { rows } = parsePdfMatrix([{
+            fragments,
+            rules: [
+                ...[0, 300, 400].map(x => [x, 0, x, 90]),
+                ...[0, 45, 90].map(y => [0, y, 400, y]),
+            ],
+        }]);
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({ type: 'dung_sai', count: 4, countUnit: 'statement' });
+        expect(matrixSlots(rows)).toEqual({ slots: [], pendingStatements: 4 });
+        expect(matrixSlots([{ ...rows[0], count: 2, references: ['C1a', 'C1b'] }]).pendingStatements).toBe(2);
+        const grouped = matrixSlots([{ ...rows[0], references: ['C1a', 'C1b', 'C1c', 'C1d'] }]);
+        expect(grouped.pendingStatements).toBe(0);
+        expect(grouped.slots).toHaveLength(1);
     });
 
     it('enforces type and level before comparing requirements that use different wording', () => {
@@ -52,5 +76,8 @@ describe('exam matrix', () => {
         expect(matrixMatchScore([row], { ...candidate, type: 'dung_sai' })).toBe(0);
         expect(matrixMatchScore([row], { ...candidate, level: 2 })).toBe(0);
         expect(matrixMatchScore([row], { ...candidate, outcomes: ['Tính cường độ điện trường'] })).toBe(0);
+        expect(matrixMatchScore([{
+            ...row, outcome: '- Nêu được đơn vị đo điện dung.\n- Nêu được biểu thức tính cường độ điện trường',
+        }], candidate)).toBeGreaterThan(0);
     });
 });

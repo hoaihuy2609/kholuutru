@@ -1,4 +1,4 @@
-import { getDocument, GlobalWorkerOptions, OPS } from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions, OPS, Util, type PDFPageProxy } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { parsePdfExam } from '../utils/pdfExamQuestions';
 import { layoutPdfText } from '../utils/pdfTextLayout';
@@ -6,6 +6,23 @@ import { restorePdfVectorAccents } from '../utils/pdfVectorAccents';
 import { parsePdfMatrix, type MatrixPage } from '../utils/pdfExamMatrix';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
+
+function pdfMatrixRules({ fnArray, argsArray }: Awaited<ReturnType<PDFPageProxy['getOperatorList']>>) {
+    const rules: number[][] = [];
+    const stack: number[][] = [];
+    let matrix = [1, 0, 0, 1, 0, 0];
+    fnArray.forEach((operator, index) => {
+        const args = argsArray[index];
+        if (operator === OPS.save) stack.push(matrix);
+        if (operator === OPS.restore) matrix = stack.pop() ?? matrix;
+        if (operator === OPS.transform) matrix = Util.transform(matrix, args);
+        if (operator !== OPS.constructPath || args?.[2]?.length !== 4) return;
+        const bounds = [Infinity, Infinity, -Infinity, -Infinity];
+        Util.axialAlignedBoundingBox(args[2], matrix, bounds);
+        rules.push(bounds);
+    });
+    return rules;
+}
 
 export async function readPdfMatrix(file: File) {
     const task = getDocument({ data: await file.arrayBuffer(), isEvalSupported: false });
@@ -20,11 +37,7 @@ export async function readPdfMatrix(file: File) {
                 const [, , , , x, y] = item.transform;
                 return [{ text: item.str, x, y, width: item.width, height: item.height }];
             });
-            const { fnArray, argsArray } = await page.getOperatorList();
-            const rules = fnArray.flatMap((operator, index) => {
-                const bounds = operator === OPS.constructPath ? argsArray[index]?.[2] : undefined;
-                return bounds?.length === 4 ? [Array.from(bounds as ArrayLike<number>)] : [];
-            });
+            const rules = pdfMatrixRules(await page.getOperatorList());
             pages.push({ fragments, rules });
             page.cleanup();
         }

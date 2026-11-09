@@ -44,8 +44,9 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
     const [previewId, setPreviewId] = useState('');
     const [limit, setLimit] = useState(15);
 
-    const slots = useMemo(() => matrixSlots(rows), [rows]);
+    const { slots, pendingStatements } = useMemo(() => matrixSlots(rows), [rows]);
     const slot = slots.find(entry => entry.id === activeId) ?? slots[0];
+    const mixedLevels = new Set(slot?.rows.map(row => row.level).filter(Boolean)).size > 1;
     const candidatesById = useMemo(() => new Map(candidates.map(candidate => [candidate.item.id, candidate])), [candidates]);
     const chosenIds = useMemo(() => new Set(Object.values(selection)), [selection]);
     const chosen = slots.flatMap(entry => {
@@ -66,7 +67,8 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
     }, [candidates, grade, reviewing, slot]);
     const sections = [...new Set(rows.filter(row => !row.type && row.section).map(row => row.section))];
     const incomplete = rows.some(row => !row.outcome.trim() || !row.type || row.count < 1
-        || (!!row.referenceText.trim() && row.references.length !== row.count));
+        || (!!row.referenceText.trim() && (row.references.length !== row.count
+            || (row.countUnit === 'statement' && row.references.some(reference => !/[a-d]$/.test(reference))))));
 
     function reviseRows(update: (current: ReturnType<typeof editable>[]) => ReturnType<typeof editable>[]) {
         setRows(update);
@@ -167,6 +169,9 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                     </label>
                 </div>
                 {notice && <p role="status" className="rounded-md bg-amber-50 p-2 text-sm text-amber-950">{notice}</p>}
+                {pendingStatements > 0 && <p className="rounded-md bg-amber-50 p-2 text-sm text-amber-950">
+                    Còn {pendingStatements} ý Đúng/Sai chưa được ghép thành câu. Mỗi câu cần đủ bốn mã, ví dụ C1a, C1b, C1c, C1d.
+                </p>}
                 {sections.map(section => <label className="flex flex-wrap items-center gap-2 text-sm" key={section}>
                     Gán loại cho các dòng chưa rõ của {section}
                     <select className={input + ' max-w-xs'} value="" onChange={event => {
@@ -215,7 +220,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <button className={button} onClick={() => reviseRows(current => [...current, emptyRow()])}><Plus className="size-4" /> Thêm dòng</button>
-                    {incomplete && <span className="text-sm text-stone-600">Điền yêu cầu, loại câu và số lượng khớp với vị trí đã ghi.</span>}
+                    {incomplete && <span className="text-sm text-stone-600">Kiểm tra yêu cầu, loại câu và số lượng vị trí. Với các dòng đếm theo ý, dùng mã như C1a, C1b.</span>}
                     <button className={primary} disabled={busy || !slots.length || incomplete} onClick={() => {
                         activate(slot?.id ?? slots[0].id);
                         setReviewing(false);
@@ -238,6 +243,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                             Biên soạn {chosen.length} câu đã chọn
                         </button>
                         {chosen.length < slots.length && <p className="text-xs text-stone-600">Còn {slots.length - chosen.length} vị trí chưa có câu.</p>}
+                        {pendingStatements > 0 && <p className="text-xs text-amber-900">Còn {pendingStatements} ý Đúng/Sai cần ghép câu trong bảng rà soát.</p>}
                     </div>
                 </aside>
                 <section className="space-y-3">
@@ -245,12 +251,14 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                         <h2 className="text-lg font-bold">{slot.label}</h2>
                         {slot.rows.map(row => <div className="text-sm" key={rows.indexOf(row as typeof rows[number])}>
                             <p className="text-stone-600">{[row.topic, typeLabel(row.type), row.level ? MATRIX_LEVELS[row.level] : 'Mọi mức độ'].filter(Boolean).join(' · ')}</p>
-                            <p className="mt-0.5 font-semibold">{row.outcome}</p>
+                            <p className="mt-0.5 whitespace-pre-line font-semibold">{row.outcome}</p>
                         </div>)}
                     </div>
                     {!available.length && <p className="rounded-xl border border-stone-200 bg-white p-4 text-sm text-stone-600">
                         {slot.rows.some(row => row.type === 'written')
                             ? 'Kho câu hỏi hiện chưa có dạng tự luận. Vị trí này được giữ trong ma trận để theo dõi.'
+                            : mixedLevels
+                            ? 'Câu này có nhiều mức độ theo từng ý. Kho hiện chỉ lưu một mức độ cho mỗi câu.'
                             : 'Chưa có câu phù hợp. Kiểm tra lại yêu cầu của vị trí này hoặc gắn yêu cầu cần đạt cho câu trong kho.'}
                     </p>}
                     {available.slice(0, limit).map(({ candidate, score }) => {

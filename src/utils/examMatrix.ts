@@ -12,6 +12,7 @@ export interface MatrixRow {
     references: string[];
     page?: number;
     sourceNote?: string;
+    countUnit?: 'statement';
 }
 
 export const MATRIX_LEVELS = ['Chưa rõ', 'Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'];
@@ -107,23 +108,38 @@ export function matrixMatchScore(rows: MatrixRow[], candidate: {
     outcomes: string[];
 }) {
     if (!rows.length || rows.some(row => row.type !== candidate.type || (row.level && row.level !== candidate.level))) return 0;
-    return Math.min(...rows.map(row =>
-        Math.max(0, ...candidate.outcomes.map(outcome => outcomeScore(row.outcome, outcome)))));
+    return Math.min(...rows.map(row => {
+        const requirements = row.outcome.split(/\n\s*[-–•]\s+/);
+        return Math.max(0, ...requirements.flatMap(requirement =>
+            candidate.outcomes.map(outcome => outcomeScore(requirement, outcome))));
+    }));
 }
 
 export function matrixSlots(rows: MatrixRow[]) {
-    const slots = new Map<string, { id: string; label: string; rows: MatrixRow[] }>();
+    const slots = new Map<string, { id: string; label: string; rows: MatrixRow[]; statements: string[] }>();
+    let pendingStatements = 0;
     rows.forEach((row, index) => {
+        if (row.countUnit === 'statement' && !row.references.length) {
+            pendingStatements += row.count;
+            return;
+        }
         const section = normalizeMatrixText(row.section) || row.type || 'unspecified';
         for (let i = 0; i < (row.references.length || row.count); i++) {
             const reference = row.references[i];
             const number = reference?.match(/\d+/)?.[0];
             const id = number ? `${section}:C${Number(number)}` : `row:${index}:${i}`;
             const label = [row.section, number ? `Câu ${Number(number)}` : `Mục ${index + 1} · Câu ${i + 1}`].filter(Boolean).join(' · ');
-            const slot = slots.get(id) ?? { id, label, rows: [] };
+            const slot = slots.get(id) ?? { id, label, rows: [], statements: [] };
             if (!slot.rows.includes(row)) slot.rows.push(row);
+            if (row.countUnit === 'statement' && reference) slot.statements.push(reference);
             slots.set(id, slot);
         }
     });
-    return [...slots.values()].sort((a, b) => a.label.localeCompare(b.label, 'vi', { numeric: true }));
+    const complete = [...slots.values()].filter(({ statements }) => {
+        if (!statements.length || (statements.length === 4 && new Set(statements).size === 4)) return true;
+        pendingStatements += statements.length;
+        return false;
+    });
+    complete.sort((a, b) => a.label.localeCompare(b.label, 'vi', { numeric: true }));
+    return { slots: complete, pendingStatements };
 }
