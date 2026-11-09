@@ -109,7 +109,7 @@ export function matrixMatchScore(rows: MatrixRow[], candidate: {
 }) {
     if (!rows.length || rows.some(row => row.type !== candidate.type || (row.level && row.level !== candidate.level))) return 0;
     return Math.min(...rows.map(row => {
-        const requirements = row.outcome.split(/\n\s*[-–•]\s+/);
+        const requirements = row.outcome.split('\n');
         return Math.max(0, ...requirements.flatMap(requirement =>
             candidate.outcomes.map(outcome => outcomeScore(requirement, outcome))));
     }));

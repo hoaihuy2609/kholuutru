@@ -66,6 +66,44 @@ describe('exam matrix', () => {
         expect(grouped.slots).toHaveLength(1);
     });
 
+    it('reads Arabic-numbered parts with Roman-numbered notes and continues tables without repeated headers', () => {
+        const columns = [0, 100, 350, 450];
+        const gridPage = (top: number, edges: number[], items: [number, number, string][]): MatrixPage => ({
+            rules: [
+                ...columns.map(x => [x, 0, x, top]),
+                ...edges.map(y => [0, y, 450, y]),
+            ],
+            fragments: items.map(([x, y, text]) => ({ x, y, text, width: 32, height: 10 })),
+        });
+        const notes = gridPage(0, [], [
+            [10, 90, 'Phần I:'],
+            [10, 72, 'Câu hỏi trắc nghiệm có 4 phương án lựa chọn'],
+        ]);
+        const start = gridPage(100, [0, 50, 100], [
+            [8, 69, 'Nội dung'],
+            [107, 69, 'Mức độ đánh giá'],
+            [355, 83, 'Câu hỏi'],
+            [355, 58, 'Phần 1'],
+            [8, 33, 'Bài 14'],
+            [107, 39, 'Nhận biết:'],
+            [107, 25, '- Nêu được khái niệm từ'],
+            [355, 30, 'C1, C2'],
+        ]);
+        start.rules.push([350, 75, 450, 75]);
+        const continuation = gridPage(70, [0, 45, 70], [
+            [107, 53, 'trường.'],
+            [8, 25, 'Bài 15'],
+            [107, 35, 'Nhận biết:'],
+            [107, 21, '- Định nghĩa được cảm ứng từ.'],
+            [355, 25, 'C3'],
+        ]);
+        const { rows } = parsePdfMatrix([notes, start, continuation]);
+        expect(rows.map(row => row.references)).toEqual([['C1', 'C2'], ['C3']]);
+        expect(rows.every(row => row.type === 'trac_nghiem' && row.level === 1)).toBe(true);
+        expect(rows[0].outcome).toContain('khái niệm từ trường.');
+        expect(rows[1].page).toBe(3);
+    });
+
     it('enforces type and level before comparing requirements that use different wording', () => {
         const row: MatrixRow = {
             section: 'Phần I', topic: 'Điện trường', outcome: 'Nêu được biểu thức tính cường độ điện trường',
