@@ -26,6 +26,17 @@ const questionTypes = [
 ];
 const typeLabel = (type: MatrixQuestionType) => questionTypes.find(option => option.value === type)?.label;
 const input = 'w-full rounded-md border border-stone-200 bg-white px-2.5 py-2 text-sm text-stone-900';
+const growingInput = input + ' min-w-0 whitespace-pre-wrap [grid-area:1/1] [overflow-wrap:anywhere]';
+
+function MatrixTextarea({ value, ...props }: Pick<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'aria-label' | 'onChange'> & { value: string }) {
+    return (
+        <div className="grid">
+            {/* The hidden copy sizes the grid even when the table changes width. */}
+            <div aria-hidden="true" className={growingInput + ' invisible'}>{value + ' '}</div>
+            <textarea {...props} value={value} rows={1} className={growingInput + ' resize-none overflow-hidden'} />
+        </div>
+    );
+}
 const button = 'inline-flex items-center justify-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-semibold hover:bg-stone-100 disabled:opacity-50';
 const primary = 'rounded-lg bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-50';
 let rowKey = 0;
@@ -192,9 +203,9 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                                 <td className="w-24 p-1"><input className={input} aria-label={`Phần dòng ${index + 1}`} value={row.section}
                                     onChange={event => updateRow(row.key, { section: event.target.value })} />
                                     {row.page && <span className="px-1 text-xs text-stone-500">Trang {row.page}</span>}</td>
-                                <td className="w-44 p-1"><textarea className={input} rows={2} aria-label={`Chủ đề dòng ${index + 1}`} value={row.topic}
+                                <td className="w-44 p-1"><MatrixTextarea aria-label={`Chủ đề dòng ${index + 1}`} value={row.topic}
                                     onChange={event => updateRow(row.key, { topic: event.target.value })} /></td>
-                                <td className="min-w-52 p-1"><textarea className={input} rows={2} aria-label={`Yêu cầu cần đạt dòng ${index + 1}`} value={row.outcome}
+                                <td className="min-w-52 p-1"><MatrixTextarea aria-label={`Yêu cầu cần đạt dòng ${index + 1}`} value={row.outcome}
                                     onChange={event => updateRow(row.key, { outcome: event.target.value })} />
                                     {row.sourceNote && <p className="text-xs text-amber-900">{row.sourceNote}</p>}</td>
                                 <td className="w-44 p-1"><select className={input} aria-label={`Loại câu dòng ${index + 1}`} value={row.type}
