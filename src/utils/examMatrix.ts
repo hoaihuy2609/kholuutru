@@ -116,7 +116,7 @@ export function matrixMatchScore(rows: MatrixRow[], candidate: {
 }
 
 export function matrixSlots(rows: MatrixRow[]) {
-    const slots = new Map<string, { id: string; label: string; rows: MatrixRow[]; statements: string[] }>();
+    const slots = new Map<string, { id: string; label: string; number?: number; rows: MatrixRow[]; statements: string[] }>();
     let pendingStatements = 0;
     rows.forEach((row, index) => {
         if (row.countUnit === 'statement' && !row.references.length) {
@@ -129,7 +129,7 @@ export function matrixSlots(rows: MatrixRow[]) {
             const number = reference?.match(/\d+/)?.[0];
             const id = number ? `${section}:C${Number(number)}` : `row:${index}:${i}`;
             const label = [row.section, number ? `Câu ${Number(number)}` : `Mục ${index + 1} · Câu ${i + 1}`].filter(Boolean).join(' · ');
-            const slot = slots.get(id) ?? { id, label, rows: [], statements: [] };
+            const slot = slots.get(id) ?? { id, label, number: number ? Number(number) : undefined, rows: [], statements: [] };
             if (!slot.rows.includes(row)) slot.rows.push(row);
             if (row.countUnit === 'statement' && reference) slot.statements.push(reference);
             slots.set(id, slot);

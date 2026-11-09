@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronLeft, FileUp, Plus, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, FileUp, Plus, Trash2 } from 'lucide-react';
 import { STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import { MATRIX_LEVELS, matrixMatchScore, matrixReferences, matrixSlots, normalizeMatrixText, type MatrixQuestionType, type MatrixRow } from '../src/utils/examMatrix';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
@@ -52,10 +52,26 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
     const [notice, setNotice] = useState('');
     const [selection, setSelection] = useState<Record<string, string>>({});
     const [activeId, setActiveId] = useState('');
+    const [openSection, setOpenSection] = useState<string | null>(null);
     const [previewId, setPreviewId] = useState('');
     const [limit, setLimit] = useState(15);
 
     const { slots, pendingStatements } = useMemo(() => matrixSlots(rows), [rows]);
+    const slotSections = useMemo(() => {
+        const groups = new Map<string, { section: string; entries: typeof slots }>();
+        for (const entry of slots) {
+            const { section, type } = entry.rows[0];
+            const key = normalizeMatrixText(section) || type;
+            const group = groups.get(key) ?? { section: section.trim(), entries: [] };
+            group.entries.push(entry);
+            groups.set(key, group);
+        }
+        return [...groups].map(([key, { section, entries }]) => ({
+            key, entries,
+            label: [section, ...new Set(entries.flatMap(entry => entry.rows.map(row => typeLabel(row.type))))]
+                .filter(Boolean).join(' · '),
+        }));
+    }, [slots]);
     const slot = slots.find(entry => entry.id === activeId) ?? slots[0];
     const mixedLevels = new Set(slot?.rows.map(row => row.level).filter(Boolean)).size > 1;
     const candidatesById = useMemo(() => new Map(candidates.map(candidate => [candidate.item.id, candidate])), [candidates]);
@@ -125,6 +141,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
 
     function activate(id: string) {
         setActiveId(id);
+        setOpenSection(slotSections.find(group => group.entries.some(entry => entry.id === id))?.key ?? null);
         setPreviewId('');
         setLimit(15);
     }
@@ -140,7 +157,8 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
             return Object.values(previous).includes(id) ? previous : { ...previous, [slot.id]: id };
         });
         if (selection[slot.id] !== id) {
-            const next = slots.slice(slots.indexOf(slot) + 1).find(entry => !selection[entry.id]);
+            const navigation = slotSections.flatMap(group => group.entries);
+            const next = navigation.slice(navigation.indexOf(slot) + 1).find(entry => !selection[entry.id]);
             if (next) activate(next.id);
         }
     }
@@ -240,14 +258,38 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
             </section> : slot && <div className="grid items-start gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
                 <aside className="rounded-xl border border-stone-200 bg-white">
                     <p className="border-b border-stone-200 px-4 py-3 text-sm font-bold" role="status">Đã chọn {chosen.length}/{slots.length} câu</p>
-                    <div className="grid max-h-64 gap-1 overflow-y-auto p-2 lg:max-h-[65vh]">
-                        {slots.map(entry => <button key={entry.id} type="button" onClick={() => activate(entry.id)}
-                            aria-current={entry.id === slot.id ? 'step' : undefined}
-                            className={'flex items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm ' +
-                                (entry.id === slot.id ? 'bg-amber-100 font-semibold text-amber-950' : 'hover:bg-stone-100')}>
-                            <span>{entry.label}</span>
-                            {selection[entry.id] && <span className="text-xs font-semibold text-green-800">Đã chọn</span>}
-                        </button>)}
+                    <div className="max-h-64 space-y-2 overflow-y-auto p-2 lg:max-h-[65vh]">
+                        {slotSections.map((group, groupIndex) => {
+                            const expanded = openSection === group.key;
+                            const selectedCount = group.entries.filter(entry => candidatesById.has(selection[entry.id])).length;
+                            const panelId = `matrix-section-${groupIndex}`;
+                            return <div key={group.key} className="rounded-lg border border-stone-200">
+                                <button type="button" aria-expanded={expanded} aria-controls={panelId}
+                                    onClick={() => setOpenSection(expanded ? null : group.key)}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2.5 text-left text-sm font-semibold hover:bg-stone-50">
+                                    <ChevronDown aria-hidden="true" className={'size-4 shrink-0 text-stone-500 ' + (expanded ? '' : '-rotate-90')} />
+                                    <span className="min-w-0 flex-1">{group.label}</span>
+                                    <span className="shrink-0 rounded bg-stone-100 px-1.5 py-0.5 text-xs tabular-nums text-stone-700">{selectedCount}/{group.entries.length}</span>
+                                </button>
+                                <div id={panelId} hidden={!expanded}
+                                    className={expanded ? 'grid grid-cols-[repeat(auto-fill,minmax(2.5rem,1fr))] gap-1.5 border-t border-stone-100 p-2' : undefined}>
+                                    {expanded && group.entries.map((entry, index) => {
+                                        const current = entry.id === slot.id;
+                                        const selected = candidatesById.has(selection[entry.id]);
+                                        const label = `${entry.label}${selected ? ', đã chọn' : ''}`;
+                                        return <button key={entry.id} type="button" onClick={() => activate(entry.id)}
+                                            aria-current={current ? 'step' : undefined} aria-label={label} title={label}
+                                            className={'flex min-h-9 items-center justify-center gap-0.5 rounded-md border px-1 text-sm font-semibold tabular-nums ' +
+                                                (current ? 'border-amber-600 bg-amber-100 text-amber-950'
+                                                    : selected ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                                                        : 'border-stone-200 text-stone-800 hover:bg-stone-100')}>
+                                            <span>{entry.number ?? `#${index + 1}`}</span>
+                                            {selected && <Check aria-hidden="true" className="size-3 shrink-0" />}
+                                        </button>;
+                                    })}
+                                </div>
+                            </div>;
+                        })}
                     </div>
                     <div className="space-y-2 border-t border-stone-200 p-3">
                         <button className={primary + ' w-full'} disabled={!chosen.length} onClick={() => onCompose(chosen)}>
