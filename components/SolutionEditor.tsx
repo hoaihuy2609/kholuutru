@@ -17,7 +17,7 @@ import {
 import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
 import { MAX_QUESTION_IMAGE_WIDTH, MIN_QUESTION_IMAGE_WIDTH, normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { renderTikzToSvg, uploadQuestionImageToTelegram, uploadSvgToTelegram } from "../src/services/tikzService";
-import type { PdfQuestionSource } from '../src/utils/pdfExamQuestions';
+import { pdfSolutionText, type PdfQuestionSource } from '../src/utils/pdfExamQuestions';
 import type { ReviewedPdfQuestion } from './PdfExamImport';
 
 const PdfExamImport = React.lazy(() => import('./PdfExamImport'));
@@ -1000,7 +1000,7 @@ export default function SolutionEditor({
       qText: question.text.trim(),
       choices: question.options,
       correctChoice: question.type === 'trac_nghiem' ? question.answer : '',
-      solution: question.type === 'tu_luan' ? question.answer : '',
+      solution: pdfSolutionText(question),
       statements: STMT_LABELS.map((label, position) => ({
         ...emptyStatement(label), claim: question.options[position], verdict: question.verdicts[position],
       })),

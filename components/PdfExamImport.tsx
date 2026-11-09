@@ -2,7 +2,8 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { FileText, X } from 'lucide-react';
 import type { StudyQuestionType } from '../types';
 import { STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
-import type { PdfExamQuestion } from '../src/utils/pdfExamQuestions';
+import { pdfSolutionText, type PdfExamQuestion } from '../src/utils/pdfExamQuestions';
+import { SolutionQuestions } from './SolutionRenderer';
 
 export interface ReviewedPdfQuestion extends PdfExamQuestion {
     imageFile?: File;
@@ -16,6 +17,7 @@ interface Props {
 }
 
 const labels = ['A', 'B', 'C', 'D'];
+const statementLabels = ['a', 'b', 'c', 'd'] as const;
 const field = 'w-full rounded-lg border border-stone-300 bg-white p-2 text-sm';
 const button = 'inline-flex items-center rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold hover:bg-stone-100 disabled:opacity-50';
 
@@ -36,14 +38,19 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
     const [grade, setGrade] = useState(fixedGrade || 12);
     const [questions, setQuestions] = useState<ReviewedPdfQuestion[]>([]);
     const [selected, setSelected] = useState<Set<number>>(new Set());
+    const [reviewed, setReviewed] = useState<Set<number>>(new Set());
     const [active, setActive] = useState(0);
+    const [view, setView] = useState<'page' | 'answerPage' | 'solutionPage'>('page');
     const [emptyPages, setEmptyPages] = useState<number[]>([]);
+    const [unmatchedEntries, setUnmatchedEntries] = useState(0);
     const [progress, setProgress] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const busy = !!progress || saving;
     const current = questions[active];
-    const approved = questions.filter((question, index) => selected.has(index) && (!requiredType || question.type === requiredType));
+    const isSelected = (question: PdfExamQuestion, index: number) => selected.has(index) && (!requiredType || question.type === requiredType);
+    const approved = questions.filter(isSelected);
+    const pendingReview = questions.filter((question, index) => isSelected(question, index) && !reviewed.has(index)).length;
     const incomplete = approved.filter(question => !isComplete(question)).length;
 
     useEffect(() => {
@@ -62,17 +69,21 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
     async function loadPdf(pdf: File) {
         setError('');
         setFile(pdf);
-        setSource(pdf.name.replace(/.pdf$/i, ''));
+        setSource(pdf.name.replace(/\.pdf$/i, ''));
         setQuestions([]);
         setSelected(new Set());
+        setReviewed(new Set());
         setActive(0);
+        setView('page');
         setEmptyPages([]);
+        setUnmatchedEntries(0);
         setProgress('Đang mở PDF…');
         try {
             const { readPdfExam } = await import('../src/services/pdfExamReader');
             const result = await readPdfExam(pdf, (page, total) => setProgress('Đang đọc trang ' + page + '/' + total + '…'));
             setQuestions(result.questions);
             setEmptyPages(result.emptyPages);
+            setUnmatchedEntries(result.unmatchedEntries);
             setSelected(new Set(result.questions.flatMap((question, index) =>
                 !requiredType || question.type === requiredType ? [index] : [])));
             if (!result.questions.length) {
@@ -88,10 +99,21 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
 
     const edit = (patch: Partial<ReviewedPdfQuestion>) => {
         setQuestions(previous => previous.map((question, index) => index === active ? { ...question, ...patch } : question));
+        setReviewed(previous => {
+            if (!previous.has(active)) return previous;
+            const next = new Set(previous);
+            next.delete(active);
+            return next;
+        });
     };
 
+    function openQuestion(index: number) {
+        setActive(index);
+        setView('page');
+    }
+
     async function save() {
-        if (!approved.length || incomplete || !source.trim() || busy) return;
+        if (!approved.length || incomplete || pendingReview || !source.trim() || busy) return;
         setSaving(true);
         setError('');
         try {
@@ -103,7 +125,7 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
         }
     }
 
-    const pdfPageUrl = sourceUrl ? sourceUrl + '#page=' + (current?.source.page ?? 1) : '';
+    const pdfPageUrl = sourceUrl ? sourceUrl + '#page=' + (current?.source[view] ?? current?.source.page ?? 1) : '';
 
     return (
         <dialog ref={dialog} aria-labelledby={titleId}
@@ -121,6 +143,17 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
                     </label>
                     {progress && <p role="status" className="text-sm text-stone-700">{progress}</p>}
                     {pdfPageUrl && <>
+                        {current && <div className="flex flex-wrap gap-2" aria-label="Trang đối chiếu">
+                            {([
+                                ['page', 'Đề'],
+                                ['answerPage', 'Đáp án'],
+                                ['solutionPage', 'Lời giải'],
+                            ] as const).map(([key, label]) => current.source[key] && (
+                                <button key={key} type="button" aria-pressed={view === key}
+                                    className={button + (view === key ? ' border-amber-300 bg-amber-50' : '')}
+                                    onClick={() => setView(key)}>{label} · Trang {current.source[key]}</button>
+                            ))}
+                        </div>}
                         <a href={pdfPageUrl} target="_blank" rel="noreferrer" className="self-start text-sm text-amber-900 underline">Mở PDF gốc ở tab mới</a>
                         <iframe key={pdfPageUrl} title="PDF gốc" src={pdfPageUrl} className="h-56 w-full rounded-lg border border-stone-200 bg-white lg:h-auto lg:flex-1" />
                     </>}
@@ -129,6 +162,9 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
                     {error && <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-800">{error}</p>}
                     {emptyPages.length > 0 && <p className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900">
                         Không đọc được chữ ở trang {emptyPages.join(', ')}. Đối chiếu PDF gốc để kiểm tra câu bị thiếu.
+                    </p>}
+                    {unmatchedEntries > 0 && <p className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900">
+                        Có {unmatchedEntries} mục đáp án hoặc lời giải chưa ghép được. Kiểm tra phần cuối PDF.
                     </p>}
                     {current && <>
                         <fieldset disabled={busy} className="space-y-3">
@@ -142,17 +178,16 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
                             </div>
                             {requiredType && <p className="text-sm text-stone-600">Chỉ lưu câu thuộc loại đã chọn ở vị trí trong kho. Mở đợt nhập khác để lưu các loại còn lại.</p>}
                             <label className="grid gap-1 text-sm font-semibold">Câu đang duyệt · {questions.length} câu tìm được
-                                <select className={field} value={active} onChange={event => setActive(Number(event.target.value))}>
+                                <select className={field} value={active} onChange={event => openQuestion(Number(event.target.value))}>
                                     {questions.map((question, index) => <option key={index} value={index}>
                                         {index + 1}. {question.source.label} · Trang {question.source.page}
-                                        {question.needsVisualReview || !hasAnswer(question) || !isComplete(question) ? ' · Cần đối chiếu' : ''}
-                                        {!selected.has(index) ? ' · Bỏ qua' : ''}
+                                        {!isSelected(question, index) ? ' · Bỏ qua' : reviewed.has(index) ? ' · Đã đối chiếu' : ' · Cần đối chiếu'}
                                     </option>)}
                                 </select>
                             </label>
                             <div className="flex flex-wrap items-center gap-2">
-                                <button type="button" className={button} disabled={active === 0} onClick={() => setActive(active - 1)}>Câu trước</button>
-                                <button type="button" className={button} disabled={active === questions.length - 1} onClick={() => setActive(active + 1)}>Câu sau</button>
+                                <button type="button" className={button} disabled={active === 0} onClick={() => openQuestion(active - 1)}>Câu trước</button>
+                                <button type="button" className={button} disabled={active === questions.length - 1} onClick={() => openQuestion(active + 1)}>Câu sau</button>
                                 <label className="flex items-center gap-1.5 text-sm">
                                     <input type="checkbox" checked={selected.has(active)} onChange={event => {
                                         const include = event.target.checked;
@@ -167,6 +202,7 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
                             </div>
                             {current.source.part && <p className="text-xs text-stone-600">{current.source.part}</p>}
                             {current.needsVisualReview && <p className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900">Đối chiếu hình và công thức với PDF gốc.</p>}
+                            {current.needsMatchReview && <p className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900">Có đáp án hoặc lời giải bị trùng, mâu thuẫn hoặc thiếu phần. Kiểm tra bản gốc trước khi xác nhận.</p>}
                             {!hasAnswer(current) && <p className="text-sm text-amber-900">Chưa có đáp án đầy đủ. Có thể đối chiếu và nhập ngay hoặc bổ sung sau khi lưu nháp.</p>}
                             <label className="grid gap-1 text-sm font-semibold">Loại câu
                                 <select className={field} value={current.type} onChange={event => edit({ type: event.target.value as StudyQuestionType, answer: '', verdicts: labels.map(() => null) })}>
@@ -199,9 +235,23 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
                                     {labels.map(label => <option key={label}>{label}</option>)}
                                 </select>
                             </label>}
-                            {current.type === 'tu_luan' && <label className="grid gap-1 text-sm font-semibold">Đáp án hoặc lời giải
+                            {current.type === 'tu_luan' && <label className="grid gap-1 text-sm font-semibold">Đáp án
                                 <textarea className={field} rows={2} value={current.answer} onChange={event => edit({ answer: event.target.value })} />
                             </label>}
+                            <label className="grid gap-1 text-sm font-semibold">Lời giải chi tiết
+                                <textarea className={field} rows={5} value={current.solution} onChange={event => edit({ solution: event.target.value })} />
+                            </label>
+                            <details className="rounded-lg border border-stone-200 bg-white p-2">
+                                <summary className="cursor-pointer text-sm font-semibold">Xem trước đề và LaTeX</summary>
+                                <SolutionQuestions className="mt-2" questions={[{
+                                    question_no: current.source.label, question_text: current.text, question_latex: '',
+                                    type: current.type, choices: current.options, correctChoice: current.answer,
+                                    solution: pdfSolutionText(current), steps: [],
+                                    statements: current.options.map((claim, index) => ({
+                                        label: statementLabels[index], claim, claim_latex: '', verdict: current.verdicts[index], steps: [],
+                                    })),
+                                }]} />
+                            </details>
                             <label className="grid gap-1 text-sm font-semibold">Hình minh họa PNG/JPG, tối đa 5 MB
                                 <input key={active} className={field} type="file" accept="image/png,image/jpeg" onChange={event => {
                                     const image = event.target.files?.[0];
@@ -219,14 +269,28 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
                                 <span className="break-all">{current.imageFile.name}</span>
                                 <button type="button" className="shrink-0 underline" onClick={() => edit({ imageFile: undefined })}>Bỏ ảnh</button>
                             </div>}
+                            <label className="flex items-center gap-2 rounded-lg border border-stone-200 bg-white p-2 text-sm font-semibold">
+                                <input type="checkbox" checked={reviewed.has(active)} disabled={!isSelected(current, active) || !isComplete(current)}
+                                    onChange={event => {
+                                        const checked = event.target.checked;
+                                        setReviewed(previous => {
+                                            const next = new Set(previous);
+                                            if (checked) next.add(active); else next.delete(active);
+                                            return next;
+                                        });
+                                    }} />
+                                Đã đối chiếu đề, đáp án và lời giải
+                            </label>
                         </fieldset>
                     </>}
                 </section>
             </div>
             <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-200 bg-white p-3">
-                <span className="text-sm text-stone-600">{incomplete > 0 ? incomplete + ' câu còn thiếu nội dung hoặc lựa chọn' : approved.length + ' câu được chọn'}</span>
+                <span className="text-sm text-stone-600">Đã đối chiếu {approved.length - pendingReview}/{approved.length} câu được chọn
+                    {incomplete > 0 && ' · ' + incomplete + ' câu còn thiếu nội dung hoặc lựa chọn'}
+                </span>
                 <button type="button" className={button + ' border-amber-800 bg-amber-800 text-white hover:bg-amber-900'}
-                    disabled={busy || !approved.length || !!incomplete || !source.trim()} onClick={() => void save()}>
+                    disabled={busy || !approved.length || !!incomplete || !!pendingReview || !source.trim()} onClick={() => void save()}>
                     {saving ? 'Đang lưu…' : 'Lưu ' + approved.length + ' câu dưới dạng nháp'}
                 </button>
             </footer>
