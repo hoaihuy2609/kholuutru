@@ -3,6 +3,7 @@ import { FileText, X } from 'lucide-react';
 import type { StudyQuestionType } from '../types';
 import { STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import { pdfSolutionText, type PdfExamQuestion } from '../src/utils/pdfExamQuestions';
+import { convertPdfMathToLatex } from '../src/utils/pdfMathLatex';
 import { SolutionQuestions } from './SolutionRenderer';
 
 export interface ReviewedPdfQuestion extends PdfExamQuestion {
@@ -46,6 +47,7 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
     const [progress, setProgress] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [latexNotice, setLatexNotice] = useState('');
     const busy = !!progress || saving;
     const current = questions[active];
     const isSelected = (question: PdfExamQuestion, index: number) => selected.has(index) && (!requiredType || question.type === requiredType);
@@ -68,6 +70,7 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
 
     async function loadPdf(pdf: File) {
         setError('');
+        setLatexNotice('');
         setFile(pdf);
         setSource(pdf.name.replace(/\.pdf$/i, ''));
         setQuestions([]);
@@ -110,6 +113,23 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
     function openQuestion(index: number) {
         setActive(index);
         setView('page');
+        setLatexNotice('');
+    }
+
+    function convertMath() {
+        if (!current) return;
+        const patch = {
+            text: convertPdfMathToLatex(current.text),
+            options: current.options.map(convertPdfMathToLatex),
+            answer: convertPdfMathToLatex(current.answer),
+            solution: convertPdfMathToLatex(current.solution),
+        };
+        const changed = patch.text !== current.text || patch.answer !== current.answer || patch.solution !== current.solution
+            || patch.options.some((value, index) => value !== current.options[index]);
+        if (changed) edit(patch);
+        setLatexNotice(changed
+            ? 'Đã chuyển các ký hiệu nhận diện được. Mở bản xem trước để đối chiếu với PDF.'
+            : 'Chưa thấy ký hiệu Unicode có thể chuyển trong câu này. Có thể nhập công thức giữa hai dấu $ để xem trước.');
     }
 
     async function save() {
@@ -241,6 +261,10 @@ export default function PdfExamImport({ fixedGrade, requiredType, onClose, onSav
                             <label className="grid gap-1 text-sm font-semibold">Lời giải chi tiết
                                 <textarea className={field} rows={5} value={current.solution} onChange={event => edit({ solution: event.target.value })} />
                             </label>
+                            <div className="space-y-1">
+                                <button type="button" className={button} onClick={convertMath}>Chuyển ký hiệu sang LaTeX</button>
+                                <p role="status" className="text-xs text-stone-600">{latexNotice || 'Chuyển số mũ, chỉ số và dấu vectơ còn trong lớp chữ PDF.'}</p>
+                            </div>
                             <details className="rounded-lg border border-stone-200 bg-white p-2">
                                 <summary className="cursor-pointer text-sm font-semibold">Xem trước đề và LaTeX</summary>
                                 <SolutionQuestions className="mt-2" questions={[{

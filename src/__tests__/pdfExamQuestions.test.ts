@@ -1,6 +1,8 @@
 import { expect, it } from 'vitest';
 import { parsePdfExam } from '../utils/pdfExamQuestions';
 import { layoutPdfText } from '../utils/pdfTextLayout';
+import { convertPdfMathToLatex } from '../utils/pdfMathLatex';
+import katex from 'katex';
 
 it('keeps page provenance, repeated numbering and all three question types', () => {
     const { questions } = parsePdfExam([
@@ -71,4 +73,18 @@ it('places text emitted later back on its visual line and flags a shifted glyph'
         fragment('d) Mệnh đề sau.', 20, 85, 80), fragment('B', 70, 100, 7),
         fragment('₁', 77, 97, 4, 6),
     ])).toEqual({ text: 'c) Vectơ B₁ hướng xuống.\nd) Mệnh đề sau.', needsReview: true });
+});
+
+it('converts explicit Unicode scripts and vector marks into renderable LaTeX', () => {
+    const converted = convertPdfMathToLatex('B⃗₁, B₂⃗, x², 10⁻⁶ và cm²');
+    expect(converted).toBe('$\\vec{B}_{1}$, $\\vec{B}_{2}$, $x^{2}$, $10^{-6}$ và $\\mathrm{cm}^{2}$');
+    for (const match of converted.matchAll(/\$([^$]+)\$/g)) {
+        expect(() => katex.renderToString(match[1], { throwOnError: true })).not.toThrow();
+    }
+    expect(convertPdfMathToLatex(converted)).toBe(converted);
+});
+
+it('preserves existing math, prose footnotes and notation whose glyphs are absent', () => {
+    const original = 'Vectơ B1. Chữ có chú thích². $x₁$ và \\(x²\\).';
+    expect(convertPdfMathToLatex(original)).toBe(original);
 });
