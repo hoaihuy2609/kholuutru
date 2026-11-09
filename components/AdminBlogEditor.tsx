@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BlogPost, StudyLesson, StudyQuestionGroup, StudyQuestionType, StudySection } from '../types';
 import { getStudyChapter, isStudyQuestionType, nextStudyQuestionNumber, STUDY_CHAPTERS, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
-import { questionOutcomes } from '../src/utils/examMatrix';
+import { matrixDraftPlacement, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
 import {
     ChevronDown, ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
     ImageIcon, Link as LinkIcon, HelpCircle, AlignLeft, AlignCenter,
@@ -19,6 +19,7 @@ import ExamPaperEditor from './ExamPaperEditor';
 interface AdminBlogEditorProps {
     blog: BlogPost | null;
     initialSection?: StudySection;
+    matrixDraft?: MatrixQuestionDraft;
     initialQuestionIndex?: number;
     initialQuestionGroup?: StudyQuestionGroup;
     studyLessons: StudyLesson[];
@@ -32,13 +33,13 @@ interface AdminBlogEditorProps {
 
 const CATEGORIES = ['Lý thuyết', 'Mẹo giải bài', 'Kinh nghiệm', 'Tin tức', 'Đề cương', 'Khác'];
 
-const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, initialQuestionIndex, initialQuestionGroup, studyLessons, existingBlogs, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
+const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, matrixDraft, initialQuestionIndex, initialQuestionGroup, studyLessons, existingBlogs, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
     const [selectedMode, setEditorMode] = useState<'markdown' | 'solution' | 'exam_paper'>('markdown');
-    const isLessonCreation = !blog && !!initialSection?.lessonId;
-    const editorMode = isLessonCreation ? 'solution' : selectedMode;
-    const placement = blog?.studySection ?? initialSection;
+    const opensSolutionDirectly = !!matrixDraft || (!blog && !!initialSection?.lessonId);
+    const editorMode = opensSolutionDirectly ? 'solution' : selectedMode;
+    const placement = blog?.studySection ?? initialSection ?? (matrixDraft && matrixDraftPlacement(matrixDraft, studyLessons));
     const [chapterId, setChapterId] = useState(placement?.chapterId ?? '');
-    const [studyType, setStudyType] = useState<StudyQuestionType | ''>(placement?.questionType ?? '');
+    const [studyType, setStudyType] = useState<StudyQuestionType | ''>(matrixDraft?.type ?? placement?.questionType ?? '');
     const [lessonId, setLessonId] = useState(placement?.lessonId ?? '');
     const chapter = getStudyChapter(chapterId);
     const lessonOptions = studyLessons.filter(lesson =>
@@ -123,6 +124,10 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
     };
 
     const savePlacedBlog = (payload: Partial<BlogPost>) => {
+        if (matrixDraft && !chapter) {
+            showToast('Chọn chương trong Góc Học Tập để lưu câu hỏi.', 'error');
+            return Promise.resolve(null);
+        }
         if (payload.category !== 'exam_paper' && chapter) {
             if (!studyType) {
                 showToast('Chọn loại câu để lưu bài vào chương.', 'error');
@@ -214,7 +219,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                 <select value={chapterId} onChange={event => { setChapterId(event.target.value); setLessonId(''); }}
                     className="block w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2">
                     <option value="">Chưa phân vào chương</option>
-                    {STUDY_GRADES.map(grade => (
+                    {STUDY_GRADES.filter(grade => !matrixDraft?.grade || grade === matrixDraft.grade).map(grade => (
                         <optgroup key={grade} label={'Vật lý ' + grade}>
                             {STUDY_CHAPTERS.filter(option => option.grade === grade).map(option => (
                                 <option key={option.id} value={option.id}>{option.name}</option>
@@ -225,7 +230,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
             </label>
             <label className="min-w-0 space-y-1 text-sm font-medium text-stone-700">
                 <span>Loại câu</span>
-                <select value={chapter ? studyType : ''} disabled={!chapter} required={!!chapter}
+                <select value={chapter || matrixDraft ? studyType : ''} disabled={!chapter || !!matrixDraft} required={!!chapter}
                     onChange={event => {
                         setStudyType(isStudyQuestionType(event.target.value) ? event.target.value : '');
                         setLessonId('');
@@ -291,11 +296,11 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                         className="flex items-center gap-1.5 text-sm font-medium hover:text-indigo-600 transition-colors"
                         style={{ color: '#787774' }}
                     >
-                        <ChevronLeft className="w-4 h-4" /> Quay lại
+                        <ChevronLeft className="w-4 h-4" /> {matrixDraft ? 'Về ma trận' : 'Quay lại'}
                     </button>
                 </div>
 
-                {!isLessonCreation && (
+                {!opensSolutionDirectly && (
                     <div className="flex items-center bg-white p-1 rounded-xl border border-[#E9E9E7]">
                         {([
                             { key: 'markdown' as const, label: 'Markdown' },
@@ -348,6 +353,12 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                     )}
                 </div>
             </div>
+            {matrixDraft && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950">
+                    <h1 className="font-bold">Soạn câu cho {matrixDraft.label}</h1>
+                    {matrixDraft.topic && <p className="mt-1 text-sm">{matrixDraft.topic}</p>}
+                </div>
+            )}
 
             {/* ═══ CONTENT ═══ */}
             {editorMode === 'markdown' && (
@@ -367,11 +378,12 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                     deleteBlog={deleteBlog}
                     hideTopBar
                     studyPlacement={studyPlacement}
-                    studyDefaults={chapter ? { title: lesson?.title || chapter.name, firstQuestionNumber } : undefined}
+                    studyDefaults={chapter || matrixDraft ? { title: lesson?.title || chapter?.name || matrixDraft?.topic || 'Bài tập Vật lý', firstQuestionNumber } : undefined}
                     studyGrade={chapter?.grade}
                     studyQuestionType={chapter && studyType ? studyType : undefined}
                     initialQuestionGroup={initialQuestionGroup}
                     savedOutcomes={savedOutcomes}
+                    matrixDraft={matrixDraft}
                 />
             )}
 

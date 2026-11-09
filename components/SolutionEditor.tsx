@@ -18,7 +18,7 @@ import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
 import { MAX_QUESTION_IMAGE_WIDTH, MIN_QUESTION_IMAGE_WIDTH, normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { renderTikzToSvg, uploadQuestionImageToTelegram, uploadSvgToTelegram } from "../src/services/tikzService";
 import { pdfSolutionText, type PdfQuestionSource } from '../src/utils/pdfExamQuestions';
-import { questionOutcomes } from '../src/utils/examMatrix';
+import { matrixMatchScore, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
 import type { ReviewedPdfQuestion } from './PdfExamImport';
 
 const PdfExamImport = React.lazy(() => import('./PdfExamImport'));
@@ -523,20 +523,24 @@ interface SolutionEditorProps {
   initialQuestionIndex?: number;
   initialQuestionGroup?: StudyQuestionGroup;
   savedOutcomes?: string[];
+  matrixDraft?: MatrixQuestionDraft;
 }
 
 export default function SolutionEditor({
   blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar,
-  studyPlacement, studyDefaults, studyGrade, studyQuestionType, initialQuestionIndex = 0, initialQuestionGroup, savedOutcomes = []
+  studyPlacement, studyDefaults, studyGrade, studyQuestionType, initialQuestionIndex = 0, initialQuestionGroup, savedOutcomes = [], matrixDraft
 }: SolutionEditorProps) {
   const splitImportedQuestions = !!saveBlog && !studyGrade;
   const [examName,   setExamName]   = useState("");
-  const [questions,  setQuestions]  = useState<Question[]>(() => [emptyQuestion(studyQuestionType, initialQuestionGroup)]);
+  const [questions,  setQuestions]  = useState<Question[]>(() => [{
+    ...emptyQuestion(matrixDraft?.type ?? studyQuestionType, initialQuestionGroup),
+    outcomeText: matrixDraft?.outcomes.join('\n') ?? '',
+  }]);
   const [activeQIdx, setActiveQIdx] = useState(0);
   const [saving,     setSaving]     = useState(false);
 
   const [category,     setCategory]     = useState("");
-  const [level,        setLevel]        = useState(0);
+  const [level,        setLevel]        = useState(matrixDraft?.level ?? 0);
   const [isPublished,  setIsPublished]  = useState(false);
   const [grade,        setGrade]        = useState(0);
 
@@ -983,6 +987,22 @@ export default function SolutionEditor({
 
   const handleSave = async () => {
     if (illustrationBusy) return;
+    if (matrixDraft) {
+      if (!studyGrade) {
+        showToast('Chọn chương trong Góc Học Tập để lưu câu hỏi.', 'error');
+        return;
+      }
+      if (!activeQuestion.qText.trim() && !activeQuestion.qFormula.trim() && !activeQuestion.imageFile
+          && !activeQuestion.imageSvg && !activeQuestion.imageTelegramFileId && !activeQuestion.imageUrl) {
+        showToast('Nhập đề bài hoặc thêm hình cho câu hỏi.', 'error');
+        return;
+      }
+      const outcomes = questionOutcomes(activeQuestion.outcomeText.split('\n'));
+      if (!matrixMatchScore(matrixDraft.rows, { type: activeQuestion.type, level, outcomes })) {
+        showToast('Yêu cầu cần đạt phải khớp với vị trí đang soạn trong ma trận.', 'error');
+        return;
+      }
+    }
     if (!studyDefaults && (!examName.trim() || questions.some(q => !q.questionNo))) {
       showToast("Vui lòng nhập tên đề và số câu cho tất cả các câu!", "error");
       return;
@@ -1065,6 +1085,7 @@ export default function SolutionEditor({
       <div className="flex min-w-0 flex-wrap gap-1 rounded-lg border border-stone-200 bg-stone-50 p-1">
         {['—', 'Mức 1', 'Mức 2', 'Mức 3', 'Mức 4'].map((label, value) => (
           <button key={value} type="button" aria-pressed={level === value} onClick={() => setLevel(value)}
+            disabled={!!matrixDraft?.level && value !== matrixDraft.level}
             aria-label={value === 0 ? 'Chưa chọn mức độ' : label}
             className={'min-h-8 rounded-md px-2.5 text-xs font-semibold '
               + (level === value ? 'bg-amber-100 text-amber-950' : 'text-stone-600 hover:bg-stone-100')}>
@@ -1137,7 +1158,7 @@ export default function SolutionEditor({
           <h2 id="solution-placement-heading" className="text-sm font-bold text-stone-900">Vị trí trong Góc Học Tập</h2>
           {studyPlacement}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-stone-100 pt-3">
-            {!studyGrade && gradeControl}
+            {!studyGrade && !matrixDraft && gradeControl}
             {levelControl}
           </div>
         </section>
@@ -1182,7 +1203,7 @@ export default function SolutionEditor({
               <h3 className="flex items-center gap-2 text-sm font-bold text-stone-900">
                 <BookOpen aria-hidden="true" className="size-4 text-amber-800" /> Soạn câu hỏi
               </h3>
-              {studyDefaults && importControl}
+              {studyDefaults && !matrixDraft && importControl}
             </div>
             {!studyDefaults && <div>
               <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Tên đề thi / Nguồn</label>
@@ -1227,7 +1248,7 @@ export default function SolutionEditor({
                       { val: 'tu_luan', label: 'Trả lời ngắn' },
                       { val: 'dung_sai', label: 'Đúng / Sai' },
                       { val: 'trac_nghiem', label: 'Trắc nghiệm' },
-                    ] as const).map(opt => (
+                    ] as const).filter(opt => !matrixDraft || opt.val === matrixDraft.type).map(opt => (
                       <button key={opt.val} type="button" aria-pressed={activeQuestion.type === opt.val}
                         onClick={() => updateQ('type', opt.val)}
                         className={'min-h-8 rounded-md border px-2.5 text-xs font-semibold transition-colors '

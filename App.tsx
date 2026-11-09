@@ -511,6 +511,15 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
             } : undefined}
             studyLessons={studyLessons} onSaveLesson={effectiveIsAdmin ? saveLesson : undefined}
             onLibraryLoaded={handleLibraryLoaded}
+            renderMatrixEditor={effectiveIsAdmin ? (draft, blogs, back, saved) => (
+              <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+                <AdminBlogEditor blog={null} matrixDraft={draft} studyLessons={studyLessons} existingBlogs={blogs}
+                  saveBlog={cloud.saveBlog} deleteBlog={cloud.deleteBlog} syncBlogs={cloud.syncBlogs} onBack={back} onSaved={blog => {
+                    setAllBlogs([blog, ...useBlogStore.getState().allBlogs.filter(entry => entry.id !== blog.id)]);
+                    saved(blog);
+                  }} />
+              </Suspense></ErrorBoundary>
+            ) : undefined}
             getStudyLibrary={cloud.getStudyLibrary} />
         </Suspense></ErrorBoundary>
       </div>

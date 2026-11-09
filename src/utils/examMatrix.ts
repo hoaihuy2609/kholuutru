@@ -1,4 +1,5 @@
-import type { StudyQuestionType } from '../../types';
+import type { StudyLesson, StudyQuestionType, StudySection } from '../../types';
+import { STUDY_CHAPTERS } from './studyLibrary';
 
 export type MatrixQuestionType = StudyQuestionType | 'written' | '';
 
@@ -13,6 +14,17 @@ export interface MatrixRow {
     page?: number;
     sourceNote?: string;
     countUnit?: 'statement';
+}
+
+export interface MatrixQuestionDraft {
+    slotId: string;
+    label: string;
+    grade: number;
+    type: StudyQuestionType;
+    level: number;
+    topic: string;
+    outcomes: string[];
+    rows: MatrixRow[];
 }
 
 export const MATRIX_LEVELS = ['Chưa rõ', 'Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'];
@@ -48,6 +60,33 @@ export function matrixLevel(text: string) {
     if (/^(?:van dung|vd|muc 3)$/.test(key)) return 3;
     if (/^(?:van dung cao|vdc|vd cao|muc 4)$/.test(key)) return 4;
     return 0;
+}
+
+export function isMatrixLevelHeading(text: string) {
+    return matrixLevel(text) > 0
+        || /^(?:nhan biet|thong hieu|van dung(?: cao)?)(?: (?:va )?(?:nhan biet|thong hieu|van dung(?: cao)?))+$/.test(normalizeMatrixText(text));
+}
+
+export function matrixOutcomeOptions(outcome: string) {
+    return questionOutcomes(outcome.split('\n')
+        .map(line => line.trim().replace(/^[-–•]\s*/, ''))
+        .filter(line => !isMatrixLevelHeading(line)));
+}
+
+export function matrixDraftPlacement(draft: MatrixQuestionDraft, lessons: StudyLesson[]): StudySection | undefined {
+    const cleanTitle = (value: string) => normalizeMatrixText(value).replace(/^(?:bai|chuong) (?:\d+(?: \d+)?|[ivx]+) /, '');
+    const topics = draft.topic.split('·').map(cleanTitle).filter(Boolean);
+    const chapters = STUDY_CHAPTERS.filter(chapter => !draft.grade || chapter.grade === draft.grade);
+    const chapterIds = new Set(chapters.map(chapter => chapter.id));
+    const matchingLessons = lessons.filter(lesson =>
+        lesson.studySection.questionType === draft.type && chapterIds.has(lesson.studySection.chapterId)
+        && topics.includes(cleanTitle(lesson.title)));
+    if (matchingLessons.length === 1) return { ...matchingLessons[0].studySection, lessonId: matchingLessons[0].id };
+    const matchingChapters = chapters.filter(chapter => {
+        const name = cleanTitle(chapter.name);
+        return topics.some(topic => ` ${topic} `.includes(` ${name} `));
+    });
+    if (matchingChapters.length === 1) return { chapterId: matchingChapters[0].id, questionType: draft.type };
 }
 
 export function matrixReferences(text: string) {

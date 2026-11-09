@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useId, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useId, useLayoutEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { BlogPost, StudyLesson, StudyLibrary, StudyQuestionGroup, StudyQuestionType, StudySection } from '../types';
 import { BookOpen, Plus, Search, SlidersHorizontal, Image, FileText, Check, Pencil, Sparkles, ChevronLeft, ChevronRight, ChevronDown, Folder, X, RotateCcw } from 'lucide-react';
@@ -9,7 +9,7 @@ import { getStudyChapter, isStudyQuestionGroup, isStudyQuestionType, parseStudyQ
 import { SelectedQuestionItem } from '../src/services/examLatexService';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
-import { questionOutcomes } from '../src/utils/examMatrix';
+import { questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -356,6 +356,7 @@ interface BlogListProps {
     onSaveLesson?: (section: StudySection, title: string, id?: string) => Promise<StudyLesson | null>;
     onLibraryLoaded: (library: StudyLibrary) => void;
     getStudyLibrary: (isAdmin: boolean) => Promise<StudyLibrary>;
+    renderMatrixEditor?: (draft: MatrixQuestionDraft, blogs: BlogPost[], onBack: () => void, onSaved: (blog: BlogPost) => void) => React.ReactNode;
 }
 
 const estimateReadTime = (content: string): number =>
@@ -462,7 +463,7 @@ function FilterGroup({ label, children }: { label: string; children: React.React
 
 const BlogList: React.FC<BlogListProps> = ({
     isAdmin, studentGrade, onReadBlog, onEditBlog, onCreateBlog, studyLessons,
-    onSaveLesson, onLibraryLoaded, getStudyLibrary,
+    onSaveLesson, onLibraryLoaded, getStudyLibrary, renderMatrixEditor,
 }) => {
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
     const [loading, setLoading] = useState(true);
@@ -484,6 +485,9 @@ const BlogList: React.FC<BlogListProps> = ({
     const [selectedCardIndexes, setSelectedCardIndexes] = useState(() => new Map<string, Set<number>>());
     const [isExamModalOpen, setIsExamModalOpen] = useState(false);
     const [showMatrix, setShowMatrix] = useState(false);
+    const [matrixDraft, setMatrixDraft] = useState<MatrixQuestionDraft>();
+    const [recentMatrixQuestion, setRecentMatrixQuestion] = useState<{ slotId: string; candidateId: string }>();
+    const matrixScrollTop = useRef<number | undefined>(undefined);
     const [matrixQuestions, setMatrixQuestions] = useState<SelectedQuestionItem[]>();
     const navigate = useNavigate();
 
@@ -596,6 +600,14 @@ const BlogList: React.FC<BlogListProps> = ({
             }];
         });
     }, [showMatrix, isAdmin, visibleCards, studyLessons]);
+
+    useLayoutEffect(() => {
+        if (matrixDraft) window.scrollTo({ top: 0, behavior: 'instant' });
+        else if (matrixScrollTop.current !== undefined) {
+            window.scrollTo({ top: matrixScrollTop.current, behavior: 'instant' });
+            matrixScrollTop.current = undefined;
+        }
+    }, [matrixDraft]);
 
     const grades = !isAdmin && studentGrade ? [studentGrade] : STUDY_GRADES;
     const folder = searchParams.get('folder');
@@ -747,10 +759,24 @@ const BlogList: React.FC<BlogListProps> = ({
     );
 
     if (isAdmin && showMatrix) return <>
-        <React.Suspense fallback={<p className="p-6 text-sm text-stone-600">Đang mở ma trận…</p>}>
-            <ExamMatrixBuilder candidates={matrixCandidates}
-                onClose={() => setShowMatrix(false)} onCompose={setMatrixQuestions} />
-        </React.Suspense>
+        <div hidden={!!matrixDraft}>
+            <React.Suspense fallback={<p className="p-6 text-sm text-stone-600">Đang mở ma trận…</p>}>
+                <ExamMatrixBuilder candidates={matrixCandidates} recentQuestion={recentMatrixQuestion}
+                    onClose={() => {
+                        setRecentMatrixQuestion(undefined);
+                        setShowMatrix(false);
+                    }} onCompose={setMatrixQuestions}
+                    onCreateQuestion={renderMatrixEditor ? draft => {
+                        matrixScrollTop.current = window.scrollY;
+                        setMatrixDraft(draft);
+                    } : undefined} />
+            </React.Suspense>
+        </div>
+        {matrixDraft && renderMatrixEditor?.(matrixDraft, blogs, () => setMatrixDraft(undefined), saved => {
+            setBlogs(current => [saved, ...current.filter(blog => blog.id !== saved.id)]);
+            setRecentMatrixQuestion({ slotId: matrixDraft.slotId, candidateId: questionKey(saved.id, 0) });
+            setMatrixDraft(current => current === matrixDraft ? undefined : current);
+        })}
         <ExamStyleModal isOpen={!!matrixQuestions} onClose={() => setMatrixQuestions(undefined)} questions={matrixQuestions ?? []} />
     </>;
 
@@ -808,21 +834,6 @@ const BlogList: React.FC<BlogListProps> = ({
                     className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-950 hover:bg-amber-100 disabled:opacity-50">
                     <FileText className="size-4" aria-hidden="true" /> Soạn đề theo ma trận
                 </button>}
-                {isAdmin && onCreateBlog && !activeChapter && (
-                    <button
-                        onClick={() => onCreateBlog()}
-                        style={{
-                            padding: '9px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
-                            background: '#1A1A1A', color: '#fff', border: 'none', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)', transition: 'all 0.15s'
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.02)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-                    >
-                        <Plus style={{ width: '15px', height: '15px' }} /> Viết bài mới
-                    </button>
-                )}
                 </div>
             </div>
 

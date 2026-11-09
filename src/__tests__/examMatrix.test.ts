@@ -1,8 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { matrixMatchScore, matrixReferences, matrixSlots, type MatrixRow } from '../utils/examMatrix';
+import { matrixDraftPlacement, matrixMatchScore, matrixOutcomeOptions, matrixReferences, matrixSlots, type MatrixQuestionDraft, type MatrixRow } from '../utils/examMatrix';
 import { parsePdfMatrix, type MatrixPage } from '../utils/pdfExamMatrix';
 
 describe('exam matrix', () => {
+    it('prefills a matrix draft from actual outcomes and a matching lesson in the same grade and format', () => {
+        const outcome = 'Nhận biết:\n- Nêu được khái niệm từ trường.\nVận dụng và vận dụng cao:\n- Xác định được chiều đường sức từ.';
+        const options = matrixOutcomeOptions(outcome);
+        expect(options).toEqual(['Nêu được khái niệm từ trường.', 'Xác định được chiều đường sức từ.']);
+        const draft: MatrixQuestionDraft = {
+            slotId: 'phan 1:C1', label: 'Phần 1 · Câu 1', grade: 12, type: 'trac_nghiem',
+            level: 0, topic: 'Bài 14: Từ trường', outcomes: [options[0]], rows: [],
+        };
+        expect(matrixDraftPlacement(draft, [{
+            kind: 'study_lesson', id: 'magnetism', title: 'Bài 1. Từ trường', grade: 12, is_published: false,
+            studySection: { chapterId: 'g12-ch3', questionType: 'trac_nghiem' },
+        }])).toEqual({ chapterId: 'g12-ch3', questionType: 'trac_nghiem', lessonId: 'magnetism' });
+        expect(matrixDraftPlacement(draft, [])).toEqual({ chapterId: 'g12-ch3', questionType: 'trac_nghiem' });
+        expect(matrixDraftPlacement({ ...draft, grade: 11 }, [])).toBeUndefined();
+    });
+
     it('reads counts from named columns without requiring question numbers', () => {
         const columns = [0, 125, 380, 475, 585];
         const page: MatrixPage = {

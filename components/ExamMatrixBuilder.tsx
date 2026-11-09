@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, ChevronLeft, FileUp, Plus, Table2, Trash2 } from 'lucide-react';
-import { STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
-import { MATRIX_LEVELS, matrixMatchScore, matrixReferences, matrixSlots, normalizeMatrixText, type MatrixQuestionType, type MatrixRow } from '../src/utils/examMatrix';
+import { Check, ChevronDown, ChevronLeft, FileUp, Pencil, Plus, Table2, Trash2 } from 'lucide-react';
+import { isStudyQuestionType, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
+import { MATRIX_LEVELS, matrixMatchScore, matrixOutcomeOptions, matrixReferences, matrixSlots, normalizeMatrixText, type MatrixQuestionDraft, type MatrixQuestionType, type MatrixRow } from '../src/utils/examMatrix';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
 import SolutionRenderer from './SolutionRenderer';
 
@@ -17,6 +17,8 @@ interface Props {
     candidates: MatrixCandidate[];
     onClose: () => void;
     onCompose: (questions: SelectedQuestionItem[]) => void;
+    onCreateQuestion?: (draft: MatrixQuestionDraft) => void;
+    recentQuestion?: { slotId: string; candidateId: string };
 }
 
 const questionTypes = [
@@ -64,7 +66,7 @@ function reviewMatrixSections(rows: ReturnType<typeof editable>[]) {
         });
 }
 
-export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Props) {
+export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCreateQuestion, recentQuestion }: Props) {
     const [rows, setRows] = useState(() => [emptyRow()]);
     const [grade, setGrade] = useState(0);
     const [reviewing, setReviewing] = useState(true);
@@ -81,6 +83,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
     const returningToSlot = useRef(false);
     const [previewId, setPreviewId] = useState('');
     const [limit, setLimit] = useState(15);
+    const [draftChoices, setDraftChoices] = useState<string[]>();
 
     const { slots, pendingStatements } = useMemo(() => matrixSlots(rows), [rows]);
     const reviewSections = useMemo(() => reviewMatrixSections(rows), [rows]);
@@ -101,6 +104,11 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
     }, [slots]);
     const slot = slots.find(entry => entry.id === activeId) ?? slots[0];
     const mixedLevels = new Set(slot?.rows.map(row => row.level).filter(Boolean)).size > 1;
+    const slotType = slot?.rows[0]?.type;
+    const outcomeOptions = slot?.rows.map(row => matrixOutcomeOptions(row.outcome)) ?? [];
+    const canCreateQuestion = !!onCreateQuestion && isStudyQuestionType(slotType) && !mixedLevels
+        && slot?.rows.every(row => row.type === slotType) && outcomeOptions.every(options => options.length > 0);
+    const recentId = recentQuestion?.slotId === slot?.id ? recentQuestion?.candidateId : undefined;
     const candidatesById = useMemo(() => new Map(candidates.map(candidate => [candidate.item.id, candidate])), [candidates]);
     const chosenIds = useMemo(() => new Set(Object.values(selection)), [selection]);
     const chosen = slots.flatMap(entry => {
@@ -117,8 +125,9 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
             const topic = normalizeMatrixText(candidate.topic);
             const topicMatch = slot.rows.some(row => row.topic && topic.includes(normalizeMatrixText(row.topic)));
             return [{ candidate, score, topicMatch }];
-        }).sort((a, b) => b.score - a.score || Number(b.topicMatch) - Number(a.topicMatch));
-    }, [candidates, grade, reviewing, slot]);
+        }).sort((a, b) => Number(b.candidate.item.id === recentId) - Number(a.candidate.item.id === recentId)
+            || b.score - a.score || Number(b.topicMatch) - Number(a.topicMatch));
+    }, [candidates, grade, reviewing, slot, recentId]);
     const sections = [...new Set(rows.filter(row => !row.type && row.section).map(row => row.section))];
     const incomplete = rows.some(row => !row.outcome.trim() || !row.type || row.count < 1
         || (!!row.referenceText.trim() && (row.references.length !== row.count
@@ -191,6 +200,19 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
         setOpenSection(slotSections.find(group => group.entries.some(entry => entry.id === id))?.key ?? null);
         setPreviewId('');
         setLimit(15);
+        setDraftChoices(undefined);
+    }
+
+    function createQuestion(outcomes: string[]) {
+        if (!slot || !isStudyQuestionType(slotType) || outcomes.some(outcome => !outcome)) return;
+        setDraftChoices(undefined);
+        onCreateQuestion?.({
+            slotId: slot.id, label: slot.label, grade, type: slotType,
+            level: slot.rows.find(row => row.level)?.level ?? 0,
+            topic: [...new Set(slot.rows.map(row => row.topic).filter(Boolean))].join(' · '),
+            outcomes: [...new Set(outcomes)],
+            rows: slot.rows,
+        });
     }
 
     function reviewActiveSlot() {
@@ -416,6 +438,33 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                             <p className="text-stone-600">{[row.topic, typeLabel(row.type), row.level ? MATRIX_LEVELS[row.level] : 'Mọi mức độ'].filter(Boolean).join(' · ')}</p>
                             <p className="mt-0.5 whitespace-pre-line font-semibold">{row.outcome}</p>
                         </div>)}
+                        {canCreateQuestion && (draftChoices ? (
+                            <div className="space-y-2 border-t border-stone-100 pt-3">
+                                {outcomeOptions.map((options, index) => options.length > 1 && (
+                                    <label key={index} className="block space-y-1 text-sm font-medium">
+                                        <span>Yêu cầu cần đạt{outcomeOptions.length > 1 ? ` · Mục ${index + 1}` : ''}</span>
+                                        <select className={input} value={draftChoices[index]} onChange={event => {
+                                            const value = event.target.value;
+                                            setDraftChoices(draftChoices.map((choice, position) => position === index ? value : choice));
+                                        }}>
+                                            <option value="">Chọn yêu cầu cần đánh giá</option>
+                                            {options.map(outcome => <option key={outcome}>{outcome}</option>)}
+                                        </select>
+                                    </label>
+                                ))}
+                                <div className="flex flex-wrap gap-2">
+                                    <button type="button" className={primary} disabled={draftChoices.some(choice => !choice)}
+                                        onClick={() => createQuestion(draftChoices)}>Mở trình soạn câu</button>
+                                    <button type="button" className={button} onClick={() => setDraftChoices(undefined)}>Hủy</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <button type="button" className={button} onClick={() => {
+                                const defaults = outcomeOptions.map(options => options.length === 1 ? options[0] : '');
+                                if (defaults.every(Boolean)) createQuestion(defaults);
+                                else setDraftChoices(defaults);
+                            }}><Pencil aria-hidden="true" className="size-4" /> Soạn câu cho vị trí này</button>
+                        ))}
                     </div>
                     {!available.length && <p className="rounded-xl border border-stone-200 bg-white p-4 text-sm text-stone-600">
                         {slot.rows.some(row => row.type === 'written')
@@ -430,7 +479,8 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                         const used = chosenIds.has(item.id) && !selected;
                         return <article key={item.id} className="space-y-2 rounded-xl border border-stone-200 bg-white p-4">
                             <p className="text-sm text-stone-600">{[candidate.topic, candidate.grade && `Lớp ${candidate.grade}`,
-                                item.level && MATRIX_LEVELS[item.level], score < 1 ? 'Yêu cầu gần khớp' : 'Khớp yêu cầu'].filter(Boolean).join(' · ')}</p>
+                                item.level && MATRIX_LEVELS[item.level], item.id === recentId && 'Vừa soạn',
+                                score < 1 ? 'Yêu cầu gần khớp' : 'Khớp yêu cầu'].filter(Boolean).join(' · ')}</p>
                             <p className="whitespace-pre-line text-base">{item.qText || item.qFormula}</p>
                             <p className="text-xs text-stone-600">{candidate.outcomes.join(' · ')}</p>
                             <div className="flex flex-wrap gap-2">

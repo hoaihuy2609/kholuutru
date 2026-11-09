@@ -1,5 +1,5 @@
 import { layoutPdfText, type PdfTextFragment } from './pdfTextLayout';
-import { matrixLevel, matrixQuestionType, matrixReferences, normalizeMatrixText, type MatrixQuestionType, type MatrixRow } from './examMatrix';
+import { isMatrixLevelHeading, matrixLevel, matrixQuestionType, matrixReferences, normalizeMatrixText, type MatrixQuestionType, type MatrixRow } from './examMatrix';
 
 export interface MatrixPage {
     fragments: PdfTextFragment[];
@@ -22,11 +22,6 @@ function sectionKey(text: string) {
     return number ? `phan ${number}` : section;
 }
 
-function isLevelHeading(text: string) {
-    return matrixLevel(text) > 0
-        || /^(?:nhan biet|thong hieu|van dung(?: cao)?)(?: (?:va )?(?:nhan biet|thong hieu|van dung(?: cao)?))+$/.test(normalizeMatrixText(text));
-}
-
 function distinctCoordinates(values: number[]) {
     return values.sort((a, b) => a - b).filter((value, index, sorted) => index === 0 || value - sorted[index - 1] > 2);
 }
@@ -41,7 +36,7 @@ function cellText(fragments: PdfTextFragment[]) {
     for (const line of layoutPdfText(fragments).text.split('\n')) {
         const text = line.replace(/\s+/g, ' ').trim();
         if (!text) continue;
-        if (!paragraphs.length || /^[-–•]\s+/.test(text) || isLevelHeading(text)) paragraphs.push(text);
+        if (!paragraphs.length || /^[-–•]\s+/.test(text) || isMatrixLevelHeading(text)) paragraphs.push(text);
         else paragraphs[paragraphs.length - 1] += ' ' + text;
     }
     return paragraphs.join('\n');
@@ -196,7 +191,7 @@ export function parsePdfMatrix(pages: MatrixPage[]) {
             }
             const sectionCell = sectionColumn === undefined ? '' : grid.cell(sectionColumn, y).text;
             const typeCell = typeColumn === undefined ? '' : grid.cell(typeColumn, y).text;
-            const embeddedLevels = requirement.text.split('\n').filter(isLevelHeading);
+            const embeddedLevels = requirement.text.split('\n').filter(isMatrixLevelHeading);
             const rowLevel = embeddedLevels.length
                 ? embeddedLevels.length === 1 ? matrixLevel(embeddedLevels[0]) : 0
                 : (levelColumn === undefined ? 0 : matrixLevel(grid.cell(levelColumn, y).text)) || currentLevel;
