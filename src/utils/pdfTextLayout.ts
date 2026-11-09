@@ -31,7 +31,8 @@ export function layoutPdfText(fragments: PdfTextFragment[]) {
             if (gap >= Math.max(line.height, 1) * 0.1 && !/\s$/.test(text) && !/^\s/.test(piece.text)) text += ' ';
             if (gap < -Math.max(line.height, 1) * 0.2 && piece.text.trim()) needsReview = true;
             text += piece.text;
-            rightEdge = Math.max(rightEdge, piece.x + piece.width);
+            // PDF.js can report a synthetic space spanning a separately drawn formula.
+            if (piece.text.trim()) rightEdge = Math.max(rightEdge, piece.x + piece.width);
         }
         return text.trim();
     }).join('\n');

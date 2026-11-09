@@ -69,7 +69,7 @@ it('preserves inline explanations and flags ambiguous entries instead of assigni
 it('places text emitted later back on its visual line and flags a shifted glyph', () => {
     const fragment = (text: string, x: number, y: number, width: number, height = 10) => ({ text, x, y, width, height });
     expect(layoutPdfText([
-        fragment('c) Vectơ', 20, 100, 45), fragment('hướng xuống.', 82, 100, 65),
+        fragment('c) Vectơ', 20, 100, 45), fragment(' ', 65, 100, 25, 0), fragment('hướng xuống.', 82, 100, 65),
         fragment('d) Mệnh đề sau.', 20, 85, 80), fragment('B', 70, 100, 7),
         fragment('₁', 77, 97, 4, 6),
     ])).toEqual({ text: 'c) Vectơ B₁ hướng xuống.\nd) Mệnh đề sau.', needsReview: true });
