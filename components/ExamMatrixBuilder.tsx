@@ -43,6 +43,27 @@ let rowKey = 0;
 const editable = (row: MatrixRow) => ({ ...row, key: ++rowKey, referenceText: row.references.join(', ') });
 const emptyRow = () => editable({ section: '', topic: '', outcome: '', type: '', level: 0, count: 1, references: [] });
 
+function reviewMatrixSections(rows: ReturnType<typeof editable>[]) {
+    const groups = new Map<string, { name: string; entries: { row: typeof rows[number]; index: number }[] }>();
+    rows.forEach((row, index) => {
+        const key = normalizeMatrixText(row.section);
+        const group = groups.get(key) ?? { name: key ? row.section.trim() : 'Chưa rõ phần', entries: [] };
+        group.entries.push({ row, index });
+        groups.set(key, group);
+    });
+    const firstNumber = (row: MatrixRow) => Math.min(...row.references.map(reference => Number(reference.match(/\d+/)?.[0])));
+    return [...groups].sort(([a], [b]) => Number(!a) - Number(!b) || a.localeCompare(b, 'vi', { numeric: true }))
+        .map(([key, group]) => {
+            const entries = group.entries.sort((a, b) => firstNumber(a.row) - firstNumber(b.row) || a.index - b.index);
+            const sectionRows = entries.map(({ row }) => row);
+            const { slots, pendingStatements } = matrixSlots(sectionRows);
+            const label = [group.name, ...new Set(sectionRows.map(row => typeLabel(row.type)))].filter(Boolean).join(' · ');
+            const count = [slots.length > 0 && `${slots.length} câu`, pendingStatements > 0 && `${pendingStatements} ý chưa ghép`]
+                .filter(Boolean).join(' · ');
+            return { key, entries, label, count: count || '0 câu' };
+        });
+}
+
 export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Props) {
     const [rows, setRows] = useState(() => [emptyRow()]);
     const [grade, setGrade] = useState(0);
@@ -53,10 +74,12 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
     const [selection, setSelection] = useState<Record<string, string>>({});
     const [activeId, setActiveId] = useState('');
     const [openSection, setOpenSection] = useState<string | null>(null);
+    const [collapsedReviewSections, setCollapsedReviewSections] = useState<Set<string>>(() => new Set());
     const [previewId, setPreviewId] = useState('');
     const [limit, setLimit] = useState(15);
 
     const { slots, pendingStatements } = useMemo(() => matrixSlots(rows), [rows]);
+    const reviewSections = useMemo(() => reviewMatrixSections(rows), [rows]);
     const slotSections = useMemo(() => {
         const groups = new Map<string, { section: string; entries: typeof slots }>();
         for (const entry of slots) {
@@ -105,6 +128,15 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
     const updateRow = (key: number, update: Partial<ReturnType<typeof editable>>) =>
         reviseRows(current => current.map(row => row.key === key ? { ...row, ...update } : row));
 
+    function expandReviewSection(section: string) {
+        setCollapsedReviewSections(current => {
+            if (!current.has(section)) return current;
+            const next = new Set(current);
+            next.delete(section);
+            return next;
+        });
+    }
+
     async function importPdf(file: File) {
         setBusy(true);
         setNotice('');
@@ -117,6 +149,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                 setGrade(result.grades.length === 1 ? result.grades[0] : 0);
                 setSelection({});
                 setActiveId('');
+                setCollapsedReviewSections(new Set());
             }
             const summary = result.rows.length
                 ? `Đọc được ${result.rows.length} dòng yêu cầu. Hãy đối chiếu với PDF, nhất là loại và số lượng câu.`
@@ -216,39 +249,69 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose }: Pr
                             {['Phần', 'Chủ đề', 'Yêu cầu cần đạt', 'Loại câu', 'Mức độ', 'Số câu / ý', 'Vị trí', ''].map(label =>
                                 <th className="px-2 py-2 font-semibold" key={label}>{label}</th>)}
                         </tr></thead>
-                        <tbody>
-                            {rows.map((row, index) => <tr key={row.key} className="border-b border-stone-100 align-top">
-                                <td className="w-24 p-1"><input className={input} aria-label={`Phần dòng ${index + 1}`} value={row.section}
-                                    onChange={event => updateRow(row.key, { section: event.target.value })} />
-                                    {row.page && <span className="px-1 text-xs text-stone-500">Trang {row.page}</span>}</td>
-                                <td className="w-44 p-1"><MatrixTextarea aria-label={`Chủ đề dòng ${index + 1}`} value={row.topic}
-                                    onChange={event => updateRow(row.key, { topic: event.target.value })} /></td>
-                                <td className="min-w-52 p-1"><MatrixTextarea aria-label={`Yêu cầu cần đạt dòng ${index + 1}`} value={row.outcome}
-                                    onChange={event => updateRow(row.key, { outcome: event.target.value })} />
-                                    {row.sourceNote && <p className="text-xs text-amber-900">{row.sourceNote}</p>}</td>
-                                <td className="w-44 p-1"><select className={input} aria-label={`Loại câu dòng ${index + 1}`} value={row.type}
-                                    onChange={event => updateRow(row.key, { type: event.target.value as MatrixQuestionType })}>
-                                    {questionTypes.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-                                </select></td>
-                                <td className="w-36 p-1"><select className={input} aria-label={`Mức độ dòng ${index + 1}`} value={row.level}
-                                    onChange={event => updateRow(row.key, { level: Number(event.target.value) })}>
-                                    {MATRIX_LEVELS.map((level, value) => <option key={level} value={value}>{level}</option>)}
-                                </select></td>
-                                <td className="w-20 p-1"><input type="number" min={1} max={99} className={input} aria-label={`Số câu dòng ${index + 1}`}
-                                    value={row.count || ''} onChange={event => updateRow(row.key, { count: Math.min(99, Math.max(0, Math.trunc(Number(event.target.value)))) })} /></td>
-                                <td className="w-28 p-1"><input className={input} placeholder="C6, C7" aria-label={`Vị trí dòng ${index + 1}`} value={row.referenceText}
-                                    onChange={event => {
-                                        const referenceText = event.target.value;
-                                        updateRow(row.key, { referenceText, references: matrixReferences(referenceText) });
-                                    }} /></td>
-                                <td className="p-1"><button className={button} aria-label={`Xóa dòng ${index + 1}`}
-                                    onClick={() => reviseRows(current => current.filter(entry => entry.key !== row.key))}><Trash2 className="size-4" /></button></td>
-                            </tr>)}
-                        </tbody>
+                        {reviewSections.map(group => {
+                            const expanded = !collapsedReviewSections.has(group.key);
+                            return <tbody key={group.key}>
+                                <tr className="border-y border-stone-200 bg-amber-50">
+                                    <th colSpan={8} scope="rowgroup" className="p-0">
+                                        <button type="button" aria-expanded={expanded}
+                                            onClick={() => setCollapsedReviewSections(current => {
+                                                const next = new Set(current);
+                                                if (next.has(group.key)) next.delete(group.key);
+                                                else next.add(group.key);
+                                                return next;
+                                            })}
+                                            className="flex w-full items-center gap-2 px-3 py-2.5 text-left font-semibold text-stone-900 hover:bg-amber-100">
+                                            <ChevronDown aria-hidden="true" className={'size-4 shrink-0 text-amber-800 ' + (expanded ? '' : '-rotate-90')} />
+                                            <span>{group.label}</span>
+                                            <span className="rounded bg-white px-2 py-0.5 text-xs tabular-nums text-stone-700">{group.count}</span>
+                                        </button>
+                                    </th>
+                                </tr>
+                                {expanded && group.entries.map(({ row, index }) => <tr key={row.key} className="border-b border-stone-100 align-top">
+                                    <td className="w-24 p-1"><input className={input} aria-label={`Phần dòng ${index + 1}`} defaultValue={row.section}
+                                        onKeyDown={event => {
+                                            if (event.key === 'Enter' && !event.nativeEvent.isComposing) event.currentTarget.blur();
+                                        }}
+                                        onBlur={event => {
+                                            const section = event.currentTarget.value.trim();
+                                            if (section === row.section) return;
+                                            expandReviewSection(normalizeMatrixText(section));
+                                            updateRow(row.key, { section });
+                                        }} />
+                                        {row.page && <span className="px-1 text-xs text-stone-500">Trang {row.page}</span>}</td>
+                                    <td className="w-44 p-1"><MatrixTextarea aria-label={`Chủ đề dòng ${index + 1}`} value={row.topic}
+                                        onChange={event => updateRow(row.key, { topic: event.target.value })} /></td>
+                                    <td className="min-w-52 p-1"><MatrixTextarea aria-label={`Yêu cầu cần đạt dòng ${index + 1}`} value={row.outcome}
+                                        onChange={event => updateRow(row.key, { outcome: event.target.value })} />
+                                        {row.sourceNote && <p className="text-xs text-amber-900">{row.sourceNote}</p>}</td>
+                                    <td className="w-44 p-1"><select className={input} aria-label={`Loại câu dòng ${index + 1}`} value={row.type}
+                                        onChange={event => updateRow(row.key, { type: event.target.value as MatrixQuestionType })}>
+                                        {questionTypes.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                                    </select></td>
+                                    <td className="w-36 p-1"><select className={input} aria-label={`Mức độ dòng ${index + 1}`} value={row.level}
+                                        onChange={event => updateRow(row.key, { level: Number(event.target.value) })}>
+                                        {MATRIX_LEVELS.map((level, value) => <option key={level} value={value}>{level}</option>)}
+                                    </select></td>
+                                    <td className="w-20 p-1"><input type="number" min={1} max={99} className={input} aria-label={`Số câu dòng ${index + 1}`}
+                                        value={row.count || ''} onChange={event => updateRow(row.key, { count: Math.min(99, Math.max(0, Math.trunc(Number(event.target.value)))) })} /></td>
+                                    <td className="w-28 p-1"><input className={input} placeholder="C6, C7" aria-label={`Vị trí dòng ${index + 1}`} value={row.referenceText}
+                                        onChange={event => {
+                                            const referenceText = event.target.value;
+                                            updateRow(row.key, { referenceText, references: matrixReferences(referenceText) });
+                                        }} /></td>
+                                    <td className="p-1"><button className={button} aria-label={`Xóa dòng ${index + 1}`}
+                                        onClick={() => reviseRows(current => current.filter(entry => entry.key !== row.key))}><Trash2 className="size-4" /></button></td>
+                                </tr>)}
+                            </tbody>;
+                        })}
                     </table>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    <button className={button} onClick={() => reviseRows(current => [...current, emptyRow()])}><Plus className="size-4" /> Thêm dòng</button>
+                    <button className={button} onClick={() => {
+                        expandReviewSection('');
+                        reviseRows(current => [...current, emptyRow()]);
+                    }}><Plus className="size-4" /> Thêm dòng</button>
                     {incomplete && <span className="text-sm text-stone-600">Kiểm tra yêu cầu, loại câu và số lượng vị trí. Với các dòng đếm theo ý, dùng mã như C1a, C1b.</span>}
                     <button className={primary} disabled={busy || !slots.length || incomplete} onClick={() => {
                         activate(slot?.id ?? slots[0].id);
