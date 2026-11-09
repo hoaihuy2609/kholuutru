@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, ChevronLeft, FileUp, Pencil, Plus, Table2, Trash2 } from 'lucide-react';
 import { isStudyQuestionType, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
-import { MATRIX_LEVELS, matrixMatchScore, matrixOutcomeOptions, matrixReferences, matrixSlots, normalizeMatrixText, type MatrixQuestionDraft, type MatrixQuestionType, type MatrixRow } from '../src/utils/examMatrix';
+import { isMatrixLevelHeading, MATRIX_LEVELS, matrixMatch, matrixOutcomeOptions, matrixReferences, matrixSlots, normalizeMatrixText, type MatrixQuestionDraft, type MatrixQuestionType, type MatrixRow } from '../src/utils/examMatrix';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
-import SolutionRenderer from './SolutionRenderer';
+import { MatrixQuestionCard, MatrixSolutionDialog } from './MatrixQuestionCard';
 
 export interface MatrixCandidate {
     item: SelectedQuestionItem;
@@ -120,14 +120,18 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
         return candidates.flatMap(candidate => {
             const { item } = candidate;
             if (grade && candidate.grade !== grade) return [];
-            const score = matrixMatchScore(slot.rows, { type: item.type, level: item.level, outcomes: candidate.outcomes });
-            if (!score) return [];
+            const match = matrixMatch(slot.rows, { type: item.type, level: item.level, outcomes: candidate.outcomes });
+            if (!match.score) return [];
             const topic = normalizeMatrixText(candidate.topic);
             const topicMatch = slot.rows.some(row => row.topic && topic.includes(normalizeMatrixText(row.topic)));
-            return [{ candidate, score, topicMatch }];
+            return [{ candidate, ...match, topicMatch }];
         }).sort((a, b) => Number(b.candidate.item.id === recentId) - Number(a.candidate.item.id === recentId)
             || b.score - a.score || Number(b.topicMatch) - Number(a.topicMatch));
     }, [candidates, grade, reviewing, slot, recentId]);
+    const visibleMatches = available.slice(0, limit);
+    const matchingLines = new Set(visibleMatches.flatMap(result =>
+        result.evidence.map(match => `${match.rowIndex}:${match.lineIndex}`)));
+    const previewCandidate = candidatesById.get(previewId);
     const sections = [...new Set(rows.filter(row => !row.type && row.section).map(row => row.section))];
     const incomplete = rows.some(row => !row.outcome.trim() || !row.type || row.count < 1
         || (!!row.referenceText.trim() && (row.references.length !== row.count
@@ -434,9 +438,15 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
                                 <Table2 aria-hidden="true" className="size-4 shrink-0 text-amber-800" />
                             </button>
                         </h2>
-                        {slot.rows.map(row => <div className="text-sm" key={rows.indexOf(row as typeof rows[number])}>
+                        {slot.rows.map((row, rowIndex) => <div className="space-y-0.5 text-sm" key={rowIndex}>
                             <p className="text-stone-600">{[row.topic, typeLabel(row.type), row.level ? MATRIX_LEVELS[row.level] : 'Mọi mức độ'].filter(Boolean).join(' · ')}</p>
-                            <p className="mt-0.5 whitespace-pre-line font-semibold">{row.outcome}</p>
+                            {row.outcome.split('\n').map((line, lineIndex) => line.trim() && (
+                                <p key={lineIndex} className={isMatrixLevelHeading(line) ? 'font-semibold' : undefined}>
+                                    {matchingLines.has(`${rowIndex}:${lineIndex}`)
+                                        ? <mark className="rounded bg-amber-100 px-1 font-semibold text-amber-950">{line}</mark>
+                                        : line}
+                                </p>
+                            ))}
                         </div>)}
                         {canCreateQuestion && (draftChoices ? (
                             <div className="space-y-2 border-t border-stone-100 pt-3">
@@ -473,27 +483,17 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
                             ? 'Câu này có nhiều mức độ theo từng ý. Kho hiện chỉ lưu một mức độ cho mỗi câu.'
                             : 'Chưa có câu phù hợp. Kiểm tra lại yêu cầu của vị trí này hoặc gắn yêu cầu cần đạt cho câu trong kho.'}
                     </p>}
-                    {available.slice(0, limit).map(({ candidate, score }) => {
-                        const { item } = candidate;
-                        const selected = selection[slot.id] === item.id;
-                        const used = chosenIds.has(item.id) && !selected;
-                        return <article key={item.id} className="space-y-2 rounded-xl border border-stone-200 bg-white p-4">
-                            <p className="text-sm text-stone-600">{[candidate.topic, candidate.grade && `Lớp ${candidate.grade}`,
-                                item.level && MATRIX_LEVELS[item.level], item.id === recentId && 'Vừa soạn',
-                                score < 1 ? 'Yêu cầu gần khớp' : 'Khớp yêu cầu'].filter(Boolean).join(' · ')}</p>
-                            <p className="whitespace-pre-line text-base">{item.qText || item.qFormula}</p>
-                            <p className="text-xs text-stone-600">{candidate.outcomes.join(' · ')}</p>
-                            <div className="flex flex-wrap gap-2">
-                                <button className={button} aria-expanded={previewId === item.id}
-                                    onClick={() => setPreviewId(previewId === item.id ? '' : item.id)}>Xem câu và lời giải</button>
-                                <button className={selected ? button : primary} disabled={used} onClick={() => choose(item.id)}>
-                                    {used ? 'Đã dùng ở vị trí khác' : selected ? 'Bỏ câu này' : 'Chọn câu này'}
-                                </button>
-                            </div>
-                            {previewId === item.id && <SolutionRenderer content={candidate.preview()} />}
-                        </article>;
-                    })}
+                    {visibleMatches.length > 0 && <div className={'grid items-start gap-3 ' + (visibleMatches.length > 1 ? 'xl:grid-cols-2' : '')}>
+                        {visibleMatches.map(({ candidate, score, evidence }) => {
+                            const { item } = candidate;
+                            const selected = selection[slot.id] === item.id;
+                            return <MatrixQuestionCard key={`${slot.id}:${item.id}`} candidate={candidate} score={score} evidence={evidence}
+                                selected={selected} used={chosenIds.has(item.id) && !selected} recent={item.id === recentId}
+                                onPreview={() => setPreviewId(item.id)} onChoose={() => choose(item.id)} />;
+                        })}
+                    </div>}
                     {available.length > limit && <button className={button} onClick={() => setLimit(limit + 15)}>Xem thêm câu phù hợp</button>}
+                    {previewCandidate && <MatrixSolutionDialog candidate={previewCandidate} onClose={() => setPreviewId('')} />}
                 </section>
             </div>}
         </main>

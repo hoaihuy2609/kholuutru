@@ -6,7 +6,7 @@
 //   import SolutionRenderer from './SolutionRenderer'
 //   <SolutionRenderer content={blog.content} />
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import { SolutionStep as Step, SolutionStatement as Statement } from '../types';
@@ -403,7 +403,7 @@ function DungSaiRenderer({ question }: { question: Question }) {
   );
 }
 
-function QuestionHeader({ question }: { question: Question }) {
+function QuestionBody({ question, compact = false }: { question: Question; compact?: boolean }) {
   const hasImage = !!(question.image_svg || question.image_url || question.image_telegram_file_id);
   const parts = hasImage ? (question.question_text || '').split(/\[image\]/i) : [question.question_text];
   const inlineImage = parts.length > 1;
@@ -411,9 +411,8 @@ function QuestionHeader({ question }: { question: Question }) {
   const hasText = !!(question.question_text || question.question_latex);
   const sideImage = hasImage && hasText && !inlineImage && question.image_layout !== 'bottom';
   const imageWidth = question.image_width === undefined ? undefined : { width: question.image_width + '%' };
-  const typeLabel = question.type === 'dung_sai' ? 'Đúng / Sai' : question.type === 'trac_nghiem' ? 'Trắc nghiệm' : 'Trả lời ngắn';
   const image = hasImage && (
-    <figure className={'mx-auto flex w-full min-w-0 max-w-sm justify-center '
+    <figure className={'mx-auto flex w-full min-w-0 justify-center ' + (compact ? 'max-w-[11rem] ' : 'max-w-sm ')
       + (sideImage ? '[@container_(min-width:40rem)]:w-[38%] [@container_(min-width:40rem)]:shrink-0' : '')}>
       {question.image_svg ? (
         <div className={'max-w-full [&>svg]:block [&>svg]:h-auto [&>svg]:max-w-full' + (imageWidth ? ' [&>svg]:w-full' : '')}
@@ -422,41 +421,73 @@ function QuestionHeader({ question }: { question: Question }) {
       ) : (
         <img
           src={question.image_url || CLOUDFLARE_PROXY_URL + '/getFile/' + question.image_telegram_file_id}
-          alt="Sơ đồ câu hỏi" className="h-auto max-w-full" style={imageWidth}
+          alt="Sơ đồ câu hỏi" className={'h-auto max-w-full ' + (compact ? 'max-h-36 object-contain' : '')}
+          loading={compact ? 'lazy' : undefined} style={imageWidth}
         />
       )}
     </figure>
   );
 
+  return (hasText || hasImage) ? (
+    <div className={compact ? '' : 'border-t border-stone-100 px-4 py-4 sm:px-5'}>
+      {inlineImage ? (
+        <div className="space-y-3">
+          {parts[0].trim() && <div className={detailProse}><TextWithMath text={parts[0]} /></div>}
+          {image}
+          {afterImage.trim() && <div className={detailProse}><TextWithMath text={afterImage} /></div>}
+          {question.question_latex && <KatexBlock tex={question.question_latex} />}
+        </div>
+      ) : (
+        <div className={'flex flex-col gap-4 ' + (sideImage ? '[@container_(min-width:40rem)]:flex-row [@container_(min-width:40rem)]:items-start' : '')}>
+          {hasText && (
+            <div className={detailProse + ' flex-1'}>
+              {question.question_text && <TextWithMath text={question.question_text} />}
+              {question.question_latex && <KatexBlock tex={question.question_latex} />}
+            </div>
+          )}
+          {image}
+        </div>
+      )}
+    </div>
+  ) : null;
+}
+
+function QuestionHeader({ question }: { question: Question }) {
+  const typeLabel = question.type === 'dung_sai' ? 'Đúng / Sai' : question.type === 'trac_nghiem' ? 'Trắc nghiệm' : 'Trả lời ngắn';
   return (
     <section className={detailPanel}>
       <div className="flex flex-wrap items-center gap-2 bg-stone-50 px-4 py-2.5 sm:px-5">
         <h2 className={detailHeading}>{question.question_no || 'Đề bài'}</h2>
         <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-950">{typeLabel}</span>
       </div>
-      {(hasText || hasImage) && (
-        <div className="border-t border-stone-100 px-4 py-4 sm:px-5">
-          {inlineImage ? (
-            <div className="space-y-3">
-              {parts[0].trim() && <div className={detailProse}><TextWithMath text={parts[0]} /></div>}
-              {image}
-              {afterImage.trim() && <div className={detailProse}><TextWithMath text={afterImage} /></div>}
-              {question.question_latex && <KatexBlock tex={question.question_latex} />}
-            </div>
-          ) : (
-            <div className={'flex flex-col gap-4 ' + (sideImage ? '[@container_(min-width:40rem)]:flex-row [@container_(min-width:40rem)]:items-start' : '')}>
-              {hasText && (
-                <div className={detailProse + ' flex-1'}>
-                  {question.question_text && <TextWithMath text={question.question_text} />}
-                  {question.question_latex && <KatexBlock tex={question.question_latex} />}
-                </div>
-              )}
-              {image}
-            </div>
-          )}
-        </div>
-      )}
+      <QuestionBody question={question} />
     </section>
+  );
+}
+
+export function SolutionQuestionPrompt({ content }: { content: string }) {
+  const question = useMemo(() => parseContent(content)?.[0], [content]);
+  if (!question) return null;
+  const options = (question.type === 'trac_nghiem'
+    ? (question.choices ?? []).slice(0, 4).map((text, index) => ({ label: ['A', 'B', 'C', 'D'][index], text, formula: '' }))
+    : question.type === 'dung_sai'
+      ? question.statements.map(statement => ({ label: statement.label, text: statement.claim, formula: statement.claim_latex }))
+      : []).filter(option => option.text || option.formula);
+  return (
+    <div className="latex-prose space-y-3 [container-type:inline-size]">
+      <QuestionBody question={question} compact />
+      {options.length > 0 && <ul className="space-y-1.5">
+        {options.map(({ label, text, formula }, index) => (
+          <li key={index} className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-2">
+            <span className="rounded bg-stone-100 text-center text-sm font-bold text-stone-800">{label ?? index + 1}.</span>
+            <div className={detailProse}>
+              {text && <TextWithMath text={text} />}
+              {formula && <KatexBlock tex={formula} />}
+            </div>
+          </li>
+        ))}
+      </ul>}
+    </div>
   );
 }
 

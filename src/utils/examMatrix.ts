@@ -141,17 +141,45 @@ export function outcomeScore(requirement: string, annotation: string) {
         ? Math.min(0.99, score) : 0;
 }
 
-export function matrixMatchScore(rows: MatrixRow[], candidate: {
+export interface MatrixMatchEvidence {
+    rowIndex: number;
+    lineIndex: number;
+    requirement: string;
+    outcome: string;
+    score: number;
+}
+
+export function matrixMatch(rows: MatrixRow[], candidate: {
     type: StudyQuestionType;
     level?: number;
     outcomes: string[];
 }) {
-    if (!rows.length || rows.some(row => row.type !== candidate.type || (row.level && row.level !== candidate.level))) return 0;
-    return Math.min(...rows.map(row => {
-        const requirements = row.outcome.split('\n');
-        return Math.max(0, ...requirements.flatMap(requirement =>
-            candidate.outcomes.map(outcome => outcomeScore(requirement, outcome))));
+    if (!rows.length || rows.some(row => row.type !== candidate.type || (row.level && row.level !== candidate.level))) {
+        return { score: 0, evidence: [] as MatrixMatchEvidence[] };
+    }
+    const evidence: MatrixMatchEvidence[] = [];
+    const score = Math.min(...rows.map((row, rowIndex) => {
+        let rowScore = 0;
+        row.outcome.split('\n').forEach((line, lineIndex) => {
+            const requirement = line.trim().replace(/^[-–•]\s+/, '');
+            let best: MatrixMatchEvidence | undefined;
+            for (const outcome of candidate.outcomes) {
+                const score = outcomeScore(requirement, outcome);
+                if (score > (best?.score ?? 0)) best = { rowIndex, lineIndex, requirement, outcome, score };
+                if (score === 1) break;
+            }
+            if (best) {
+                evidence.push(best);
+                rowScore = Math.max(rowScore, best.score);
+            }
+        });
+        return rowScore;
     }));
+    return { score, evidence: score ? evidence : [] };
+}
+
+export function matrixMatchScore(rows: MatrixRow[], candidate: Parameters<typeof matrixMatch>[1]) {
+    return matrixMatch(rows, candidate).score;
 }
 
 export function matrixSlots(rows: MatrixRow[]) {

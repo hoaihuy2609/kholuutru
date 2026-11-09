@@ -1,8 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { matrixDraftPlacement, matrixMatchScore, matrixOutcomeOptions, matrixReferences, matrixSlots, type MatrixQuestionDraft, type MatrixRow } from '../utils/examMatrix';
+import { matrixDraftPlacement, matrixMatch, matrixMatchScore, matrixOutcomeOptions, matrixReferences, matrixSlots, type MatrixQuestionDraft, type MatrixRow } from '../utils/examMatrix';
 import { parsePdfMatrix, type MatrixPage } from '../utils/pdfExamMatrix';
 
 describe('exam matrix', () => {
+    it('reports the exact matrix line and stored outcome that qualified a suggestion', () => {
+        const row: MatrixRow = {
+            section: 'Phần 1', topic: 'Điện trường', type: 'trac_nghiem', level: 1, count: 1, references: ['C1'],
+            outcome: 'Nhận biết:\n- Nêu được đơn vị đo điện dung.\n- Nêu được biểu thức tính cường độ điện trường',
+        };
+        const outcome = 'Viết công thức tính cường độ điện trường';
+        const candidate = { type: 'trac_nghiem' as const, level: 1, outcomes: [outcome] };
+        const match = matrixMatch([row], candidate);
+        expect(match.score).toBeGreaterThan(0);
+        expect(match.score).toBeLessThan(1);
+        expect(match.evidence).toEqual([{
+            rowIndex: 0, lineIndex: 2, requirement: 'Nêu được biểu thức tính cường độ điện trường', outcome, score: match.score,
+        }]);
+        expect(matrixMatch([row, { ...row, outcome: 'Nêu được định luật Coulomb' }], candidate)).toEqual({ score: 0, evidence: [] });
+        expect(matrixMatch([row], { ...candidate, level: 2 })).toEqual({ score: 0, evidence: [] });
+    });
+
     it('prefills a matrix draft from actual outcomes and a matching lesson in the same grade and format', () => {
         const outcome = 'Nhận biết:\n- Nêu được khái niệm từ trường.\nVận dụng và vận dụng cao:\n- Xác định được chiều đường sức từ.';
         const options = matrixOutcomeOptions(outcome);
