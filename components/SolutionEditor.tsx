@@ -18,6 +18,7 @@ import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
 import { MAX_QUESTION_IMAGE_WIDTH, MIN_QUESTION_IMAGE_WIDTH, normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { renderTikzToSvg, uploadQuestionImageToTelegram, uploadSvgToTelegram } from "../src/services/tikzService";
 import { pdfSolutionText, type PdfQuestionSource } from '../src/utils/pdfExamQuestions';
+import { questionOutcomes } from '../src/utils/examMatrix';
 import type { ReviewedPdfQuestion } from './PdfExamImport';
 
 const PdfExamImport = React.lazy(() => import('./PdfExamImport'));
@@ -31,6 +32,7 @@ interface Question {
   questionNo: string;
   qText: string;
   qFormula: string;
+  outcomeText: string;
   type: QuestionType;
   groups: StudyQuestionGroup[];
   solution: string;        // Ô lời giải chi tiết duy nhất (hỗ trợ text & LaTeX)
@@ -84,6 +86,7 @@ const emptyQuestion = (type: StudyQuestionType = 'tu_luan', group?: StudyQuestio
   questionNo: "",
   qText: "",
   qFormula: "",
+  outcomeText: "",
   type,
   groups: group && supportsStudyGroups(type) ? [group] : [],
   solution: "",
@@ -151,6 +154,7 @@ const normalizeQuestion = (q: any): Question => {
     questionNo: q.question_no || q.questionNo || "",
     qText:      q.question_text || q.qText || "",
     qFormula:   q.question_latex || q.qFormula || "",
+    outcomeText: questionOutcomes(q.learning_outcomes).join('\n'),
     type:       qType,
     groups: Array.isArray(q.question_groups) ? q.question_groups.filter(isStudyQuestionGroup) : [],
     solution:   sol,
@@ -170,11 +174,13 @@ const normalizeQuestion = (q: any): Question => {
 };
 
 function serializeQuestion(q: Question, questionNo: string) {
+  const outcomes = questionOutcomes(q.outcomeText.split('\n'));
   return {
     question_no:    questionNo,
     question_text:  q.qText,
     question_latex: q.qFormula,
     type:           q.type,
+    ...(outcomes.length ? { learning_outcomes: outcomes } : {}),
     ...(supportsStudyGroups(q.type) && q.groups.length ? { question_groups: q.groups } : {}),
     solution:       q.solution || '',
     tikz_code:      q.tikzCode || '',
@@ -516,11 +522,12 @@ interface SolutionEditorProps {
   studyQuestionType?: StudyQuestionType;
   initialQuestionIndex?: number;
   initialQuestionGroup?: StudyQuestionGroup;
+  savedOutcomes?: string[];
 }
 
 export default function SolutionEditor({
   blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar,
-  studyPlacement, studyDefaults, studyGrade, studyQuestionType, initialQuestionIndex = 0, initialQuestionGroup
+  studyPlacement, studyDefaults, studyGrade, studyQuestionType, initialQuestionIndex = 0, initialQuestionGroup, savedOutcomes = []
 }: SolutionEditorProps) {
   const splitImportedQuestions = !!saveBlog && !studyGrade;
   const [examName,   setExamName]   = useState("");
@@ -1281,6 +1288,22 @@ export default function SolutionEditor({
                     {examName && examName + ' · '}{activeQuestion.pdfSource.label} · Trang {activeQuestion.pdfSource.page}
                   </p>
                 )}
+                {saveBlog && <div className="space-y-1.5">
+                  <label className="block text-sm font-semibold text-stone-800" htmlFor="question-learning-outcomes">Yêu cầu cần đạt</label>
+                  <AutoResizeTextarea id="question-learning-outcomes" rows={2}
+                    className="w-full rounded-lg border border-stone-200 p-3 text-sm text-stone-800 outline-none focus:border-amber-600"
+                    placeholder="Ví dụ: Nêu được khái niệm điện trường"
+                    value={activeQuestion.outcomeText} onChange={e => updateQ('outcomeText', e.target.value)} />
+                  <p className="text-xs text-stone-600">Mỗi dòng một yêu cầu. Web dùng các yêu cầu này để tìm câu theo ma trận.</p>
+                  {savedOutcomes.length > 0 && <select aria-label="Thêm yêu cầu đã lưu" value=""
+                    className="max-w-full rounded-md border border-stone-200 bg-white p-2 text-sm"
+                    onChange={e => {
+                      if (e.target.value) updateQ('outcomeText', questionOutcomes([...activeQuestion.outcomeText.split('\n'), e.target.value]).join('\n'));
+                    }}>
+                    <option value="">Thêm yêu cầu đã lưu…</option>
+                    {savedOutcomes.map(outcome => <option key={outcome}>{outcome}</option>)}
+                  </select>}
+                </div>}
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-stone-800">Mô tả đề bài</label>
                   <AutoResizeTextarea rows={2}

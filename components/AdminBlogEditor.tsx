@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BlogPost, StudyLesson, StudyQuestionGroup, StudyQuestionType, StudySection } from '../types';
 import { getStudyChapter, isStudyQuestionType, nextStudyQuestionNumber, STUDY_CHAPTERS, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
+import { questionOutcomes } from '../src/utils/examMatrix';
 import {
     ChevronDown, ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
     ImageIcon, Link as LinkIcon, HelpCircle, AlignLeft, AlignCenter,
@@ -46,6 +47,17 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
     const firstQuestionNumber = useMemo(() => chapter && studyType
         ? nextStudyQuestionNumber(existingBlogs, { chapterId: chapter.id, questionType: studyType, lessonId: lesson?.id })
         : 1, [chapter, studyType, lesson?.id, existingBlogs]);
+    const savedOutcomes = useMemo(() => questionOutcomes(existingBlogs.flatMap(post => {
+        try {
+            const parsed = JSON.parse(post.content);
+            if (parsed?.type !== 'physics_solution' || !parsed.data) return [];
+            const questions = Array.isArray(parsed.data.questions) && parsed.data.questions.length
+                ? parsed.data.questions : [parsed.data];
+            return questions.flatMap(question => questionOutcomes(question?.learning_outcomes));
+        } catch {
+            return [];
+        }
+    })).sort((a, b) => a.localeCompare(b, 'vi')), [existingBlogs]);
 
     const [formData, setFormData] = useState<Partial<BlogPost>>({
         title: '', summary: '', content: '', cover_image: '', category: '', is_published: false,
@@ -359,6 +371,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                     studyGrade={chapter?.grade}
                     studyQuestionType={chapter && studyType ? studyType : undefined}
                     initialQuestionGroup={initialQuestionGroup}
+                    savedOutcomes={savedOutcomes}
                 />
             )}
 

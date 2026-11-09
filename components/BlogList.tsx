@@ -9,8 +9,12 @@ import { getStudyChapter, isStudyQuestionGroup, isStudyQuestionType, parseStudyQ
 import { SelectedQuestionItem } from '../src/services/examLatexService';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
+import { questionOutcomes } from '../src/utils/examMatrix';
+import type { MatrixCandidate } from './ExamMatrixBuilder';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+
+const ExamMatrixBuilder = React.lazy(() => import('./ExamMatrixBuilder'));
 
 // ─────────────────────────────────────────────────────────────
 // Mini renderers — tái sử dụng logic của SolutionRenderer để
@@ -70,6 +74,7 @@ interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
     | 'tikzCode' | 'imageSvg' | 'imageUrl' | 'imageTelegramFileId' | 'imageLayout' | 'imageWidth'>> {
     question_no?: string;
     question_groups?: StudyQuestionGroup[];
+    learning_outcomes?: string[];
     question_text?: string;
     question_latex?: string;
     tikz_code?: string;
@@ -142,6 +147,30 @@ type BlogCard = ReturnType<typeof getBlogCards>[number];
 
 function questionKey(blogId: string, index: number) {
     return JSON.stringify([blogId, index]);
+}
+
+function toSelectedQuestion(blog: BlogPost, question: StoredQuestion | undefined, index: number, fallbackNumber: number): SelectedQuestionItem {
+    const card = toCardQuestion(question);
+    return {
+        id: questionKey(blog.id, index),
+        questionNo: card?.questionNo || 'Câu ' + fallbackNumber,
+        qText: card ? card.questionText : blog.summary || blog.title,
+        qFormula: card?.questionLatex,
+        type: card?.type ?? 'tu_luan',
+        choices: question?.choices,
+        correctChoice: question?.correctChoice,
+        statements: question?.statements,
+        solution: question?.solution,
+        solutionSteps: question?.solutionSteps,
+        steps: question?.steps,
+        level: blog.level,
+        tikzCode: question?.tikz_code || question?.tikzCode,
+        imageSvg: card?.imageSvg,
+        imageUrl: card?.imageUrl,
+        imageTelegramFileId: card?.imageTelegramFileId,
+        imageLayout: card?.imageLayout,
+        imageWidth: card?.imageWidth,
+    };
 }
 
 interface QuestionCardProps {
@@ -454,6 +483,8 @@ const BlogList: React.FC<BlogListProps> = ({
 
     const [selectedCardIndexes, setSelectedCardIndexes] = useState(() => new Map<string, Set<number>>());
     const [isExamModalOpen, setIsExamModalOpen] = useState(false);
+    const [showMatrix, setShowMatrix] = useState(false);
+    const [matrixQuestions, setMatrixQuestions] = useState<SelectedQuestionItem[]>();
     const navigate = useNavigate();
 
     const handleToggleSelect = (blogId: string, index: number) => {
@@ -476,27 +507,7 @@ const BlogList: React.FC<BlogListProps> = ({
             const questions = getStoredQuestions(parsePhysicsSolution(blog.content));
             (questions.length ? questions : [undefined]).forEach((question, index) => {
                 if (!indexes.has(index)) return;
-                const card = toCardQuestion(question);
-                selected.push({
-                    id: questionKey(blog.id, index),
-                    questionNo: card?.questionNo || 'Câu ' + (selected.length + 1),
-                    qText: card ? card.questionText : blog.summary || blog.title,
-                    qFormula: card?.questionLatex,
-                    type: card?.type ?? 'tu_luan',
-                    choices: question?.choices,
-                    correctChoice: question?.correctChoice,
-                    statements: question?.statements,
-                    solution: question?.solution,
-                    solutionSteps: question?.solutionSteps,
-                    steps: question?.steps,
-                    level: blog.level,
-                    tikzCode: question?.tikz_code || question?.tikzCode,
-                    imageSvg: card?.imageSvg,
-                    imageUrl: card?.imageUrl,
-                    imageTelegramFileId: card?.imageTelegramFileId,
-                    imageLayout: card?.imageLayout,
-                    imageWidth: card?.imageWidth,
-                });
+                selected.push(toSelectedQuestion(blog, question, index, selected.length + 1));
             });
         }
         return selected;
@@ -567,6 +578,24 @@ const BlogList: React.FC<BlogListProps> = ({
         return blog.is_published && blog.category !== 'exam_paper' && (!studentGrade || !blog.grade || blog.grade === studentGrade);
     }), [blogs, isAdmin, studentGrade]);
     const visibleCards = useMemo(() => visibleBlogs.flatMap(getBlogCards), [visibleBlogs]);
+    const matrixCandidates = useMemo<MatrixCandidate[]>(() => {
+        if (!showMatrix || !isAdmin) return [];
+        const lessonTitles = new Map(studyLessons.map(lesson => [lesson.id, lesson.title]));
+        return visibleCards.flatMap(({ blog, question, index, solution }) => {
+            if (!question || !solution || !isStudyQuestionType(question.type)) return [];
+            const outcomes = questionOutcomes(question.learning_outcomes);
+            if (!outcomes.length) return [];
+            const chapter = getStudyChapter(blog.studySection?.chapterId);
+            const title = lessonTitles.get(blog.studySection?.lessonId ?? '');
+            return [{
+                item: toSelectedQuestion(blog, question, index, index + 1),
+                grade: blog.grade || chapter?.grade,
+                topic: [chapter?.name, title].filter(Boolean).join(' · ') || blog.title,
+                outcomes,
+                preview: () => JSON.stringify({ ...solution, data: { questions: [question] } }),
+            }];
+        });
+    }, [showMatrix, isAdmin, visibleCards, studyLessons]);
 
     const grades = !isAdmin && studentGrade ? [studentGrade] : STUDY_GRADES;
     const folder = searchParams.get('folder');
@@ -717,6 +746,14 @@ const BlogList: React.FC<BlogListProps> = ({
         lesson.id === selectedLessonId && lesson.studySection.questionType === selectedType
     );
 
+    if (isAdmin && showMatrix) return <>
+        <React.Suspense fallback={<p className="p-6 text-sm text-stone-600">Đang mở ma trận…</p>}>
+            <ExamMatrixBuilder candidates={matrixCandidates}
+                onClose={() => setShowMatrix(false)} onCompose={setMatrixQuestions} />
+        </React.Suspense>
+        <ExamStyleModal isOpen={!!matrixQuestions} onClose={() => setMatrixQuestions(undefined)} questions={matrixQuestions ?? []} />
+    </>;
+
     return (
         <>
         {isLessonOpen ? (
@@ -766,6 +803,11 @@ const BlogList: React.FC<BlogListProps> = ({
                     </div>
                 </div>
 
+                <div className="flex flex-wrap items-center gap-2">
+                {isAdmin && <button type="button" disabled={loading} onClick={() => setShowMatrix(true)}
+                    className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-950 hover:bg-amber-100 disabled:opacity-50">
+                    <FileText className="size-4" aria-hidden="true" /> Soạn đề theo ma trận
+                </button>}
                 {isAdmin && onCreateBlog && !activeChapter && (
                     <button
                         onClick={() => onCreateBlog()}
@@ -781,6 +823,7 @@ const BlogList: React.FC<BlogListProps> = ({
                         <Plus style={{ width: '15px', height: '15px' }} /> Viết bài mới
                     </button>
                 )}
+                </div>
             </div>
 
             {/* ── BỐ CỤC 2 CỘT: Cột Trái (Mục lục cây thư mục) & Cột Phải (Kho học liệu & Bộ lọc) ── */}

@@ -3,8 +3,36 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { parsePdfExam } from '../utils/pdfExamQuestions';
 import { layoutPdfText } from '../utils/pdfTextLayout';
 import { restorePdfVectorAccents } from '../utils/pdfVectorAccents';
+import { parsePdfMatrix, type MatrixPage } from '../utils/pdfExamMatrix';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
+
+export async function readPdfMatrix(file: File) {
+    const task = getDocument({ data: await file.arrayBuffer(), isEvalSupported: false });
+    try {
+        const pdf = await task.promise;
+        const pages: MatrixPage[] = [];
+        for (let number = 1; number <= pdf.numPages; number++) {
+            const page = await pdf.getPage(number);
+            const content = await page.getTextContent();
+            const fragments = content.items.flatMap(item => {
+                if (!('str' in item) || !item.str.trim()) return [];
+                const [, , , , x, y] = item.transform;
+                return [{ text: item.str, x, y, width: item.width, height: item.height }];
+            });
+            const { fnArray, argsArray } = await page.getOperatorList();
+            const rules = fnArray.flatMap((operator, index) => {
+                const bounds = operator === OPS.constructPath ? argsArray[index]?.[2] : undefined;
+                return bounds?.length === 4 ? [Array.from(bounds as ArrayLike<number>)] : [];
+            });
+            pages.push({ fragments, rules });
+            page.cleanup();
+        }
+        return parsePdfMatrix(pages);
+    } finally {
+        await task.destroy();
+    }
+}
 
 export async function readPdfExam(file: File, onProgress: (page: number, total: number) => void) {
     const task = getDocument({ data: await file.arrayBuffer(), isEvalSupported: false });
