@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useCallback, Suspense, useState, useRef } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate, useLocation, useSearchParams } from 'react-router-dom';
-import { GradeLevel, Lesson, Exam, BlogPost, StudyLesson, StudySection } from './types';
+import { GradeLevel, Lesson, Exam, BlogPost, StudyLesson, StudyLibrary, StudySection } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Toast from './components/Toast';
@@ -14,7 +14,7 @@ import { useDataStore } from './src/stores/useDataStore';
 import { useExamStore, useBlogStore } from './src/stores/useContentStore';
 import { useShallow } from 'zustand/react/shallow';
 import { syncPendingOnStartup } from './src/services/examService';
-import { resumeBlogSync, syncBlogs } from './src/services/blogService';
+import { getStudyLibrary, resumeBlogSync, syncBlogs } from './src/services/blogService';
 import { syncServerTime } from './src/lib/serverTime';
 import { isStudyQuestionGroup, studySectionParams, supportsStudyGroups } from './src/utils/studyLibrary';
 
@@ -394,6 +394,55 @@ function ExamRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   );
 }
 
+function relatedStudyBlogs(activeBlog: BlogPost, blogs: BlogPost[]) {
+  const section = activeBlog.studySection;
+  return blogs.filter(blog => {
+    if (blog.id === activeBlog.id || !blog.is_published) return false;
+    if (section) {
+      return blog.studySection?.chapterId === section.chapterId && blog.studySection.questionType === section.questionType
+        && blog.studySection.lessonId === section.lessonId;
+    }
+    return blog.category === activeBlog.category || (blog.tags || []).some(tag => (activeBlog.tags || []).includes(tag));
+  }).slice(0, 4);
+}
+
+function StudyOnlyApp() {
+  const [library, setLibrary] = useState<StudyLibrary>({ blogs: [], lessons: [] });
+  const [activeBlog, setActiveBlog] = useState<BlogPost | null>(null);
+  const [nextQuestion, setNextQuestion] = useState<(() => void) | undefined>();
+  const listScrollTop = useRef<number | undefined>(undefined);
+
+  const openBlog = (blog: BlogPost, onNext?: () => void) => {
+    if (!blog.is_published) return;
+    listScrollTop.current ??= window.scrollY;
+    setNextQuestion(() => onNext);
+    setActiveBlog(blog);
+  };
+
+  useLayoutEffect(() => {
+    if (activeBlog) window.scrollTo({ top: 0, behavior: 'instant' });
+    else if (listScrollTop.current !== undefined) {
+      window.scrollTo({ top: listScrollTop.current, behavior: 'instant' });
+      listScrollTop.current = undefined;
+    }
+  }, [activeBlog]);
+
+  return (
+    <main className="mx-auto min-h-screen w-full max-w-[1920px] px-4 py-4 md:px-8 md:py-8 lg:px-12">
+      <ErrorBoundary><Suspense fallback={<LazyFallback />}>
+        {activeBlog && <BlogDetail blog={activeBlog} onBack={() => {
+          setNextQuestion(undefined);
+          setActiveBlog(null);
+        }} onNextQuestion={nextQuestion} relatedBlogs={relatedStudyBlogs(activeBlog, library.blogs)} onReadRelated={openBlog} />}
+        <div hidden={!!activeBlog}>
+          <BlogList studyOnly isAdmin={false} studyLessons={library.lessons} onReadBlog={openBlog}
+            onLibraryLoaded={setLibrary} getStudyLibrary={getStudyLibrary} />
+        </div>
+      </Suspense></ErrorBoundary>
+    </main>
+  );
+}
+
 function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const questionGroup = searchParams.get('group');
@@ -478,15 +527,7 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   }
   let detail: React.ReactNode;
   if (activeBlog) {
-    const section = activeBlog.studySection;
-    const related = allBlogs.filter(blog => {
-      if (blog.id === activeBlog.id || !blog.is_published) return false;
-      if (section) {
-        return blog.studySection?.chapterId === section.chapterId && blog.studySection.questionType === section.questionType
-          && blog.studySection.lessonId === section.lessonId;
-      }
-      return blog.category === activeBlog.category || (blog.tags || []).some(tag => (activeBlog.tags || []).includes(tag));
-    }).slice(0, 4);
+    const related = relatedStudyBlogs(activeBlog, allBlogs);
     detail = (
       <ErrorBoundary><Suspense fallback={<LazyFallback />}>
         <BlogDetail blog={activeBlog} onBack={() => {
@@ -789,7 +830,7 @@ function AppShell({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 // ──────────────────────────────────────────────────────────────────
 // Root
 // ──────────────────────────────────────────────────────────────────
-function App() {
+function FullApp() {
   const cloud = useCloudStorage();
   
   useEffect(() => {
@@ -802,6 +843,31 @@ function App() {
       <AppShell cloud={cloud} />
     </>
   );
+}
+
+const FULL_WEBSITE_SESSION_KEY = 'physivault_full_website';
+
+function App() {
+  const { pathname, search } = useLocation();
+  const requestedMode = new URLSearchParams(search).get('full');
+  const [rememberFullWebsite, setRememberFullWebsite] = useState(() => {
+    try { return window.sessionStorage.getItem(FULL_WEBSITE_SESSION_KEY) === '1'; }
+    catch { return false; }
+  });
+  const fullWebsite = requestedMode === '1' || (requestedMode !== '0' && rememberFullWebsite);
+
+  useEffect(() => {
+    if (requestedMode !== '1' && requestedMode !== '0') return;
+    setRememberFullWebsite(requestedMode === '1');
+    try {
+      if (requestedMode === '1') window.sessionStorage.setItem(FULL_WEBSITE_SESSION_KEY, '1');
+      else window.sessionStorage.removeItem(FULL_WEBSITE_SESSION_KEY);
+    } catch { /* The in-memory preference still works in this tab. */ }
+  }, [requestedMode]);
+
+  if (fullWebsite) return <FullApp />;
+  if (pathname !== '/') return <Navigate to={{ pathname: '/', search: pathname === '/blog' ? search : '' }} replace />;
+  return <StudyOnlyApp />;
 }
 
 export default App;

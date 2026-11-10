@@ -348,6 +348,7 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
 
 interface BlogListProps {
     isAdmin: boolean;
+    studyOnly?: boolean;
     studentGrade?: number | null;
     onReadBlog: (blog: BlogPost, onNext?: () => void) => void;
     onEditBlog?: (blog: BlogPost, questionIndex?: number) => void;
@@ -462,7 +463,7 @@ function FilterGroup({ label, children }: { label: string; children: React.React
 }
 
 const BlogList: React.FC<BlogListProps> = ({
-    isAdmin, studentGrade, onReadBlog, onEditBlog, onCreateBlog, studyLessons,
+    isAdmin, studyOnly = false, studentGrade, onReadBlog, onEditBlog, onCreateBlog, studyLessons,
     onSaveLesson, onLibraryLoaded, getStudyLibrary, renderMatrixEditor,
 }) => {
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
@@ -582,8 +583,9 @@ const BlogList: React.FC<BlogListProps> = ({
         return blog.is_published && blog.category !== 'exam_paper' && (!studentGrade || !blog.grade || blog.grade === studentGrade);
     }), [blogs, isAdmin, studentGrade]);
     const visibleCards = useMemo(() => visibleBlogs.flatMap(getBlogCards), [visibleBlogs]);
+    const canUseMatrix = isAdmin || studyOnly;
     const matrixCandidates = useMemo<MatrixCandidate[]>(() => {
-        if (!showMatrix || !isAdmin) return [];
+        if (!showMatrix || !canUseMatrix) return [];
         const lessonTitles = new Map(studyLessons.map(lesson => [lesson.id, lesson.title]));
         return visibleCards.flatMap(({ blog, question, index, solution }) => {
             if (!question || !solution || !isStudyQuestionType(question.type)) return [];
@@ -599,7 +601,7 @@ const BlogList: React.FC<BlogListProps> = ({
                 preview: () => JSON.stringify({ ...solution, data: { questions: [question] } }),
             }];
         });
-    }, [showMatrix, isAdmin, visibleCards, studyLessons]);
+    }, [showMatrix, canUseMatrix, visibleCards, studyLessons]);
 
     useLayoutEffect(() => {
         if (matrixDraft) window.scrollTo({ top: 0, behavior: 'instant' });
@@ -758,7 +760,7 @@ const BlogList: React.FC<BlogListProps> = ({
         lesson.id === selectedLessonId && lesson.studySection.questionType === selectedType
     );
 
-    if (isAdmin && showMatrix) return <>
+    if (canUseMatrix && showMatrix) return <>
         <div hidden={!!matrixDraft}>
             <React.Suspense fallback={<p className="p-6 text-sm text-stone-600">Đang mở ma trận…</p>}>
                 <ExamMatrixBuilder candidates={matrixCandidates} recentQuestion={recentMatrixQuestion}
@@ -791,7 +793,7 @@ const BlogList: React.FC<BlogListProps> = ({
         <div className={'w-full max-w-[1720px] mx-auto p-4 md:p-6 lg:p-8 animate-fade-in relative '
             + (selectedQuestions.length ? 'pb-28 sm:pb-20' : 'pb-20')} style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
             {/* Nút quay lại trang chủ (khi góc học tập mở full-screen) */}
-            <div style={{ marginBottom: '16px' }}>
+            {!studyOnly && <div style={{ marginBottom: '16px' }}>
                 <button
                     onClick={() => navigate('/')}
                     style={{
@@ -805,7 +807,7 @@ const BlogList: React.FC<BlogListProps> = ({
                 >
                     <ChevronLeft style={{ width: '16px', height: '16px' }} /> Quay lại trang chủ
                 </button>
-            </div>
+            </div>}
 
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
@@ -830,7 +832,7 @@ const BlogList: React.FC<BlogListProps> = ({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                {isAdmin && <button type="button" disabled={loading} onClick={() => setShowMatrix(true)}
+                {canUseMatrix && <button type="button" disabled={loading} onClick={() => setShowMatrix(true)}
                     className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-950 hover:bg-amber-100 disabled:opacity-50">
                     <FileText className="size-4" aria-hidden="true" /> Soạn đề theo ma trận
                 </button>}
