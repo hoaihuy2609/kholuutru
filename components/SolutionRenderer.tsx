@@ -155,8 +155,11 @@ function renderInlineMath(text: string): React.ReactNode[] {
 
 function TextWithMath({ text }: { text: string }) {
   if (!text) return null;
-  // Chuẩn hóa ký tự \n dạng chuỗi escape thành ký tự xuống dòng thực tế
-  const normalized = text.replace(/\\n/g, '\n');
+  // Tách dấu xuống dòng dạng \n mà không cắt các lệnh LaTeX như \neq.
+  const normalized = text.replace(
+    /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$(?!\$)[^$\r\n]+\$)|\\n(?!eq\b)/g,
+    (match, math: string | undefined) => math ? math.replace(/(?<!\\)\\n(?![A-Za-z])/g, '\n') : '\n',
+  );
   const clean = normalized.replace(/\[\/?justify\]/gi, '');
   const rawLines = clean.split('\n');
 
