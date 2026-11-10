@@ -3,6 +3,8 @@
 
 import { TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
 
+const ILLUSTRATION_UPLOAD_TIMEOUT_MS = 45_000;
+
 export interface TikzRenderResult {
   svg: string;
   width: number;
@@ -111,6 +113,8 @@ async function uploadIllustrationToTelegram(blob: Blob, fileName: string, label:
     return null;
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ILLUSTRATION_UPLOAD_TIMEOUT_MS);
   try {
     const formData = new FormData();
     formData.append('chat_id', TELEGRAM_CHAT_ID);
@@ -123,6 +127,7 @@ async function uploadIllustrationToTelegram(blob: Blob, fileName: string, label:
         'Authorization': ADMIN_AUTH_HEADER,
       },
       body: formData,
+      signal: controller.signal,
     });
 
     if (!res.ok) {
@@ -136,7 +141,12 @@ async function uploadIllustrationToTelegram(blob: Blob, fileName: string, label:
     }
     return null;
   } catch (err) {
+    if (controller.signal.aborted) {
+      throw new Error('Telegram chưa phản hồi sau 45 giây. Hãy thử lưu lại.');
+    }
     console.error('[tikzService] Lỗi khi tải hình minh họa lên Telegram:', err);
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }

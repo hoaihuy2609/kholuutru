@@ -590,6 +590,7 @@ export default function SolutionEditor({
   }]);
   const [activeQIdx, setActiveQIdx] = useState(0);
   const [saving,     setSaving]     = useState(false);
+  const [uploadingSaveImages, setUploadingSaveImages] = useState(false);
 
   const [category,     setCategory]     = useState("");
   const [level,        setLevel]        = useState(matrixDraft?.level ?? 0);
@@ -971,11 +972,12 @@ export default function SolutionEditor({
   // ── Save ───────────────────────────────────────────────────
   const persistQuestions = async (batch: Question[], source: string, targetGrade: number, published: boolean) => {
       // Ảnh tải lên cần có file_id trước khi lưu. SVG vẫn có thể dùng bản nhúng.
-      const processedQuestions = await Promise.all(batch.map(async (q, idx) => {
+      setUploadingSaveImages(batch.some(q => q.imageFile ? !uploadedImageIds.current.has(q.imageFile) : q.imageSvg && !q.imageTelegramFileId));
+      const uploads = await Promise.allSettled(batch.map(async (q, idx) => {
         if (q.imageFile) {
           const file = q.imageFile;
           const fileId = uploadedImageIds.current.get(file) ?? await uploadQuestionImageToTelegram(file);
-          if (!fileId) return q;
+          if (!fileId) throw new Error('Tải ảnh lên Telegram thất bại. Hãy thử lưu lại.');
           uploadedImageIds.current.set(file, fileId);
           return { ...q, imageFile: undefined, imageTelegramFileId: fileId };
         }
@@ -990,10 +992,12 @@ export default function SolutionEditor({
         }
         return { ...q, imageTelegramFileId: tId };
       }));
-      const failedImageIndex = processedQuestions.findIndex(q => q.imageFile);
-      if (failedImageIndex >= 0) {
-        throw new Error(`Không tải được ảnh của ${questionNumber(batch[failedImageIndex], failedImageIndex)} lên Telegram. Vui lòng thử lưu lại.`);
-      }
+      setUploadingSaveImages(false);
+      const processedQuestions = uploads.map((upload, index) => {
+        if (upload.status === 'fulfilled') return upload.value;
+        const reason = upload.reason instanceof Error ? upload.reason.message : 'Không tải được ảnh. Hãy thử lưu lại.';
+        throw new Error(`Ảnh của ${questionNumber(batch[index], index)}. ${reason}`);
+      });
 
       // Serialize mỗi câu hỏi tùy theo type
       const serializedQuestions = processedQuestions.map((q, index) =>
@@ -1205,7 +1209,7 @@ export default function SolutionEditor({
           <button onClick={handleSave} disabled={illustrationBusy}
             className="px-6 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-60 shadow-sm">
             <Save className="w-4 h-4" />
-            {saving ? 'Đang lưu...' : (blog ? 'Cập nhật' : 'Đăng bài')}
+            {saving ? (uploadingSaveImages ? 'Đang tải hình…' : 'Đang lưu…') : (blog ? 'Cập nhật' : 'Đăng bài')}
           </button>
         </div>
       </div>
@@ -1793,7 +1797,7 @@ export default function SolutionEditor({
               className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-amber-800 px-3.5 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-60 sm:ml-auto"
             >
               <Save className="w-4 h-4" />
-              {saving ? 'Đang lưu...' : (blog ? 'Cập nhật Lời Giải' : 'Đăng bài Lời Giải')}
+              {saving ? (uploadingSaveImages ? 'Đang tải hình…' : 'Đang lưu…') : (blog ? 'Cập nhật Lời Giải' : 'Đăng bài Lời Giải')}
             </button>
           </div>
         </div>
