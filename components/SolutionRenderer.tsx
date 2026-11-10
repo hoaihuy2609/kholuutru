@@ -512,16 +512,14 @@ export default function SolutionRenderer({ content, className = "" }: SolutionRe
   return <SolutionQuestions questions={questions} className={className} />;
 }
 
-export function SolutionQuestions({ questions, activeIndex, className = '' }: {
+export function SolutionQuestions({ questions, className = '' }: {
   questions: Question[];
-  activeIndex?: number;
   className?: string;
 }) {
   return (
     <div className={`solution-renderer latex-prose space-y-5 [container-type:inline-size] ${className}`}>
       {questions.map((q, idx) => (
-        <div key={idx} className={(idx > 0 ? 'border-t border-stone-200 pt-5 ' : '')
-          + (activeIndex !== undefined && idx !== activeIndex ? 'pointer-events-none opacity-40 grayscale' : '')}>
+        <div key={idx} className={idx > 0 ? 'border-t border-stone-200 pt-5' : undefined}>
           {q.type === 'dung_sai'
             ? <DungSaiRenderer   question={q} />
             : q.type === 'trac_nghiem'

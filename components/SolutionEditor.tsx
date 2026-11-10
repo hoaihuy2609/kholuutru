@@ -9,7 +9,7 @@ import { useUIStore } from "../src/stores/useUIStore";
 import { SolutionStep as Step, SolutionStatement as Statement, StudyQuestionGroup, StudyQuestionType } from '../types';
 import { isStudyQuestionGroup, STUDY_QUESTION_GROUPS, supportsStudyGroups } from '../src/utils/studyLibrary';
 import {
-  ChevronLeft, Save, Trash2, ArrowUp, ArrowDown,
+  ChevronLeft, ChevronRight, Save, Trash2, ArrowUp, ArrowDown,
   Plus, Eye, BookOpen, Layers, X, ToggleLeft, ToggleRight,
   Image as ImageIcon, Sparkles, RefreshCw, CheckCircle2, AlertCircle,
   FileCode, Download
@@ -640,16 +640,13 @@ export default function SolutionEditor({
     return studyDefaults && !blog?.id ? automatic : question.questionNo || automatic;
   };
   const activeNumber = questionNumber(activeQuestion, activeQIdx);
-  const previewQuestions = questions.map((question, index) => serializeQuestion(
-    index === activeQIdx && localImageUrl ? { ...question, imageUrl: localImageUrl } : question,
-    questionNumber(question, index),
-  ));
-  const hasPreview = previewQuestions.some(question =>
-    question.question_text || question.question_latex || question.image_svg || question.image_url
-    || question.image_telegram_file_id || question.solution || question.choices.some(Boolean)
-    || question.statements.some(statement => statement.claim || statement.claim_latex || convertStepsToSolution(statement.steps))
-    || convertStepsToSolution(question.steps) || convertStepsToSolution(question.solutionSteps)
+  const previewQuestion = serializeQuestion(
+    localImageUrl ? { ...activeQuestion, imageUrl: localImageUrl } : activeQuestion, activeNumber,
   );
+  const hasPreview = previewQuestion.question_text || previewQuestion.question_latex || previewQuestion.image_svg
+    || previewQuestion.image_url || previewQuestion.image_telegram_file_id || previewQuestion.solution || previewQuestion.choices.some(Boolean)
+    || previewQuestion.statements.some(statement => statement.claim || statement.claim_latex || convertStepsToSolution(statement.steps))
+    || convertStepsToSolution(previewQuestion.steps) || convertStepsToSolution(previewQuestion.solutionSteps);
   const [renderingTikz, setRenderingTikz] = useState(false);
   const [tikzError, setTikzError] = useState<string | null>(null);
   const illustrationBusy = saving || renderingTikz;
@@ -1260,7 +1257,7 @@ export default function SolutionEditor({
         {/* ════════ EDITOR ════════ */}
         <div className="flex min-w-0 flex-col gap-5">
 
-          {/* Thông tin đề + Tabs câu */}
+          {/* Thông tin đề và điều hướng câu hỏi */}
           <div className="space-y-4 rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm sm:p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="flex items-center gap-2 text-sm font-bold text-stone-900">
@@ -1275,25 +1272,30 @@ export default function SolutionEditor({
                 value={examName} onChange={e => setExamName(e.target.value)} />
             </div>}
 
-            {/* Tabs */}
             <div className="space-y-3 border-t border-stone-100 pt-3">
+              {questions.length > 1 && <div role="group" aria-label="Điều hướng câu hỏi"
+                className="flex flex-wrap items-center gap-1.5 rounded-lg border border-stone-200 bg-stone-50 p-2 text-sm">
+                <button type="button" disabled={illustrationBusy || activeQIdx === 0} onClick={() => setActiveQIdx(activeQIdx - 1)}
+                  className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 font-semibold text-stone-700 hover:bg-stone-200 disabled:opacity-40">
+                  <ChevronLeft aria-hidden="true" className="size-4" /> Câu trước
+                </button>
+                <select aria-label="Câu đang soạn" value={activeQIdx} disabled={illustrationBusy}
+                  onChange={event => setActiveQIdx(Number(event.target.value))}
+                  className="min-h-9 min-w-0 max-w-full rounded-md border border-stone-200 bg-white px-2 font-semibold text-stone-900">
+                  {questions.map((question, index) => <option key={index} value={index}>{questionNumber(question, index)}</option>)}
+                </select>
+                <span aria-label={`Vị trí ${activeQIdx + 1} trong ${questions.length} câu`}
+                  className="px-1 text-xs tabular-nums text-stone-600">{activeQIdx + 1}/{questions.length}</span>
+                <button type="button" disabled={illustrationBusy || activeQIdx === questions.length - 1} onClick={() => setActiveQIdx(activeQIdx + 1)}
+                  className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 font-semibold text-stone-700 hover:bg-stone-200 disabled:opacity-40">
+                  Câu sau <ChevronRight aria-hidden="true" className="size-4" />
+                </button>
+                <button type="button" disabled={illustrationBusy} onClick={() => removeQuestion(activeQIdx)} aria-label="Xóa câu đang soạn"
+                  className="ml-auto grid size-9 place-items-center rounded-md text-stone-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-40">
+                  <Trash2 aria-hidden="true" className="size-4" />
+                </button>
+              </div>}
               {!studyDefaults && <div className="flex flex-wrap items-center gap-2">
-                {questions.map((q, idx) => (
-                  <button key={idx} onClick={() => setActiveQIdx(idx)}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeQIdx === idx ? 'bg-indigo-600 text-white shadow-sm' : 'bg-[#F7F6F3] text-[#787774] border border-[#E9E9E7] hover:bg-white'}`}>
-                    {q.questionNo || `Câu ${idx + 1}`}
-                    {/* Badge loại bài */}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${activeQIdx === idx ? 'bg-indigo-500 text-indigo-100' : 'bg-gray-200 text-gray-500'}`}>
-                      {q.type === 'dung_sai' ? 'Đ/S' : q.type === 'trac_nghiem' ? 'TN' : 'TL'}
-                    </span>
-                    {questions.length > 1 && (
-                      <span onClick={e => { e.stopPropagation(); removeQuestion(idx); }}
-                        className={`w-5 h-5 rounded-full flex items-center justify-center -mr-1 ${activeQIdx === idx ? 'hover:bg-indigo-700 text-indigo-100' : 'hover:bg-red-100 text-red-400'}`}>
-                        <X className="w-3 h-3" />
-                      </span>
-                    )}
-                  </button>
-                ))}
                 <button onClick={addQuestion} disabled={illustrationBusy}
                   className="px-3 py-2 rounded-lg text-sm font-semibold border-2 border-dashed border-[#DCDCDA] text-[#787774] hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1">
                   <Plus className="w-4 h-4" /> Thêm câu
@@ -1342,26 +1344,13 @@ export default function SolutionEditor({
                   </div>
                 )}
 
-                {studyDefaults ? (
+                {studyDefaults ? (questions.length === 1 && (
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     <span className="font-semibold text-stone-700">Số câu</span>
-                    {questions.length > 1 ? (
-                      <>
-                        <select aria-label="Câu đang soạn" value={activeQIdx} onChange={e => setActiveQIdx(Number(e.target.value))}
-                          className="rounded-md border border-stone-200 bg-white px-2 py-1 text-sm text-stone-800">
-                          {questions.map((question, index) => <option key={index} value={index}>{questionNumber(question, index)}</option>)}
-                        </select>
-                        <button type="button" disabled={illustrationBusy} onClick={() => removeQuestion(activeQIdx)} aria-label="Xóa câu đang soạn"
-                          className="grid size-8 place-items-center rounded-md text-stone-600 hover:bg-red-50 hover:text-red-700">
-                          <Trash2 aria-hidden="true" className="size-4" />
-                        </button>
-                      </>
-                    ) : (
-                      <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 font-semibold text-amber-950">{activeNumber}</span>
-                    )}
+                    <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 font-semibold text-amber-950">{activeNumber}</span>
                     {!blog?.id && <span className="text-xs text-stone-600">Tự động</span>}
                   </div>
-                ) : <div>
+                )) : <div>
                   <label className="block text-sm font-semibold mb-2 text-[#1A1A1A]">Số bài / Số câu</label>
                   <input className="w-full p-3 rounded-lg border border-[#E9E9E7] outline-none focus:border-indigo-500 text-sm transition-colors"
                     placeholder="VD: Câu 4"
@@ -1742,10 +1731,11 @@ export default function SolutionEditor({
               <h3 className="font-semibold text-[#1A1A1A] flex items-center gap-2">
                 <Eye aria-hidden="true" className="size-4 text-amber-800" /> Xem trước kết quả
               </h3>
+              {questions.length > 1 && <span className="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-950">{activeNumber}</span>}
             </div>
-            <div className="min-w-0 flex-1 overflow-y-auto bg-stone-50 p-3.5 sm:p-4">
+            <div key={activeQIdx} className="min-w-0 flex-1 overflow-y-auto bg-stone-50 p-3.5 sm:p-4">
               {hasPreview ? (
-                <SolutionQuestions questions={previewQuestions} activeIndex={activeQIdx} />
+                <SolutionQuestions questions={[previewQuestion]} />
               ) : (
                 <div className="flex min-h-48 flex-col items-center justify-center gap-3 px-4 text-center text-stone-500">
                   <Eye aria-hidden="true" className="size-8" />
