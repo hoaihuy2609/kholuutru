@@ -702,6 +702,7 @@ export const useCloudStorage = () => {
         getBlogs: blogService.getBlogs,
         getStudyLibrary: blogService.getStudyLibrary,
         saveStudyLesson: blogService.saveStudyLesson,
+        deleteEmptyStudyLesson: blogService.deleteEmptyStudyLesson,
         saveBlog: blogService.saveBlog,
         deleteBlog: blogService.deleteBlog,
         syncBlogs: blogService.syncBlogs,

@@ -19,6 +19,9 @@ vi.mock('../lib/supabase', () => ({
 }));
 vi.mock('../lib/db', () => ({
     dbGet: async (key: string) => key === 'physivault_blogs_local' ? [...mocks.records] : mocks.cache.get(key),
+    dbUpdate: async (_key: string, update: (records: typeof mocks.records) => typeof mocks.records) => {
+        mocks.records = update(mocks.records);
+    },
     dbSetBatch: async (entries: [string, unknown][]) => {
         for (const [key, value] of entries) mocks.cache.set(key, value);
     },
@@ -30,7 +33,7 @@ vi.mock('../lib/telegram', () => ({
     fetchViaCloudflareProxy: mocks.proxyDownload,
 }));
 
-import { getStudyLibrary, resumeBlogSync, syncBlogs } from '../services/blogService';
+import { deleteEmptyStudyLesson, getStudyLibrary, resumeBlogSync, syncBlogs } from '../services/blogService';
 
 const telegramResponse = (id: string) => Response.json({ result: { document: { file_id: id } } });
 
@@ -59,6 +62,18 @@ describe('blog snapshot sync', () => {
 
     afterEach(() => {
         vi.unstubAllGlobals();
+    });
+
+    it('xóa đúng mục trống trùng tên và giữ mục còn câu hỏi nháp', async () => {
+        const lesson = { id: 'populated', kind: 'study_lesson', title: 'Bài 4' };
+        const emptyLesson = { ...lesson, id: 'empty' };
+        const draft = { id: 'draft', is_published: false, studySection: { lessonId: lesson.id } };
+        mocks.records = [emptyLesson, lesson, draft];
+
+        expect(await deleteEmptyStudyLesson(lesson.id)).toBe('not_empty');
+        expect(await deleteEmptyStudyLesson(emptyLesson.id)).toBe('deleted');
+        expect(await deleteEmptyStudyLesson('missing')).toBe('failed');
+        expect(mocks.records).toEqual([lesson, draft]);
     });
 
     it('gộp lần lưu gần nhau và gửi lượt tiếp theo nếu có thay đổi khi đang tải', async () => {

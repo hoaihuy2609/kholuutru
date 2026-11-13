@@ -365,6 +365,7 @@ interface BlogListProps {
     onCreateBlog?: (section?: StudySection) => void;
     studyLessons: StudyLesson[];
     onSaveLesson?: (section: StudySection, title: string, id?: string) => Promise<StudyLesson | null>;
+    onDeleteEmptyLesson?: (id: string) => Promise<'deleted' | 'not_empty' | 'failed'>;
     onLibraryLoaded: (library: StudyLibrary) => void;
     getStudyLibrary: (isAdmin: boolean) => Promise<StudyLibrary>;
     renderMatrixEditor?: (draft: MatrixQuestionDraft, blogs: BlogPost[], onBack: () => void, onSaved: (blog: BlogPost) => void) => React.ReactNode;
@@ -474,7 +475,7 @@ function FilterGroup({ label, children }: { label: string; children: React.React
 
 const BlogList: React.FC<BlogListProps> = ({
     isAdmin, studyOnly = false, studentGrade, onReadBlog, onEditBlog, onCreateBlog, studyLessons,
-    onSaveLesson, onLibraryLoaded, getStudyLibrary, renderMatrixEditor,
+    onSaveLesson, onDeleteEmptyLesson, onLibraryLoaded, getStudyLibrary, renderMatrixEditor,
 }) => {
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
     const [loading, setLoading] = useState(true);
@@ -764,7 +765,7 @@ const BlogList: React.FC<BlogListProps> = ({
                 posts.flatMap(getBlogCards).filter(({ blog, index }) => !groupMatches || groupMatches.get(blog.id)?.has(index)),
                 true,
             )}
-            onSaveLesson={onSaveLesson} />
+            onSaveLesson={onSaveLesson} onDeleteEmptyLesson={onDeleteEmptyLesson} />
     );
     const isLessonOpen = chapterLessons.some(lesson =>
         lesson.id === selectedLessonId && lesson.studySection.questionType === selectedType

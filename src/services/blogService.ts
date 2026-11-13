@@ -175,6 +175,25 @@ export const saveStudyLesson = async (section: StudySection, title: string, id?:
     }
 };
 
+export const deleteEmptyStudyLesson = async (id: string): Promise<'deleted' | 'not_empty' | 'failed'> => {
+    try {
+        let result: 'deleted' | 'not_empty' | 'failed' = 'failed';
+        await dbUpdate<BlogRecord[]>(BLOG_LOCAL_KEY, (records = []) => {
+            if (records.some(record => isBlogPost(record) && record.studySection?.lessonId === id)) {
+                result = 'not_empty';
+                return records;
+            }
+            if (!records.some(record => isStudyLesson(record) && record.id === id)) return records;
+            result = 'deleted';
+            return records.filter(record => !isStudyLesson(record) || record.id !== id);
+        });
+        return result;
+    } catch (error) {
+        console.error('[Blog] Lỗi xóa tên bài:', error);
+        return 'failed';
+    }
+};
+
 export const deleteBlog = async (id: string): Promise<boolean> => {
     try {
         await dbUpdate<BlogRecord[]>(BLOG_LOCAL_KEY, (records = []) =>

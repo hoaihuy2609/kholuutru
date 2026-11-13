@@ -39,7 +39,7 @@ function PostRows({ posts, onRead, onEdit }: {
 export default function ChapterStudyList({
   chapter, selectedType, selectedLessonId, selectedGroup, groupMatches, blogs, lessons, loading,
   onSelectType, onSelectGroup, onSelectLesson,
-  onRead, onCreate, onEdit, onSaveLesson, countQuestions, renderLessonPosts,
+  onRead, onCreate, onEdit, onSaveLesson, onDeleteEmptyLesson, countQuestions, renderLessonPosts,
 }: {
   chapter: { id: string; name: string; grade: number };
   selectedType?: StudyQuestionType;
@@ -58,11 +58,13 @@ export default function ChapterStudyList({
   countQuestions: (blog: BlogPost) => number;
   renderLessonPosts: (posts: BlogPost[]) => React.ReactNode;
   onSaveLesson?: (section: StudySection, title: string, id?: string) => Promise<StudyLesson | null>;
+  onDeleteEmptyLesson?: (id: string) => Promise<'deleted' | 'not_empty' | 'failed'>;
 }) {
   const [nameEditor, setNameEditor] = useState<StudyLesson | 'new' | null>(null);
   const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'save' | 'delete' | null>(null);
+  const saving = pendingAction !== null;
+  const [error, setError] = useState('');
   const savingRef = useRef(false);
   const lessonsById = new Map(lessons.map(lesson => [lesson.id, lesson]));
   const postsByLesson = new Map<string, BlogPost[]>();
@@ -93,6 +95,8 @@ export default function ChapterStudyList({
   const lessonHeading = useRef<HTMLHeadingElement>(null);
   const lessonPosts = activeLesson ? matchingPosts(postsByLesson.get(activeLesson.id) ?? []) : [];
   const visibleLoosePosts = type ? matchingPosts(loosePosts[type.value]) : [];
+  const canDelete = onDeleteEmptyLesson && nameEditor && nameEditor !== 'new'
+    && (postsByLesson.get(nameEditor.id)?.length ?? 0) === 0;
 
   useEffect(() => {
     if (!activeLessonId) return;
@@ -102,7 +106,7 @@ export default function ChapterStudyList({
 
   const openNameEditor = (lesson: StudyLesson | 'new') => {
     setName(lesson === 'new' ? '' : lesson.title);
-    setSaveError(false);
+    setError('');
     setNameEditor(lesson);
   };
 
@@ -110,18 +114,37 @@ export default function ChapterStudyList({
     event.preventDefault();
     if (!type || !onSaveLesson || !nameEditor || !name.trim() || savingRef.current) return;
     savingRef.current = true;
-    setSaving(true);
-    setSaveError(false);
+    setPendingAction('save');
+    setError('');
     try {
       const saved = await onSaveLesson({ chapterId: chapter.id, questionType: type.value }, name.trim(),
         nameEditor === 'new' ? undefined : nameEditor.id);
       if (saved) setNameEditor(null);
-      else setSaveError(true);
+      else setError('Chưa lưu được tên bài. Thử lại nhé.');
     } catch {
-      setSaveError(true);
+      setError('Chưa lưu được tên bài. Thử lại nhé.');
     } finally {
       savingRef.current = false;
-      setSaving(false);
+      setPendingAction(null);
+    }
+  };
+
+  const deleteName = async () => {
+    if (!canDelete || !onDeleteEmptyLesson || !nameEditor || nameEditor === 'new' || savingRef.current) return;
+    if (!window.confirm(`Xóa bài trống “${nameEditor.title}”?`)) return;
+    savingRef.current = true;
+    setPendingAction('delete');
+    setError('');
+    try {
+      const result = await onDeleteEmptyLesson(nameEditor.id);
+      if (result === 'deleted') setNameEditor(null);
+      else setError(result === 'not_empty' ? 'Bài đã có nội dung. Hãy chuyển câu sang bài khác trước khi xóa.'
+        : 'Chưa xóa được bài. Thử lại nhé.');
+    } catch {
+      setError('Chưa xóa được bài. Thử lại nhé.');
+    } finally {
+      savingRef.current = false;
+      setPendingAction(null);
     }
   };
 
@@ -222,14 +245,20 @@ export default function ChapterStudyList({
                   onChange={event => setName(event.target.value)} placeholder="Ví dụ: Bài 1. Khái niệm từ trường"
                   className="min-w-40 flex-1 rounded-md border border-stone-300 bg-white px-2.5 py-2 text-sm outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600" />
                 <button type="submit" disabled={saving || !name.trim()} className={addButton + ' disabled:opacity-60'}>
-                  {saving ? 'Đang lưu…' : 'Lưu tên bài'}
+                  {pendingAction === 'save' ? 'Đang lưu…' : 'Lưu tên bài'}
                 </button>
                 <button type="button" disabled={saving} onClick={() => setNameEditor(null)}
                   className={'min-h-9 rounded-md px-2 text-xs font-semibold text-stone-700 hover:bg-stone-100 ' + focusStyle}>
                   Hủy
                 </button>
+                {canDelete && (
+                  <button type="button" disabled={saving} onClick={deleteName}
+                    className={'min-h-9 rounded-md px-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 ' + focusStyle}>
+                    {pendingAction === 'delete' ? 'Đang xóa…' : 'Xóa bài trống'}
+                  </button>
+                )}
               </div>
-              {saveError && <p role="alert" className="text-xs text-red-700">Chưa lưu được tên bài. Thử lại nhé.</p>}
+              {error && <p role="alert" className="text-xs text-red-700">{error}</p>}
             </form>
           )}
           {loading ? (

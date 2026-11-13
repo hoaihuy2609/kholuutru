@@ -478,6 +478,15 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     return saved;
   };
 
+  const deleteEmptyLesson = async (id: string) => {
+    const result = await cloud.deleteEmptyStudyLesson(id);
+    if (result === 'deleted') {
+      setStudyLessons(previous => previous.filter(lesson => lesson.id !== id));
+      void cloud.syncBlogs();
+    }
+    return result;
+  };
+
   const handleLibraryLoaded = useCallback(({ blogs, lessons }: { blogs: BlogPost[]; lessons: StudyLesson[] }) => {
     setAllBlogs(blogs);
     setStudyLessons(lessons);
@@ -551,6 +560,7 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
               setIsCreatingBlog(true);
             } : undefined}
             studyLessons={studyLessons} onSaveLesson={effectiveIsAdmin ? saveLesson : undefined}
+            onDeleteEmptyLesson={effectiveIsAdmin ? deleteEmptyLesson : undefined}
             onLibraryLoaded={handleLibraryLoaded}
             renderMatrixEditor={effectiveIsAdmin ? (draft, blogs, back, saved) => (
               <ErrorBoundary><Suspense fallback={<LazyFallback />}>
