@@ -510,9 +510,9 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       const before = parts[0] || '';
       const after = parts.slice(1).join('[image]') || '';
       return { wrapsImage, html: `
-        <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(before)}</div>
+        <div class="exam-question-text"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(before)}</div>
         <div style="margin: 10px 0; text-align: center;">${imgHtml}</div>
-        ${after.trim() ? `<div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-top: 4px;">${escapeHtml(after)}</div>` : ''}
+        ${after.trim() ? `<div class="exam-question-text" style="margin-top: 4px;">${escapeHtml(after)}</div>` : ''}
         ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
         ${tableHtml}
       ` };
@@ -521,7 +521,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
     const sideTable = !!tableHtml && !!imgHtml && sideLayout;
     return { wrapsImage, html: `
       ${wrapsImage ? imgHtml : ''}
-      <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
+      <div class="exam-question-text"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
       ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
       ${sideTable ? `<div style="display: grid; grid-template-columns: minmax(0, 1fr) 35%; gap: 16px; align-items: start;">${tableHtml}${imgHtml}</div>` : tableHtml}
       ${imgHtml && !wrapsImage && !sideTable ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}
@@ -669,7 +669,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       if (sectionTitle) bodyHtml += `<h3 style="font-size: 11pt; color: ${primaryColor};">${escapeHtml(sectionTitle)}</h3>`;
       bodyHtml += `
         <div style="margin-bottom: 18px; page-break-inside: avoid;">
-          <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-bottom: 6px;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
+          <div class="exam-question-text" style="margin-bottom: 6px;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
           ${renderQuestionTableHtml(q.questionTable)}
           <div style="text-align: center; color: #0000ff; font-weight: bold; margin: 6px 0 8px 0;">Lời giải:</div>
           <div style="padding-left: 12px; font-size: 11pt; text-align: justify; text-justify: inter-word;">
@@ -729,6 +729,7 @@ export function examPrintDocument(body = '', title = 'Xem trước đề thi') {
     .katex { font-size: 1em; color: var(--math-color); }
     .katex-display { margin: 6px 0; }
     .exam-question { display: flow-root; margin-bottom: 16px; break-inside: avoid; }
+    .exam-question-text { white-space: pre-line; text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; }
     .exam-statements > div + div { margin-top: 4px; }
     .exam-wrapped-choices > div + div { margin-top: 6px; }
     .exam-watermark {
