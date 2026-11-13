@@ -12,11 +12,14 @@ import "katex/dist/katex.min.css";
 import { SolutionStep as Step, SolutionStatement as Statement } from '../types';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
+import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
+import QuestionTable from './QuestionTable';
 
 interface Question {
   question_no: string;
   question_text: string;
   question_latex: string;
+  question_table?: QuestionTableData;
   type?: 'tu_luan' | 'dung_sai' | 'trac_nghiem';
   solution?: string;
   steps: Step[];
@@ -71,6 +74,7 @@ function parseContent(content: string): Question[] | null {
       questions = data.questions.map(q => ({
         question_no:    q.question_no    || "",
         question_text:  q.question_text  || "",
+        question_table: normalizeQuestionTable(q.question_table),
         question_latex: q.question_latex || "",
         type:           q.type === 'dung_sai' ? 'dung_sai' : q.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan',
         steps:          q.steps          || [],
@@ -86,6 +90,7 @@ function parseContent(content: string): Question[] | null {
       questions = [{
         question_no:    data.question_no    || "",
         question_text:  data.question_text  || "",
+        question_table: normalizeQuestionTable(data.question_table),
         question_latex: data.question_latex || "",
         type:           'tu_luan',
         steps:       data.steps || [],
@@ -411,8 +416,15 @@ function QuestionBody({ question, compact = false }: { question: Question; compa
   const parts = hasImage ? (question.question_text || '').split(/\[image\]/i) : [question.question_text];
   const inlineImage = parts.length > 1;
   const afterImage = parts.slice(1).join('[image]');
-  const hasText = !!(question.question_text || question.question_latex);
-  const sideImage = hasImage && hasText && !inlineImage && question.image_layout !== 'bottom';
+  const table = question.question_table && <QuestionTable table={question.question_table}
+    renderCell={text => <TextWithMath text={text} />} />;
+  const text = (question.question_text || question.question_latex) && (
+    <>
+      {question.question_text && <TextWithMath text={question.question_text} />}
+      {question.question_latex && <KatexBlock tex={question.question_latex} />}
+    </>
+  );
+  const sideImage = hasImage && !!(text || table) && !inlineImage && question.image_layout !== 'bottom';
   const imageWidth = question.image_width === undefined ? undefined : { width: question.image_width + '%' };
   const image = hasImage && (
     <figure className={'mx-auto flex w-full min-w-0 justify-center ' + (compact ? 'max-w-[11rem] ' : 'max-w-sm ')
@@ -431,7 +443,7 @@ function QuestionBody({ question, compact = false }: { question: Question; compa
     </figure>
   );
 
-  return (hasText || hasImage) ? (
+  return (text || table || hasImage) ? (
     <div className={compact ? '' : 'border-t border-stone-100 px-4 py-4 sm:px-5'}>
       {inlineImage ? (
         <div className="space-y-3">
@@ -439,17 +451,16 @@ function QuestionBody({ question, compact = false }: { question: Question; compa
           {image}
           {afterImage.trim() && <div className={detailProse}><TextWithMath text={afterImage} /></div>}
           {question.question_latex && <KatexBlock tex={question.question_latex} />}
+          {table}
         </div>
       ) : (
-        <div className={'flex flex-col gap-4 ' + (sideImage ? '[@container_(min-width:40rem)]:flex-row [@container_(min-width:40rem)]:items-start' : '')}>
-          {hasText && (
-            <div className={detailProse + ' flex-1'}>
-              {question.question_text && <TextWithMath text={question.question_text} />}
-              {question.question_latex && <KatexBlock tex={question.question_latex} />}
-            </div>
-          )}
-          {image}
-        </div>
+        <>
+          {table && text && <div className={detailProse}>{text}</div>}
+          <div className={'flex flex-col gap-4 ' + (sideImage ? '[@container_(min-width:40rem)]:flex-row [@container_(min-width:40rem)]:items-start' : '')}>
+            {(table || text) && <div className={detailProse + ' min-w-0 flex-1'}>{table || text}</div>}
+            {image}
+          </div>
+        </>
       )}
     </div>
   ) : null;

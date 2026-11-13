@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { CLOUDFLARE_PROXY_URL } from "../src/lib/telegram";
 import { MAX_QUESTION_IMAGE_WIDTH, MIN_QUESTION_IMAGE_WIDTH, normalizeQuestionImageWidth } from '../src/utils/questionImage';
+import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
 import { renderTikzToSvg, uploadQuestionImageToTelegram, uploadSvgToTelegram } from "../src/services/tikzService";
 import { pdfSolutionText, type PdfQuestionSource } from '../src/utils/pdfExamQuestions';
 import { importedQuestionOutcomes, matrixMatchScore, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
@@ -81,6 +82,7 @@ interface Question {
   questionNo: string;
   qText: string;
   qFormula: string;
+  questionTable?: QuestionTableData;
   outcomeText: string;
   type: QuestionType;
   groups: StudyQuestionGroup[];
@@ -202,6 +204,7 @@ const normalizeQuestion = (q: any): Question => {
   return {
     questionNo: q.question_no || q.questionNo || "",
     qText:      q.question_text || q.qText || "",
+    questionTable: normalizeQuestionTable(q.question_table ?? q.questionTable),
     qFormula:   q.question_latex || q.qFormula || "",
     outcomeText: questionOutcomes(q.learning_outcomes).join('\n'),
     type:       qType,
@@ -227,6 +230,7 @@ function serializeQuestion(q: Question, questionNo: string) {
   return {
     question_no:    questionNo,
     question_text:  q.qText,
+    question_table: q.questionTable,
     question_latex: q.qFormula,
     type:           q.type,
     ...(outcomes.length ? { learning_outcomes: outcomes } : {}),
@@ -616,6 +620,7 @@ export default function SolutionEditor({
   };
 
   const activeQuestion = questions[activeQIdx] ?? emptyQuestion();
+  const questionTable = activeQuestion.questionTable;
   const imageInput = useRef<HTMLInputElement>(null);
   const uploadedImageIds = useRef(new WeakMap<File, string>());
   const [imagePreview, setImagePreview] = useState<{ file: File; url: string }>();
@@ -643,7 +648,7 @@ export default function SolutionEditor({
   const previewQuestion = serializeQuestion(
     localImageUrl ? { ...activeQuestion, imageUrl: localImageUrl } : activeQuestion, activeNumber,
   );
-  const hasPreview = previewQuestion.question_text || previewQuestion.question_latex || previewQuestion.image_svg
+  const hasPreview = previewQuestion.question_text || previewQuestion.question_latex || previewQuestion.question_table || previewQuestion.image_svg
     || previewQuestion.image_url || previewQuestion.image_telegram_file_id || previewQuestion.solution || previewQuestion.choices.some(Boolean)
     || previewQuestion.statements.some(statement => statement.claim || statement.claim_latex || convertStepsToSolution(statement.steps))
     || convertStepsToSolution(previewQuestion.steps) || convertStepsToSolution(previewQuestion.solutionSteps);
@@ -736,7 +741,7 @@ export default function SolutionEditor({
         list = parsed;
       } else if (parsed && typeof parsed === 'object') {
         if (Array.isArray(parsed.questions)) list = parsed.questions;
-        else if (parsed.questionNo || parsed.qText || parsed.question_text) list = [parsed];
+        else if (parsed.questionNo || parsed.qText || parsed.question_text || parsed.question_table || parsed.questionTable) list = [parsed];
       }
       if (list.length === 0) return { error: 'Không tìm thấy câu hỏi trong JSON', count: 0, tikzCount: 0 };
       const tikzCount = list.filter(q => Boolean(q.tikzCode || q.tikz_code)).length;
@@ -772,7 +777,7 @@ export default function SolutionEditor({
         }
         if (Array.isArray(parsed.questions)) {
           rawQuestions = parsed.questions;
-        } else if (parsed.questionNo || parsed.qText || parsed.question_text) {
+        } else if (parsed.questionNo || parsed.qText || parsed.question_text || parsed.question_table || parsed.questionTable) {
           rawQuestions = [parsed];
         } else {
           throw new Error('Không tìm thấy danh sách câu hỏi ("questions") trong đối tượng JSON.');
@@ -787,6 +792,9 @@ export default function SolutionEditor({
 
       const normalizedList: Question[] = rawQuestions.map((raw, index) => {
         const question = normalizeQuestion(raw);
+        if ((raw.question_table !== undefined || raw.questionTable !== undefined) && !question.questionTable) {
+          throw new Error(`Câu thứ ${index + 1}. Bảng cần ít nhất một tiêu đề cột và mỗi hàng phải có số ô văn bản bằng số tiêu đề.`);
+        }
         if (raw.learning_outcomes !== undefined) {
           try {
             question.outcomeText = importedQuestionOutcomes(raw.learning_outcomes).join('\n');
@@ -1052,7 +1060,7 @@ export default function SolutionEditor({
         showToast('Chọn chương trong Góc Học Tập để lưu câu hỏi.', 'error');
         return;
       }
-      if (!activeQuestion.qText.trim() && !activeQuestion.qFormula.trim() && !activeQuestion.imageFile
+      if (!activeQuestion.qText.trim() && !activeQuestion.qFormula.trim() && !activeQuestion.questionTable && !activeQuestion.imageFile
           && !activeQuestion.imageSvg && !activeQuestion.imageTelegramFileId && !activeQuestion.imageUrl) {
         showToast('Nhập đề bài hoặc thêm hình cho câu hỏi.', 'error');
         return;
@@ -1390,6 +1398,76 @@ export default function SolutionEditor({
                       : "Một vật dao động điều hòa..."}
                     value={activeQuestion.qText} onChange={e => updateQ('qText', e.target.value)} />
                 </div>
+
+                {questionTable ? (
+                  <fieldset className="min-w-0 space-y-2">
+                    <legend className="mb-1 text-sm font-semibold text-stone-800">Bảng trong đề bài</legend>
+                    <div className="overflow-x-auto">
+                      <div className="grid items-start gap-2 pb-1"
+                        style={{ gridTemplateColumns: `repeat(${questionTable.headers.length}, minmax(7rem, 1fr)) auto` }}>
+                        {questionTable.headers.map((header, column) => (
+                          <div key={column} className="flex min-w-0 items-center gap-1">
+                            <input aria-label={`Tiêu đề cột ${column + 1}`} value={header}
+                              className="w-full min-w-0 rounded-lg border border-stone-200 px-2 py-2 text-sm"
+                              onChange={event => {
+                                const headers = [...questionTable.headers];
+                                headers[column] = event.target.value;
+                                updateQuestion({ questionTable: { ...questionTable, headers } });
+                              }} />
+                            {questionTable.headers.length > 1 && (
+                              <button type="button" className="shrink-0 rounded-lg px-1.5 py-2 text-stone-600 hover:bg-stone-100"
+                                aria-label={`Xóa cột ${column + 1}`} title={`Xóa cột ${column + 1}`} onClick={() => {
+                                  if ((header.trim() || questionTable.rows.some(row => row[column].trim()))
+                                    && !window.confirm(`Xóa cột ${column + 1} và nội dung trong cột này?`)) return;
+                                  updateQuestion({ questionTable: {
+                                    headers: questionTable.headers.filter((_, i) => i !== column),
+                                    rows: questionTable.rows.map(row => row.filter((_, i) => i !== column)),
+                                  } });
+                                }}>×</button>
+                            )}
+                          </div>
+                        ))}
+                        <span />
+                        {questionTable.rows.map((row, index) => (
+                          <React.Fragment key={index}>
+                            {row.map((cell, column) => (
+                              <AutoResizeTextarea key={column} rows={1} aria-label={`Hàng ${index + 1}, cột ${column + 1}`}
+                                value={cell} className="min-w-0 rounded-lg border border-stone-200 px-2 py-2 text-sm"
+                                onChange={event => {
+                                  const nextRow = [...row];
+                                  nextRow[column] = event.target.value;
+                                  updateQuestion({ questionTable: {
+                                    ...questionTable, rows: questionTable.rows.map((item, i) => i === index ? nextRow : item),
+                                  } });
+                                }} />
+                            ))}
+                            <button type="button" className="rounded-lg px-2 py-2 text-stone-600 hover:bg-stone-100"
+                              aria-label={`Xóa hàng ${index + 1}`} onClick={() => {
+                                updateQuestion({ questionTable: { ...questionTable, rows: questionTable.rows.filter((_, i) => i !== index) } });
+                              }}>×</button>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      <button type="button" className="font-semibold text-amber-900" onClick={() =>
+                        updateQuestion({ questionTable: { ...questionTable, rows: [...questionTable.rows, questionTable.headers.map(() => '')] } })
+                      }>+ Thêm hàng</button>
+                      <button type="button" className="font-semibold text-amber-900" onClick={() =>
+                        updateQuestion({ questionTable: {
+                          headers: [...questionTable.headers, ''],
+                          rows: questionTable.rows.map(row => [...row, '']),
+                        } })
+                      }>+ Thêm cột</button>
+                      <button type="button" className="text-red-700" onClick={() => updateQuestion({ questionTable: undefined })}>Xóa bảng</button>
+                    </div>
+                  </fieldset>
+                ) : (
+                  <button type="button" className="self-start rounded-lg border border-stone-200 px-3 py-2 text-sm font-semibold text-amber-900"
+                    onClick={() => updateQuestion({ questionTable: { headers: ['Cột A', 'Cột B'], rows: [['', ''], ['', '']] } })}>
+                    + Chèn bảng
+                  </button>
+                )}
 
                 <div
                   role="group"
@@ -1890,6 +1968,9 @@ export default function SolutionEditor({
 
               {/* Textarea */}
               <div className="relative">
+                <p className="mb-2 text-xs text-stone-600">
+                  Bảng dùng <code>question_table</code>. Mỗi hàng trong <code>rows</code> có số ô bằng số tiêu đề trong <code>headers</code>.
+                </p>
                 <textarea
                   value={jsonInput}
                   onChange={e => setJsonInput(e.target.value)}

@@ -4,6 +4,7 @@ import renderMathInElement from 'katex/contrib/auto-render';
 import katexStyles from 'katex/dist/katex.min.css?inline';
 import { CLOUDFLARE_PROXY_URL } from '../lib/telegram';
 import { normalizeQuestionImageWidth } from '../utils/questionImage';
+import type { QuestionTableData } from '../utils/questionTable';
 
 export interface ExamStyleConfig {
   // 1. Mẫu giao diện & Bảng màu LaTeX
@@ -93,6 +94,7 @@ export interface SelectedQuestionItem {
   id: string;
   questionNo: string;
   qText: string;
+  questionTable?: QuestionTableData;
   qFormula?: string;
   type: 'trac_nghiem' | 'dung_sai' | 'tu_luan';
   solution?: string;
@@ -158,6 +160,30 @@ function getSolutionEntries(sections: { title: string; questions: SelectedQuesti
 }
 
 /** Sinh mã nguồn LaTeX hoàn chỉnh từ danh sách câu hỏi và cấu hình giao diện. */
+function renderQuestionTableLatex(table?: QuestionTableData): string {
+  if (!table) return '';
+  const renderCell = (cell: string) => cell
+    .split(/(\$(?:\\.|[^$\\])+\$|\\\([\s\S]*?\\\))/g)
+    .map((part, index) => index % 2 ? part : part.replace(/[\\{}%&#_$^~\r\n]/g, char => {
+      switch (char) {
+        case '\\': return '\\textbackslash{}';
+        case '^': return '\\textasciicircum{}';
+        case '~': return '\\textasciitilde{}';
+        case '\r': return '';
+        case '\n': return ' ';
+        default: return '\\' + char;
+      }
+    })).join('');
+  const header = table.headers.map(cell => '\\textbf{' + renderCell(cell) + '}').join(' & ');
+  const rows = [header, ...table.rows.map(row => row.map(renderCell).join(' & '))];
+  const columnCount = table.headers.length;
+  const columns = columnCount === 2 ? '|p{0.24\\linewidth}|p{0.66\\linewidth}|'
+    : '|p{\\dimexpr\\linewidth/' + columnCount + '-2\\tabcolsep-2\\arrayrulewidth\\relax}|'
+      + ('p{\\dimexpr\\linewidth/' + columnCount + '-2\\tabcolsep-\\arrayrulewidth\\relax}|').repeat(columnCount - 1);
+  return '\n\\par\\smallskip\\noindent\\begin{tabular}{' + columns + '}\n\\hline\n'
+    + rows.join(' \\\\\n\\hline\n') + ' \\\\\n\\hline\n\\end{tabular}\\par\\smallskip\n';
+}
+
 export function generateExamLatex(questions: SelectedQuestionItem[], config: ExamStyleConfig): string {
   const primaryColorHex = (config.isCustomColor ? config.customColor : config.themeColor).replace('#', '');
 
@@ -227,6 +253,7 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
         out += `\\[ ${q.qFormula} \\]\n`;
       }
 
+      out += renderQuestionTableLatex(q.questionTable);
       const choices = q.choices || ['', '', '', ''];
       const cA = choices[0] || '';
       const cB = choices[1] || '';
@@ -267,6 +294,7 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
         out += `\\[ ${q.qFormula} \\]\n`;
       }
 
+      out += renderQuestionTableLatex(q.questionTable);
       if (q.statements && q.statements.length > 0) {
         out += `\\begin{enumerate}[label=\\textbf{\\alph*)}, leftmargin=20pt, itemsep=1.5mm]\n`;
         q.statements.forEach((st) => {
@@ -295,6 +323,7 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
       if (q.qFormula) {
         out += `\\[ ${q.qFormula} \\]\n`;
       }
+      out += renderQuestionTableLatex(q.questionTable);
       out += `\\vspace{3mm}\n`;
     });
   }
@@ -353,6 +382,7 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
       if (sectionTitle) out += `\n\\noindent\\textbf{\\color{primaryColor} ${sectionTitle}}\\par\n`;
       const prefix = config.questionPrefix || 'Câu';
       out += `\n\\noindent \\textbf{${prefix} ${qNum}:} ${q.qText || ''}\n`;
+      out += renderQuestionTableLatex(q.questionTable);
       out += `\n\\begin{center}\\textbf{\\color{blue} Lời giải:}\\end{center}\n`;
 
       if (q.solution) {
@@ -441,6 +471,16 @@ function escapeHtml(value: string): string {
     .replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
+function renderQuestionTableHtml(table?: QuestionTableData): string {
+  if (!table) return '';
+  const cellStyle = 'border: 1px solid #888; padding: 4px 7px; vertical-align: top; white-space: pre-line; overflow-wrap: anywhere;';
+  const header = table.headers.map((cell, index) =>
+    `<th scope="col" style="${cellStyle}${table.headers.length === 2 && index === 0 ? 'width: 28%;' : ''}">${escapeHtml(cell)}</th>`).join('');
+  const rows = table.rows.map(row =>
+    `<tr>${row.map(cell => `<td style="${cellStyle}">${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
+  return `<table style="width: 100%; table-layout: fixed; border-collapse: collapse; text-align: left; margin: 8px 0;"><thead><tr>${header}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
 export function renderExamPrintBody(questions: SelectedQuestionItem[], config: ExamStyleConfig) {
   const primaryColor = config.isCustomColor ? config.customColor : config.themeColor;
 
@@ -461,8 +501,9 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
   const renderQuestionHeaderPdf = (q: SelectedQuestionItem, qNum: number) => {
     const inlineImage = /\[image\]/i.test(q.qText || '');
     const sideLayout = q.imageLayout === 'right' || q.imageLayout === 'auto';
-    const imgHtml = renderQuestionImageHtml(q, sideLayout && !inlineImage);
-    const wrapsImage = !!imgHtml && sideLayout && !inlineImage;
+    const tableHtml = renderQuestionTableHtml(q.questionTable);
+    const imgHtml = renderQuestionImageHtml(q, sideLayout && !inlineImage && !tableHtml);
+    const wrapsImage = !!imgHtml && sideLayout && !inlineImage && !tableHtml;
 
     if (imgHtml && inlineImage) {
       const parts = (q.qText || '').split(/\[image\]/i);
@@ -473,14 +514,17 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
         <div style="margin: 10px 0; text-align: center;">${imgHtml}</div>
         ${after.trim() ? `<div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-top: 4px;">${escapeHtml(after)}</div>` : ''}
         ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
+        ${tableHtml}
       ` };
     }
 
+    const sideTable = !!tableHtml && !!imgHtml && sideLayout;
     return { wrapsImage, html: `
       ${wrapsImage ? imgHtml : ''}
       <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
       ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
-      ${imgHtml && !wrapsImage ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}
+      ${sideTable ? `<div style="display: grid; grid-template-columns: minmax(0, 1fr) 35%; gap: 16px; align-items: start;">${tableHtml}${imgHtml}</div>` : tableHtml}
+      ${imgHtml && !wrapsImage && !sideTable ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}
     ` };
   };
 
@@ -626,6 +670,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       bodyHtml += `
         <div style="margin-bottom: 18px; page-break-inside: avoid;">
           <div style="text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; margin-bottom: 6px;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
+          ${renderQuestionTableHtml(q.questionTable)}
           <div style="text-align: center; color: #0000ff; font-weight: bold; margin: 6px 0 8px 0;">Lời giải:</div>
           <div style="padding-left: 12px; font-size: 11pt; text-align: justify; text-justify: inter-word;">
             ${q.solution ? `

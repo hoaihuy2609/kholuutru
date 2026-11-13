@@ -7,6 +7,8 @@ import TreeTableOfContents, { normalizeSearchText } from './TreeTableOfContents'
 import ChapterStudyList from './ChapterStudyList';
 import { getStudyChapter, isStudyQuestionGroup, isStudyQuestionType, parseStudyQuestionNumber, STUDY_GRADES, studySectionParams, supportsStudyGroups } from '../src/utils/studyLibrary';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
+import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
+import QuestionTable from './QuestionTable';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
@@ -76,6 +78,7 @@ interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
     question_groups?: StudyQuestionGroup[];
     learning_outcomes?: string[];
     question_text?: string;
+    question_table?: QuestionTableData;
     question_latex?: string;
     tikz_code?: string;
     image_svg?: string;
@@ -88,6 +91,7 @@ interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
 interface CardQuestionData {
     questionNo: string;
     questionText: string;
+    questionTable?: QuestionTableData;
     questionLatex: string;
     type: QuestionType;
     imageSvg?: string;
@@ -117,6 +121,7 @@ function toCardQuestion(question?: StoredQuestion): CardQuestionData | null {
     return {
         questionNo: question.question_no || '',
         questionText: question.question_text || '',
+        questionTable: normalizeQuestionTable(question.question_table),
         questionLatex: question.question_latex || '',
         type: question.type === 'dung_sai' ? 'dung_sai' : question.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan',
         imageSvg: question.image_svg || question.imageSvg || '',
@@ -156,6 +161,7 @@ function toSelectedQuestion(blog: BlogPost, question: StoredQuestion | undefined
         questionNo: card?.questionNo || 'Câu ' + fallbackNumber,
         qText: card ? card.questionText : blog.summary || blog.title,
         qFormula: card?.questionLatex,
+        questionTable: card?.questionTable,
         type: card?.type ?? 'tu_luan',
         choices: question?.choices,
         correctChoice: question?.correctChoice,
@@ -217,10 +223,12 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
     const hasImage = !!(question?.imageSvg || imageSrc);
     const text = question?.questionText || '';
     const formula = question?.questionLatex || '';
-    const hasQuestion = !!(text || formula || hasImage);
+    const table = question?.questionTable && <QuestionTable table={question.questionTable}
+        renderCell={cell => <TextWithMathCard text={cell} />} />;
+    const hasQuestion = !!(text || formula || table || hasImage);
     const parts = hasImage ? text.split(/\[image\]/i) : [text];
     const inlineImage = parts.length > 1;
-    const sideImage = hasImage && !inlineImage && !!(text || formula) && question?.imageLayout !== 'bottom';
+    const sideImage = hasImage && !inlineImage && !!(text || formula || table) && question?.imageLayout !== 'bottom';
     const imageWidth = question?.imageWidth === undefined ? undefined : { width: question.imageWidth + '%' };
     const metadata = [
         blog.grade ? 'Lớp ' + blog.grade : 'Chung',
@@ -302,13 +310,15 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
                                 {image}
                                 {renderText(parts.slice(1).join('[image]'))}
                                 {formula && <KatexBlockCard tex={formula} />}
+                                {table}
                             </div>
                         ) : (
                             <div className={'flex flex-col gap-3 ' + (sideImage ? '[@container_(min-width:26rem)]:flex-row' : '')}>
-                                {(text || formula) && (
+                                {(text || formula || table) && (
                                     <div className="min-w-0 flex-1 space-y-2">
                                         {renderText(text)}
                                         {formula && <KatexBlockCard tex={formula} />}
+                                        {table}
                                     </div>
                                 )}
                                 {image}
