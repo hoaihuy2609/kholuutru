@@ -44,7 +44,7 @@ export function isStudyQuestionGroup(value: unknown): value is StudyQuestionGrou
 }
 
 export function supportsStudyGroups(type?: StudyQuestionType) {
-  return type === 'trac_nghiem' || type === 'dung_sai';
+  return type === 'trac_nghiem';
 }
 
 export function studySectionParams(section: StudySection) {
