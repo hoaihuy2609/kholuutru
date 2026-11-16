@@ -4,8 +4,8 @@ import { BlogPost, StudyLesson, StudyLibrary, StudyQuestionGroup, StudyQuestionT
 import { BookOpen, Plus, Search, SlidersHorizontal, Image, FileText, Check, Pencil, Sparkles, ChevronLeft, ChevronRight, ChevronDown, Folder, X, RotateCcw } from 'lucide-react';
 import ExamStyleModal from './ExamStyleModal';
 import TreeTableOfContents, { normalizeSearchText } from './TreeTableOfContents';
-import ChapterStudyList from './ChapterStudyList';
-import { getStudyChapter, isStudyQuestionGroup, isStudyQuestionType, parseStudyQuestionNumber, STUDY_GRADES, studySectionParams, supportsStudyGroups } from '../src/utils/studyLibrary';
+import ChapterStudyList, { type ChapterStudyGroup } from './ChapterStudyList';
+import { getStudyChapter, isStudyQuestionGroup, isStudyQuestionType, parseStudyQuestionNumber, STUDY_GRADES, STUDY_QUESTION_GROUPS, studySectionParams, supportsStudyGroups } from '../src/utils/studyLibrary';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
 import { readStudyImages, studyImageParts, studyImageSrc, studyQuestionIllustrations, type StudyImage } from '../src/utils/studyImages';
 import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
@@ -379,7 +379,7 @@ interface BlogListProps {
     onEditBlog?: (blog: BlogPost, questionIndex?: number) => void;
     onCreateBlog?: (section?: StudySection) => void;
     studyLessons: StudyLesson[];
-    onSaveLesson?: (section: StudySection, title: string, id?: string) => Promise<StudyLesson | null>;
+    onSaveLesson?: (section: StudySection, title: string, id?: string, group?: StudyQuestionGroup) => Promise<StudyLesson | null>;
     onDeleteEmptyLesson?: (id: string) => Promise<'deleted' | 'not_empty' | 'failed'>;
     onLibraryLoaded: (library: StudyLibrary) => void;
     getStudyLibrary: (isAdmin: boolean) => Promise<StudyLibrary>;
@@ -648,8 +648,8 @@ const BlogList: React.FC<BlogListProps> = ({
     const selectedType = activeChapter && isStudyQuestionType(type) ? type : undefined;
     const selectedLessonId = selectedType ? searchParams.get('lesson') ?? undefined : undefined;
     const group = searchParams.get('group');
-    const selectedGroup = supportsStudyGroups(selectedType)
-        ? isStudyQuestionGroup(group) ? group : group === 'all' || selectedLessonId ? 'all' : undefined
+    const selectedGroup = supportsStudyGroups(selectedType) && (isStudyQuestionGroup(group) || group === 'unclassified')
+        ? group
         : undefined;
     const chapterLessons = studyLessons.filter(lesson => lesson.studySection.chapterId === activeChapter?.id);
 
@@ -682,25 +682,35 @@ const BlogList: React.FC<BlogListProps> = ({
         blog.category !== 'exam_paper' && blog.studySection?.chapterId === activeChapter.id
         && isStudyQuestionType(blog.studySection.questionType)
     ) : [], [activeChapter, visibleBlogs]);
-    const groupMatches = useMemo(() => {
-        if (!isStudyQuestionGroup(selectedGroup)) return undefined;
-        const matches = new Map<string, Set<number>>();
+    const matchesByGroup = useMemo(() => {
+        const matches: Record<ChapterStudyGroup, Map<string, Set<number>>> = {
+            ly_thuyet: new Map(), tinh_toan: new Map(), unclassified: new Map(),
+        };
+        if (!supportsStudyGroups(selectedType)) return matches;
         for (const blog of chapterBlogs) {
             if (blog.studySection?.questionType !== selectedType) continue;
-            const indexes = new Set<number>();
-            getStoredQuestions(parsePhysicsSolution(blog.content)).forEach((question, index) => {
-                if (question && (question.type ?? selectedType) === selectedType
-                    && Array.isArray(question.question_groups) && question.question_groups.includes(selectedGroup)) {
+            const questions = getStoredQuestions(parsePhysicsSolution(blog.content));
+            if (!questions.length) matches.unclassified.set(blog.id, new Set());
+            questions.forEach((question, index) => {
+                if (!question) return;
+                const groups: ChapterStudyGroup[] = (question.type ?? selectedType) === selectedType
+                    && Array.isArray(question.question_groups)
+                    ? STUDY_QUESTION_GROUPS.filter(({ value }) => question.question_groups?.includes(value)).map(({ value }) => value)
+                    : [];
+                if (!groups.length) groups.push('unclassified');
+                for (const key of groups) {
+                    const indexes = matches[key].get(blog.id) ?? new Set<number>();
                     indexes.add(index);
+                    matches[key].set(blog.id, indexes);
                 }
             });
-            if (indexes.size) matches.set(blog.id, indexes);
         }
         return matches;
-    }, [chapterBlogs, selectedType, selectedGroup]);
+    }, [chapterBlogs, selectedType]);
+    const groupMatches = selectedGroup ? matchesByGroup[selectedGroup] : undefined;
 
-    const readChapterPost = (blog: BlogPost) => {
-        const indexes = groupMatches?.get(blog.id);
+    const readChapterPost = (blog: BlogPost, group?: ChapterStudyGroup) => {
+        const indexes = group ? matchesByGroup[group].get(blog.id) : undefined;
         if (!indexes) return onReadBlog(blog);
         const solution = parsePhysicsSolution(blog.content);
         if (!solution) return onReadBlog(blog);
@@ -757,28 +767,26 @@ const BlogList: React.FC<BlogListProps> = ({
     const chapterStudyList = activeChapter && (
         <ChapterStudyList key={activeChapter.id + ':' + (selectedType ?? '') + ':' + (selectedGroup ?? '')}
             chapter={activeChapter} selectedType={selectedType} selectedLessonId={selectedLessonId}
-            selectedGroup={selectedGroup} groupMatches={groupMatches}
+            selectedGroup={selectedGroup} matchesByGroup={matchesByGroup}
             blogs={chapterBlogs} lessons={chapterLessons} loading={loading}
             onSelectType={questionType => setSearchParams(
                 questionType === selectedType && supportsStudyGroups(questionType)
                     ? { folder: activeChapter.id }
                     : studySectionParams({ chapterId: activeChapter.id, questionType })
             )}
-            onSelectGroup={group => {
-                if (selectedType) setSearchParams({ ...studySectionParams({ chapterId: activeChapter.id, questionType: selectedType }), group });
-            }}
-            onSelectLesson={lessonId => {
+            onSelectLesson={(lessonId, group) => {
                 if (selectedType) setSearchParams({
                     ...studySectionParams({ chapterId: activeChapter.id, questionType: selectedType, lessonId }),
-                    ...(selectedGroup ? { group: selectedGroup } : {}),
+                    ...(lessonId && group ? { group } : {}),
                 });
             }}
             onRead={readChapterPost} onCreate={isAdmin ? onCreateBlog : undefined} onEdit={isAdmin ? onEditBlog : undefined}
-            countQuestions={post => groupMatches
-                ? groupMatches.get(post.id)?.size ?? 0
+            countQuestions={(post, group) => group
+                ? matchesByGroup[group].get(post.id)?.size ?? 0
                 : getStoredQuestions(parsePhysicsSolution(post.content)).filter(Boolean).length}
             renderLessonPosts={posts => renderQuestionCards(
-                posts.flatMap(getBlogCards).filter(({ blog, index }) => !groupMatches || groupMatches.get(blog.id)?.has(index)),
+                posts.flatMap(getBlogCards).filter(({ blog, index, solution }) =>
+                    !groupMatches || (solution ? groupMatches.get(blog.id)?.has(index) : groupMatches.has(blog.id))),
                 true,
             )}
             onSaveLesson={onSaveLesson} onDeleteEmptyLesson={onDeleteEmptyLesson} />

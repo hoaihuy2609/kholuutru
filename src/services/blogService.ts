@@ -3,8 +3,8 @@ import { dbGet, dbSetBatch, dbUpdate } from '../lib/db';
 import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
 import { packBlogSnapshot, unpackBlogSnapshot } from './blogSnapshot';
 import { useBlogStore } from '../stores/useContentStore';
-import { BlogPost, StudyLesson, StudyLibrary, StudyQuestionType, StudySection } from '../../types';
-import { getStudyChapter, isStudyQuestionType, nextStudyQuestionNumber } from '../utils/studyLibrary';
+import { BlogPost, StudyLesson, StudyLibrary, StudyQuestionGroup, StudyQuestionType, StudySection } from '../../types';
+import { getStudyChapter, isStudyQuestionGroup, isStudyQuestionType, nextStudyQuestionNumber, supportsStudyGroups } from '../utils/studyLibrary';
 import { matchingStudyImportLessons } from '../utils/studyJsonImport';
 import { rememberBlogImages, replaceBlogImageTokens, type BlogImageUpload, type BlogSaveInput } from '../utils/blogImageUploads';
 import { uploadQuestionImageToTelegram } from './tikzService';
@@ -210,7 +210,8 @@ export async function saveStudyQuestionImport(
                 throw new Error('Danh sách bài đích đã thay đổi. Mở lại trình soạn để chọn bài đích.');
             }
             if (!lesson) {
-                lesson = { ...source, id: crypto.randomUUID(), studySection: { ...source.studySection, questionType: type } };
+                lesson = { ...source, id: crypto.randomUUID(), questionGroup: undefined,
+                    studySection: { ...source.studySection, questionType: type } };
                 newLessons.push(lesson);
             }
             const studySection = { ...lesson.studySection, lessonId: lesson.id };
@@ -232,7 +233,7 @@ export async function saveStudyQuestionImport(
     return finishLocalSave(saved);
 }
 
-export const saveStudyLesson = async (section: StudySection, title: string, id?: string): Promise<StudyLesson | null> => {
+export const saveStudyLesson = async (section: StudySection, title: string, id?: string, group?: StudyQuestionGroup): Promise<StudyLesson | null> => {
     const chapter = getStudyChapter(section.chapterId);
     const name = title.trim();
     if (!chapter || !name || !isStudyQuestionType(section.questionType)) return null;
@@ -250,6 +251,7 @@ export const saveStudyLesson = async (section: StudySection, title: string, id?:
             saved = {
                 kind: 'study_lesson', id: crypto.randomUUID(), title: name, grade: chapter.grade,
                 studySection: { chapterId: chapter.id, questionType: section.questionType }, is_published: false,
+                ...(supportsStudyGroups(section.questionType) && isStudyQuestionGroup(group) ? { questionGroup: group } : {}),
             };
             return [...records, saved];
         });

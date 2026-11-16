@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useCallback, Suspense, useState, useRef } from 'react';
 import { Routes, Route, useNavigate, useParams, Navigate, useLocation, useSearchParams } from 'react-router-dom';
-import { GradeLevel, Lesson, Exam, BlogPost, StudyLesson, StudyLibrary, StudySection } from './types';
+import { GradeLevel, Lesson, Exam, BlogPost, StudyLesson, StudyLibrary, StudyQuestionGroup, StudySection } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Toast from './components/Toast';
@@ -478,8 +478,8 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
     setIsCreatingBlog: state.setIsCreatingBlog,
     setAllBlogs: state.setAllBlogs,
   })));
-  const saveLesson = async (section: StudySection, title: string, id?: string) => {
-    const saved = await cloud.saveStudyLesson(section, title, id);
+  const saveLesson = async (section: StudySection, title: string, id?: string, group?: StudyQuestionGroup) => {
+    const saved = await cloud.saveStudyLesson(section, title, id, group);
     if (saved) {
       setStudyLessons(previous => [...previous.filter(lesson => lesson.id !== saved.id), saved]);
       void cloud.syncBlogs();

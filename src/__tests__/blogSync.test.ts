@@ -37,7 +37,7 @@ vi.mock('../lib/telegram', () => ({
 }));
 vi.mock('../services/tikzService', () => ({ uploadQuestionImageToTelegram: mocks.uploadImage }));
 
-import { deleteEmptyStudyLesson, getStudyLibrary, resumeBlogImageUploads, resumeBlogSync, saveBlog, saveStudyQuestionImport, syncBlogs } from '../services/blogService';
+import { deleteEmptyStudyLesson, getStudyLibrary, resumeBlogImageUploads, resumeBlogSync, saveBlog, saveStudyLesson, saveStudyQuestionImport, syncBlogs } from '../services/blogService';
 
 const telegramResponse = (id: string) => Response.json({ result: { document: { file_id: id } } });
 
@@ -79,6 +79,18 @@ describe('blog snapshot sync', () => {
         expect(await deleteEmptyStudyLesson(emptyLesson.id)).toBe('deleted');
         expect(await deleteEmptyStudyLesson('missing')).toBe('failed');
         expect(mocks.records).toEqual([lesson, draft]);
+    });
+
+    it('lưu riêng hai tên bài trùng nhau theo nhóm và giữ nhóm khi đổi tên', async () => {
+        mocks.records = [];
+        const section = { chapterId: 'g10-ch4', questionType: 'trac_nghiem' } as const;
+        const theory = await saveStudyLesson(section, 'Bài 1', undefined, 'ly_thuyet');
+        const calculation = await saveStudyLesson(section, 'Bài 1', undefined, 'tinh_toan');
+        const renamed = await saveStudyLesson(section, 'Bài 1. Động lượng', calculation!.id);
+
+        expect(theory?.questionGroup).toBe('ly_thuyet');
+        expect(renamed).toMatchObject({ id: calculation!.id, questionGroup: 'tinh_toan', title: 'Bài 1. Động lượng' });
+        expect((await getStudyLibrary(true)).lessons).toEqual([theory, renamed]);
     });
 
     it('lưu trước khi ảnh tải xong và chỉ phát hành nội dung mới sau khi có mã Telegram', async () => {

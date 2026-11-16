@@ -162,6 +162,7 @@ export interface StudyLesson {
   title: string;
   grade: number;
   studySection: Omit<StudySection, 'lessonId'>;
+  questionGroup?: StudyQuestionGroup;
   is_published: false;
 }
 
