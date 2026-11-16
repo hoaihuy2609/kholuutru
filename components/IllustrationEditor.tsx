@@ -64,7 +64,6 @@ export default function IllustrationEditor({ image, target, disabled, onChange, 
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="font-semibold text-stone-900">{label}</span>
           <span className="text-stone-500">(tùy chọn)</span>
-          {image.key && <code className="text-stone-600">{image.key}</code>}
         </div>
         <label className={button + ' inline-flex items-center gap-1.5 focus-within:ring-1 focus-within:ring-amber-600'}>
           <ImageIcon aria-hidden="true" className="size-3.5 text-amber-800" /> {hasImage ? 'Thay ảnh' : 'Chèn ảnh'}

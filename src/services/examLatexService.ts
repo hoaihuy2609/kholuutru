@@ -4,7 +4,7 @@ import renderMathInElement from 'katex/contrib/auto-render';
 import katexStyles from 'katex/dist/katex.min.css?inline';
 import { normalizeQuestionImageWidth } from '../utils/questionImage';
 import type { QuestionTableData } from '../utils/questionTable';
-import { layoutStudySolutionImages, studyImageParts, studyImageSrc, type StudyImage } from '../utils/studyImages';
+import { layoutStudySolutionImages, studyImageParts, studyImageSrc, studyQuestionIllustrations, type StudyImage } from '../utils/studyImages';
 
 export interface ExamStyleConfig {
   // 1. Mẫu giao diện & Bảng màu LaTeX
@@ -505,10 +505,10 @@ function renderQuestionTableHtml(table?: QuestionTableData): string {
 export function renderExamPrintBody(questions: SelectedQuestionItem[], config: ExamStyleConfig) {
   const primaryColor = config.isCustomColor ? config.customColor : config.themeColor;
 
-  const renderQuestionImageHtml = (q: SelectedQuestionItem, wrap: boolean) => {
-    const imageUrl = studyImageSrc({ svg: q.imageSvg, url: q.imageUrl, file_id: q.imageTelegramFileId });
+  const renderQuestionImageHtml = (image: StudyImage, wrap: boolean) => {
+    const imageUrl = studyImageSrc(image);
     if (!imageUrl) return '';
-    const width = normalizeQuestionImageWidth(q.imageWidth);
+    const width = normalizeQuestionImageWidth(image.width);
     if (wrap) {
       const widthStyle = width === undefined ? '' : ` width: calc(min(38%, 260px) * ${width / 100});`;
       return `<img src="${escapeHtml(imageUrl)}" alt="Hình minh họa" style="float: right; max-width: min(38%, 260px); height: auto; margin: 0 0 8px 16px;${widthStyle}" />`;
@@ -518,10 +518,13 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
   };
 
   const renderQuestionHeaderPdf = (q: SelectedQuestionItem, qNum: number) => {
+    const { primary, extra } = studyQuestionIllustrations<StudyImage>(q.qText || '', {
+      svg: q.imageSvg, url: q.imageUrl, file_id: q.imageTelegramFileId, width: q.imageWidth, layout: q.imageLayout ?? 'auto',
+    }, q.questionImages);
     const inlineImage = /\[image\]/i.test(q.qText || '');
-    const sideLayout = q.imageLayout === 'right' || q.imageLayout === 'auto';
+    const sideLayout = primary.layout !== 'bottom';
     const tableHtml = renderQuestionTableHtml(q.questionTable);
-    const imgHtml = renderQuestionImageHtml(q, sideLayout && !inlineImage && !tableHtml);
+    const imgHtml = renderQuestionImageHtml(primary, sideLayout && !inlineImage && !tableHtml);
     const wrapsImage = !!imgHtml && sideLayout && !inlineImage && !tableHtml;
 
     if (imgHtml && inlineImage) {
@@ -531,7 +534,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       return { wrapsImage, html: `
         <div class="exam-question-text"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(before)}</div>
         <div style="margin: 10px 0; text-align: center;">${imgHtml}</div>
-        <div class="exam-question-text" style="margin-top: 4px;">${renderStudyImageText(after, q.questionImages, 'Hình minh họa đề bài')}</div>
+        <div class="exam-question-text" style="margin-top: 4px;">${renderStudyImageText(after, extra, 'Hình minh họa đề bài')}</div>
         ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
         ${tableHtml}
       ` };
@@ -540,7 +543,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
     const sideTable = !!tableHtml && !!imgHtml && sideLayout;
     return { wrapsImage, html: `
       ${wrapsImage ? imgHtml : ''}
-      <div class="exam-question-text"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${renderStudyImageText(q.qText || '', q.questionImages, 'Hình minh họa đề bài')}</div>
+      <div class="exam-question-text"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${renderStudyImageText(q.qText || '', extra, 'Hình minh họa đề bài')}</div>
       ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
       ${sideTable ? `<div style="display: grid; grid-template-columns: minmax(0, 1fr) 35%; gap: 16px; align-items: start;">${tableHtml}${imgHtml}</div>` : tableHtml}
       ${imgHtml && !wrapsImage && !sideTable ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}

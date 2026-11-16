@@ -7,7 +7,7 @@ import TreeTableOfContents, { normalizeSearchText } from './TreeTableOfContents'
 import ChapterStudyList from './ChapterStudyList';
 import { getStudyChapter, isStudyQuestionGroup, isStudyQuestionType, parseStudyQuestionNumber, STUDY_GRADES, studySectionParams, supportsStudyGroups } from '../src/utils/studyLibrary';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
-import { readStudyImages, studyImageParts, studyImageSrc, type StudyImage } from '../src/utils/studyImages';
+import { readStudyImages, studyImageParts, studyImageSrc, studyQuestionIllustrations, type StudyImage } from '../src/utils/studyImages';
 import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
 import QuestionTable from './QuestionTable';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
@@ -224,19 +224,22 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
         return () => observer.disconnect();
     }, [expanded]);
 
-    const imageSrc = studyImageSrc({ url: question?.imageUrl, file_id: question?.imageTelegramFileId });
-    const hasImage = !!(question?.imageSvg || imageSrc);
     const text = question?.questionText || '';
+    const { primary, extra: extraImages } = studyQuestionIllustrations<StudyImage>(text, {
+        url: question?.imageUrl, file_id: question?.imageTelegramFileId, svg: question?.imageSvg,
+        width: question?.imageWidth, layout: question?.imageLayout,
+    }, question?.questionImages);
+    const imageSrc = studyImageSrc(primary);
+    const hasImage = !!imageSrc;
     const formula = question?.questionLatex || '';
     const table = question?.questionTable && <QuestionTable table={question.questionTable}
         renderCell={cell => <TextWithMathCard text={cell} />} />;
-    const extraImages = question?.questionImages ?? [];
     const hasExtraImages = extraImages.some(studyImageSrc);
     const hasQuestion = !!(text || formula || table || hasImage || hasExtraImages);
     const parts = hasImage ? text.split(/\[image\]/i) : [text];
     const inlineImage = parts.length > 1;
-    const sideImage = hasImage && !inlineImage && !!(text || formula || table) && question?.imageLayout !== 'bottom';
-    const imageWidth = question?.imageWidth === undefined ? undefined : { width: question.imageWidth + '%' };
+    const sideImage = hasImage && !inlineImage && !!(text || formula || table) && primary.layout !== 'bottom';
+    const imageWidth = primary.width === undefined ? undefined : { width: primary.width + '%' };
     const metadata = [
         blog.grade ? 'Lớp ' + blog.grade : 'Chung',
         isAdmin && !blog.is_published ? 'Nháp' : '',
@@ -244,7 +247,7 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
     const image = hasImage && (
         <figure className={'mx-auto flex w-full min-w-0 max-w-sm items-center justify-center self-start '
             + (sideImage ? '[@container_(min-width:26rem)]:w-[38%] [@container_(min-width:26rem)]:shrink-0' : '')}>
-            {question?.imageSvg ? (
+            {question?.imageSvg && primary.svg === question.imageSvg ? (
                 <div className={'max-w-full [&>svg]:block [&>svg]:h-auto [&>svg]:max-w-full '
                     + (expanded ? '[&>svg]:max-h-48' : '[&>svg]:max-h-32 sm:[&>svg]:max-h-40')
                     + (imageWidth ? ' [&>svg]:w-full' : '')}
@@ -263,6 +266,7 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
     const renderTextWithImages = (value: string) => studyImageParts(value, extraImages).map((part, index) =>
         typeof part === 'string' ? <React.Fragment key={index}>{renderText(part)}</React.Fragment>
             : <img key={index} src={studyImageSrc(part)} alt="Hình minh họa đề bài" loading="lazy"
+                style={{ width: part.width === undefined ? undefined : part.width + '%' }}
                 className={'mx-auto max-w-full object-contain ' + (expanded ? 'max-h-48' : 'max-h-32')} />);
     const height = expanded ? 'min-h-[168px] lg:min-h-[176px] ' : 'h-[168px] lg:h-[176px] ';
     const readLabel = question ? 'Xem lời giải' : 'Đọc bài';

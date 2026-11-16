@@ -68,12 +68,21 @@ export function studyImageSrc(image: StudyImage) {
         ? CLOUDFLARE_PROXY_URL + '/getFile/' + encodeURIComponent(remoteId) : '');
 }
 
+export function studyQuestionIllustrations<T extends EditableStudyImage>(text: string, primary: T, images: T[] = []) {
+    if (primary.file || studyImageSrc(primary) || /\[image:/i.test(text)) return { primary, extra: images };
+    const first = images.find(image => image.file || studyImageSrc(image));
+    return first
+        ? { primary: first, extra: images.filter(image => image !== first) }
+        : { primary, extra: images };
+}
+
 export function layoutStudySolutionImages<T extends EditableStudyImage>(text: string, images: T[]) {
     const parts = studyImageParts(text, images);
     const lastText = parts.map(part => typeof part === 'string').lastIndexOf(true);
     const sideImages: T[] = [];
     const body = parts.filter((part, index) => {
-        if (text.trim() && index > lastText && typeof part !== 'string' && (part.layout === 'right' || part.layout === 'auto')) {
+        if (text.trim() && index > lastText && typeof part !== 'string'
+            && (part.layout === 'right' || part.layout === 'auto' || (part.layout === undefined && part.key))) {
             sideImages.push(part);
             return false;
         }

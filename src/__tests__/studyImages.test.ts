@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { layoutStudySolutionImages, matchStudyImageFiles, readStudyImages, studyImageParts, studyImageSrc } from '../utils/studyImages';
+import { layoutStudySolutionImages, matchStudyImageFiles, readStudyImages, studyImageParts, studyImageSrc, studyQuestionIllustrations } from '../utils/studyImages';
 
 vi.mock('../lib/telegram', () => ({ CLOUDFLARE_PROXY_URL: 'https://telegram.test' }));
 
@@ -37,5 +37,17 @@ describe('study question images', () => {
         expect(sideImages).toEqual([images[0]]);
         expect(body).toEqual(['Phân tích lực\n', images[2], '\nKết luận', images[1]]);
         expect(layoutStudySolutionImages('', images).sideImages).toEqual([]);
+    });
+
+    it('dùng ảnh ghép như hình chính và giữ chỗ chèn có mã riêng', () => {
+        const image = { key: 'cs01_c18_h01', file_id: 'car', width: 40 };
+        const pending = { key: 'pending' };
+        const existing = { file_id: 'hand-added' };
+        expect(studyQuestionIllustrations('Một ô tô', {}, [pending, image])).toEqual({
+            primary: image, extra: [pending],
+        });
+        expect(studyQuestionIllustrations('Một ô tô', existing, [image])).toEqual({ primary: existing, extra: [image] });
+        expect(studyQuestionIllustrations('[image:cs01_c18_h01]', {}, [image])).toEqual({ primary: {}, extra: [image] });
+        expect(layoutStudySolutionImages('Phân tích lực', [image]).sideImages).toEqual([image]);
     });
 });

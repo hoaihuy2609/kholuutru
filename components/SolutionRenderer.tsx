@@ -13,7 +13,7 @@ import { SolutionStep as Step, SolutionStatement as Statement } from '../types';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
 import QuestionTable from './QuestionTable';
-import { layoutStudySolutionImages, readStudyImages, studyImageParts, studyImageSrc, type EditableStudyImage } from '../src/utils/studyImages';
+import { layoutStudySolutionImages, readStudyImages, studyImageParts, studyImageSrc, studyQuestionIllustrations, type EditableStudyImage } from '../src/utils/studyImages';
 import { useImageFileUrl } from './StudyImageBatch';
 
 interface Question {
@@ -444,29 +444,33 @@ function DungSaiRenderer({ question }: { question: Question }) {
 }
 
 function QuestionBody({ question, compact = false }: { question: Question; compact?: boolean }) {
-  const imageSrc = studyImageSrc({ url: question.image_url, file_id: question.image_telegram_file_id });
-  const hasImage = !!(question.image_svg || imageSrc);
+  const { primary, extra: extraImages } = studyQuestionIllustrations<EditableStudyImage>(question.question_text || '', {
+    url: question.image_url, file_id: question.image_telegram_file_id, svg: question.image_svg,
+    layout: question.image_layout, width: question.image_width,
+  }, question.question_images);
+  const local = useImageFileUrl(primary.file);
+  const imageSrc = local || studyImageSrc(primary);
+  const hasImage = !!imageSrc;
   const parts = hasImage ? (question.question_text || '').split(/\[image\]/i) : [question.question_text];
   const inlineImage = parts.length > 1;
   const afterImage = parts.slice(1).join('[image]');
   const table = question.question_table && <QuestionTable table={question.question_table}
     renderCell={text => <TextWithMath text={text} />} />;
-  const extraImages = question.question_images ?? [];
   const text = (question.question_text || question.question_latex || extraImages.some(item => item.file || studyImageSrc(item))) && (
     <>
       <StudyImageText text={question.question_text || ''} images={extraImages} alt="Hình minh họa đề bài" compact={compact} />
       {question.question_latex && <KatexBlock tex={question.question_latex} />}
     </>
   );
-  const sideImage = hasImage && !!(text || table) && !inlineImage && question.image_layout !== 'bottom';
-  const imageWidth = question.image_width === undefined ? undefined : { width: question.image_width + '%' };
+  const sideImage = hasImage && !!(text || table) && !inlineImage && primary.layout !== 'bottom';
+  const imageWidth = primary.width === undefined ? undefined : { width: primary.width + '%' };
   const image = hasImage && (
     <figure className={'mx-auto flex w-full min-w-0 justify-center ' + (compact ? 'max-w-[11rem] ' : 'max-w-sm ')
       + (sideImage ? '[@container_(min-width:40rem)]:w-[38%] [@container_(min-width:40rem)]:shrink-0' : '')}>
-      {question.image_svg ? (
+      {question.image_svg && primary.svg === question.image_svg ? (
         <div className={'max-w-full [&>svg]:block [&>svg]:h-auto [&>svg]:max-w-full' + (imageWidth ? ' [&>svg]:w-full' : '')}
           style={imageWidth}
-          dangerouslySetInnerHTML={{ __html: question.image_svg }} />
+          dangerouslySetInnerHTML={{ __html: primary.svg }} />
       ) : (
         <img
           src={imageSrc}

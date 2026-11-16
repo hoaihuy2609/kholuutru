@@ -23,9 +23,9 @@ import { renderTikzToSvg, uploadQuestionImageToTelegram, uploadSvgToTelegram } f
 import { pdfSolutionText, type PdfQuestionSource } from '../src/utils/pdfExamQuestions';
 import { importedQuestionOutcomes, matrixMatchScore, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
 import type { ReviewedPdfQuestion } from './PdfExamImport';
-import StudyImageBatch, { StudyImageThumbnail, type StudyImageTarget } from './StudyImageBatch';
+import StudyImageBatch, { type StudyImageTarget } from './StudyImageBatch';
 import IllustrationEditor from './IllustrationEditor';
-import { readStudyImages, studyImageFields, studyImageSrc, validStudyImage,
+import { readStudyImages, studyImageFields, studyImageSrc,
   type EditableStudyImage } from '../src/utils/studyImages';
 
 const PdfExamImport = React.lazy(() => import('./PdfExamImport'));
@@ -691,6 +691,18 @@ export default function SolutionEditor({
     return () => URL.revokeObjectURL(url);
   }, [imageFile]);
   const localImageUrl = imagePreview?.file === imageFile ? imagePreview?.url : undefined;
+  const [questionImageSelection, setQuestionImageSelection] = useState<{ question: number; image: number }>();
+  const questionImages = activeQuestion.questionImages ?? [];
+  const primaryImage = {
+    file: activeQuestion.imageFile, url: activeQuestion.imageUrl, file_id: activeQuestion.imageTelegramFileId,
+    svg: activeQuestion.imageSvg, tikz: activeQuestion.tikzCode, layout: activeQuestion.imageLayout, width: activeQuestion.imageWidth,
+  };
+  const hasPrimaryImage = !!(primaryImage.file || primaryImage.tikz || studyImageSrc(primaryImage));
+  const firstAttachedImage = questionImages.findIndex(image => image.file || studyImageSrc(image));
+  const defaultQuestionImage = hasPrimaryImage || !questionImages.length
+    ? -1 : Math.max(0, firstAttachedImage);
+  const selectedQuestionImage = questionImageSelection?.question === activeQIdx
+    ? Math.min(questionImageSelection.image, questionImages.length) : defaultQuestionImage;
   const [solutionImageSelection, setSolutionImageSelection] = useState({ question: 0, image: 0 });
   const solutionImages = activeQuestion.solutionImages ?? [];
   const selectedSolutionImage = solutionImageSelection.question === activeQIdx
@@ -715,60 +727,6 @@ export default function SolutionEditor({
   const [renderingTikz, setRenderingTikz] = useState(false);
   const [processingImageBatch, setProcessingImageBatch] = useState(false);
   const illustrationBusy = saving || renderingTikz || processingImageBatch;
-
-  const attachStudyImages = (files: File[], slot?: number) => {
-    if (illustrationBusy || !files.length) return;
-    const valid = files.filter(validStudyImage);
-    if (valid.length !== files.length) showToast('Chỉ nhận ảnh PNG/JPG có dung lượng tối đa 5 MB mỗi ảnh.', 'warning');
-    if (!valid.length) return;
-    const images = activeQuestion.questionImages ?? [];
-    if (slot !== undefined) {
-      updateQuestion({ questionImages: images.map((image, index) =>
-        index === slot ? { key: image.key, file: valid[0] } : image) });
-      return;
-    }
-    updateQuestion({ questionImages: [...images, ...valid.map(file => ({ file }))] });
-  };
-
-  const questionImageFields = () => {
-    const images = activeQuestion.questionImages ?? [];
-    const label = 'Ảnh bổ sung trong đề';
-    if (!images.length) return null;
-    return (
-      <div className="space-y-2 rounded-xl border border-stone-200 bg-white p-3 text-sm" tabIndex={0} role="group"
-        aria-label={label} onPaste={event => {
-          const files = Array.from(event.clipboardData.files).filter(file => file.type.startsWith('image/'));
-          if (!files.length) return;
-          event.preventDefault();
-          attachStudyImages(files);
-        }}>
-        <span className="font-semibold text-stone-800">{label}</span>
-        {images.map((image, index) => (
-          <div key={index} className="flex flex-wrap items-center gap-2 border-t border-stone-100 pt-2">
-            <StudyImageThumbnail file={image.file} src={studyImageSrc(image)} alt={label + ' ' + (index + 1)} />
-            <span className="min-w-0 flex-1 break-all text-xs text-stone-700">
-              {image.key || image.file?.name || 'Ảnh ' + (index + 1)}
-              {!image.file && !studyImageSrc(image) && ' · Chưa có ảnh'}
-            </span>
-            <label className="cursor-pointer rounded-md px-1.5 py-1 text-xs font-semibold text-amber-900">
-              {image.file || studyImageSrc(image) ? 'Thay ảnh' : 'Chọn ảnh'}
-              <input className="sr-only" type="file" accept="image/png,image/jpeg" disabled={illustrationBusy}
-                aria-label={label + ' ' + (index + 1)}
-                onChange={event => {
-                  attachStudyImages(Array.from(event.target.files ?? []), index);
-                  event.target.value = '';
-                }} />
-            </label>
-            <button type="button" disabled={illustrationBusy} className="rounded-md px-1.5 py-1 text-xs text-red-700"
-              onClick={() => updateQuestion({ questionImages: images.flatMap((item, i) =>
-                i !== index ? [item] : item.key && (item.file || studyImageSrc(item)) ? [{ key: item.key }] : []) })}>
-              Xóa
-            </button>
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   // Khung dán nhanh cả 4 đáp án / 4 mệnh đề
   const [quickBatchInput, setQuickBatchInput] = useState('');
@@ -1596,7 +1554,6 @@ export default function SolutionEditor({
                   <StudyImageBatch targets={editorImageTargets} disabled={illustrationBusy} onProcessing={setProcessingImageBatch}
                     onApply={entries => setQuestions(previous => applyStudyImageBatch(previous, entries))} />
                 )}
-                {questionImageFields()}
                 {questionTable ? (
                   <fieldset className="min-w-0 space-y-2">
                     <legend className="mb-1 text-sm font-semibold text-stone-800">Bảng trong đề bài</legend>
@@ -1667,12 +1624,44 @@ export default function SolutionEditor({
                   </button>
                 )}
 
-                <IllustrationEditor key={activeQIdx} target="đề bài" disabled={illustrationBusy}
-                  image={{ file: activeQuestion.imageFile, url: activeQuestion.imageUrl, file_id: activeQuestion.imageTelegramFileId,
-                    svg: activeQuestion.imageSvg, tikz: activeQuestion.tikzCode, layout: activeQuestion.imageLayout, width: activeQuestion.imageWidth }}
-                  onChange={image => updateQuestion({ imageFile: image.file, imageUrl: image.url, imageTelegramFileId: image.file_id,
-                    imageSvg: image.svg, tikzCode: image.tikz, imageLayout: image.layout ?? 'auto', imageWidth: image.width })}
-                  onBusy={setRenderingTikz} onTikzFocus={element => trackFocus('q-tikz-' + activeQIdx, element)} />
+                <div className="space-y-2">
+                  {!!(questionImages.length || hasPrimaryImage) && (
+                    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Chọn hình trong đề bài">
+                      {hasPrimaryImage && (questionImages.length > 0 || selectedQuestionImage === questionImages.length) && (
+                        <button type="button" disabled={illustrationBusy} aria-pressed={selectedQuestionImage === -1}
+                          onClick={() => setQuestionImageSelection({ question: activeQIdx, image: -1 })}
+                          className="rounded-md border border-stone-200 px-2 py-1 text-xs aria-pressed:bg-amber-50">Hình 1</button>
+                      )}
+                      {questionImages.map((image, index) => (questionImages.length > 1 || hasPrimaryImage || selectedQuestionImage === questionImages.length) && (
+                        <button key={index} type="button" disabled={illustrationBusy} title={image.key}
+                          aria-pressed={selectedQuestionImage === index}
+                          onClick={() => setQuestionImageSelection({ question: activeQIdx, image: index })}
+                          className="rounded-md border border-stone-200 px-2 py-1 text-xs aria-pressed:bg-amber-50">
+                          Hình {index + (hasPrimaryImage ? 2 : 1)}
+                        </button>
+                      ))}
+                      <button type="button" disabled={illustrationBusy} aria-pressed={selectedQuestionImage === questionImages.length}
+                        onClick={() => setQuestionImageSelection({ question: activeQIdx, image: questionImages.length })}
+                        className="rounded-md px-2 py-1 text-xs font-semibold text-amber-900">+ Thêm hình</button>
+                    </div>
+                  )}
+                  <IllustrationEditor key={activeQIdx + ':' + selectedQuestionImage} target="đề bài" disabled={illustrationBusy}
+                    image={selectedQuestionImage === -1 ? primaryImage : questionImages[selectedQuestionImage] ?? {}}
+                    onChange={image => {
+                      if (selectedQuestionImage === -1) {
+                        updateQuestion({ imageFile: image.file, imageUrl: image.url, imageTelegramFileId: image.file_id,
+                          imageSvg: image.svg, tikzCode: image.tikz, imageLayout: image.layout ?? 'auto', imageWidth: image.width });
+                        if (!image.file && !image.tikz && !studyImageSrc(image)) setQuestionImageSelection(undefined);
+                        return;
+                      }
+                      const images = [...questionImages];
+                      if (image.key || image.file || image.url || image.file_id || image.svg || image.tikz) images[selectedQuestionImage] = image;
+                      else images.splice(selectedQuestionImage, 1);
+                      updateQuestion({ questionImages: images });
+                      if (!images[selectedQuestionImage]) setQuestionImageSelection(undefined);
+                    }}
+                    onBusy={setRenderingTikz} onTikzFocus={element => trackFocus('q-tikz-' + activeQIdx, element)} />
+                </div>
 
               </div>
             </div>
