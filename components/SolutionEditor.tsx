@@ -920,7 +920,8 @@ export default function SolutionEditor({
         const review = normalizedList.map((question, index) => ({
           question, ...classifyImportedQuestion(rawQuestions[index]),
         }));
-        if (review.some(row => row.type !== studyImport.source.studySection.questionType)) {
+        if (review.some(row => row.type !== studyImport.source.studySection.questionType)
+            || imageBatchTargets(normalizedList).length > 0) {
           setImportDestinations({});
           setJsonReview(review);
           return;
