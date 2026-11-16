@@ -15,6 +15,7 @@ import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import SolutionEditor from './SolutionEditor';
 import ExamPaperEditor from './ExamPaperEditor';
+import type { saveStudyQuestionImport } from '../src/services/blogService';
 
 interface AdminBlogEditorProps {
     blog: BlogPost | null;
@@ -27,6 +28,7 @@ interface AdminBlogEditorProps {
     onBack: () => void;
     onSaved: (blog: BlogPost) => void;
     saveBlog: (blog: Partial<BlogPost>) => Promise<BlogPost | null>;
+    saveStudyQuestionImport?: typeof saveStudyQuestionImport;
     deleteBlog: (id: string) => Promise<boolean>;
     syncBlogs: (onProgress?: (pct: number) => void) => Promise<{ success: boolean; fileId?: string; blogCount: number }>;
 }
@@ -44,7 +46,7 @@ function storedEditorMode(content?: string): EditorMode {
     return 'markdown';
 }
 
-const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, matrixDraft, initialQuestionIndex, initialQuestionGroup, studyLessons, existingBlogs, onBack, onSaved, saveBlog, deleteBlog, syncBlogs }) => {
+const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection, matrixDraft, initialQuestionIndex, initialQuestionGroup, studyLessons, existingBlogs, onBack, onSaved, saveBlog, saveStudyQuestionImport, deleteBlog, syncBlogs }) => {
     const storedMode = useMemo(() => storedEditorMode(blog?.content), [blog?.content]);
     const [selectedMode, setEditorMode] = useState(storedMode);
     const opensSolutionDirectly = storedMode === 'solution' || !!matrixDraft || (!blog && !!initialSection?.lessonId);
@@ -381,6 +383,8 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                     studyDefaults={chapter || matrixDraft ? { title: lesson?.title || chapter?.name || matrixDraft?.topic || 'Bài tập Vật lý', firstQuestionNumber } : undefined}
                     studyGrade={chapter?.grade}
                     studyQuestionType={chapter && studyType ? studyType : undefined}
+                    studyImport={!blog && !matrixDraft && lesson && saveStudyQuestionImport
+                        ? { source: lesson, lessons: studyLessons, save: saveStudyQuestionImport } : undefined}
                     initialQuestionGroup={initialQuestionGroup}
                     savedOutcomes={savedOutcomes}
                     matrixDraft={matrixDraft}

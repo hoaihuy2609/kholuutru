@@ -6,8 +6,10 @@ import { createPortal } from "react-dom";
 import { SolutionQuestions } from './SolutionRenderer';
 import { supabase } from "../src/lib/supabase";
 import { useUIStore } from "../src/stores/useUIStore";
-import { SolutionStep as Step, SolutionStatement as Statement, StudyQuestionGroup, StudyQuestionType } from '../types';
-import { isStudyQuestionGroup, STUDY_QUESTION_GROUPS, supportsStudyGroups } from '../src/utils/studyLibrary';
+import { SolutionStep as Step, SolutionStatement as Statement, StudyLesson, StudyQuestionGroup, StudyQuestionType } from '../types';
+import { isStudyQuestionGroup, isStudyQuestionType, STUDY_QUESTION_GROUPS, STUDY_QUESTION_TYPES, supportsStudyGroups } from '../src/utils/studyLibrary';
+import { classifyImportedQuestion, matchingStudyImportLessons } from '../src/utils/studyJsonImport';
+import type { saveStudyQuestionImport } from '../src/services/blogService';
 import {
   ChevronLeft, ChevronRight, Save, Trash2, ArrowUp, ArrowDown,
   Plus, Eye, BookOpen, Layers, X, ToggleLeft, ToggleRight,
@@ -576,6 +578,7 @@ interface SolutionEditorProps {
   studyDefaults?: { title: string; firstQuestionNumber: number };
   studyGrade?: number;
   studyQuestionType?: StudyQuestionType;
+  studyImport?: { source: StudyLesson; lessons: StudyLesson[]; save: typeof saveStudyQuestionImport };
   initialQuestionIndex?: number;
   initialQuestionGroup?: StudyQuestionGroup;
   savedOutcomes?: string[];
@@ -584,7 +587,7 @@ interface SolutionEditorProps {
 
 export default function SolutionEditor({
   blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar,
-  studyPlacement, studyDefaults, studyGrade, studyQuestionType, initialQuestionIndex = 0, initialQuestionGroup, savedOutcomes = [], matrixDraft
+  studyPlacement, studyDefaults, studyGrade, studyQuestionType, studyImport, initialQuestionIndex = 0, initialQuestionGroup, savedOutcomes = [], matrixDraft
 }: SolutionEditorProps) {
   const splitImportedQuestions = !!saveBlog && !studyGrade;
   const [examName,   setExamName]   = useState("");
@@ -730,6 +733,28 @@ export default function SolutionEditor({
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [importingJson, setImportingJson] = useState(false);
+  const [jsonReview, setJsonReview] = useState<{
+    question: Question; type?: StudyQuestionType; issue?: string;
+  }[]>([]);
+  const [importDestinations, setImportDestinations] = useState<Partial<Record<StudyQuestionType, string>>>({});
+  const confirmingImport = useRef(false);
+  const importTargets = studyImport ? STUDY_QUESTION_TYPES.flatMap(option => {
+    const questions = jsonReview.filter(row => row.type === option.value).map(row => row.question);
+    if (!questions.length) return [];
+    const candidates = matchingStudyImportLessons(studyImport.lessons, studyImport.source, option.value);
+    return [{ ...option, questions, candidates,
+      lessonId: candidates.length === 1 ? candidates[0].id : importDestinations[option.value] }];
+  }) : [];
+  const incompleteImport = jsonReview.some(({ type, question }) => !type
+    || (type === 'trac_nghiem' && question.choices.some(choice => !choice.trim()))
+    || (type === 'dung_sai' && question.statements.some(statement => !statement.claim.trim())));
+  const ambiguousDestination = importTargets.some(target => target.candidates.length > 1 && !target.lessonId);
+
+  const closeJsonImport = () => {
+    setShowJsonModal(false);
+    setJsonReview([]);
+    setImportDestinations({});
+  };
 
   // Phân tích cú pháp JSON thời gian thực để báo trạng thái trên giao diện
   const parsedPreview = useMemo(() => {
@@ -750,6 +775,53 @@ export default function SolutionEditor({
       return { error: 'Cú pháp JSON chưa hợp lệ', count: 0, tikzCount: 0 };
     }
   }, [jsonInput]);
+
+  const renderImportedDiagrams = async (batch: Question[]) => {
+    let renderedCount = 0;
+    for (const question of batch) {
+      if (!question.tikzCode || question.imageSvg) continue;
+      try {
+        const result = await renderTikzToSvg(question.tikzCode);
+        question.imageSvg = result.svg;
+        if (!question.imageLayout || question.imageLayout === 'auto') question.imageLayout = result.recommendedLayout;
+        renderedCount++;
+      } catch (error) {
+        console.warn('Không thể render TikZ cho câu nhập từ JSON:', error);
+      }
+    }
+    return renderedCount;
+  };
+
+  const confirmJsonImport = async () => {
+    if (!studyImport || !importTargets.length || incompleteImport || ambiguousDestination || confirmingImport.current) return;
+    confirmingImport.current = true;
+    setImportingJson(true);
+    try {
+      const groups = importTargets.map(target => ({
+        type: target.value,
+        lessonId: target.lessonId,
+        questions: target.questions.map(question => ({
+          ...question, type: target.value,
+          groups: question.groups.length || !initialQuestionGroup ? question.groups : [initialQuestionGroup],
+        })),
+      }));
+      await renderImportedDiagrams(groups.flatMap(group => group.questions));
+      const saved = await studyImport.save(studyImport.source.id, groups.map(group => ({
+        ...group,
+        questions: group.questions.map(question => serializeQuestion(question, question.questionNo)),
+      })), { category: category || 'Lời giải', level, published: isPublished });
+      void syncBlogs?.();
+      closeJsonImport();
+      showToast(`Đã nhập ${jsonReview.length} câu vào ${saved.length} mục.`, 'success');
+      const current = saved.find(post => post.studySection?.lessonId === studyImport.source.id);
+      onSaved?.(current ?? saved[0]);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Chưa lưu được lô câu hỏi. Thử lại nhé.', 'error');
+    } finally {
+      confirmingImport.current = false;
+      setImportingJson(false);
+    }
+  };
 
   const handleImportJson = async () => {
     if (!jsonInput.trim()) {
@@ -791,6 +863,9 @@ export default function SolutionEditor({
       }
 
       const normalizedList: Question[] = rawQuestions.map((raw, index) => {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+          throw new Error(`Câu thứ ${index + 1} phải là một đối tượng JSON.`);
+        }
         const question = normalizeQuestion(raw);
         if ((raw.question_table !== undefined || raw.questionTable !== undefined) && !question.questionTable) {
           throw new Error(`Câu thứ ${index + 1}. Bảng cần ít nhất một tiêu đề cột và mỗi hàng phải có số ô văn bản bằng số tiêu đề.`);
@@ -808,24 +883,25 @@ export default function SolutionEditor({
         return question;
       });
 
-      // Tự động render TikZ sang SVG nếu có tikzCode mà chưa có imageSvg
-      let renderedCount = 0;
-      for (let i = 0; i < normalizedList.length; i++) {
-        const q = normalizedList[i];
-        if (q.tikzCode && !q.imageSvg) {
-          try {
-            const res = await renderTikzToSvg(q.tikzCode);
-            q.imageSvg = res.svg;
-            if (!q.imageLayout || q.imageLayout === 'auto') {
-              q.imageLayout = res.recommendedLayout;
-            }
-            renderedCount++;
-          } catch (tikzErr: any) {
-            console.warn(`Không thể render TikZ cho câu ${q.questionNo || i + 1}:`, tikzErr?.message);
-          }
+      if (studyImport) {
+        const review = normalizedList.map((question, index) => ({
+          question, ...classifyImportedQuestion(rawQuestions[index]),
+        }));
+        if (review.some(row => row.type !== studyImport.source.studySection.questionType)) {
+          setImportDestinations({});
+          setJsonReview(review);
+          return;
         }
+        review.forEach(({ question, type }) => { if (type) question.type = type; });
+      } else if (studyQuestionType && !matrixDraft
+          && rawQuestions.some(raw => {
+            const { type } = classifyImportedQuestion(raw);
+            return type && type !== studyQuestionType;
+          })) {
+        throw new Error('JSON có câu khác loại với bài đang sửa. Mở “Viết bài” trong danh sách câu để nhập và chia lô theo loại.');
       }
 
+      const renderedCount = await renderImportedDiagrams(normalizedList);
       if (importedExamName) {
         setExamName(importedExamName);
       }
@@ -1889,7 +1965,7 @@ export default function SolutionEditor({
             WebkitBackdropFilter: 'blur(5px)',
           }}
           onClick={() => {
-            if (!importingJson) setShowJsonModal(false);
+            if (!importingJson) closeJsonImport();
           }}
         >
           <div
@@ -1906,14 +1982,14 @@ export default function SolutionEditor({
                   <FileCode className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-[#1A1A1A]">Nhập đề thi từ JSON</h3>
-                  <p className="text-xs text-[#787774]">Thêm <code>learning_outcomes</code> vào từng câu để nạp cả yêu cầu cần đạt.</p>
+                  <h3 className="text-base font-bold text-[#1A1A1A]">{jsonReview.length ? 'Rà soát câu nhập từ JSON' : 'Nhập đề thi từ JSON'}</h3>
+                  {!jsonReview.length && <p className="text-xs text-[#787774]">Thêm <code>learning_outcomes</code> vào từng câu để nạp cả yêu cầu cần đạt.</p>}
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  if (!importingJson) setShowJsonModal(false);
+                  if (!importingJson) closeJsonImport();
                 }}
                 disabled={importingJson}
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-[#787774] hover:bg-[#F7F6F3] hover:text-[#1A1A1A] transition-colors disabled:opacity-50"
@@ -1924,6 +2000,78 @@ export default function SolutionEditor({
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-4">
+              {jsonReview.length ? (
+                <>
+                  <div className="space-y-2 rounded-lg bg-stone-50 p-3 text-sm">
+                    {importTargets.map(target => (
+                      <div key={target.value}>
+                        <p><strong>{target.questions.length} câu · {target.label}</strong>
+                          {' · '}{studyImport?.source.title}
+                          {target.candidates.length === 0 && ' (tạo bài cùng tên)'}</p>
+                        {target.candidates.length > 1 && (
+                          <select aria-label={'Bài đích cho ' + target.label} className="mt-1 w-full rounded border p-2"
+                            value={target.lessonId ?? ''} disabled={importingJson}
+                            onChange={event => setImportDestinations(previous => ({ ...previous, [target.value]: event.target.value }))}>
+                            <option value="">Có nhiều bài trùng tên. Chọn bài đích</option>
+                            {target.candidates.map((lesson, index) => (
+                              <option key={lesson.id} value={lesson.id}>{lesson.title} · Mục {index + 1}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    ))}
+                    {jsonReview.some(row => !row.type) && (
+                      <p className="font-semibold text-amber-900">{jsonReview.filter(row => !row.type).length} câu cần kiểm tra</p>
+                    )}
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" checked={isPublished} disabled={importingJson}
+                        onChange={event => setIsPublished(event.target.checked)} />
+                      Công khai cho học sinh
+                    </label>
+                  </div>
+                  <ol className="divide-y divide-stone-200">
+                    {jsonReview.map(({ question, type, issue }, index) => {
+                      const missingChoices = type === 'trac_nghiem' && question.choices.some(choice => !choice.trim());
+                      const missingClaims = type === 'dung_sai' && question.statements.some(statement => !statement.claim.trim());
+                      return (
+                        <li key={index} className="grid gap-2 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto]">
+                          <div className="min-w-0 break-words">
+                            <p className="font-semibold">{question.questionNo || 'Câu ' + (index + 1)}</p>
+                            <p className="line-clamp-3">{question.qText || question.qFormula}</p>
+                            {issue && question.choices.some(choice => choice.trim()) && (
+                              <details className="mt-1 text-xs text-stone-600">
+                                <summary className="cursor-pointer">Xem phương án trong JSON</summary>
+                                {question.choices.map((choice, index) => (
+                                  <p key={index}>{'ABCD'[index]}. {choice || '—'}</p>
+                                ))}
+                              </details>
+                            )}
+                            {issue && <p className="mt-1 text-xs text-amber-900">{issue}</p>}
+                            {(missingChoices || missingClaims) && <p className="mt-1 text-xs text-red-700">
+                              Quay lại JSON để bổ sung {missingChoices ? 'đủ bốn phương án' : 'đủ bốn mệnh đề'}.
+                            </p>}
+                            {type && ((type !== 'trac_nghiem' && question.choices.some(choice => choice.trim()))
+                              || (type !== 'dung_sai' && question.statements.some(statement => statement.claim.trim()))) && (
+                              <p className="mt-1 text-xs text-amber-900">Phương án hoặc mệnh đề không thuộc loại đã chọn sẽ bị bỏ khi lưu.</p>
+                            )}
+                          </div>
+                          <select aria-label={`Loại câu thứ ${index + 1}`} className="self-start rounded-lg border border-stone-200 bg-white p-2"
+                            value={type ?? ''} disabled={importingJson}
+                            onChange={event => {
+                              const value = event.target.value;
+                              setJsonReview(previous => previous.map((row, i) => i === index
+                                ? { ...row, type: isStudyQuestionType(value) ? value : undefined } : row));
+                            }}>
+                            <option value="">Cần kiểm tra</option>
+                            {STUDY_QUESTION_TYPES.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                          </select>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </>
+              ) : (
+              <>
               {/* Quick Actions Bar */}
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
@@ -1959,7 +2107,7 @@ export default function SolutionEditor({
                         Phát hiện {parsedPreview.count} câu hỏi {parsedPreview.tikzCount > 0 ? `(${parsedPreview.tikzCount} hình TikZ)` : ''}
                         {parsedPreview.count > 1 && splitImportedQuestions
                           ? ` — Sẽ tự động tách thành ${parsedPreview.count} Cards riêng biệt`
-                          : ' — Nạp vào cùng một bài'}
+                          : ''}
                       </span>
                     )}
                   </div>
@@ -1979,22 +2127,24 @@ export default function SolutionEditor({
                   spellCheck={false}
                 />
               </div>
+              </>
+              )}
             </div>
 
             {/* Modal Footer */}
             <div className="px-6 py-3.5 border-t border-[#E9E9E7] bg-[#FAFAFA] flex items-center justify-end gap-2.5 shrink-0">
               <button
                 type="button"
-                onClick={() => setShowJsonModal(false)}
+                onClick={() => jsonReview.length ? setJsonReview([]) : closeJsonImport()}
                 disabled={importingJson}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-[#57564F] hover:bg-[#EFEFED] border border-[#E9E9E7] transition-colors disabled:opacity-50 cursor-pointer"
               >
-                Đóng
+                {jsonReview.length ? 'Quay lại JSON' : 'Đóng'}
               </button>
               <button
                 type="button"
-                onClick={handleImportJson}
-                disabled={!jsonInput.trim() || importingJson}
+                onClick={jsonReview.length ? confirmJsonImport : handleImportJson}
+                disabled={!jsonInput.trim() || importingJson || (jsonReview.length > 0 && (incompleteImport || ambiguousDestination))}
                 className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
               >
                 {importingJson ? (
@@ -2005,9 +2155,9 @@ export default function SolutionEditor({
                 ) : (
                   <>
                     <Download className="w-3.5 h-3.5" />
-                    {parsedPreview && parsedPreview.count > 1 && splitImportedQuestions
+                    {jsonReview.length ? 'Xác nhận nhập' : parsedPreview && parsedPreview.count > 1 && splitImportedQuestions
                       ? `Tự động tách & Tạo ${parsedPreview.count} Cards`
-                      : 'Nạp vào trình soạn'}
+                      : studyImport ? 'Kiểm tra và nạp JSON' : 'Nạp vào trình soạn'}
                   </>
                 )}
               </button>

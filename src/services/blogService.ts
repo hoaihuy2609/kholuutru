@@ -3,8 +3,9 @@ import { dbGet, dbSet, dbSetBatch, dbUpdate } from '../lib/db';
 import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
 import { packBlogSnapshot, unpackBlogSnapshot } from './blogSnapshot';
 import { useBlogStore } from '../stores/useContentStore';
-import { BlogPost, StudyLesson, StudyLibrary, StudySection } from '../../types';
-import { getStudyChapter, isStudyQuestionType } from '../utils/studyLibrary';
+import { BlogPost, StudyLesson, StudyLibrary, StudyQuestionType, StudySection } from '../../types';
+import { getStudyChapter, isStudyQuestionType, nextStudyQuestionNumber } from '../utils/studyLibrary';
+import { matchingStudyImportLessons } from '../utils/studyJsonImport';
 
 const BLOG_LOCAL_KEY = 'physivault_blogs_local';
 const BLOG_READER_KEY = 'physivault_blogs_reader';
@@ -146,6 +147,51 @@ export const saveBlog = async (blog: Partial<BlogPost>): Promise<BlogPost | null
         return null;
     }
 };
+
+export async function saveStudyQuestionImport(
+    sourceId: string,
+    groups: { type: StudyQuestionType; lessonId?: string; questions: { type: StudyQuestionType; question_text: string }[] }[],
+    { category, level, published }: { category: string; level: number; published: boolean },
+): Promise<BlogPost[]> {
+    const saved: BlogPost[] = [];
+    await dbUpdate<BlogRecord[]>(BLOG_LOCAL_KEY, (records = []) => {
+        const lessons = records.filter(isStudyLesson);
+        const source = lessons.find(lesson => lesson.id === sourceId);
+        if (!source) throw new Error('Bài đang mở đã bị xóa. Hãy chọn lại bài để nhập.');
+        const blogs = records.filter(isBlogPost);
+        const newLessons: StudyLesson[] = [];
+        const now = new Date().toISOString();
+        for (const { type, lessonId, questions } of groups) {
+            if (!questions.length || questions.some(question => question.type !== type)) {
+                throw new Error('Có câu hỏi không khớp với loại của bài đích.');
+            }
+            const candidates = matchingStudyImportLessons(lessons, source, type);
+            let lesson = lessonId ? candidates.find(item => item.id === lessonId) : candidates[0];
+            if ((lessonId && !lesson) || (!lessonId && candidates.length > 1)) {
+                throw new Error('Danh sách bài đích đã thay đổi. Mở lại trình soạn để chọn bài đích.');
+            }
+            if (!lesson) {
+                lesson = { ...source, id: crypto.randomUUID(), studySection: { ...source.studySection, questionType: type } };
+                newLessons.push(lesson);
+            }
+            const studySection = { ...lesson.studySection, lessonId: lesson.id };
+            const firstNumber = nextStudyQuestionNumber(blogs, studySection);
+            const numbered = questions.map((question, index) => ({
+                ...question, question_no: 'Câu ' + (firstNumber + index),
+            }));
+            saved.push({
+                id: crypto.randomUUID(), title: lesson.title, summary: numbered[0].question_text.slice(0, 150),
+                content: JSON.stringify({ type: 'physics_solution', data: {
+                    exam_name: lesson.title, ...numbered[0], questions: numbered,
+                } }),
+                cover_image: '', category, tags: [], is_published: published,
+                grade: lesson.grade, level, studySection, created_at: now, updated_at: now,
+            });
+        }
+        return [...saved, ...records, ...newLessons];
+    });
+    return saved;
+}
 
 export const saveStudyLesson = async (section: StudySection, title: string, id?: string): Promise<StudyLesson | null> => {
     const chapter = getStudyChapter(section.chapterId);

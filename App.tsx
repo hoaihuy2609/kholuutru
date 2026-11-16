@@ -530,6 +530,7 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
         <AdminBlogEditor blog={activeAdminBlog} initialSection={createSection} initialQuestionIndex={editQuestionIndex}
           initialQuestionGroup={createSection && supportsStudyGroups(createSection.questionType) && isStudyQuestionGroup(questionGroup) ? questionGroup : undefined}
           studyLessons={studyLessons} existingBlogs={allBlogs} saveBlog={cloud.saveBlog} deleteBlog={cloud.deleteBlog}
+          saveStudyQuestionImport={cloud.saveStudyQuestionImport}
           syncBlogs={cloud.syncBlogs} onBack={back} onSaved={saved} />
       </Suspense></ErrorBoundary>
     );

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { xorObfuscate } from '../lib/crypto';
 import { packBlogSnapshot, unpackBlogSnapshot } from '../services/blogSnapshot';
 import { useBlogStore } from '../stores/useContentStore';
+import { classifyImportedQuestion } from '../utils/studyJsonImport';
 
 const mocks = vi.hoisted(() => ({
     records: [] as { id: string }[],
@@ -33,7 +34,7 @@ vi.mock('../lib/telegram', () => ({
     fetchViaCloudflareProxy: mocks.proxyDownload,
 }));
 
-import { deleteEmptyStudyLesson, getStudyLibrary, resumeBlogSync, syncBlogs } from '../services/blogService';
+import { deleteEmptyStudyLesson, getStudyLibrary, resumeBlogSync, saveStudyQuestionImport, syncBlogs } from '../services/blogService';
 
 const telegramResponse = (id: string) => Response.json({ result: { document: { file_id: id } } });
 
@@ -74,6 +75,38 @@ describe('blog snapshot sync', () => {
         expect(await deleteEmptyStudyLesson(emptyLesson.id)).toBe('deleted');
         expect(await deleteEmptyStudyLesson('missing')).toBe('failed');
         expect(mocks.records).toEqual([lesson, draft]);
+    });
+
+    it('tách lô theo loại, tạo bài cùng tên rồi dùng lại và đánh số tiếp khi nhập thêm', async () => {
+        const multipleChoice = { type: 'trac_nghiem', choices: ['A', 'B', 'C', 'D'], question_text: 'Câu trắc nghiệm' } as const;
+        const shortAnswer = { type: 'tu_luan', question_text: 'Câu trả lời ngắn' } as const;
+        expect(classifyImportedQuestion({ ...multipleChoice, choices: [...multipleChoice.choices] }).type).toBe('trac_nghiem');
+        expect(classifyImportedQuestion(shortAnswer).type).toBe('tu_luan');
+        expect(classifyImportedQuestion({ ...shortAnswer, choices: ['A', 'B', 'C', 'D'] }).type).toBeUndefined();
+        expect(classifyImportedQuestion({ ...multipleChoice, choices: ['A', 'B'] }).type).toBeUndefined();
+
+        const source = { id: 'source', kind: 'study_lesson', title: 'Bài 4', grade: 10,
+            studySection: { chapterId: 'g10-ch4', questionType: 'trac_nghiem' }, is_published: false };
+        mocks.records = [source];
+        const options = { category: 'Lời giải', level: 2, published: true };
+        const groups = [
+            { type: 'trac_nghiem', questions: [multipleChoice] },
+            { type: 'tu_luan', questions: [shortAnswer] },
+        ] as const;
+        const [mc, short] = await saveStudyQuestionImport(source.id,
+            groups.map(group => ({ ...group, questions: [...group.questions] })), options);
+        expect(mc.studySection?.lessonId).toBe(source.id);
+        expect(short.studySection).toMatchObject({ chapterId: 'g10-ch4', questionType: 'tu_luan' });
+        expect(short.studySection?.lessonId).not.toBe(source.id);
+        const [next] = await saveStudyQuestionImport(source.id, [{ type: 'tu_luan', questions: [shortAnswer] }], options);
+        expect(next.studySection?.lessonId).toBe(short.studySection?.lessonId);
+        expect(JSON.parse(next.content).data.questions[0].question_no).toBe('Câu 2');
+        expect((await getStudyLibrary(true)).lessons).toHaveLength(2);
+        await expect(saveStudyQuestionImport(source.id, [
+            { type: 'trac_nghiem', questions: [multipleChoice] },
+            { type: 'tu_luan', lessonId: 'missing', questions: [shortAnswer] },
+        ], options)).rejects.toThrow();
+        expect((await getStudyLibrary(true)).blogs).toHaveLength(3);
     });
 
     it('gộp lần lưu gần nhau và gửi lượt tiếp theo nếu có thay đổi khi đang tải', async () => {
