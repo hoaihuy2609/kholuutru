@@ -10,6 +10,7 @@ import { SolutionStep as Step, SolutionStatement as Statement, StudyLesson, Stud
 import { isStudyQuestionGroup, isStudyQuestionType, STUDY_QUESTION_GROUPS, STUDY_QUESTION_TYPES, supportsStudyGroups } from '../src/utils/studyLibrary';
 import { classifyImportedQuestion, matchingStudyImportLessons } from '../src/utils/studyJsonImport';
 import type { saveStudyQuestionImport } from '../src/services/blogService';
+import type { BlogImageUpload } from '../src/utils/blogImageUploads';
 import {
   ChevronLeft, ChevronRight, Save, Trash2, ArrowUp, ArrowDown,
   Plus, Eye, BookOpen, Layers, X, ToggleLeft, ToggleRight,
@@ -617,6 +618,27 @@ function applyStudyImageBatch(questions: Question[], entries: { target: StudyIma
   });
 }
 
+function stageQuestionImages(questions: Question[]) {
+  const imageUploads: BlogImageUpload[] = [];
+  const stage = (file: File) => {
+    const token = 'pv-local-image:' + crypto.randomUUID();
+    imageUploads.push({ token, file });
+    return token;
+  };
+  const batch = questions.map(question => {
+    const next = { ...question };
+    if (question.imageFile) {
+      next.imageTelegramFileId = stage(question.imageFile);
+      next.imageFile = undefined;
+    }
+    for (const field of studyImageFields) {
+      next[field] = question[field]?.map(({ file, ...image }) => file ? { ...image, file_id: stage(file) } : image);
+    }
+    return next;
+  });
+  return { batch, imageUploads };
+}
+
 export default function SolutionEditor({
   blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar,
   studyPlacement, studyDefaults, studyGrade, studyQuestionType, studyImport, initialQuestionIndex = 0, initialQuestionGroup, savedOutcomes = [], matrixDraft
@@ -857,14 +879,13 @@ export default function SolutionEditor({
         })),
       }));
       await renderImportedDiagrams(groups.flatMap(group => group.questions));
-      const batches = [];
-      for (const group of groups) {
-        const uploaded = await uploadStudyImages(group.questions);
-        batches.push({ ...group, questions: uploaded.map(question => serializeQuestion(question, question.questionNo)) });
-      }
+      const batches = groups.map(group => {
+        const { batch, imageUploads } = stageQuestionImages(group.questions);
+        return { ...group, imageUploads, questions: batch.map(question => serializeQuestion(question, question.questionNo)) };
+      });
       const saved = await studyImport.save(studyImport.source.id, batches,
         { category: category || 'Lời giải', level, published: isPublished });
-      void syncBlogs?.();
+      if (batches.some(group => !group.imageUploads.length)) void syncBlogs?.();
       closeJsonImport();
       showToast(`Đã nhập ${jsonReview.length} câu vào ${saved.length} mục.`, 'success');
       const current = saved.find(post => post.studySection?.lessonId === studyImport.source.id);
@@ -1132,7 +1153,7 @@ export default function SolutionEditor({
     return processed;
   };
 
-  const persistQuestions = async (batch: Question[], source: string, targetGrade: number, published: boolean) => {
+  const uploadQuestionsImmediately = async (batch: Question[]) => {
       // Ảnh tải lên cần có file_id trước khi lưu. SVG vẫn có thể dùng bản nhúng.
       setUploadingSaveImages(batch.some(q => (q.imageFile ? !uploadedImageIds.current.has(q.imageFile) : q.imageSvg && !q.imageTelegramFileId)
         || studyImageFields.some(field => q[field]?.some(image => image.file && !uploadedImageIds.current.has(image.file)))));
@@ -1162,11 +1183,16 @@ export default function SolutionEditor({
         return { ...q, imageTelegramFileId: tId };
       }));
       setUploadingSaveImages(false);
-      const processedQuestions = uploads.map((upload, index) => {
+      return uploads.map((upload, index) => {
         if (upload.status === 'fulfilled') return upload.value;
         const reason = upload.reason instanceof Error ? upload.reason.message : 'Không tải được ảnh. Hãy thử lưu lại.';
         throw new Error(`Ảnh của ${questionNumber(batch[index], index)}. ${reason}`);
       });
+  };
+
+  const persistQuestions = async (batch: Question[], source: string, targetGrade: number, published: boolean) => {
+      const { batch: processedQuestions, imageUploads } = saveBlog
+        ? stageQuestionImages(batch) : { batch: await uploadQuestionsImmediately(batch), imageUploads: [] };
 
       // Serialize mỗi câu hỏi tùy theo type
       const serializedQuestions = processedQuestions.map((q, index) =>
@@ -1195,6 +1221,7 @@ export default function SolutionEditor({
         title: titleStr,
         summary: batch[0].qText.substring(0, 150) || 'Hướng dẫn giải chi tiết bằng LaTeX.',
         content: JSON.stringify(solutionData),
+        imageUploads,
         category: category || 'Lời giải',
         is_published: published,
         tags: [],
@@ -1205,8 +1232,9 @@ export default function SolutionEditor({
       if (saveBlog) {
         const saved = await saveBlog(payload);
         if (saved) {
-          void syncBlogs?.();
-          showToast(published ? 'Đã lưu bài viết!' : 'Đã lưu bản nháp!', 'success');
+          if (!imageUploads.length) void syncBlogs?.();
+          showToast(imageUploads.length ? 'Đã lưu trên máy. Ảnh đang được tải ở nền.'
+            : published ? 'Đã lưu bài viết!' : 'Đã lưu bản nháp!', 'success');
           if (onSaved) onSaved(saved);
         } else throw new Error("Lưu thất bại.");
       } else {

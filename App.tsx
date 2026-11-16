@@ -14,7 +14,7 @@ import { useDataStore } from './src/stores/useDataStore';
 import { useExamStore, useBlogStore } from './src/stores/useContentStore';
 import { useShallow } from 'zustand/react/shallow';
 import { syncPendingOnStartup } from './src/services/examService';
-import { getStudyLibrary, resumeBlogSync, syncBlogs } from './src/services/blogService';
+import { getStudyLibrary, resumeBlogImageUploads, resumeBlogSync, syncBlogs } from './src/services/blogService';
 import { syncServerTime } from './src/lib/serverTime';
 import { isStudyQuestionGroup, studySectionParams, supportsStudyGroups } from './src/utils/studyLibrary';
 
@@ -56,7 +56,16 @@ function AppDataSync({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
   const setIsActivated = useDataStore(state => state.setIsActivated);
   const setStudentGradeValue = useDataStore(state => state.setStudentGradeValue);
   const isAdmin = useUIStore(state => state.isAdmin);
-  useEffect(() => { if (isAdmin) resumeBlogSync(); }, [isAdmin]);
+  useEffect(() => {
+    if (!isAdmin) return;
+    const resume = () => {
+      resumeBlogSync();
+      void resumeBlogImageUploads();
+    };
+    resume();
+    window.addEventListener('online', resume);
+    return () => window.removeEventListener('online', resume);
+  }, [isAdmin]);
   const setKicked = useUIStore(state => state.setKicked);
   const setNotificationUnreadCount = useUIStore(state => state.setNotificationUnreadCount);
   const { getFetchedNotificationIds, getNotifications, verifyAccess } = cloud;
@@ -585,14 +594,20 @@ function BlogRoutes({ cloud }: { cloud: ReturnType<typeof useCloudStorage> }) {
 // ──────────────────────────────────────────────────────────────────
 function BlogSyncStatus() {
   const status = useBlogStore(state => state.syncStatus);
-  if (status === 'idle') return null;
+  const images = useBlogStore(state => state.imageSyncStatus);
+  if (status === 'idle' && images === 'idle') return null;
   return (
     <div role="status" className="flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700 shadow-sm">
-      <span>{status === 'syncing' ? 'Kho câu hỏi · Đã lưu trên máy, đang đồng bộ'
+      <span>{images === 'uploading' ? 'Kho câu hỏi · Đã lưu trên máy, đang tải ảnh'
+        : images === 'failed' ? 'Kho câu hỏi · Ảnh chưa tải lên'
+        : status === 'syncing' ? 'Kho câu hỏi · Đã lưu trên máy, đang đồng bộ'
         : status === 'synced' ? 'Kho câu hỏi · Đã đồng bộ'
         : 'Kho câu hỏi · Đồng bộ chưa thành công'}</span>
-      {status === 'failed' && (
-        <button type="button" onClick={() => void syncBlogs()} className="font-semibold text-amber-900 underline">Thử lại</button>
+      {(images === 'failed' || (images === 'idle' && status === 'failed')) && (
+        <button type="button" onClick={() => {
+          if (images === 'failed') void resumeBlogImageUploads();
+          else void syncBlogs();
+        }} className="font-semibold text-amber-900 underline">Thử lại</button>
       )}
     </div>
   );

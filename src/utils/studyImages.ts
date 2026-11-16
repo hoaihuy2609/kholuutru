@@ -1,5 +1,6 @@
 import { CLOUDFLARE_PROXY_URL } from '../lib/telegram';
 import { normalizeQuestionImageWidth } from './questionImage';
+import { getBlogImageReference } from './blogImageUploads';
 
 export interface StudyImage {
     key?: string;
@@ -61,9 +62,10 @@ export function readStudyImages(value: unknown, keys?: unknown): StudyImage[] {
 }
 
 export function studyImageSrc(image: StudyImage) {
+    const { localUrl, remoteId } = getBlogImageReference(image.file_id ?? '');
     return image.svg ? 'data:image/svg+xml,' + encodeURIComponent(image.svg)
-        : image.url || (image.file_id && CLOUDFLARE_PROXY_URL
-        ? CLOUDFLARE_PROXY_URL + '/getFile/' + encodeURIComponent(image.file_id) : '');
+        : image.url || localUrl || (remoteId && CLOUDFLARE_PROXY_URL
+        ? CLOUDFLARE_PROXY_URL + '/getFile/' + encodeURIComponent(remoteId) : '');
 }
 
 export function layoutStudySolutionImages<T extends EditableStudyImage>(text: string, images: T[]) {

@@ -16,6 +16,7 @@ import 'katex/dist/katex.min.css';
 import SolutionEditor from './SolutionEditor';
 import ExamPaperEditor from './ExamPaperEditor';
 import type { saveStudyQuestionImport } from '../src/services/blogService';
+import type { BlogSaveInput } from '../src/utils/blogImageUploads';
 
 interface AdminBlogEditorProps {
     blog: BlogPost | null;
@@ -27,7 +28,7 @@ interface AdminBlogEditorProps {
     existingBlogs: BlogPost[];
     onBack: () => void;
     onSaved: (blog: BlogPost) => void;
-    saveBlog: (blog: Partial<BlogPost>) => Promise<BlogPost | null>;
+    saveBlog: (blog: BlogSaveInput) => Promise<BlogPost | null>;
     saveStudyQuestionImport?: typeof saveStudyQuestionImport;
     deleteBlog: (id: string) => Promise<boolean>;
     syncBlogs: (onProgress?: (pct: number) => void) => Promise<{ success: boolean; fileId?: string; blogCount: number }>;
@@ -125,7 +126,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
         handleChange('tags', val.split(',').map(t => t.trim()).filter(t => t));
     };
 
-    const savePlacedBlog = (payload: Partial<BlogPost>) => {
+    const savePlacedBlog = (payload: BlogSaveInput) => {
         if (matrixDraft && !chapter) {
             showToast('Chọn chương trong Góc Học Tập để lưu câu hỏi.', 'error');
             return Promise.resolve(null);

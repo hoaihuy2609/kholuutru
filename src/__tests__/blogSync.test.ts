@@ -3,12 +3,14 @@ import { xorObfuscate } from '../lib/crypto';
 import { packBlogSnapshot, unpackBlogSnapshot } from '../services/blogSnapshot';
 import { useBlogStore } from '../stores/useContentStore';
 import { classifyImportedQuestion } from '../utils/studyJsonImport';
+import { getBlogImageReference } from '../utils/blogImageUploads';
 
 const mocks = vi.hoisted(() => ({
     records: [] as { id: string }[],
     rpc: vi.fn(),
     proxyDownload: vi.fn(),
     index: vi.fn(),
+    uploadImage: vi.fn(),
     cache: new Map<string, unknown>(),
 }));
 
@@ -33,8 +35,9 @@ vi.mock('../lib/telegram', () => ({
     ADMIN_AUTH_HEADER: '',
     fetchViaCloudflareProxy: mocks.proxyDownload,
 }));
+vi.mock('../services/tikzService', () => ({ uploadQuestionImageToTelegram: mocks.uploadImage }));
 
-import { deleteEmptyStudyLesson, getStudyLibrary, resumeBlogSync, saveStudyQuestionImport, syncBlogs } from '../services/blogService';
+import { deleteEmptyStudyLesson, getStudyLibrary, resumeBlogImageUploads, resumeBlogSync, saveBlog, saveStudyQuestionImport, syncBlogs } from '../services/blogService';
 
 const telegramResponse = (id: string) => Response.json({ result: { document: { file_id: id } } });
 
@@ -58,7 +61,8 @@ describe('blog snapshot sync', () => {
         mocks.rpc.mockReset().mockResolvedValue({ error: null });
         mocks.index.mockReset();
         mocks.proxyDownload.mockReset();
-        useBlogStore.setState({ syncStatus: 'idle' });
+        mocks.uploadImage.mockReset();
+        useBlogStore.setState({ syncStatus: 'idle', imageSyncStatus: 'idle' });
     });
 
     afterEach(() => {
@@ -76,6 +80,52 @@ describe('blog snapshot sync', () => {
         expect(await deleteEmptyStudyLesson('missing')).toBe('failed');
         expect(mocks.records).toEqual([lesson, draft]);
     });
+
+    it('lưu trước khi ảnh tải xong và chỉ phát hành nội dung mới sau khi có mã Telegram', async () => {
+        mocks.records = [];
+        send.mockImplementation(async () => telegramResponse('snapshot'));
+        let finishUpload!: (id: string) => void;
+        mocks.uploadImage.mockImplementationOnce(() => new Promise<string>(resolve => { finishUpload = resolve; }));
+        const old = await saveBlog({ title: 'Bản cũ', content: 'Nội dung cũ', is_published: true });
+        const token = 'pv-local-image:force-test';
+        const content = JSON.stringify({ file_id: token });
+        const file = new File(['png'], 'force.png', { type: 'image/png' });
+        const saved = await saveBlog({ id: old!.id, title: 'Bản mới', content, imageUploads: [{ token, file }] });
+        expect(saved?.title).toBe('Bản mới');
+        expect(getBlogImageReference(token).localUrl).toMatch(/^blob:/);
+        expect((await getStudyLibrary(true)).blogs[0].content).toBe(content);
+        await syncBlogs();
+        const first = await unpackBlogSnapshot(new Uint8Array(await send.mock.calls[0][0].get('document').arrayBuffer()));
+        expect(first).toEqual([old]);
+        const latest = await saveBlog({ id: old!.id, title: 'Sửa tiếp khi chờ ảnh', content });
+        expect(latest?.content).toBe(content);
+        finishUpload('telegram-force');
+        await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(2), { timeout: 5000 });
+        await vi.waitFor(() => expect(useBlogStore.getState().syncStatus).toBe('synced'), { timeout: 5000 });
+        const published = await unpackBlogSnapshot(new Uint8Array(await send.mock.calls.at(-1)![0].get('document').arrayBuffer()));
+        expect(published).toEqual([expect.objectContaining({
+            title: 'Sửa tiếp khi chờ ảnh', content: JSON.stringify({ file_id: 'telegram-force' }),
+        })]);
+        expect(JSON.stringify(published)).not.toMatch(/pendingImages|uploadedImages|pv-local-image/);
+        expect(await saveBlog({ id: old!.id, content })).toMatchObject({ content: JSON.stringify({ file_id: 'telegram-force' }) });
+        expect(mocks.uploadImage).toHaveBeenCalledTimes(1);
+    }, 10000);
+
+    it('giữ file khi lỗi và tiếp tục tải ở lần thử lại', async () => {
+        mocks.records = [];
+        send.mockResolvedValue(telegramResponse('snapshot'));
+        mocks.uploadImage.mockResolvedValueOnce(null).mockResolvedValueOnce('telegram-retry');
+        const token = 'pv-local-image:retry-test';
+        const file = new File(['jpeg'], 'retry.jpg', { type: 'image/jpeg' });
+        await saveBlog({ title: 'Câu mới', content: JSON.stringify({ file_id: token }), imageUploads: [{ token, file }] });
+        await vi.waitFor(() => expect(useBlogStore.getState().imageSyncStatus).toBe('failed'));
+        expect((await getStudyLibrary(true)).blogs[0].content).toContain(token);
+        expect(send).not.toHaveBeenCalled();
+        await resumeBlogImageUploads();
+        expect(mocks.uploadImage.mock.calls).toEqual([[file], [file]]);
+        expect((await getStudyLibrary(true)).blogs[0].content).toContain('telegram-retry');
+        await vi.waitFor(() => expect(useBlogStore.getState().syncStatus).toBe('synced'), { timeout: 5000 });
+    }, 10000);
 
     it('tách lô theo loại, tạo bài cùng tên rồi dùng lại và đánh số tiếp khi nhập thêm', async () => {
         const multipleChoice = { type: 'trac_nghiem', choices: ['A', 'B', 'C', 'D'], question_text: 'Câu trắc nghiệm' } as const;

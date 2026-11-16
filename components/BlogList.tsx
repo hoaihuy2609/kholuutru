@@ -10,7 +10,6 @@ import { SelectedQuestionItem } from '../src/services/examLatexService';
 import { readStudyImages, studyImageParts, studyImageSrc, type StudyImage } from '../src/utils/studyImages';
 import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
 import QuestionTable from './QuestionTable';
-import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
@@ -225,8 +224,7 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
         return () => observer.disconnect();
     }, [expanded]);
 
-    const imageSrc = question?.imageUrl || (question?.imageTelegramFileId
-        ? CLOUDFLARE_PROXY_URL + '/getFile/' + question.imageTelegramFileId : '');
+    const imageSrc = studyImageSrc({ url: question?.imageUrl, file_id: question?.imageTelegramFileId });
     const hasImage = !!(question?.imageSvg || imageSrc);
     const text = question?.questionText || '';
     const formula = question?.questionLatex || '';

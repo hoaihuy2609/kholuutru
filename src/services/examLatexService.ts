@@ -2,7 +2,6 @@
 // Engine sinh mã LaTeX chuẩn TeX/Overleaf & xử lý xuất bản đề thi
 import renderMathInElement from 'katex/contrib/auto-render';
 import katexStyles from 'katex/dist/katex.min.css?inline';
-import { CLOUDFLARE_PROXY_URL } from '../lib/telegram';
 import { normalizeQuestionImageWidth } from '../utils/questionImage';
 import type { QuestionTableData } from '../utils/questionTable';
 import { layoutStudySolutionImages, studyImageParts, studyImageSrc, type StudyImage } from '../utils/studyImages';
@@ -507,9 +506,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
   const primaryColor = config.isCustomColor ? config.customColor : config.themeColor;
 
   const renderQuestionImageHtml = (q: SelectedQuestionItem, wrap: boolean) => {
-    const imageUrl = q.imageSvg ? 'data:image/svg+xml,' + encodeURIComponent(q.imageSvg)
-      : q.imageUrl || (CLOUDFLARE_PROXY_URL && q.imageTelegramFileId
-        ? CLOUDFLARE_PROXY_URL + '/getFile/' + encodeURIComponent(q.imageTelegramFileId) : '');
+    const imageUrl = studyImageSrc({ svg: q.imageSvg, url: q.imageUrl, file_id: q.imageTelegramFileId });
     if (!imageUrl) return '';
     const width = normalizeQuestionImageWidth(q.imageWidth);
     if (wrap) {

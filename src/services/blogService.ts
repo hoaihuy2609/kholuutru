@@ -1,21 +1,57 @@
 import { supabase } from '../lib/supabase';
-import { dbGet, dbSet, dbSetBatch, dbUpdate } from '../lib/db';
+import { dbGet, dbSetBatch, dbUpdate } from '../lib/db';
 import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
 import { packBlogSnapshot, unpackBlogSnapshot } from './blogSnapshot';
 import { useBlogStore } from '../stores/useContentStore';
 import { BlogPost, StudyLesson, StudyLibrary, StudyQuestionType, StudySection } from '../../types';
 import { getStudyChapter, isStudyQuestionType, nextStudyQuestionNumber } from '../utils/studyLibrary';
 import { matchingStudyImportLessons } from '../utils/studyJsonImport';
+import { rememberBlogImages, replaceBlogImageTokens, type BlogImageUpload, type BlogSaveInput } from '../utils/blogImageUploads';
+import { uploadQuestionImageToTelegram } from './tikzService';
 
 const BLOG_LOCAL_KEY = 'physivault_blogs_local';
 const BLOG_READER_KEY = 'physivault_blogs_reader';
 const BLOG_READER_FILE_ID = 'physivault_blogs_reader_file_id';
 const BLOG_PENDING_SYNC = 'pv_blog_pending_sync';
-type BlogRecord = BlogPost | StudyLesson;
+type LocalBlog = BlogPost & {
+    pendingImages?: { files: BlogImageUpload[]; previous?: BlogPost };
+    uploadedImages?: Record<string, string>;
+};
+type BlogRecord = LocalBlog | StudyLesson;
 
 const isStudyLesson = (record: BlogRecord): record is StudyLesson =>
     'kind' in record && record.kind === 'study_lesson';
-const isBlogPost = (record: BlogRecord): record is BlogPost => !isStudyLesson(record);
+const isBlogPost = (record: BlogRecord): record is LocalBlog => !isStudyLesson(record);
+
+function plainBlog({ pendingImages, uploadedImages, ...blog }: LocalBlog): BlogPost {
+    return blog;
+}
+
+function publishableRecords(records: BlogRecord[]): (BlogPost | StudyLesson)[] {
+    return records.flatMap<BlogPost | StudyLesson>(record => {
+        if (isStudyLesson(record)) return [record];
+        const blog = record.pendingImages ? record.pendingImages.previous : plainBlog(record);
+        return blog ? [blog] : [];
+    });
+}
+
+function applyLocalImages(blog: BlogPost, existing?: LocalBlog, additional: BlogImageUpload[] = []): LocalBlog {
+    const uploaded = existing?.uploadedImages ?? {};
+    const content = replaceBlogImageTokens(blog.content, uploaded);
+    const files = [...(existing?.pendingImages?.files ?? []), ...additional]
+        .filter(({ token }) => content.includes(JSON.stringify(token)));
+    const previous = existing?.pendingImages ? existing.pendingImages.previous : existing && plainBlog(existing);
+    return { ...blog, content, uploadedImages: existing?.uploadedImages,
+        pendingImages: files.length ? { files, previous } : undefined };
+}
+
+function cacheLocalBlogImages(blogs: LocalBlog[]) {
+    for (const blog of blogs) {
+        if (blog.pendingImages || blog.uploadedImages) {
+            rememberBlogImages(blog.pendingImages?.files ?? [], blog.uploadedImages);
+        }
+    }
+}
 
 // ── Cloudflare Worker URL (dùng chung Worker với vault-index) ──
 const VAULT_WORKER_URL = import.meta.env.VITE_VAULT_WORKER_URL || '';
@@ -66,7 +102,7 @@ const getBlogRecords = async (isAdmin: boolean): Promise<BlogRecord[]> => {
         const cached: BlogRecord[] | undefined = await dbGet(cacheKey);
         if (cached || isAdmin) return cached ?? [];
         const oldCache: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
-        return oldCache.filter(record => isBlogPost(record) && record.is_published);
+        return publishableRecords(oldCache).filter(record => isBlogPost(record) && record.is_published);
     };
     try {
         const local: BlogRecord[] | undefined = await dbGet(cacheKey);
@@ -104,8 +140,10 @@ async function fetchBlogRecords(fileId: string): Promise<BlogRecord[]> {
 
 export const getStudyLibrary = async (isAdmin: boolean): Promise<StudyLibrary> => {
     const records = await getBlogRecords(isAdmin);
+    const blogs = records.filter(isBlogPost);
+    if (isAdmin) cacheLocalBlogImages(blogs);
     return {
-        blogs: records.filter(isBlogPost).filter(blog => isAdmin || blog.is_published),
+        blogs: blogs.filter(blog => isAdmin || blog.is_published).map(plainBlog),
         lessons: records.filter(isStudyLesson),
     };
 };
@@ -113,9 +151,9 @@ export const getStudyLibrary = async (isAdmin: boolean): Promise<StudyLibrary> =
 export const getBlogs = async (isAdmin: boolean): Promise<BlogPost[]> =>
     (await getStudyLibrary(isAdmin)).blogs;
 
-export const saveBlog = async (blog: Partial<BlogPost>): Promise<BlogPost | null> => {
+export const saveBlog = async ({ imageUploads, ...blog }: BlogSaveInput): Promise<BlogPost | null> => {
     try {
-        let saved: BlogPost | null = null;
+        let saved: LocalBlog | null = null;
         await dbUpdate<BlogRecord[]>(BLOG_LOCAL_KEY, (records = []) => {
             const section = blog.studySection;
             if (section?.lessonId && !records.some(record => isStudyLesson(record)
@@ -126,11 +164,11 @@ export const saveBlog = async (blog: Partial<BlogPost>): Promise<BlogPost | null
             if (blog.id) {
                 return records.map(record => {
                     if (!isBlogPost(record) || record.id !== blog.id) return record;
-                    saved = { ...record, ...blog, updated_at: now };
+                    saved = applyLocalImages({ ...plainBlog(record), ...blog, updated_at: now }, record, imageUploads);
                     return saved;
                 });
             }
-            saved = {
+            saved = applyLocalImages({
                 id: crypto.randomUUID ? crypto.randomUUID() : 'blog_' + Date.now(),
                 title: blog.title || '', summary: blog.summary || '', content: blog.content || '',
                 cover_image: blog.cover_image || '', category: blog.category || '',
@@ -138,10 +176,10 @@ export const saveBlog = async (blog: Partial<BlogPost>): Promise<BlogPost | null
                 grade: blog.grade ?? 0, level: blog.level ?? 0,
                 ...(section ? { studySection: section } : {}),
                 created_at: now, updated_at: now,
-            };
+            }, undefined, imageUploads);
             return [saved, ...records];
         });
-        return saved;
+        return finishLocalSave(saved ? [saved] : [])[0] ?? null;
     } catch (error) {
         console.error('[Blog] Lỗi saveBlog:', error);
         return null;
@@ -150,10 +188,11 @@ export const saveBlog = async (blog: Partial<BlogPost>): Promise<BlogPost | null
 
 export async function saveStudyQuestionImport(
     sourceId: string,
-    groups: { type: StudyQuestionType; lessonId?: string; questions: { type: StudyQuestionType; question_text: string }[] }[],
+    groups: { type: StudyQuestionType; lessonId?: string; questions: { type: StudyQuestionType; question_text: string }[];
+        imageUploads?: BlogImageUpload[] }[],
     { category, level, published }: { category: string; level: number; published: boolean },
 ): Promise<BlogPost[]> {
-    const saved: BlogPost[] = [];
+    const saved: LocalBlog[] = [];
     await dbUpdate<BlogRecord[]>(BLOG_LOCAL_KEY, (records = []) => {
         const lessons = records.filter(isStudyLesson);
         const source = lessons.find(lesson => lesson.id === sourceId);
@@ -161,7 +200,7 @@ export async function saveStudyQuestionImport(
         const blogs = records.filter(isBlogPost);
         const newLessons: StudyLesson[] = [];
         const now = new Date().toISOString();
-        for (const { type, lessonId, questions } of groups) {
+        for (const { type, lessonId, questions, imageUploads } of groups) {
             if (!questions.length || questions.some(question => question.type !== type)) {
                 throw new Error('Có câu hỏi không khớp với loại của bài đích.');
             }
@@ -179,18 +218,18 @@ export async function saveStudyQuestionImport(
             const numbered = questions.map((question, index) => ({
                 ...question, question_no: 'Câu ' + (firstNumber + index),
             }));
-            saved.push({
+            saved.push(applyLocalImages({
                 id: crypto.randomUUID(), title: lesson.title, summary: numbered[0].question_text.slice(0, 150),
                 content: JSON.stringify({ type: 'physics_solution', data: {
                     exam_name: lesson.title, ...numbered[0], questions: numbered,
                 } }),
                 cover_image: '', category, tags: [], is_published: published,
                 grade: lesson.grade, level, studySection, created_at: now, updated_at: now,
-            });
+            }, undefined, imageUploads));
         }
         return [...saved, ...records, ...newLessons];
     });
-    return saved;
+    return finishLocalSave(saved);
 }
 
 export const saveStudyLesson = async (section: StudySection, title: string, id?: string): Promise<StudyLesson | null> => {
@@ -254,7 +293,7 @@ export const deleteBlog = async (id: string): Promise<boolean> => {
 const uploadBlogRecords = async (onProgress?: (pct: number) => void): Promise<{ success: boolean; fileId?: string; blogCount: number }> => {
     try {
         if (onProgress) onProgress(5);
-        const records: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
+        const records = publishableRecords(await dbGet(BLOG_LOCAL_KEY) ?? []);
         const blogCount = records.filter(isBlogPost).length;
         const { blob, name } = await packBlogSnapshot(records);
         if (onProgress) onProgress(20);
@@ -338,8 +377,12 @@ async function flushSync() {
     else useBlogStore.setState({ syncStatus: result.success ? 'synced' : 'failed' });
 }
 
-export function syncBlogs(onProgress?: (pct: number) => void): Promise<SyncResult> {
+function markBlogPending() {
     localStorage.setItem(BLOG_PENDING_SYNC, crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`);
+}
+
+export function syncBlogs(onProgress?: (pct: number) => void): Promise<SyncResult> {
+    markBlogPending();
     useBlogStore.setState({ syncStatus: 'syncing' });
     return new Promise(resolve => {
         waiting.push({ resolve, onProgress });
@@ -351,23 +394,110 @@ export function resumeBlogSync() {
     if (localStorage.getItem(BLOG_PENDING_SYNC) && !syncing && !waiting.length) void syncBlogs();
 }
 
+function finishLocalSave(saved: LocalBlog[]): BlogPost[] {
+    cacheLocalBlogImages(saved);
+    if (saved.some(blog => blog.pendingImages)) {
+        useBlogStore.setState({ imageSyncStatus: 'uploading' });
+        void resumeBlogImageUploads();
+    }
+    return saved.map(plainBlog);
+}
+
+let imageUploadRun: Promise<void> | undefined;
+let recheckImageQueue = false;
+
+async function drainImageUploads() {
+    const failedTokens = new Set<string>();
+    for (;;) {
+        const records: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
+        const pending = records.filter(isBlogPost).filter(blog => blog.pendingImages);
+        cacheLocalBlogImages(pending);
+        if (!pending.length) {
+            useBlogStore.setState({ imageSyncStatus: 'idle' });
+            return;
+        }
+        const blog = pending.find(item => item.pendingImages?.files.some(file => !failedTokens.has(file.token)));
+        const upload = blog?.pendingImages?.files.find(file => !failedTokens.has(file.token));
+        if (!blog || !upload || navigator.onLine === false) {
+            useBlogStore.setState({ imageSyncStatus: 'failed' });
+            return;
+        }
+        useBlogStore.setState({ imageSyncStatus: 'uploading' });
+        try {
+            const id = await uploadQuestionImageToTelegram(upload.file);
+            if (!id) throw new Error('Telegram chưa nhận được ảnh.');
+            let completed = false;
+            const resolved = { [upload.token]: id };
+            await dbUpdate<BlogRecord[]>(BLOG_LOCAL_KEY, (current = []) => current.map(record => {
+                if (!isBlogPost(record) || record.id !== blog.id
+                    || !record.pendingImages?.files.some(file => file.token === upload.token)) return record;
+                const files = record.pendingImages.files.filter(file => file.token !== upload.token);
+                completed = files.length === 0;
+                if (completed) markBlogPending();
+                return { ...record, content: replaceBlogImageTokens(record.content, resolved),
+                    pendingImages: completed ? undefined : { ...record.pendingImages, files },
+                    uploadedImages: { ...record.uploadedImages, ...resolved } };
+            }));
+            rememberBlogImages([], resolved);
+            if (completed) resumeBlogSync();
+        } catch (error) {
+            failedTokens.add(upload.token);
+            console.warn('[Blog] Lỗi tải ảnh:', upload.file.name, error);
+        }
+    }
+}
+
+export function resumeBlogImageUploads(): Promise<void> {
+    if (imageUploadRun) {
+        recheckImageQueue = true;
+        return imageUploadRun;
+    }
+    const run = async () => {
+        do {
+            recheckImageQueue = false;
+            const work = () => drainImageUploads();
+            if (navigator.locks) await navigator.locks.request('pv-blog-image-uploads', work);
+            else await work();
+        } while (recheckImageQueue);
+    };
+    imageUploadRun = run().catch(error => {
+        console.error('[Blog] Lỗi hàng đợi ảnh:', error);
+        useBlogStore.setState({ imageSyncStatus: 'failed' });
+    }).finally(() => { imageUploadRun = undefined; });
+    return imageUploadRun;
+}
+
 export const fetchBlogsForEditing = async (): Promise<{ blogs: BlogPost[]; loaded: boolean }> => {
     try {
-        if (localStorage.getItem(BLOG_PENDING_SYNC)) {
-            const local: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
-            return { blogs: local.filter(isBlogPost), loaded: false };
+        const local: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
+        if (localStorage.getItem(BLOG_PENDING_SYNC) || local.some(record => isBlogPost(record) && record.pendingImages)) {
+            const blogs = local.filter(isBlogPost);
+            cacheLocalBlogImages(blogs);
+            return { blogs: blogs.map(plainBlog), loaded: false };
         }
         const fileId = await getBlogIndexFileId();
         if (!fileId) {
-            const local: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
-            return { blogs: local.filter(isBlogPost), loaded: false };
+            const blogs = local.filter(isBlogPost);
+            cacheLocalBlogImages(blogs);
+            return { blogs: blogs.map(plainBlog), loaded: false };
         }
         const records = await fetchBlogRecords(fileId);
-        await dbSet(BLOG_LOCAL_KEY, records);
-        return { blogs: records.filter(isBlogPost), loaded: true };
+        let loaded = true;
+        let blogs: LocalBlog[] = [];
+        await dbUpdate<BlogRecord[]>(BLOG_LOCAL_KEY, (current = []) => {
+            loaded = !localStorage.getItem(BLOG_PENDING_SYNC)
+                && !current.some(record => isBlogPost(record) && record.pendingImages);
+            const next = loaded ? records : current;
+            blogs = next.filter(isBlogPost);
+            return next;
+        });
+        cacheLocalBlogImages(blogs);
+        return { blogs: blogs.map(plainBlog), loaded };
     } catch (e) {
         console.warn('[Blog] fetchBlogsForEditing thất bại, dùng local:', e);
         const local: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
-        return { blogs: local.filter(isBlogPost), loaded: false };
+        const blogs = local.filter(isBlogPost);
+        cacheLocalBlogImages(blogs);
+        return { blogs: blogs.map(plainBlog), loaded: false };
     }
 };

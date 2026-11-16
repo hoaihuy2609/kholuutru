@@ -10,7 +10,6 @@ import React, { useEffect, useMemo, useRef } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import { SolutionStep as Step, SolutionStatement as Statement } from '../types';
-import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
 import QuestionTable from './QuestionTable';
@@ -445,7 +444,8 @@ function DungSaiRenderer({ question }: { question: Question }) {
 }
 
 function QuestionBody({ question, compact = false }: { question: Question; compact?: boolean }) {
-  const hasImage = !!(question.image_svg || question.image_url || question.image_telegram_file_id);
+  const imageSrc = studyImageSrc({ url: question.image_url, file_id: question.image_telegram_file_id });
+  const hasImage = !!(question.image_svg || imageSrc);
   const parts = hasImage ? (question.question_text || '').split(/\[image\]/i) : [question.question_text];
   const inlineImage = parts.length > 1;
   const afterImage = parts.slice(1).join('[image]');
@@ -469,7 +469,7 @@ function QuestionBody({ question, compact = false }: { question: Question; compa
           dangerouslySetInnerHTML={{ __html: question.image_svg }} />
       ) : (
         <img
-          src={question.image_url || CLOUDFLARE_PROXY_URL + '/getFile/' + question.image_telegram_file_id}
+          src={imageSrc}
           alt="Sơ đồ câu hỏi" className={'h-auto max-w-full ' + (compact ? 'max-h-36 object-contain' : '')}
           loading={compact ? 'lazy' : undefined} style={imageWidth}
         />
