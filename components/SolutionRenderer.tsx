@@ -14,7 +14,7 @@ import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
 import QuestionTable from './QuestionTable';
-import { readStudyImages, studyImageParts, studyImageSrc, type EditableStudyImage } from '../src/utils/studyImages';
+import { layoutStudySolutionImages, readStudyImages, studyImageParts, studyImageSrc, type EditableStudyImage } from '../src/utils/studyImages';
 import { useImageFileUrl } from './StudyImageBatch';
 
 interface Question {
@@ -314,25 +314,36 @@ function StudyFigure({ image, alt, compact }: { image: EditableStudyImage; alt: 
   const local = useImageFileUrl(image.file);
   const src = local || studyImageSrc(image);
   return src ? <img src={src} alt={alt} loading={compact ? 'lazy' : undefined}
+    style={{ width: image.width === undefined ? undefined : image.width + '%' }}
     className={'mx-auto my-2 block h-auto max-w-full object-contain ' + (compact ? 'max-h-36' : 'max-h-[24rem]')} /> : null;
 }
 
-export function StudyImageText({ text, images, alt, compact, renderText }: {
-  text: string; images: EditableStudyImage[]; alt: string; compact?: boolean;
-  renderText?: (part: string) => React.ReactNode;
+function StudyImageContent({ parts, alt, compact }: {
+  parts: (string | EditableStudyImage)[]; alt: string; compact?: boolean;
 }) {
-  return <>{studyImageParts(text, images).map((part, index) => typeof part === 'string'
-    ? <React.Fragment key={index}>{part.trim() && (renderText ? renderText(part) : <TextWithMath text={part} />)}</React.Fragment>
+  return <>{parts.map((part, index) => typeof part === 'string'
+    ? <React.Fragment key={index}>{part.trim() && <TextWithMath text={part} />}</React.Fragment>
     : <StudyFigure key={index} image={part} alt={alt} compact={compact} />)}</>;
+}
+
+function StudyImageText({ text, images, alt, compact }: {
+  text: string; images: EditableStudyImage[]; alt: string; compact?: boolean;
+}) {
+  return <StudyImageContent parts={studyImageParts(text, images)} alt={alt} compact={compact} />;
 }
 
 function SolutionPanel({ text, images = [] }: { text: string; images?: EditableStudyImage[] }) {
   if (!text && !images.some(image => image.file || studyImageSrc(image))) return null;
+  const { body, sideImages } = layoutStudySolutionImages(text, images);
+  const alt = 'Hình minh họa lời giải';
   return (
     <section className={detailPanel}>
       <h3 className={detailHeading + ' border-b border-stone-100 bg-amber-50/60 px-4 py-2.5 sm:px-5'}>Lời giải chi tiết</h3>
-      <div className={detailProse + ' px-4 py-4 sm:px-5'}>
-        <StudyImageText text={text} images={images} alt="Hình minh họa lời giải" />
+      <div className="flex flex-col gap-3 px-4 py-4 sm:px-5 [@container_(min-width:40rem)]:flex-row">
+        <div className={detailProse + ' flex-1'}><StudyImageContent parts={body} alt={alt} /></div>
+        {!!sideImages.length && <div className="min-w-0 [@container_(min-width:40rem)]:w-[38%] [@container_(min-width:40rem)]:shrink-0">
+          <StudyImageContent parts={sideImages} alt={alt} />
+        </div>}
       </div>
     </section>
   );

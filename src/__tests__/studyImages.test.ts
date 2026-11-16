@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { matchStudyImageFiles, readStudyImages, studyImageParts, studyImageSrc } from '../utils/studyImages';
+import { layoutStudySolutionImages, matchStudyImageFiles, readStudyImages, studyImageParts, studyImageSrc } from '../utils/studyImages';
 
 vi.mock('../lib/telegram', () => ({ CLOUDFLARE_PROXY_URL: 'https://telegram.test' }));
 
@@ -23,5 +23,19 @@ describe('study question images', () => {
         ]);
         expect(studyImageSrc(images[0])).toBe('https://telegram.test/getFile/telegram%2Fimage');
         expect(studyImageParts('[image:p2_c04_lg02]', images)).toContain('[image:p2_c04_lg02]');
+    });
+
+    it('giữ dữ liệu TikZ, kích thước và bố cục, đồng thời ưu tiên vị trí chèn trong lời giải', () => {
+        const images = readStudyImages([
+            { key: 'force', svg: '<svg/>', tikz: '\\draw;', width: 40, layout: 'right' },
+            { url: '/bottom.png', layout: 'bottom' },
+            { key: 'inline', url: '/inline.png', layout: 'right' },
+        ]);
+        expect(images[0]).toMatchObject({ tikz: '\\draw;', width: 40, layout: 'right' });
+        expect(studyImageSrc(images[0])).toBe('data:image/svg+xml,%3Csvg%2F%3E');
+        const { body, sideImages } = layoutStudySolutionImages('Phân tích lực\n[image:inline]\nKết luận', images);
+        expect(sideImages).toEqual([images[0]]);
+        expect(body).toEqual(['Phân tích lực\n', images[2], '\nKết luận', images[1]]);
+        expect(layoutStudySolutionImages('', images).sideImages).toEqual([]);
     });
 });

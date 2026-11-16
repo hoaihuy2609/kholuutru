@@ -5,7 +5,7 @@ import katexStyles from 'katex/dist/katex.min.css?inline';
 import { CLOUDFLARE_PROXY_URL } from '../lib/telegram';
 import { normalizeQuestionImageWidth } from '../utils/questionImage';
 import type { QuestionTableData } from '../utils/questionTable';
-import { studyImageParts, studyImageSrc, type StudyImage } from '../utils/studyImages';
+import { layoutStudySolutionImages, studyImageParts, studyImageSrc, type StudyImage } from '../utils/studyImages';
 
 export interface ExamStyleConfig {
   // 1. Mẫu giao diện & Bảng màu LaTeX
@@ -475,8 +475,22 @@ function escapeHtml(value: string): string {
 }
 
 function renderStudyImageText(text: string, images: StudyImage[] = [], alt: string) {
-  return studyImageParts(text, images).map(part => typeof part === 'string' ? escapeHtml(part)
-    : `<img class="exam-question-figure" src="${escapeHtml(studyImageSrc(part))}" alt="${alt}" />`).join('');
+  return renderStudyImageParts(studyImageParts(text, images), alt);
+}
+
+function renderStudyImageParts(parts: (string | StudyImage)[], alt: string) {
+  return parts.map(part => {
+    if (typeof part === 'string') return escapeHtml(part);
+    const width = normalizeQuestionImageWidth(part.width);
+    return `<img class="exam-question-figure" src="${escapeHtml(studyImageSrc(part))}" alt="${alt}"${width === undefined ? '' : ` style="width: ${width}%;"`} />`;
+  }).join('');
+}
+
+function renderStudySolutionText(text: string, images: StudyImage[] = []) {
+  const { body, sideImages } = layoutStudySolutionImages(text, images);
+  const alt = 'Hình minh họa lời giải';
+  const html = renderStudyImageParts(body, alt);
+  return sideImages.length ? `<div class="exam-solution-with-image"><div>${html}</div><div>${renderStudyImageParts(sideImages, alt)}</div></div>` : html;
 }
 
 function renderQuestionTableHtml(table?: QuestionTableData): string {
@@ -682,7 +696,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
           <div style="text-align: center; color: #0000ff; font-weight: bold; margin: 6px 0 8px 0;">Lời giải:</div>
           <div style="padding-left: 12px; font-size: 11pt; text-align: justify; text-justify: inter-word;">
             ${q.solution ? `
-              <div style="margin-bottom: 6px; white-space: pre-wrap; line-height: 1.45;">${renderStudyImageText(q.solution, q.solutionImages, 'Hình minh họa lời giải')}</div>
+              <div style="margin-bottom: 6px; white-space: pre-wrap; line-height: 1.45;">${renderStudySolutionText(q.solution, q.solutionImages)}</div>
             ` : (q.solutionSteps || q.steps || []).map(s => `
               <div style="margin-bottom: 6px;">
                 ${s.title ? `<b>${escapeHtml(s.title)}:</b> ` : ''}${escapeHtml(s.text || '')}
@@ -740,6 +754,7 @@ export function examPrintDocument(body = '', title = 'Xem trước đề thi') {
     .exam-question { display: flow-root; margin-bottom: 16px; break-inside: avoid; }
     .exam-question-text { white-space: pre-line; text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; }
     .exam-question-figure { display: block; max-width: 100%; max-height: 85mm; object-fit: contain; margin: 8px auto; }
+    .exam-solution-with-image { display: grid; grid-template-columns: minmax(0, 1fr) 38%; gap: 12px; align-items: start; }
     .exam-statements > div + div { margin-top: 4px; }
     .exam-wrapped-choices > div + div { margin-top: 6px; }
     .exam-watermark {

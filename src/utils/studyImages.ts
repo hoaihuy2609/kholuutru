@@ -1,9 +1,14 @@
 import { CLOUDFLARE_PROXY_URL } from '../lib/telegram';
+import { normalizeQuestionImageWidth } from './questionImage';
 
 export interface StudyImage {
     key?: string;
     file_id?: string;
     url?: string;
+    svg?: string;
+    tikz?: string;
+    layout?: 'auto' | 'right' | 'bottom';
+    width?: number;
 }
 
 export interface EditableStudyImage extends StudyImage {
@@ -38,7 +43,11 @@ export function readStudyImages(value: unknown, keys?: unknown): StudyImage[] {
             const key = typeof image.key === 'string' ? studyImageKey(image.key) : undefined;
             const file_id = typeof image.file_id === 'string' ? image.file_id : undefined;
             const url = typeof image.url === 'string' ? image.url : undefined;
-            if (key || file_id || url) images.push({ key, file_id, url });
+            const svg = typeof image.svg === 'string' ? image.svg : undefined;
+            const tikz = typeof image.tikz === 'string' ? image.tikz : undefined;
+            const layout = image.layout === 'auto' || image.layout === 'right' || image.layout === 'bottom' ? image.layout : undefined;
+            const width = normalizeQuestionImageWidth(image.width);
+            if (key || file_id || url || svg || tikz) images.push({ key, file_id, url, svg, tikz, layout, width });
         }
     }
     if (Array.isArray(keys)) {
@@ -52,8 +61,23 @@ export function readStudyImages(value: unknown, keys?: unknown): StudyImage[] {
 }
 
 export function studyImageSrc(image: StudyImage) {
-    return image.url || (image.file_id && CLOUDFLARE_PROXY_URL
+    return image.svg ? 'data:image/svg+xml,' + encodeURIComponent(image.svg)
+        : image.url || (image.file_id && CLOUDFLARE_PROXY_URL
         ? CLOUDFLARE_PROXY_URL + '/getFile/' + encodeURIComponent(image.file_id) : '');
+}
+
+export function layoutStudySolutionImages<T extends EditableStudyImage>(text: string, images: T[]) {
+    const parts = studyImageParts(text, images);
+    const lastText = parts.map(part => typeof part === 'string').lastIndexOf(true);
+    const sideImages: T[] = [];
+    const body = parts.filter((part, index) => {
+        if (text.trim() && index > lastText && typeof part !== 'string' && (part.layout === 'right' || part.layout === 'auto')) {
+            sideImages.push(part);
+            return false;
+        }
+        return true;
+    });
+    return { body, sideImages };
 }
 
 export function studyImageParts<T extends EditableStudyImage>(text: string, images: T[]): (string | T)[] {
