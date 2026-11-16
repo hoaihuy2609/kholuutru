@@ -7,6 +7,7 @@ import TreeTableOfContents, { normalizeSearchText } from './TreeTableOfContents'
 import ChapterStudyList from './ChapterStudyList';
 import { getStudyChapter, isStudyQuestionGroup, isStudyQuestionType, parseStudyQuestionNumber, STUDY_GRADES, studySectionParams, supportsStudyGroups } from '../src/utils/studyLibrary';
 import { SelectedQuestionItem } from '../src/services/examLatexService';
+import { readStudyImages, studyImageParts, studyImageSrc, type StudyImage } from '../src/utils/studyImages';
 import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
 import QuestionTable from './QuestionTable';
 import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
@@ -78,6 +79,8 @@ interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
     question_groups?: StudyQuestionGroup[];
     learning_outcomes?: string[];
     question_text?: string;
+    question_images?: StudyImage[];
+    solution_images?: StudyImage[];
     question_table?: QuestionTableData;
     question_latex?: string;
     tikz_code?: string;
@@ -91,6 +94,7 @@ interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
 interface CardQuestionData {
     questionNo: string;
     questionText: string;
+    questionImages?: StudyImage[];
     questionTable?: QuestionTableData;
     questionLatex: string;
     type: QuestionType;
@@ -121,6 +125,7 @@ function toCardQuestion(question?: StoredQuestion): CardQuestionData | null {
     return {
         questionNo: question.question_no || '',
         questionText: question.question_text || '',
+        questionImages: readStudyImages(question.question_images),
         questionTable: normalizeQuestionTable(question.question_table),
         questionLatex: question.question_latex || '',
         type: question.type === 'dung_sai' ? 'dung_sai' : question.type === 'trac_nghiem' ? 'trac_nghiem' : 'tu_luan',
@@ -167,6 +172,8 @@ function toSelectedQuestion(blog: BlogPost, question: StoredQuestion | undefined
         correctChoice: question?.correctChoice,
         statements: question?.statements,
         solution: question?.solution,
+        questionImages: card?.questionImages,
+        solutionImages: readStudyImages(question?.solution_images),
         solutionSteps: question?.solutionSteps,
         steps: question?.steps,
         level: blog.level,
@@ -225,7 +232,9 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
     const formula = question?.questionLatex || '';
     const table = question?.questionTable && <QuestionTable table={question.questionTable}
         renderCell={cell => <TextWithMathCard text={cell} />} />;
-    const hasQuestion = !!(text || formula || table || hasImage);
+    const extraImages = question?.questionImages ?? [];
+    const hasExtraImages = extraImages.some(studyImageSrc);
+    const hasQuestion = !!(text || formula || table || hasImage || hasExtraImages);
     const parts = hasImage ? text.split(/\[image\]/i) : [text];
     const inlineImage = parts.length > 1;
     const sideImage = hasImage && !inlineImage && !!(text || formula || table) && question?.imageLayout !== 'bottom';
@@ -253,6 +262,10 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
     const renderText = (value: string) => value.trim() ? (
         <div className="overflow-x-auto whitespace-pre-wrap text-justify [overflow-wrap:anywhere]"><TextWithMathCard text={value} /></div>
     ) : null;
+    const renderTextWithImages = (value: string) => studyImageParts(value, extraImages).map((part, index) =>
+        typeof part === 'string' ? <React.Fragment key={index}>{renderText(part)}</React.Fragment>
+            : <img key={index} src={studyImageSrc(part)} alt="Hình minh họa đề bài" loading="lazy"
+                className={'mx-auto max-w-full object-contain ' + (expanded ? 'max-h-48' : 'max-h-32')} />);
     const height = expanded ? 'min-h-[168px] lg:min-h-[176px] ' : 'h-[168px] lg:h-[176px] ';
     const readLabel = question ? 'Xem lời giải' : 'Đọc bài';
 
@@ -308,15 +321,15 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
                             <div className="space-y-3">
                                 {renderText(parts[0])}
                                 {image}
-                                {renderText(parts.slice(1).join('[image]'))}
+                                {renderTextWithImages(parts.slice(1).join('[image]'))}
                                 {formula && <KatexBlockCard tex={formula} />}
                                 {table}
                             </div>
                         ) : (
                             <div className={'flex flex-col gap-3 ' + (sideImage ? '[@container_(min-width:26rem)]:flex-row' : '')}>
-                                {(text || formula || table) && (
+                                {(text || formula || table || hasExtraImages) && (
                                     <div className="min-w-0 flex-1 space-y-2">
-                                        {renderText(text)}
+                                        {renderTextWithImages(text)}
                                         {formula && <KatexBlockCard tex={formula} />}
                                         {table}
                                     </div>
@@ -395,7 +408,8 @@ function indexQuestion(card: BlogCard) {
         card,
         type: question?.type ?? 'tu_luan',
         level: blog.level ?? 0,
-        hasImage: !!(question?.imageSvg || question?.imageUrl || question?.imageTelegramFileId),
+        hasImage: !!(question?.imageSvg || question?.imageUrl || question?.imageTelegramFileId
+            || question?.questionImages?.some(studyImageSrc)),
         searchFields: [
             blog.title, questionCount > 1 ? undefined : blog.summary, blog.category, ...(blog.tags || []),
             question?.questionText, question?.questionLatex,

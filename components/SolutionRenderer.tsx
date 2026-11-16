@@ -14,6 +14,8 @@ import { CLOUDFLARE_PROXY_URL } from '../src/lib/telegram';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
 import QuestionTable from './QuestionTable';
+import { readStudyImages, studyImageParts, studyImageSrc, type EditableStudyImage } from '../src/utils/studyImages';
+import { useImageFileUrl } from './StudyImageBatch';
 
 interface Question {
   question_no: string;
@@ -22,6 +24,8 @@ interface Question {
   question_table?: QuestionTableData;
   type?: 'tu_luan' | 'dung_sai' | 'trac_nghiem';
   solution?: string;
+  question_images?: EditableStudyImage[];
+  solution_images?: EditableStudyImage[];
   steps: Step[];
   statements: Statement[];
   choices?: string[];
@@ -51,6 +55,8 @@ interface PhysicsSolutionData extends Partial<Question> {
 
 function normalizeIllustration(question: Partial<Question>) {
   return {
+    question_images: readStudyImages(question.question_images),
+    solution_images: readStudyImages(question.solution_images),
     tikz_code: question.tikz_code || question.tikzCode || '',
     image_svg: question.image_svg || question.imageSvg || '',
     image_url: question.image_url || question.imageUrl || '',
@@ -304,13 +310,29 @@ const detailPanel = 'min-w-0 overflow-hidden rounded-xl border border-stone-200 
 const detailHeading = 'text-base font-bold text-stone-900';
 const detailProse = 'min-w-0 overflow-x-auto whitespace-pre-wrap text-[17px] leading-relaxed text-stone-800 [overflow-wrap:anywhere]';
 
-function SolutionPanel({ text }: { text: string }) {
-  if (!text) return null;
+function StudyFigure({ image, alt, compact }: { image: EditableStudyImage; alt: string; compact?: boolean }) {
+  const local = useImageFileUrl(image.file);
+  const src = local || studyImageSrc(image);
+  return src ? <img src={src} alt={alt} loading={compact ? 'lazy' : undefined}
+    className={'mx-auto my-2 block h-auto max-w-full object-contain ' + (compact ? 'max-h-36' : 'max-h-[24rem]')} /> : null;
+}
+
+export function StudyImageText({ text, images, alt, compact, renderText }: {
+  text: string; images: EditableStudyImage[]; alt: string; compact?: boolean;
+  renderText?: (part: string) => React.ReactNode;
+}) {
+  return <>{studyImageParts(text, images).map((part, index) => typeof part === 'string'
+    ? <React.Fragment key={index}>{part.trim() && (renderText ? renderText(part) : <TextWithMath text={part} />)}</React.Fragment>
+    : <StudyFigure key={index} image={part} alt={alt} compact={compact} />)}</>;
+}
+
+function SolutionPanel({ text, images = [] }: { text: string; images?: EditableStudyImage[] }) {
+  if (!text && !images.some(image => image.file || studyImageSrc(image))) return null;
   return (
     <section className={detailPanel}>
       <h3 className={detailHeading + ' border-b border-stone-100 bg-amber-50/60 px-4 py-2.5 sm:px-5'}>Lời giải chi tiết</h3>
       <div className={detailProse + ' px-4 py-4 sm:px-5'}>
-        <TextWithMath text={text} />
+        <StudyImageText text={text} images={images} alt="Hình minh họa lời giải" />
       </div>
     </section>
   );
@@ -353,7 +375,7 @@ function TracNghiemRenderer({ question }: { question: Question }) {
           </ul>
         </section>
       )}
-      <SolutionPanel text={question.solution || convertStepsToSolution(question.solutionSteps)} />
+      <SolutionPanel text={question.solution || convertStepsToSolution(question.solutionSteps)} images={question.solution_images} />
     </div>
   );
 }
@@ -362,7 +384,7 @@ function TuLuanRenderer({ question }: { question: Question }) {
   return (
     <div className="space-y-4">
       <QuestionHeader question={question} />
-      <SolutionPanel text={question.solution || convertStepsToSolution(question.steps)} />
+      <SolutionPanel text={question.solution || convertStepsToSolution(question.steps)} images={question.solution_images} />
     </div>
   );
 }
@@ -406,7 +428,7 @@ function DungSaiRenderer({ question }: { question: Question }) {
           </ul>
         </section>
       )}
-      <SolutionPanel text={effectiveSolution} />
+      <SolutionPanel text={effectiveSolution} images={question.solution_images} />
     </div>
   );
 }
@@ -418,9 +440,10 @@ function QuestionBody({ question, compact = false }: { question: Question; compa
   const afterImage = parts.slice(1).join('[image]');
   const table = question.question_table && <QuestionTable table={question.question_table}
     renderCell={text => <TextWithMath text={text} />} />;
-  const text = (question.question_text || question.question_latex) && (
+  const extraImages = question.question_images ?? [];
+  const text = (question.question_text || question.question_latex || extraImages.some(item => item.file || studyImageSrc(item))) && (
     <>
-      {question.question_text && <TextWithMath text={question.question_text} />}
+      <StudyImageText text={question.question_text || ''} images={extraImages} alt="Hình minh họa đề bài" compact={compact} />
       {question.question_latex && <KatexBlock tex={question.question_latex} />}
     </>
   );
@@ -449,7 +472,7 @@ function QuestionBody({ question, compact = false }: { question: Question; compa
         <div className="space-y-3">
           {parts[0].trim() && <div className={detailProse}><TextWithMath text={parts[0]} /></div>}
           {image}
-          {afterImage.trim() && <div className={detailProse}><TextWithMath text={afterImage} /></div>}
+          <div className={detailProse}><StudyImageText text={afterImage} images={extraImages} alt="Hình minh họa đề bài" compact={compact} /></div>
           {question.question_latex && <KatexBlock tex={question.question_latex} />}
           {table}
         </div>
@@ -526,19 +549,25 @@ export default function SolutionRenderer({ content, className = "" }: SolutionRe
   return <SolutionQuestions questions={questions} className={className} />;
 }
 
-export function SolutionQuestions({ questions, className = '' }: {
+export function SolutionQuestions({ questions, className = '', imageFiles }: {
   questions: Question[];
   className?: string;
+  imageFiles?: { question?: (File | undefined)[]; solution?: (File | undefined)[] };
 }) {
+  const withPreview = (question: Question): Question => imageFiles ? {
+    ...question,
+    question_images: question.question_images?.map((image, index) => ({ ...image, file: imageFiles.question?.[index] })),
+    solution_images: question.solution_images?.map((image, index) => ({ ...image, file: imageFiles.solution?.[index] })),
+  } : question;
   return (
     <div className={`solution-renderer latex-prose space-y-5 [container-type:inline-size] ${className}`}>
       {questions.map((q, idx) => (
         <div key={idx} className={idx > 0 ? 'border-t border-stone-200 pt-5' : undefined}>
           {q.type === 'dung_sai'
-            ? <DungSaiRenderer   question={q} />
+            ? <DungSaiRenderer   question={withPreview(q)} />
             : q.type === 'trac_nghiem'
-            ? <TracNghiemRenderer question={q} />
-            : <TuLuanRenderer    question={q} />
+            ? <TracNghiemRenderer question={withPreview(q)} />
+            : <TuLuanRenderer    question={withPreview(q)} />
           }
         </div>
       ))}

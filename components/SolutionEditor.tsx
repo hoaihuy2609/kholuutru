@@ -23,6 +23,9 @@ import { renderTikzToSvg, uploadQuestionImageToTelegram, uploadSvgToTelegram } f
 import { pdfSolutionText, type PdfQuestionSource } from '../src/utils/pdfExamQuestions';
 import { importedQuestionOutcomes, matrixMatchScore, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
 import type { ReviewedPdfQuestion } from './PdfExamImport';
+import StudyImageBatch, { StudyImageThumbnail, type StudyImageTarget } from './StudyImageBatch';
+import { readStudyImages, studyImageFields, studyImageSrc, validStudyImage,
+  type EditableStudyImage, type StudyImageField } from '../src/utils/studyImages';
 
 const PdfExamImport = React.lazy(() => import('./PdfExamImport'));
 
@@ -89,6 +92,8 @@ interface Question {
   type: QuestionType;
   groups: StudyQuestionGroup[];
   solution: string;        // Ô lời giải chi tiết duy nhất (hỗ trợ text & LaTeX)
+  questionImages?: EditableStudyImage[];
+  solutionImages?: EditableStudyImage[];
   steps: Step[];           // backward compat
   statements: Statement[]; // dùng khi type === 'dung_sai'
   choices: string[];       // dùng khi type === 'trac_nghiem' (A/B/C/D)
@@ -212,6 +217,8 @@ const normalizeQuestion = (q: any): Question => {
     type:       qType,
     groups: Array.isArray(q.question_groups) ? q.question_groups.filter(isStudyQuestionGroup) : [],
     solution:   sol,
+    questionImages: readStudyImages(q.question_images, q.question_image_keys),
+    solutionImages: readStudyImages(q.solution_images, q.solution_image_keys),
     steps:      q.steps?.length > 0 ? q.steps : [emptyStep()],
     statements: normalizedStatements,
     choices: Array.isArray(q.choices) ? [0, 1, 2, 3].map(i => q.choices[i] !== undefined && q.choices[i] !== null ? String(q.choices[i]) : '') : ['', '', '', ''],
@@ -238,6 +245,8 @@ function serializeQuestion(q: Question, questionNo: string) {
     ...(outcomes.length ? { learning_outcomes: outcomes } : {}),
     ...(supportsStudyGroups(q.type) && q.groups.length ? { question_groups: q.groups } : {}),
     solution:       q.solution || '',
+    ...(q.questionImages?.length ? { question_images: q.questionImages.map(({ key, file_id, url }) => ({ key, file_id, url })) } : {}),
+    ...(q.solutionImages?.length ? { solution_images: q.solutionImages.map(({ key, file_id, url }) => ({ key, file_id, url })) } : {}),
     tikz_code:      q.tikzCode || '',
     image_svg:      q.imageSvg || '',
     image_url:      q.imageUrl || '',
@@ -585,6 +594,29 @@ interface SolutionEditorProps {
   matrixDraft?: MatrixQuestionDraft;
 }
 
+function imageBatchTargets(questions: Question[]): StudyImageTarget[] {
+  return questions.flatMap((question, index) => studyImageFields.flatMap(field =>
+    (question[field] ?? []).flatMap((image, slot) => image.key ? [{
+      id: JSON.stringify([index, field, slot, image.key]), key: image.key, question: index, field, slot,
+      label: (question.questionNo || 'Câu ' + (index + 1)) + (field === 'questionImages' ? ' · Đề' : ' · Lời giải'),
+      attached: !!(image.file || image.file_id || image.url),
+    }] : [])));
+}
+
+function applyStudyImageBatch(questions: Question[], entries: { target: StudyImageTarget; file: File }[]): Question[] {
+  return questions.map((question, index) => {
+    const next = { ...question };
+    for (const field of studyImageFields) {
+      next[field] = question[field]?.map((image, slot) => {
+        const match = entries.find(({ target }) => target.question === index && target.field === field
+          && target.slot === slot && target.key === image.key);
+        return match ? { key: image.key, file: match.file } : image;
+      });
+    }
+    return next;
+  });
+}
+
 export default function SolutionEditor({
   blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar,
   studyPlacement, studyDefaults, studyGrade, studyQuestionType, studyImport, initialQuestionIndex = 0, initialQuestionGroup, savedOutcomes = [], matrixDraft
@@ -651,13 +683,19 @@ export default function SolutionEditor({
   const previewQuestion = serializeQuestion(
     localImageUrl ? { ...activeQuestion, imageUrl: localImageUrl } : activeQuestion, activeNumber,
   );
+  const previewImageFiles = {
+    question: activeQuestion.questionImages?.map(image => image.file),
+    solution: activeQuestion.solutionImages?.map(image => image.file),
+  };
   const hasPreview = previewQuestion.question_text || previewQuestion.question_latex || previewQuestion.question_table || previewQuestion.image_svg
     || previewQuestion.image_url || previewQuestion.image_telegram_file_id || previewQuestion.solution || previewQuestion.choices.some(Boolean)
+    || studyImageFields.some(field => activeQuestion[field]?.some(image => image.file || studyImageSrc(image)))
     || previewQuestion.statements.some(statement => statement.claim || statement.claim_latex || convertStepsToSolution(statement.steps))
     || convertStepsToSolution(previewQuestion.steps) || convertStepsToSolution(previewQuestion.solutionSteps);
   const [renderingTikz, setRenderingTikz] = useState(false);
+  const [processingImageBatch, setProcessingImageBatch] = useState(false);
   const [tikzError, setTikzError] = useState<string | null>(null);
-  const illustrationBusy = saving || renderingTikz;
+  const illustrationBusy = saving || renderingTikz || processingImageBatch;
 
   const attachImage = (file: File) => {
     if (illustrationBusy) return;
@@ -671,6 +709,72 @@ export default function SolutionEditor({
     }
     setTikzError(null);
     updateQuestion({ imageFile: file, imageUrl: '', imageSvg: '', imageTelegramFileId: '', tikzCode: '' });
+  };
+
+  const attachStudyImages = (field: StudyImageField, files: File[], slot?: number) => {
+    if (illustrationBusy || !files.length) return;
+    const valid = files.filter(validStudyImage);
+    if (valid.length !== files.length) showToast('Chỉ nhận ảnh PNG/JPG có dung lượng tối đa 5 MB mỗi ảnh.', 'warning');
+    if (!valid.length) return;
+    const images = activeQuestion[field] ?? [];
+    if (slot !== undefined) {
+      updateQuestion({ [field]: images.map((image, index) =>
+        index === slot ? { key: image.key, file: valid[0] } : image) });
+      return;
+    }
+    updateQuestion({ [field]: [...images, ...valid.map(file => ({ file }))] });
+  };
+
+  const imageFields = (field: StudyImageField) => {
+    const images = activeQuestion[field] ?? [];
+    const isSolution = field === 'solutionImages';
+    const label = isSolution ? 'Hình minh họa lời giải' : 'Ảnh bổ sung trong đề';
+    if (!isSolution && !images.length) return null;
+    return (
+      <div className="space-y-2 rounded-xl border border-stone-200 bg-white p-3 text-sm" tabIndex={0} role="group"
+        aria-label={label} onPaste={event => {
+          const files = Array.from(event.clipboardData.files).filter(file => file.type.startsWith('image/'));
+          if (!files.length) return;
+          event.preventDefault();
+          attachStudyImages(field, files);
+        }}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-semibold text-stone-800">{label}</span>
+          {isSolution && <label className="cursor-pointer rounded-md border border-stone-200 px-2 py-1 text-xs font-semibold text-amber-900">
+            Thêm ảnh lời giải
+            <input className="sr-only" type="file" aria-label="Thêm ảnh lời giải" accept="image/png,image/jpeg" multiple
+              disabled={illustrationBusy} onChange={event => {
+                attachStudyImages(field, Array.from(event.target.files ?? []));
+                event.target.value = '';
+              }} />
+          </label>}
+        </div>
+        {isSolution && <p className="text-xs text-stone-600">Có thể dán ảnh vào khung này. Gõ <code>[image]</code> vào lời giải để đặt ảnh giữa các đoạn.</p>}
+        {images.map((image, index) => (
+          <div key={index} className="flex flex-wrap items-center gap-2 border-t border-stone-100 pt-2">
+            <StudyImageThumbnail file={image.file} src={studyImageSrc(image)} alt={label + ' ' + (index + 1)} />
+            <span className="min-w-0 flex-1 break-all text-xs text-stone-700">
+              {image.key || image.file?.name || 'Ảnh ' + (index + 1)}
+              {!image.file && !studyImageSrc(image) && ' · Chưa có ảnh'}
+            </span>
+            <label className="cursor-pointer rounded-md px-1.5 py-1 text-xs font-semibold text-amber-900">
+              {image.file || studyImageSrc(image) ? 'Thay ảnh' : 'Chọn ảnh'}
+              <input className="sr-only" type="file" accept="image/png,image/jpeg" disabled={illustrationBusy}
+                aria-label={label + ' ' + (index + 1)}
+                onChange={event => {
+                  attachStudyImages(field, Array.from(event.target.files ?? []), index);
+                  event.target.value = '';
+                }} />
+            </label>
+            <button type="button" disabled={illustrationBusy} className="rounded-md px-1.5 py-1 text-xs text-red-700"
+              onClick={() => updateQuestion({ [field]: images.flatMap((item, i) =>
+                i !== index ? [item] : item.key && (item.file || studyImageSrc(item)) ? [{ key: item.key }] : []) })}>
+              Xóa
+            </button>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   // Khung dán nhanh cả 4 đáp án / 4 mệnh đề
@@ -738,6 +842,8 @@ export default function SolutionEditor({
   }[]>([]);
   const [importDestinations, setImportDestinations] = useState<Partial<Record<StudyQuestionType, string>>>({});
   const confirmingImport = useRef(false);
+  const reviewImageTargets = imageBatchTargets(jsonReview.map(row => row.question));
+  const editorImageTargets = imageBatchTargets(questions);
   const importTargets = studyImport ? STUDY_QUESTION_TYPES.flatMap(option => {
     const questions = jsonReview.filter(row => row.type === option.value).map(row => row.question);
     if (!questions.length) return [];
@@ -793,7 +899,8 @@ export default function SolutionEditor({
   };
 
   const confirmJsonImport = async () => {
-    if (!studyImport || !importTargets.length || incompleteImport || ambiguousDestination || confirmingImport.current) return;
+    if (!studyImport || !importTargets.length || incompleteImport || ambiguousDestination
+        || confirmingImport.current || processingImageBatch) return;
     confirmingImport.current = true;
     setImportingJson(true);
     try {
@@ -806,10 +913,13 @@ export default function SolutionEditor({
         })),
       }));
       await renderImportedDiagrams(groups.flatMap(group => group.questions));
-      const saved = await studyImport.save(studyImport.source.id, groups.map(group => ({
-        ...group,
-        questions: group.questions.map(question => serializeQuestion(question, question.questionNo)),
-      })), { category: category || 'Lời giải', level, published: isPublished });
+      const batches = [];
+      for (const group of groups) {
+        const uploaded = await uploadStudyImages(group.questions);
+        batches.push({ ...group, questions: uploaded.map(question => serializeQuestion(question, question.questionNo)) });
+      }
+      const saved = await studyImport.save(studyImport.source.id, batches,
+        { category: category || 'Lời giải', level, published: isPublished });
       void syncBlogs?.();
       closeJsonImport();
       showToast(`Đã nhập ${jsonReview.length} câu vào ${saved.length} mục.`, 'success');
@@ -1051,9 +1161,43 @@ export default function SolutionEditor({
     updateQ('statements', activeQuestion.statements.map((s, i) => i === si ? val : s));
 
   // ── Save ───────────────────────────────────────────────────
+  const uploadStudyImages = async (batch: Question[]) => {
+    const processed = batch.map(question => ({ ...question }));
+    for (const question of processed) {
+      for (const field of studyImageFields) {
+        const images = question[field];
+        if (!images?.some(image => image.file)) continue;
+        const saved: EditableStudyImage[] = [];
+        for (const image of images) {
+          if (!image.file) {
+            saved.push(image);
+            continue;
+          }
+          try {
+            const fileId = uploadedImageIds.current.get(image.file) ?? await uploadQuestionImageToTelegram(image.file);
+            if (!fileId) throw new Error('Telegram chưa nhận được ảnh.');
+            uploadedImageIds.current.set(image.file, fileId);
+            saved.push({ key: image.key, file_id: fileId });
+          } catch (error) {
+            throw new Error(`Ảnh ${image.file.name} của ${question.questionNo || 'câu đang nhập'}. ${error instanceof Error ? error.message : 'Tải lên thất bại.'}`);
+          }
+        }
+        question[field] = saved;
+      }
+    }
+    return processed;
+  };
+
   const persistQuestions = async (batch: Question[], source: string, targetGrade: number, published: boolean) => {
       // Ảnh tải lên cần có file_id trước khi lưu. SVG vẫn có thể dùng bản nhúng.
-      setUploadingSaveImages(batch.some(q => q.imageFile ? !uploadedImageIds.current.has(q.imageFile) : q.imageSvg && !q.imageTelegramFileId));
+      setUploadingSaveImages(batch.some(q => (q.imageFile ? !uploadedImageIds.current.has(q.imageFile) : q.imageSvg && !q.imageTelegramFileId)
+        || studyImageFields.some(field => q[field]?.some(image => image.file && !uploadedImageIds.current.has(image.file)))));
+      try {
+        batch = await uploadStudyImages(batch);
+      } catch (error) {
+        setUploadingSaveImages(false);
+        throw error;
+      }
       const uploads = await Promise.allSettled(batch.map(async (q, idx) => {
         if (q.imageFile) {
           const file = q.imageFile;
@@ -1137,7 +1281,8 @@ export default function SolutionEditor({
         return;
       }
       if (!activeQuestion.qText.trim() && !activeQuestion.qFormula.trim() && !activeQuestion.questionTable && !activeQuestion.imageFile
-          && !activeQuestion.imageSvg && !activeQuestion.imageTelegramFileId && !activeQuestion.imageUrl) {
+          && !activeQuestion.imageSvg && !activeQuestion.imageTelegramFileId && !activeQuestion.imageUrl
+          && !activeQuestion.questionImages?.some(image => image.file || studyImageSrc(image))) {
         showToast('Nhập đề bài hoặc thêm hình cho câu hỏi.', 'error');
         return;
       }
@@ -1475,6 +1620,11 @@ export default function SolutionEditor({
                     value={activeQuestion.qText} onChange={e => updateQ('qText', e.target.value)} />
                 </div>
 
+                {!!editorImageTargets.length && (
+                  <StudyImageBatch targets={editorImageTargets} disabled={illustrationBusy} onProcessing={setProcessingImageBatch}
+                    onApply={entries => setQuestions(previous => applyStudyImageBatch(previous, entries))} />
+                )}
+                {imageFields('questionImages')}
                 {questionTable ? (
                   <fieldset className="min-w-0 space-y-2">
                     <legend className="mb-1 text-sm font-semibold text-stone-800">Bảng trong đề bài</legend>
@@ -1876,6 +2026,7 @@ export default function SolutionEditor({
               </div>
             </div>
           )}
+          {imageFields('solutionImages')}
         </div>
 
         {/* ════════ PREVIEW ════════ */}
@@ -1889,7 +2040,7 @@ export default function SolutionEditor({
             </div>
             <div key={activeQIdx} className="min-w-0 flex-1 overflow-y-auto bg-stone-50 p-3.5 sm:p-4">
               {hasPreview ? (
-                <SolutionQuestions questions={[previewQuestion]} />
+                <SolutionQuestions questions={[previewQuestion]} imageFiles={previewImageFiles} />
               ) : (
                 <div className="flex min-h-48 flex-col items-center justify-center gap-3 px-4 text-center text-stone-500">
                   <Eye aria-hidden="true" className="size-8" />
@@ -1965,7 +2116,7 @@ export default function SolutionEditor({
             WebkitBackdropFilter: 'blur(5px)',
           }}
           onClick={() => {
-            if (!importingJson) closeJsonImport();
+            if (!importingJson && !processingImageBatch) closeJsonImport();
           }}
         >
           <div
@@ -1989,9 +2140,9 @@ export default function SolutionEditor({
               <button
                 type="button"
                 onClick={() => {
-                  if (!importingJson) closeJsonImport();
+                  if (!importingJson && !processingImageBatch) closeJsonImport();
                 }}
-                disabled={importingJson}
+                disabled={importingJson || processingImageBatch}
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-[#787774] hover:bg-[#F7F6F3] hover:text-[#1A1A1A] transition-colors disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
@@ -2002,6 +2153,13 @@ export default function SolutionEditor({
             <div className="p-6 overflow-y-auto space-y-4">
               {jsonReview.length ? (
                 <>
+                  {!!reviewImageTargets.length && (
+                    <StudyImageBatch targets={reviewImageTargets} disabled={importingJson} onProcessing={setProcessingImageBatch}
+                      onApply={entries => setJsonReview(previous => {
+                        const questions = applyStudyImageBatch(previous.map(row => row.question), entries);
+                        return previous.map((row, index) => ({ ...row, question: questions[index] }));
+                      })} />
+                  )}
                   <div className="space-y-2 rounded-lg bg-stone-50 p-3 text-sm">
                     {importTargets.map(target => (
                       <div key={target.value}>
@@ -2117,7 +2275,7 @@ export default function SolutionEditor({
               {/* Textarea */}
               <div className="relative">
                 <p className="mb-2 text-xs text-stone-600">
-                  Bảng dùng <code>question_table</code>. Mỗi hàng trong <code>rows</code> có số ô bằng số tiêu đề trong <code>headers</code>.
+                  Bảng dùng <code>question_table</code>. Để ghép ảnh theo tên file, khai báo mã ảnh trong <code>question_image_keys</code> hoặc <code>solution_image_keys</code>.
                 </p>
                 <textarea
                   value={jsonInput}
@@ -2136,7 +2294,7 @@ export default function SolutionEditor({
               <button
                 type="button"
                 onClick={() => jsonReview.length ? setJsonReview([]) : closeJsonImport()}
-                disabled={importingJson}
+                disabled={importingJson || processingImageBatch}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-[#57564F] hover:bg-[#EFEFED] border border-[#E9E9E7] transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {jsonReview.length ? 'Quay lại JSON' : 'Đóng'}
@@ -2144,7 +2302,8 @@ export default function SolutionEditor({
               <button
                 type="button"
                 onClick={jsonReview.length ? confirmJsonImport : handleImportJson}
-                disabled={!jsonInput.trim() || importingJson || (jsonReview.length > 0 && (incompleteImport || ambiguousDestination))}
+                disabled={!jsonInput.trim() || importingJson || processingImageBatch
+                  || (jsonReview.length > 0 && (incompleteImport || ambiguousDestination))}
                 className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
               >
                 {importingJson ? (

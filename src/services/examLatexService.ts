@@ -5,6 +5,7 @@ import katexStyles from 'katex/dist/katex.min.css?inline';
 import { CLOUDFLARE_PROXY_URL } from '../lib/telegram';
 import { normalizeQuestionImageWidth } from '../utils/questionImage';
 import type { QuestionTableData } from '../utils/questionTable';
+import { studyImageParts, studyImageSrc, type StudyImage } from '../utils/studyImages';
 
 export interface ExamStyleConfig {
   // 1. Mẫu giao diện & Bảng màu LaTeX
@@ -98,6 +99,8 @@ export interface SelectedQuestionItem {
   qFormula?: string;
   type: 'trac_nghiem' | 'dung_sai' | 'tu_luan';
   solution?: string;
+  questionImages?: StudyImage[];
+  solutionImages?: StudyImage[];
   choices?: string[];
   correctChoice?: string;
   statements?: Array<{ label: string; claim: string; verdict?: boolean | null; steps?: any[] }>;
@@ -471,6 +474,11 @@ function escapeHtml(value: string): string {
     .replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
+function renderStudyImageText(text: string, images: StudyImage[] = [], alt: string) {
+  return studyImageParts(text, images).map(part => typeof part === 'string' ? escapeHtml(part)
+    : `<img class="exam-question-figure" src="${escapeHtml(studyImageSrc(part))}" alt="${alt}" />`).join('');
+}
+
 function renderQuestionTableHtml(table?: QuestionTableData): string {
   if (!table) return '';
   const cellStyle = 'border: 1px solid #888; padding: 4px 7px; vertical-align: top; white-space: pre-line; overflow-wrap: anywhere;';
@@ -512,7 +520,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       return { wrapsImage, html: `
         <div class="exam-question-text"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(before)}</div>
         <div style="margin: 10px 0; text-align: center;">${imgHtml}</div>
-        ${after.trim() ? `<div class="exam-question-text" style="margin-top: 4px;">${escapeHtml(after)}</div>` : ''}
+        <div class="exam-question-text" style="margin-top: 4px;">${renderStudyImageText(after, q.questionImages, 'Hình minh họa đề bài')}</div>
         ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
         ${tableHtml}
       ` };
@@ -521,7 +529,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
     const sideTable = !!tableHtml && !!imgHtml && sideLayout;
     return { wrapsImage, html: `
       ${wrapsImage ? imgHtml : ''}
-      <div class="exam-question-text"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
+      <div class="exam-question-text"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${renderStudyImageText(q.qText || '', q.questionImages, 'Hình minh họa đề bài')}</div>
       ${q.qFormula ? `<div style="text-align: center; margin: 6px 0;">$$${escapeHtml(q.qFormula)}$$</div>` : ''}
       ${sideTable ? `<div style="display: grid; grid-template-columns: minmax(0, 1fr) 35%; gap: 16px; align-items: start;">${tableHtml}${imgHtml}</div>` : tableHtml}
       ${imgHtml && !wrapsImage && !sideTable ? `<div style="margin: 8px 0; text-align: center;">${imgHtml}</div>` : ''}
@@ -669,18 +677,19 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       if (sectionTitle) bodyHtml += `<h3 style="font-size: 11pt; color: ${primaryColor};">${escapeHtml(sectionTitle)}</h3>`;
       bodyHtml += `
         <div style="margin-bottom: 18px; page-break-inside: avoid;">
-          <div class="exam-question-text" style="margin-bottom: 6px;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${escapeHtml(q.qText || '')}</div>
+          <div class="exam-question-text" style="margin-bottom: 6px;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${renderStudyImageText(q.qText || '', q.questionImages, 'Hình minh họa đề bài')}</div>
           ${renderQuestionTableHtml(q.questionTable)}
           <div style="text-align: center; color: #0000ff; font-weight: bold; margin: 6px 0 8px 0;">Lời giải:</div>
           <div style="padding-left: 12px; font-size: 11pt; text-align: justify; text-justify: inter-word;">
             ${q.solution ? `
-              <div style="margin-bottom: 6px; white-space: pre-wrap; line-height: 1.45;">${escapeHtml(q.solution)}</div>
+              <div style="margin-bottom: 6px; white-space: pre-wrap; line-height: 1.45;">${renderStudyImageText(q.solution, q.solutionImages, 'Hình minh họa lời giải')}</div>
             ` : (q.solutionSteps || q.steps || []).map(s => `
               <div style="margin-bottom: 6px;">
                 ${s.title ? `<b>${escapeHtml(s.title)}:</b> ` : ''}${escapeHtml(s.text || '')}
                 ${s.formula ? `<div style="text-align: center; margin: 4px 0;">$$${escapeHtml(s.formula)}$$</div>` : ''}
               </div>
             `).join('')}
+            ${q.solution ? '' : renderStudyImageText('', q.solutionImages, 'Hình minh họa lời giải')}
             ${q.correctChoice ? `<div style="font-weight: bold; color: #2e7d32; margin-top: 4px;">➔ Đáp án: ${escapeHtml(q.correctChoice)}</div>` : ''}
           </div>
         </div>
@@ -730,6 +739,7 @@ export function examPrintDocument(body = '', title = 'Xem trước đề thi') {
     .katex-display { margin: 6px 0; }
     .exam-question { display: flow-root; margin-bottom: 16px; break-inside: avoid; }
     .exam-question-text { white-space: pre-line; text-align: justify; text-justify: inter-word; line-height: 1.45; color: #1a1a1a; }
+    .exam-question-figure { display: block; max-width: 100%; max-height: 85mm; object-fit: contain; margin: 8px auto; }
     .exam-statements > div + div { margin-top: 4px; }
     .exam-wrapped-choices > div + div { margin-top: 6px; }
     .exam-watermark {
