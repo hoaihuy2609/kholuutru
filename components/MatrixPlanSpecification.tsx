@@ -2,7 +2,8 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import type { StudyQuestionGroup } from '../types';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
-import { MATRIX_LEVELS, matrixMatch, type MatrixRow } from '../src/utils/examMatrix';
+import { ENERGY_MATRIX_CHAPTER_ID, MATRIX_LEVELS, matrixMatch, type MatrixRow } from '../src/utils/examMatrix';
+import { energyCurriculumGoals, matchEnergyCurriculumGoal, type EnergyCurriculumGoal } from '../src/utils/energyCurriculum';
 import { matrixPlanSlots, matchesMatrixPlanSlot, plannedOutcome, type MatrixAllocation, type MatrixPlanSlot } from '../src/utils/matrixPlan';
 import { STUDY_QUESTION_GROUPS, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
@@ -14,11 +15,39 @@ const primary = 'inline-flex min-h-9 items-center justify-center rounded-lg bg-a
 const input = 'block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm leading-5 text-stone-900 outline-none focus:border-amber-700 focus:ring-1 focus:ring-amber-700';
 const pageSize = 12;
 
-type Choice = { questionId?: string; outcome?: string; pickedOutcome?: string };
+type Choice = { questionId?: string; outcome?: string; pickedOutcome?: string; curriculumId?: string };
 
-function MatrixPlanPicker({ slot, outcome, candidates, selectedId, usedIds, onChoose, onClose }: {
+function CurriculumPicker({ slot, goals, selectedGoal, candidates, onChoose }: {
+    slot: MatrixPlanSlot;
+    goals: readonly EnergyCurriculumGoal[];
+    selectedGoal?: EnergyCurriculumGoal;
+    candidates: MatrixCandidate[];
+    onChoose: (goal: EnergyCurriculumGoal) => void;
+}) {
+    const eligible = useMemo(() => candidates.filter(candidate => matchesMatrixPlanSlot(slot, candidate)), [candidates, slot]);
+    return <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50/60 p-2">
+        <p className="px-1 text-xs font-semibold text-stone-700">
+            {slot.canChoose ? 'Mức lọc của ô · ' : 'YCCĐ theo PPCT · '}{MATRIX_LEVELS[slot.level]}
+        </p>
+        <ul className="space-y-1" aria-label="Các yêu cầu cần đạt theo PPCT">
+            {goals.map(goal => <li key={goal.id}>
+                <button type="button" className={'flex min-h-9 w-full flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-md px-2 py-1.5 text-left text-xs '
+                    + (selectedGoal?.id === goal.id ? 'bg-amber-100 text-amber-950' : 'bg-white text-stone-800 hover:bg-amber-100')}
+                    aria-pressed={selectedGoal?.id === goal.id} onClick={() => onChoose(goal)}>
+                    <span className="min-w-0 flex-1">{goal.label}</span>
+                    {slot.canChoose && <span className="shrink-0 tabular-nums text-stone-600">
+                        {eligible.filter(candidate => matchEnergyCurriculumGoal(goal, candidate.outcomes).score > 0).length} gợi ý
+                    </span>}
+                </button>
+            </li>)}
+        </ul>
+    </div>;
+}
+
+function MatrixPlanPicker({ slot, outcome, curriculumGoal, candidates, selectedId, usedIds, onChoose, onClose }: {
     slot: MatrixPlanSlot;
     outcome: string;
+    curriculumGoal?: EnergyCurriculumGoal;
     candidates: MatrixCandidate[];
     selectedId?: string;
     usedIds: ReadonlySet<string>;
@@ -28,16 +57,21 @@ function MatrixPlanPicker({ slot, outcome, candidates, selectedId, usedIds, onCh
     const [group, setGroup] = useState<StudyQuestionGroup | ''>('');
     const [limit, setLimit] = useState(pageSize);
     const [preview, setPreview] = useState<MatrixCandidate>();
+    const [showSameTopic, setShowSameTopic] = useState(false);
     const matches = useMemo(() => {
         const row: MatrixRow = { ...slot, section: '', count: 1, references: [], outcome };
         return candidates.filter(candidate => matchesMatrixPlanSlot(slot, candidate))
             .map(candidate => ({
                 candidate,
-                ...matrixMatch([row], { type: candidate.item.type, level: candidate.item.level, outcomes: candidate.outcomes }),
+                ...(curriculumGoal ? matchEnergyCurriculumGoal(curriculumGoal, candidate.outcomes)
+                    : matrixMatch([row], { type: candidate.item.type, level: candidate.item.level, outcomes: candidate.outcomes })),
             }))
             .sort((a, b) => b.score - a.score);
-    }, [candidates, slot, outcome]);
-    const visible = group ? matches.filter(({ candidate }) => candidate.groups?.includes(group)) : matches;
+    }, [candidates, slot, outcome, curriculumGoal]);
+    const groupMatches = group ? matches.filter(({ candidate }) => candidate.groups?.includes(group)) : matches;
+    const relevant = curriculumGoal ? groupMatches.filter(({ score }) => score > 0) : groupMatches;
+    const otherCount = groupMatches.length - relevant.length;
+    const visible = showSameTopic ? groupMatches : relevant;
 
     return (
         <MatrixDialog title={'Chọn câu · ' + slot.label}
@@ -49,7 +83,9 @@ function MatrixPlanPicker({ slot, outcome, candidates, selectedId, usedIds, onCh
                     <p className="whitespace-pre-wrap break-words">{outcome}</p>
                 </div>}
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-stone-700" role="status">{visible.length} câu trong kho</p>
+                    <p className="text-sm font-semibold text-stone-700" role="status">
+                        {curriculumGoal ? relevant.length + ' gợi ý theo YCCĐ' : visible.length + ' câu trong kho'}
+                    </p>
                     {slot.type === 'trac_nghiem' && <div className="flex flex-wrap gap-1.5" role="group" aria-label="Lọc nhóm trắc nghiệm">
                         {[{ value: '' as const, label: 'Tất cả' }, ...STUDY_QUESTION_GROUPS].map(({ value, label }) => (
                             <button key={value} type="button" aria-pressed={group === value}
@@ -65,9 +101,14 @@ function MatrixPlanPicker({ slot, outcome, candidates, selectedId, usedIds, onCh
                             showOutcomes onPreview={() => setPreview(candidate)} onChoose={() => onChoose(candidate)} />
                     ))}
                 </div> : <p className="rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-600">
-                    {group ? 'Nhóm này chưa có câu phù hợp. Xem Tất cả để rà các nhóm còn lại.'
+                    {curriculumGoal && groupMatches.length ? 'Chưa tìm thấy câu có YCCĐ sát với ý này ở mức đã chọn.'
+                        : group ? 'Nhóm này chưa có câu phù hợp. Xem Tất cả để rà các nhóm còn lại.'
                         : 'Kho chưa có câu được gắn đúng nội dung, loại câu và mức độ của vị trí này.'}
                 </p>}
+                {otherCount > 0 && <button type="button" className={button} aria-pressed={showSameTopic}
+                    onClick={() => { setShowSameTopic(value => !value); setLimit(pageSize); }}>
+                    {showSameTopic ? 'Chỉ xem gợi ý theo YCCĐ' : 'Xem thêm ' + otherCount + ' câu cùng nội dung'}
+                </button>}
                 {visible.length > limit && <button type="button" className={button} onClick={() => setLimit(previous => previous + pageSize)}>Xem thêm câu</button>}
             </div>
             {preview && <MatrixSolutionDialog candidate={preview} onClose={() => setPreview(undefined)} />}
@@ -84,6 +125,7 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
     const [choices, setChoices] = useState<Record<string, Choice>>({});
     const [openTopic, setOpenTopic] = useState<string | null>();
     const [activeId, setActiveId] = useState<string>();
+    const [curriculumPickerId, setCurriculumPickerId] = useState<string>();
     const slots = useMemo(() => matrixPlanSlots(allocations), [allocations]);
     const byId = useMemo(() => new Map(candidates.map(candidate => [candidate.item.id, candidate])), [candidates]);
     const topics = new Map<string, MatrixPlanSlot[]>();
@@ -101,6 +143,9 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
     const chosenBySlot = new Map(selectedSlots.map(({ slot, candidate }) => [slot.id, candidate]));
     const usedIds = new Set(selectedSlots.map(({ candidate }) => candidate.item.id));
     const activeSlot = slots.find(slot => slot.id === activeId && slot.canChoose);
+    const activeGoal = activeSlot?.chapterId === ENERGY_MATRIX_CHAPTER_ID
+        ? energyCurriculumGoals(activeSlot.topicId).find(goal => goal.id === choices[activeSlot.id]?.curriculumId)
+        : undefined;
     const pendingIdeas = slots.reduce((sum, slot) => sum + (slot.type === 'dung_sai' && !slot.canChoose ? slot.units : 0), 0);
     const selectableCount = slots.filter(slot => slot.canChoose).length;
     const slotIds = useMemo(() => new Set(slots.map(slot => slot.id)), [slots]);
@@ -177,28 +222,47 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                                 const candidate = chosenBySlot.get(slot.id);
                                 const outcome = outcomeFor(slot.id, candidate);
                                 const fieldId = id + '-' + slot.id;
+                                const goals = slot.chapterId === ENERGY_MATRIX_CHAPTER_ID ? energyCurriculumGoals(slot.topicId) : [];
+                                const selectedGoal = goals.find(goal => goal.id === choices[slot.id]?.curriculumId);
+                                const choosingCurriculum = curriculumPickerId === slot.id;
                                 return <div key={slot.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(9.5rem,0.7fr)_minmax(0,2fr)_minmax(8rem,0.6fr)]">
                                     <div className="space-y-0.5">
                                         <p className="text-sm font-semibold">{typeLabel(slot.type)}</p>
                                         <p className="text-xs text-stone-600">{slot.label} · {MATRIX_LEVELS[slot.level]}{slot.units === 4 ? ' · 4 ý' : ''}</p>
                                     </div>
                                     <div className="min-w-0 space-y-1.5">
-                                        <label htmlFor={fieldId} className="text-xs font-semibold text-stone-700">Yêu cầu cần đạt</label>
+                                        <div className="flex flex-wrap items-center justify-between gap-1">
+                                            <label htmlFor={fieldId} className="text-xs font-semibold text-stone-700">Yêu cầu cần đạt</label>
+                                            {goals.length > 0 && <button type="button" className="min-h-8 rounded px-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-50"
+                                                aria-expanded={choosingCurriculum} aria-controls={fieldId + '-ppct'}
+                                                onClick={() => setCurriculumPickerId(choosingCurriculum ? undefined : slot.id)}>Chọn từ PPCT</button>}
+                                        </div>
+                                        {goals.length > 0 && <div id={fieldId + '-ppct'} hidden={!choosingCurriculum}>
+                                            {choosingCurriculum && <CurriculumPicker slot={slot} goals={goals}
+                                                selectedGoal={selectedGoal} candidates={candidates} onChoose={goal => {
+                                                    updateChoice(slot.id, { curriculumId: goal.id, outcome: goal.label, pickedOutcome: undefined });
+                                                    if (slot.canChoose) setActiveId(slot.id);
+                                                }} />}
+                                        </div>}
                                         <textarea id={fieldId} rows={2} className={input + ' resize-y'} value={outcome}
                                             placeholder="Nhập yêu cầu cần đạt"
-                                            onChange={event => updateChoice(slot.id, { outcome: event.target.value })} />
+                                            onChange={event => updateChoice(slot.id, { outcome: event.target.value, curriculumId: undefined })} />
+                                        {selectedGoal && <details className="text-xs text-stone-600">
+                                            <summary className="cursor-pointer font-semibold text-amber-900">Xem nguyên văn PPCT</summary>
+                                            <p className="mt-1 rounded bg-stone-50 p-2 leading-relaxed">{selectedGoal.source}</p>
+                                        </details>}
                                         {candidate && candidate.outcomes.length > 1 && <select aria-label={'Lấy YCCĐ từ ' + slot.label}
                                             value={candidate.outcomes.includes(outcome) ? outcome : ''}
                                             className={input} onChange={event => {
                                                 const pickedOutcome = event.target.value;
-                                                if (pickedOutcome) updateChoice(slot.id, { pickedOutcome, outcome: undefined });
+                                                if (pickedOutcome) updateChoice(slot.id, { pickedOutcome, outcome: undefined, curriculumId: undefined });
                                             }}>
                                             <option value="">Lấy một YCCĐ từ câu đã chọn…</option>
                                             {candidate.outcomes.map(value => <option key={value} value={value}>{value}</option>)}
                                         </select>}
                                         {candidate?.outcomes.length === 1 && outcome !== candidate.outcomes[0] && (
                                             <button type="button" className="text-xs font-semibold text-amber-900 underline underline-offset-2"
-                                                onClick={() => updateChoice(slot.id, { outcome: undefined, pickedOutcome: undefined })}>
+                                                onClick={() => updateChoice(slot.id, { outcome: undefined, pickedOutcome: undefined, curriculumId: undefined })}>
                                                 Dùng YCCĐ của câu đã chọn
                                             </button>
                                         )}
@@ -222,7 +286,7 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                     </div>;
                 })}
             </div>
-            {activeSlot && <MatrixPlanPicker key={activeSlot.id} slot={activeSlot}
+            {activeSlot && <MatrixPlanPicker key={activeSlot.id} slot={activeSlot} curriculumGoal={activeGoal}
                 outcome={outcomeFor(activeSlot.id, chosenBySlot.get(activeSlot.id))}
                 candidates={candidates} selectedId={chosenBySlot.get(activeSlot.id)?.item.id} usedIds={usedIds}
                 onClose={() => setActiveId(undefined)} onChoose={candidate => choose(activeSlot.id, candidate)} />}

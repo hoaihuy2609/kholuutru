@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { energyCurriculumGoals, matchEnergyCurriculumGoal } from '../utils/energyCurriculum';
 import { matrixPlanSlots, matchesMatrixPlanSlot, plannedOutcome, type MatrixAllocation } from '../utils/matrixPlan';
 
 const allocation: MatrixAllocation = {
@@ -57,5 +58,32 @@ describe('matrix planner specification', () => {
         expect(plannedOutcome(undefined, second, [first, second])).toBe(second);
         expect(plannedOutcome('YCCĐ giáo viên nhập', undefined, [first])).toBe('YCCĐ giáo viên nhập');
         expect(plannedOutcome('', second, [first, second])).toBe('');
+    });
+
+    it('keeps the curriculum source while matching each assessed action at the allocated level', () => {
+        const goals = energyCurriculumGoals('work');
+        const formula = goals.find(goal => goal.id === 'work-expression')!;
+        const unit = goals.find(goal => goal.id === 'work-unit')!;
+        const calculation = goals.find(goal => goal.id === 'work-calculate')!;
+        expect(formula.source).toBe(unit.source);
+        expect(calculation.source).toBe(unit.source);
+        expect(matchEnergyCurriculumGoal(formula, [formula.label]).score).toBe(1);
+        expect(matchEnergyCurriculumGoal(formula, ['Nêu được đơn vị đo công']).score).toBe(0);
+        expect(matchEnergyCurriculumGoal(unit, ['Nêu được đơn vị đo công']).score).toBeGreaterThan(0);
+        expect(matchEnergyCurriculumGoal(calculation, ['Tính được công của lực kéo']).score).toBeGreaterThan(0);
+
+        const transfer = goals.find(goal => goal.id === 'work-transfer')!;
+        const recognized = 'Nhận biết được ví dụ truyền năng lượng bằng cách thực hiện công';
+        expect(matchEnergyCurriculumGoal(transfer, [recognized])).toMatchObject({
+            score: 0.9, evidence: [{ outcome: recognized, requirement: transfer.label }],
+        });
+        const [slot] = matrixPlanSlots([{ ...allocation, level: 2 }]);
+        const candidates = [1, 2, 3].map(level => ({
+            chapterId: allocation.chapterId, energyTopic: 'work' as const,
+            item: { type: 'trac_nghiem' as const, level }, outcomes: [recognized],
+        }));
+        expect(candidates.filter(candidate => matchesMatrixPlanSlot(slot, candidate)
+            && matchEnergyCurriculumGoal(transfer, candidate.outcomes).score > 0)).toEqual([candidates[1]]);
+        expect(energyCurriculumGoals('other')).toEqual([]);
     });
 });
