@@ -44,7 +44,7 @@ export function normalizeMatrixText(text: string) {
         .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-function cleanMatrixTitle(text: string) {
+export function cleanMatrixTitle(text: string) {
     return normalizeMatrixText(text).replace(/^(?:bai|chuong) (?:\d+(?: \d+)?|[ivx]+) /, '');
 }
 

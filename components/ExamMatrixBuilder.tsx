@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, ChevronLeft, FileUp, Pencil, Plus, Table2, Trash2 } from 'lucide-react';
+import type { StudyQuestionGroup } from '../types';
 import { isStudyQuestionType, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import { energyMatrixTopic, isMatrixLevelHeading, MATRIX_LEVELS, matrixCandidateFit, matrixOutcomeOptions, matrixReferences, matrixSlots, normalizeMatrixText, type MatrixQuestionDraft, type MatrixQuestionType, type MatrixRow } from '../src/utils/examMatrix';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
@@ -11,7 +12,9 @@ export interface MatrixCandidate {
     grade?: number;
     chapterId?: string;
     topic: string;
+    lessonTitle?: string;
     energyTopic?: ReturnType<typeof energyMatrixTopic>;
+    groups?: StudyQuestionGroup[];
     outcomes: string[];
     preview: () => string;
 }
@@ -281,7 +284,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
                 <button type="button" aria-pressed={!planning} className={planning ? button : primary}
                     onClick={() => setPlanning(false)}>Nhập PDF / Bản đặc tả</button>
             </div>}
-            <div hidden={!planning}><MatrixPlanner /></div>
+            <div hidden={!planning} className="space-y-4"><MatrixPlanner candidates={candidates} onCompose={onCompose} /></div>
 
             {planning ? null : reviewing ? <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-4">
                 <div className="flex flex-wrap items-center gap-3">

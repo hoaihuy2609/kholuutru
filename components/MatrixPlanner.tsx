@@ -1,7 +1,10 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import type { SelectedQuestionItem } from '../src/services/examLatexService';
 import { ENERGY_MATRIX_CHAPTER_ID, ENERGY_MATRIX_TOPICS, MATRIX_LEVELS, type MatrixQuestionType } from '../src/utils/examMatrix';
 import { STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
+import type { MatrixCandidate } from './ExamMatrixBuilder';
+import MatrixPlanSpecification from './MatrixPlanSpecification';
 
 const chapters: readonly { id: string; name: string; topics: readonly (readonly [id: string, name: string])[] }[] = [
     { id: 'g10-ch0', name: 'Mở đầu', topics: [
@@ -47,26 +50,37 @@ const levels = [1, 2, 3].map(value => ({ value, label: MATRIX_LEVELS[value] }));
 const columns = formats.flatMap(format => levels.map(level => ({
     key: format.value + ':' + level.value,
     format: format.label,
+    type: format.value,
     level: level.label,
+    levelValue: level.value,
     colors: formatColors[format.value],
 })));
 const cell = 'border-b border-r border-stone-200 px-2 py-2';
 const check = 'size-4 shrink-0 accent-amber-800';
 const maxCount = 99;
 
-export default function MatrixPlanner() {
+export default function MatrixPlanner({ candidates, onCompose }: {
+    candidates: MatrixCandidate[];
+    onCompose: (questions: SelectedQuestionItem[]) => void;
+}) {
     const id = useId();
     const [showContents, setShowContents] = useState(true);
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
     const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
     const [counts, setCounts] = useState<Record<string, Record<string, number>>>({});
 
-    const selectedChapters = chapters.map(chapter => ({
+    const selectedChapters = useMemo(() => chapters.map(chapter => ({
         ...chapter, topics: chapter.topics.filter(([topicId]) => selected.has(topicId)),
-    })).filter(chapter => chapter.topics.length > 0);
+    })).filter(chapter => chapter.topics.length > 0), [selected]);
     const selectedTopics = selectedChapters.flatMap(chapter => chapter.topics);
     const totals = Object.fromEntries(columns.map(({ key }) =>
         [key, selectedTopics.reduce((sum, [topicId]) => sum + (counts[topicId]?.[key] ?? 0), 0)]));
+    const allocations = useMemo(() => selectedChapters.flatMap(chapter =>
+        chapter.topics.flatMap(([topicId, topic]) => columns.flatMap(({ key, type, levelValue }) => {
+            const count = counts[topicId]?.[key];
+            return count ? [{ chapterId: chapter.id, chapter: chapter.name, topicId, topic, type, level: levelValue, count }] : [];
+        }))
+    ), [selectedChapters, counts]);
 
     function toggleExpanded(chapterId: string) {
         setExpanded(previous => {
@@ -88,7 +102,7 @@ export default function MatrixPlanner() {
         });
     }
 
-    return (
+    return <>
         <div className={'grid items-start gap-3 ' + (showContents
             ? 'lg:grid-cols-[minmax(235px,285px)_minmax(0,1fr)]'
             : 'lg:grid-cols-[auto_minmax(0,1fr)]')}>
@@ -226,5 +240,6 @@ export default function MatrixPlanner() {
                 </div>
             </section>
         </div>
-    );
+        <MatrixPlanSpecification allocations={allocations} candidates={candidates} onCompose={onCompose} />
+    </>;
 }

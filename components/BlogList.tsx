@@ -621,13 +621,15 @@ const BlogList: React.FC<BlogListProps> = ({
             const chapter = getStudyChapter(blog.studySection?.chapterId);
             const title = lessonTitles.get(blog.studySection?.lessonId ?? '');
             const energyTopic = questionEnergyMatrixTopic(chapter?.id, title ?? blog.title, question.matrix_topic);
-            if (!outcomes.length && !energyTopic) return [];
+            if (!outcomes.length && chapter?.grade !== 10) return [];
             return [{
                 item: toSelectedQuestion(blog, question, index, index + 1),
                 grade: blog.grade || chapter?.grade,
                 chapterId: chapter?.id,
                 topic: [chapter?.name, title].filter(Boolean).join(' · ') || blog.title,
+                lessonTitle: title ?? blog.title,
                 energyTopic,
+                groups: Array.isArray(question.question_groups) ? question.question_groups.filter(isStudyQuestionGroup) : undefined,
                 outcomes,
                 preview: () => JSON.stringify({ ...solution, data: { questions: [question] } }),
             }];

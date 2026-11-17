@@ -1,6 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Check, X } from 'lucide-react';
 import { MATRIX_LEVELS, type MatrixMatchEvidence } from '../src/utils/examMatrix';
+import { STUDY_QUESTION_GROUPS } from '../src/utils/studyLibrary';
 import SolutionRenderer, { SolutionQuestionPrompt } from './SolutionRenderer';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 
@@ -12,12 +14,13 @@ interface CardProps {
     evidence: MatrixMatchEvidence[];
     selected: boolean;
     used: boolean;
-    recent: boolean;
+    recent?: boolean;
+    showOutcomes?: boolean;
     onPreview: () => void;
     onChoose: () => void;
 }
 
-export function MatrixQuestionCard({ candidate, score, evidence, selected, used, recent, onPreview, onChoose }: CardProps) {
+export function MatrixQuestionCard({ candidate, score, evidence, selected, used, recent, showOutcomes, onPreview, onChoose }: CardProps) {
     const { item } = candidate;
     const [expanded, setExpanded] = useState(false);
     const [clipped, setClipped] = useState(false);
@@ -45,6 +48,8 @@ export function MatrixQuestionCard({ candidate, score, evidence, selected, used,
             <div className="flex flex-wrap items-center gap-2 text-xs text-stone-600">
                 <span className="font-bold text-stone-900">{item.questionNo}</span>
                 <span>{[candidate.topic, candidate.grade && `Lớp ${candidate.grade}`, item.level && MATRIX_LEVELS[item.level]].filter(Boolean).join(' · ')}</span>
+                {showOutcomes && item.type === 'trac_nghiem' && STUDY_QUESTION_GROUPS.filter(group => candidate.groups?.includes(group.value))
+                    .map(group => <span key={group.value} className="rounded bg-stone-100 px-2 py-0.5">{group.label}</span>)}
                 {recent && <span className="rounded bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-900">Vừa soạn</span>}
                 {selected && <span className="inline-flex items-center gap-1 font-semibold text-emerald-800"><Check aria-hidden="true" className="size-3.5" /> Đã chọn</span>}
             </div>
@@ -59,7 +64,7 @@ export function MatrixQuestionCard({ candidate, score, evidence, selected, used,
                         </>}
                     </li>)}
                 </ul>
-            </div> : (
+            </div> : !showOutcomes && (
                 <p className="rounded-lg bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-700">
                     Cùng nội dung · Chưa xác nhận khớp yêu cầu cần đạt
                 </p>
@@ -73,12 +78,18 @@ export function MatrixQuestionCard({ candidate, score, evidence, selected, used,
                 className="text-sm font-semibold text-amber-900 underline-offset-2 hover:underline">
                 {expanded ? 'Thu gọn đề bài' : 'Xem đầy đủ đề bài'}
             </button>}
+            {showOutcomes && <div className="space-y-1 rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-700">
+                <p className="text-xs font-semibold text-stone-900">Yêu cầu cần đạt</p>
+                {candidate.outcomes.length ? <ul className="list-disc space-y-1 pl-4">
+                    {candidate.outcomes.map(outcome => <li key={outcome}>{outcome}</li>)}
+                </ul> : <p className="text-xs text-stone-500">Câu này chưa có YCCĐ.</p>}
+            </div>}
 
             <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 pt-3">
                 <button type="button" className="rounded-lg bg-amber-800 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-50"
                     disabled={used} onClick={onChoose}>{used ? 'Đã dùng ở vị trí khác' : selected ? 'Bỏ câu này' : 'Chọn câu này'}</button>
                 <button type="button" className={action} aria-haspopup="dialog" onClick={onPreview}>Xem lời giải</button>
-                {otherOutcomes.length > 0 && <details className="basis-full text-sm text-stone-600">
+                {!showOutcomes && otherOutcomes.length > 0 && <details className="basis-full text-sm text-stone-600">
                     <summary className="cursor-pointer py-1">Xem {otherOutcomes.length} yêu cầu khác của câu</summary>
                     <ul className="list-disc space-y-1 pl-5">{otherOutcomes.map(outcome => <li key={outcome}>{outcome}</li>)}</ul>
                 </details>}
@@ -87,7 +98,13 @@ export function MatrixQuestionCard({ candidate, score, evidence, selected, used,
     );
 }
 
-export function MatrixSolutionDialog({ candidate, onClose }: { candidate: MatrixCandidate; onClose: () => void }) {
+export function MatrixDialog({ title, subtitle, closeLabel = 'Đóng', children, onClose }: {
+    title: string;
+    subtitle?: string;
+    closeLabel?: string;
+    children: ReactNode;
+    onClose: () => void;
+}) {
     const dialog = useRef<HTMLDialogElement>(null);
     const titleId = useId();
     useEffect(() => {
@@ -109,12 +126,21 @@ export function MatrixSolutionDialog({ candidate, onClose }: { candidate: Matrix
             onClick={event => { if (event.target === event.currentTarget) onClose(); }}
             className="fixed inset-auto left-1/2 top-1/2 m-0 h-[94dvh] max-h-none w-[min(96vw,1100px)] max-w-none -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-stone-200 bg-stone-50 p-0 shadow-xl backdrop:bg-black/25 open:flex open:flex-col sm:h-[min(90dvh,900px)]">
             <header className="flex items-center justify-between gap-3 border-b border-stone-200 bg-white px-4 py-3">
-                <h2 id={titleId} className="font-bold">Lời giải · {candidate.item.questionNo}</h2>
-                <button type="button" aria-label="Đóng lời giải" className={action} onClick={onClose}><X aria-hidden="true" className="size-4" /></button>
+                <div>
+                    <h2 id={titleId} className="font-bold">{title}</h2>
+                    {subtitle && <p className="mt-0.5 text-sm text-stone-600">{subtitle}</p>}
+                </div>
+                <button type="button" aria-label={closeLabel} className={action} onClick={onClose}><X aria-hidden="true" className="size-4" /></button>
             </header>
             <div className="min-h-0 flex-1 overflow-auto overscroll-contain p-3 sm:p-4">
-                <SolutionRenderer content={candidate.preview()} />
+                {children}
             </div>
         </dialog>
     );
+}
+
+export function MatrixSolutionDialog({ candidate, onClose }: { candidate: MatrixCandidate; onClose: () => void }) {
+    return <MatrixDialog title={`Lời giải · ${candidate.item.questionNo}`} closeLabel="Đóng lời giải" onClose={onClose}>
+        <SolutionRenderer content={candidate.preview()} />
+    </MatrixDialog>;
 }
