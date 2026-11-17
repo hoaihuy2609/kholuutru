@@ -2,7 +2,7 @@ import type { BlogPost, StudyLesson } from '../../types';
 import { dbGet, dbUpdate, dbUpdateBatch } from '../lib/db';
 import { fetchBlogsForEditing, getStudyLibrary, syncBlogs } from './blogService';
 import { parseReviewPrintRequest, resolveReviewPrintCards } from '../utils/outcomeReviewPrint';
-import { makeOutcomeExport, parseOutcomeResult, patchOutcomeBlogs, previewOutcomeResult, reverseOutcomeChanges,
+import { makeOutcomeExport, parseOutcomeResult, patchOutcomeBlogs, previewOutcomeResult, reverseOutcomeChanges, sameOutcome,
   type OutcomeChange, type OutcomeExport, type OutcomePreview, type OutcomeResult } from '../utils/outcomeExchange';
 import { parseQuestionCorrections, patchQuestionCorrections, previewQuestionCorrections,
   type QuestionCorrection, type QuestionCorrectionFile } from '../utils/questionCorrections';
@@ -15,7 +15,13 @@ export const OUTCOME_SYNC_KEY = 'pv_outcome_pending_sync';
 type RecordItem = BlogPost | StudyLesson;
 const isBlog = (item: RecordItem): item is BlogPost => !('kind' in item && item.kind === 'study_lesson');
 export type OutcomeBatch = { id: string; chapter_id: string; created_at: string; export_id: string;
-  changes: OutcomeChange[]; undone_at?: string };
+  changes: OutcomeChange[]; corrections?: QuestionCorrection[]; undone_at?: string };
+export type ChapterOutcomeResult = OutcomeResult | {
+  schema: 'physivault.outcomes.revision.v1'; chapter_id: string; export_id: string;
+  updates: OutcomeResult['updates']; corrected_question_ids: string[];
+  corrections: QuestionCorrectionFile['updates'];
+};
+export type ChapterOutcomePreview = OutcomePreview & { corrections?: QuestionCorrection[] };
 
 // Refresh the complete library, never the visible tab, search results or pagination.
 async function freshLibrary() {
@@ -52,27 +58,80 @@ export async function prepareOutcomeReviewPrint(chapterId: string, text: string)
 }
 
 export async function reviewChapterOutcomes(chapterId: string, text: string) {
-  const result = parseOutcomeResult(text);
+  const result = parseChapterOutcomeResult(text);
   const manifest = findManifest(await dbGet(EXPORTS) ?? [], result, chapterId);
   const library = await freshLibrary();
-  return { result, preview: previewOutcomeResult(library.blogs, manifest, result) };
+  const history: CorrectionBatch[] = result.schema === 'physivault.outcomes.revision.v1' ? await dbGet(CORRECTION_HISTORY) ?? [] : [];
+  return { result, preview: prepareOutcomeRevision(library.blogs, manifest, result, history).preview };
 }
 
-export async function applyChapterOutcomes(chapterId: string, input: OutcomeResult): Promise<OutcomeBatch> {
+function parseChapterOutcomeResult(text: string): ChapterOutcomeResult {
+  const value = JSON.parse(text.replace(/^\uFEFF/, ''));
+  if (value?.schema !== 'physivault.outcomes.revision.v1') return parseOutcomeResult(text);
+  const { schema, chapter_id, export_id, updates, corrections, corrected_question_ids, ...extra } = value;
+  if (Object.keys(extra).length || !Array.isArray(corrected_question_ids) || !corrected_question_ids.length
+    || corrected_question_ids.some(id => typeof id !== 'string' || !id)
+    || new Set(corrected_question_ids).size !== corrected_question_ids.length) throw new Error('Danh sách mã câu đã sửa không hợp lệ.');
+  const outcomes = parseOutcomeResult(JSON.stringify({ schema: 'physivault.outcomes.update.v1', chapter_id, export_id, updates }));
+  const patch = parseQuestionCorrections(JSON.stringify({ schema: 'physivault.questions.update.v1', chapter_id, export_id, updates: corrections }));
+  const ids = new Set(outcomes.updates.map(update => update.question_id));
+  const priorIds = new Set(corrected_question_ids);
+  if (corrected_question_ids.some(id => !ids.has(id)) || patch.updates.some(edit => !priorIds.has(edit.question_id))) {
+    throw new Error('Mã cần sửa thêm phải thuộc đợt sửa trước và có YCCĐ trong file.');
+  }
+  return { schema, chapter_id, export_id, updates: outcomes.updates, corrections: patch.updates, corrected_question_ids };
+}
+
+function prepareOutcomeRevision(blogs: BlogPost[], manifest: OutcomeExport, result: ChapterOutcomeResult, history: CorrectionBatch[])
+  : { blogs: BlogPost[]; preview: ChapterOutcomePreview } {
+  if (result.schema === 'physivault.outcomes.update.v1') return { blogs, preview: previewOutcomeResult(blogs, manifest, result) };
+  const expectedIds = new Set(result.corrected_question_ids);
+  const prior = history.find(batch => !batch.undone_at && batch.chapter_id === result.chapter_id && batch.export_id === result.export_id
+    && batch.changes.length === expectedIds.size && batch.changes.every(change => expectedIds.has(change.source.question_id)));
+  if (!prior) throw new Error('Không thấy đợt sửa nội dung trước trên trình duyệt này. Dùng trình duyệt đã áp dụng đợt sửa.');
+  const repairedIds = new Map(prior.changes.map(change => [change.source.question_id, change]));
+  const rebased = { ...manifest, sources: manifest.sources.map(source => {
+    const repair = repairedIds.get(source.question_id);
+    if (!repair) return source;
+    if (repair.source.fingerprint !== source.fingerprint) throw new Error('Lịch sử sửa câu không khớp lượt xuất.');
+    return { ...source, fingerprint: repair.afterFingerprint };
+  }) };
+  const correctionFile: QuestionCorrectionFile = { schema: 'physivault.questions.update.v1',
+    chapter_id: result.chapter_id, export_id: result.export_id, updates: result.corrections };
+  const { changes: corrections, errors } = previewQuestionCorrections(blogs, rebased, correctionFile);
+  if (errors.length) return { blogs, preview: { changes: [], unchanged: 0, omitted: 0, errors, corrections } };
+  const staged = patchQuestionCorrections(blogs, result.chapter_id, corrections);
+  const corrected = new Map(corrections.map(change => [change.source.question_id, change.afterFingerprint]));
+  const current = new Map(makeOutcomeExport(staged, [], result.chapter_id, result.export_id).manifest.sources.map(source => [source.question_id, source]));
+  const updates = new Map(result.updates.map(update => [update.question_id, update.learning_outcomes]));
+  const updatedManifest = { ...rebased, sources: rebased.sources.map(source => {
+    const live = current.get(source.question_id);
+    const target = updates.get(source.question_id);
+    const desired = { present: true, value: target };
+    return { ...source, fingerprint: corrected.get(source.question_id) ?? source.fingerprint,
+      text: live?.text ?? source.text,
+      before: live && target && sameOutcome(live.before, desired) ? live.before : source.before,
+      rootBefore: live?.rootBefore && target && sameOutcome(live.rootBefore, desired) ? live.rootBefore : source.rootBefore };
+  }) };
+  const outcomeFile: OutcomeResult = { schema: 'physivault.outcomes.update.v1',
+    chapter_id: result.chapter_id, export_id: result.export_id, updates: result.updates };
+  return { blogs: staged, preview: { ...previewOutcomeResult(staged, updatedManifest, outcomeFile), corrections } };
+}
+
+export async function applyChapterOutcomes(chapterId: string, input: ChapterOutcomeResult): Promise<OutcomeBatch> {
   // Validate again at commit, including imports supplied by callers other than this UI.
-  const result = parseOutcomeResult(JSON.stringify(input));
+  const result = parseChapterOutcomeResult(JSON.stringify(input));
   await freshLibrary();
   let batch!: OutcomeBatch;
-  await dbUpdateBatch([BLOGS, EXPORTS, HISTORY, OUTCOME_SYNC_KEY], values => {
+  await dbUpdateBatch([BLOGS, EXPORTS, HISTORY, CORRECTION_HISTORY, OUTCOME_SYNC_KEY], values => {
     const records: RecordItem[] = values[BLOGS] ?? [];
     const manifest = findManifest(values[EXPORTS] ?? [], result, chapterId);
-    const blogs = records.filter(isBlog);
-    const preview = previewOutcomeResult(blogs, manifest, result);
+    const { blogs, preview } = prepareOutcomeRevision(records.filter(isBlog), manifest, result, values[CORRECTION_HISTORY] ?? []);
     if (preview.errors.length) throw new Error(preview.errors.join('\n'));
-    if (!preview.changes.length) throw new Error('Không có YCCĐ thay đổi để áp dụng.');
+    if (!preview.changes.length && !preview.corrections?.length) throw new Error('Không có thay đổi để áp dụng.');
     const patched = new Map(patchOutcomeBlogs(blogs, chapterId, preview.changes).map(blog => [blog.id, blog]));
     batch = { id: crypto.randomUUID(), chapter_id: chapterId, export_id: result.export_id,
-      created_at: new Date().toISOString(), changes: preview.changes };
+      created_at: new Date().toISOString(), changes: preview.changes, corrections: preview.corrections };
     return {
       [BLOGS]: records.map(record => isBlog(record) ? patched.get(record.id)! : record),
       [HISTORY]: [...(values[HISTORY] ?? []), batch], [OUTCOME_SYNC_KEY]: batch.id,
@@ -82,15 +141,18 @@ export async function applyChapterOutcomes(chapterId: string, input: OutcomeResu
   return batch;
 }
 
-export async function reviewOutcomeUndo(chapterId: string, batchId: string): Promise<OutcomePreview> {
+export async function reviewOutcomeUndo(chapterId: string, batchId: string): Promise<ChapterOutcomePreview> {
   const library = await freshLibrary();
   const batch = (await getOutcomeHistory(chapterId)).find(item => item.id === batchId && !item.undone_at);
   if (!batch) throw new Error('Không tìm thấy đợt cập nhật còn có thể hoàn tác.');
   const changes = reverseOutcomeChanges(batch.changes);
   // Reuse the guarded patch without writing anything.
-  try { patchOutcomeBlogs(library.blogs, chapterId, changes); }
+  try {
+    const restored = patchOutcomeBlogs(library.blogs, chapterId, changes);
+    if (batch.corrections) patchQuestionCorrections(restored, chapterId, batch.corrections, true);
+  }
   catch (error) { return { changes, unchanged: 0, omitted: 0, errors: [String((error as Error).message)] }; }
-  return { changes, unchanged: 0, omitted: 0, errors: [] };
+  return { changes, corrections: batch.corrections, unchanged: 0, omitted: 0, errors: [] };
 }
 
 export async function undoChapterOutcomes(chapterId: string, batchId: string) {
@@ -100,8 +162,9 @@ export async function undoChapterOutcomes(chapterId: string, batchId: string) {
     const batch = history.find(item => item.id === batchId && item.chapter_id === chapterId && !item.undone_at);
     if (!batch) throw new Error('Đợt cập nhật đã được hoàn tác hoặc không thuộc chương này.');
     const records: RecordItem[] = values[BLOGS] ?? [];
-    const patched = new Map(patchOutcomeBlogs(records.filter(isBlog), chapterId,
-      reverseOutcomeChanges(batch.changes)).map(blog => [blog.id, blog]));
+    const restored = patchOutcomeBlogs(records.filter(isBlog), chapterId, reverseOutcomeChanges(batch.changes));
+    const next = batch.corrections ? patchQuestionCorrections(restored, chapterId, batch.corrections, true) : restored;
+    const patched = new Map(next.map(blog => [blog.id, blog]));
     return {
       [BLOGS]: records.map(record => isBlog(record) ? patched.get(record.id)! : record),
       [HISTORY]: history.map(item => item.id === batchId ? { ...item, undone_at: new Date().toISOString() } : item),

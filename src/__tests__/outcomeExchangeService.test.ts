@@ -141,6 +141,38 @@ describe('outcome exchange transactions', () => {
     expect(state.sync).not.toHaveBeenCalled();
   });
 
+  it('uses the exact prior correction batch to apply a combined revision and roll it back', async () => {
+    const { manifest } = await exportChapterOutcomes(chapter);
+    const reference = { chapter_id: chapter, export_id: manifest.export_id };
+    const packet = {
+      schema: 'physivault.outcomes.revision.v1', ...reference,
+      corrected_question_ids: ['post:0'],
+      corrections: [{ question_id: 'post:0', set: { question_text: 'Tính công đã làm tròn' } }],
+      updates: [{ question_id: 'post:0', learning_outcomes: ['Tính được công.'] }],
+    };
+    const review = () => reviewChapterOutcomes(chapter, JSON.stringify(packet));
+    await expect(review()).rejects.toThrow('đợt sửa nội dung trước');
+    await applyChapterCorrections(chapter, { schema: 'physivault.questions.update.v1', ...reference,
+      updates: [{ question_id: 'post:0', set: { question_text: 'Tính công mới' } }] });
+    const before = JSON.parse(state.db.get(KEY)[0].content);
+    const draft = await review();
+    expect(draft.preview).toMatchObject({ errors: [], changes: [expect.anything()], corrections: [expect.anything()] });
+    expect(JSON.parse(state.db.get(KEY)[0].content)).toEqual(before);
+    const batch = await applyChapterOutcomes(chapter, draft.result);
+    expect(JSON.parse(state.db.get(KEY)[0].content).data).toMatchObject({
+      question_text: 'Tính công đã làm tròn', learning_outcomes: ['Tính được công.'], image_telegram_file_id: 'original-image',
+    });
+    expect((await reviewOutcomeUndo(chapter, batch.id)).errors).toEqual([]);
+    await undoChapterOutcomes(chapter, batch.id);
+    expect(JSON.parse(state.db.get(KEY)[0].content)).toEqual(before);
+
+    const records = state.db.get(KEY);
+    before.data.question_text = 'Sửa bên ngoài đợt nhập';
+    records[0].content = JSON.stringify(before);
+    await expect(applyChapterOutcomes(chapter, draft.result)).rejects.toThrow('đã đổi');
+    expect(JSON.parse(state.db.get(KEY)[0].content).data.learning_outcomes).toEqual(['Cũ']);
+  });
+
   it('revalidates changes inside the write transaction after a successful preview', async () => {
     const { review } = await prepare();
     state.beforeTransaction = () => {

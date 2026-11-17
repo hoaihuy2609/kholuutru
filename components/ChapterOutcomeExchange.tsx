@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, FileJson, History, Pencil, Printer, Upload } from 'lucide-react';
 import OutcomeReviewPrint from './OutcomeReviewPrint';
-import ChapterQuestionCorrections from './ChapterQuestionCorrections';
+import ChapterQuestionCorrections, { displayChanges } from './ChapterQuestionCorrections';
 import type { StudyLibrary } from '../types';
 import { MatrixDialog } from './MatrixQuestionCard';
 import { STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
-import type { OutcomePreview, OutcomeResult, OutcomeValue } from '../src/utils/outcomeExchange';
+import type { OutcomeValue } from '../src/utils/outcomeExchange';
 import { applyChapterOutcomes, exportChapterOutcomes, getOutcomeHistory, reviewChapterOutcomes,
-  reviewOutcomeUndo, undoChapterOutcomes, type OutcomeBatch } from '../src/services/outcomeExchangeService';
+  reviewOutcomeUndo, undoChapterOutcomes, type OutcomeBatch, type ChapterOutcomePreview,
+  type ChapterOutcomeResult } from '../src/services/outcomeExchangeService';
 import { getStudyLibrary } from '../src/services/blogService';
 
 const button = 'inline-flex items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-stone-50 disabled:opacity-50';
@@ -31,7 +32,7 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
   const [tab, setTab] = useState<'export' | 'import' | 'history' | 'pdf' | 'corrections'>('export');
   const [prepared, setPrepared] = useState<Awaited<ReturnType<typeof exportChapterOutcomes>>>();
   const [text, setText] = useState('');
-  const [review, setReview] = useState<{ preview: OutcomePreview; result?: OutcomeResult; batchId?: string }>();
+  const [review, setReview] = useState<{ preview: ChapterOutcomePreview; result?: ChapterOutcomeResult; batchId?: string }>();
   const [history, setHistory] = useState<OutcomeBatch[]>([]);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
@@ -59,7 +60,8 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
     if (review.batchId) await undoChapterOutcomes(chapter.id, review.batchId);
     else if (review.result) await applyChapterOutcomes(chapter.id, review.result);
     else return;
-    const count = review.preview.changes.length;
+    const count = new Set([...review.preview.changes.map(change => change.question_id),
+      ...(review.preview.corrections ?? []).map(change => change.source.question_id)]).size;
     setReview(undefined); setText(''); setConfirmed(false); setPrepared(undefined);
     setNotice(`Đã lưu ${count} câu trên máy và đưa vào hàng đợi đồng bộ. Theo dõi trạng thái “Kho câu hỏi” để biết khi đồng bộ xong.`);
     onChanged(await getStudyLibrary(true));
@@ -74,8 +76,7 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
       onClose={() => { if (!busyRef.current) setOpen(false); }}>
       <div className="space-y-4">
         {tab !== 'corrections' && <p className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-950">
-          Xuất toàn bộ loại câu và cả câu nháp trong chương. Khi nhập, chỉ cập nhật YCCĐ của các mã câu được gửi lại.
-          Đề, đáp án, lời giải, mức độ và ảnh được giữ nguyên.
+          Xuất toàn bộ loại câu và cả câu nháp trong chương. Khi nhập, màn hình xem trước liệt kê YCCĐ và các mục sửa nội dung có trong file.
         </p>}
         <div className="flex flex-wrap gap-2" role="group" aria-label="Thao tác YCCĐ">
           {([['export', '1. Xuất để rà', Download], ['import', '2. Nhập kết quả', Upload], ['pdf', 'Xuất PDF rà câu', Printer],
@@ -148,7 +149,7 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
           <h3 className="font-bold">Lịch sử trên trình duyệt này</h3>
           {!history.length && <p className="text-sm text-stone-500">Chưa có đợt cập nhật YCCĐ.</p>}
           {history.map(batch => <div key={batch.id} className="flex flex-wrap items-center justify-between gap-2 border-t py-3 text-sm">
-            <div><strong>{batch.changes.length} câu</strong> · {new Date(batch.created_at).toLocaleString('vi-VN')}
+            <div><strong>{batch.changes.length} YCCĐ theo câu{batch.corrections?.length ? ` · ${batch.corrections.length} câu sửa nội dung` : ''}</strong> · {new Date(batch.created_at).toLocaleString('vi-VN')}
               {batch.undone_at && <p className="text-emerald-700">Đã hoàn tác</p>}</div>
             <div className="flex flex-wrap gap-2">
               <button type="button" className={button} disabled={busy} onClick={() => downloadJson(`lich-su-yccd-${batch.id}.json`, batch)}>Tải bản đối chiếu</button>
@@ -162,11 +163,18 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
 
         {review && <section className="space-y-3">
           <h3 className="font-bold">{review.batchId ? 'Xem trước hoàn tác' : 'Xem trước cập nhật'}</h3>
-          <p className="text-sm">{review.preview.changes.length} câu thay đổi · {review.preview.unchanged} giữ nguyên · {review.preview.omitted} câu không gửi lại</p>
+          <p className="text-sm">YCCĐ: {review.preview.changes.length} câu thay đổi · {review.preview.unchanged} đã khớp · {review.preview.omitted} câu không gửi lại</p>
           {!!review.preview.errors.length && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
             <strong>Chưa thể áp dụng. Không câu nào được cập nhật khi còn lỗi.</strong>
             <ul className="mt-2 list-disc space-y-1 pl-4">{review.preview.errors.map((message, index) => <li key={index} className="whitespace-pre-wrap">{message}</li>)}</ul>
           </div>}
+          {review.preview.corrections?.map(change => <article key={change.source.question_id} className="space-y-2 rounded-xl border border-amber-200 bg-white p-4 text-sm">
+            <h4 className="font-bold">Sửa nội dung · {change.source.lesson} · {change.source.label}</h4>
+            {displayChanges(change, !!review.batchId).map(field => <div key={field.label} className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg bg-stone-50 p-3"><p className="font-semibold">{field.label} · Hiện tại</p><p className="whitespace-pre-wrap break-words">{field.a}</p></div>
+              <div className="rounded-lg bg-emerald-50 p-3"><p className="font-semibold">{field.label} · Sau thay đổi</p><p className="whitespace-pre-wrap break-words">{field.b}</p></div>
+            </div>)}
+          </article>)}
           {review.preview.changes.map(change => <article key={change.question_id} className="space-y-2 rounded-xl border bg-white p-4 text-sm">
             <h4 className="font-bold">{change.lesson} · {change.label}</h4>
             <p className="line-clamp-3 text-stone-600">{change.text}</p>
@@ -175,11 +183,11 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
               <div className="rounded-lg bg-emerald-50 p-3"><p className="mb-2 font-semibold text-emerald-900">Sau khi {review.batchId ? 'hoàn tác' : 'cập nhật'}</p><Outcomes value={change.after} /></div>
             </div>
           </article>)}
-          {review.preview.changes.length > 0 && !review.preview.errors.length && <div className="sticky bottom-0 space-y-3 rounded-xl border border-amber-200 bg-white p-4 shadow-sm">
+          {(review.preview.changes.length > 0 || !!review.preview.corrections?.length) && !review.preview.errors.length && <div className="sticky bottom-0 space-y-3 rounded-xl border border-amber-200 bg-white p-4 shadow-sm">
             <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} disabled={busy} onChange={e => setConfirmed(e.target.checked)} className="mt-0.5" />
-              Tôi đã rà thay đổi YCCĐ của {review.preview.changes.length} câu trong chương này.</label>
+              Tôi đã rà các thay đổi được hiển thị.</label>
             <button type="button" className={primary} disabled={busy || !confirmed} onClick={apply}>
-              {review.batchId ? 'Xác nhận hoàn tác' : 'Áp dụng YCCĐ mới'}</button>
+              {review.batchId ? 'Xác nhận hoàn tác' : review.preview.corrections?.length ? 'Áp dụng YCCĐ và sửa nội dung' : 'Áp dụng YCCĐ mới'}</button>
           </div>}
         </section>}
       </div>

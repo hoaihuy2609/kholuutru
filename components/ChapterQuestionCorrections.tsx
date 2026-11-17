@@ -10,7 +10,7 @@ type Review = { changes: QuestionCorrection[]; errors: string[]; input?: Questio
 type Statement = { label: string; claim: string; verdict: boolean };
 const describeStatement = (statement: Statement) => `${statement.claim}\nĐáp án: ${statement.verdict ? 'Đúng' : 'Sai'}`;
 
-function displayChanges(change: QuestionCorrection, undo: boolean) {
+export function displayChanges(change: QuestionCorrection, undo: boolean) {
   return change.fields.flatMap(({ key, before, after }) => {
     const a = undo ? after.value : before.value;
     const b = undo ? before.value : after.value;
