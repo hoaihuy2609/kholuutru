@@ -4,10 +4,13 @@ import { fetchBlogsForEditing, getStudyLibrary, syncBlogs } from './blogService'
 import { parseReviewPrintRequest, resolveReviewPrintCards } from '../utils/outcomeReviewPrint';
 import { makeOutcomeExport, parseOutcomeResult, patchOutcomeBlogs, previewOutcomeResult, reverseOutcomeChanges,
   type OutcomeChange, type OutcomeExport, type OutcomePreview, type OutcomeResult } from '../utils/outcomeExchange';
+import { parseQuestionCorrections, patchQuestionCorrections, previewQuestionCorrections,
+  type QuestionCorrection, type QuestionCorrectionFile } from '../utils/questionCorrections';
 
 const BLOGS = 'physivault_blogs_local';
 const EXPORTS = 'pv_outcome_exports_v1';
 const HISTORY = 'pv_outcome_history_v1';
+const CORRECTION_HISTORY = 'pv_question_corrections_v1';
 export const OUTCOME_SYNC_KEY = 'pv_outcome_pending_sync';
 type RecordItem = BlogPost | StudyLesson;
 const isBlog = (item: RecordItem): item is BlogPost => !('kind' in item && item.kind === 'study_lesson');
@@ -102,6 +105,70 @@ export async function undoChapterOutcomes(chapterId: string, batchId: string) {
     return {
       [BLOGS]: records.map(record => isBlog(record) ? patched.get(record.id)! : record),
       [HISTORY]: history.map(item => item.id === batchId ? { ...item, undone_at: new Date().toISOString() } : item),
+      [OUTCOME_SYNC_KEY]: crypto.randomUUID(),
+    };
+  });
+  void syncBlogs();
+}
+
+type CorrectionBatch = Omit<OutcomeBatch, 'changes'> & { changes: QuestionCorrection[] };
+
+export async function getCorrectionHistory(chapterId: string): Promise<CorrectionBatch[]> {
+  const history: CorrectionBatch[] = await dbGet(CORRECTION_HISTORY) ?? [];
+  return history.filter(batch => batch.chapter_id === chapterId).reverse();
+}
+
+export async function reviewChapterCorrections(chapterId: string, text: string) {
+  const input = parseQuestionCorrections(text);
+  const manifest = findManifest(await dbGet(EXPORTS) ?? [], input, chapterId);
+  const { blogs } = await freshLibrary();
+  return { input, ...previewQuestionCorrections(blogs, manifest, input) };
+}
+
+export async function applyChapterCorrections(chapterId: string, input: QuestionCorrectionFile) {
+  const result = parseQuestionCorrections(JSON.stringify(input));
+  await freshLibrary();
+  await dbUpdateBatch([BLOGS, EXPORTS, CORRECTION_HISTORY, OUTCOME_SYNC_KEY], values => {
+    const records: RecordItem[] = values[BLOGS] ?? [];
+    const manifest = findManifest(values[EXPORTS] ?? [], result, chapterId);
+    const blogs = records.filter(isBlog);
+    const { changes, errors } = previewQuestionCorrections(blogs, manifest, result);
+    if (errors.length) throw new Error(errors.join('\n'));
+    if (!changes.length) throw new Error('File không có nội dung thay đổi để áp dụng.');
+    const patched = new Map(patchQuestionCorrections(blogs, chapterId, changes).map(blog => [blog.id, blog]));
+    const batch: CorrectionBatch = {
+      id: crypto.randomUUID(), chapter_id: chapterId, export_id: result.export_id,
+      created_at: new Date().toISOString(), changes,
+    };
+    return {
+      [BLOGS]: records.map(record => isBlog(record) ? patched.get(record.id)! : record),
+      [CORRECTION_HISTORY]: [...(values[CORRECTION_HISTORY] ?? []), batch],
+      [OUTCOME_SYNC_KEY]: batch.id,
+    };
+  });
+  void syncBlogs();
+}
+
+export async function reviewCorrectionUndo(chapterId: string, batchId: string) {
+  const batch = (await getCorrectionHistory(chapterId)).find(item => item.id === batchId && !item.undone_at);
+  if (!batch) throw new Error('Không tìm thấy đợt sửa còn có thể hoàn tác.');
+  const { blogs } = await freshLibrary();
+  patchQuestionCorrections(blogs, chapterId, batch.changes, true);
+  return batch.changes;
+}
+
+export async function undoChapterCorrections(chapterId: string, batchId: string) {
+  await freshLibrary();
+  await dbUpdateBatch([BLOGS, CORRECTION_HISTORY, OUTCOME_SYNC_KEY], values => {
+    const history: CorrectionBatch[] = values[CORRECTION_HISTORY] ?? [];
+    const batch = history.find(item => item.id === batchId && item.chapter_id === chapterId && !item.undone_at);
+    if (!batch) throw new Error('Đợt sửa đã được hoàn tác hoặc không thuộc chương này.');
+    const records: RecordItem[] = values[BLOGS] ?? [];
+    const patched = new Map(patchQuestionCorrections(records.filter(isBlog), chapterId, batch.changes, true)
+      .map(blog => [blog.id, blog]));
+    return {
+      [BLOGS]: records.map(record => isBlog(record) ? patched.get(record.id)! : record),
+      [CORRECTION_HISTORY]: history.map(item => item.id === batch.id ? { ...item, undone_at: new Date().toISOString() } : item),
       [OUTCOME_SYNC_KEY]: crypto.randomUUID(),
     };
   });

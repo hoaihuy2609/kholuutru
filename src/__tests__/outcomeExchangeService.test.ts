@@ -21,7 +21,8 @@ vi.mock('../services/blogService', () => ({
   syncBlogs: state.sync,
 }));
 import { applyChapterOutcomes, exportChapterOutcomes, getOutcomeHistory, reviewChapterOutcomes,
-  reviewOutcomeUndo, undoChapterOutcomes, OUTCOME_SYNC_KEY } from '../services/outcomeExchangeService';
+  reviewOutcomeUndo, undoChapterOutcomes, OUTCOME_SYNC_KEY, reviewChapterCorrections, applyChapterCorrections,
+  getCorrectionHistory, undoChapterCorrections } from '../services/outcomeExchangeService';
 
 const KEY = 'physivault_blogs_local';
 const chapter = 'g10-ch3';
@@ -82,6 +83,61 @@ describe('outcome exchange transactions', () => {
     expect(state.db.get(KEY)).toEqual(original);
     expect(await getOutcomeHistory(chapter)).toEqual([]);
     expect(state.db.get(OUTCOME_SYNC_KEY)).toBeUndefined();
+    expect(state.sync).not.toHaveBeenCalled();
+  });
+
+  it('patches exact question indices and mirrored text, then restores the edits without replacing images or later YCCĐ', async () => {
+    const post = fixture();
+    const doc = JSON.parse(post.content);
+    const q1 = { ...doc.data, question_text: 'Đề 1 [image:h1]',
+      question_images: [{ key: 'h1', file_id: 'img-q1' }],
+      solution_images: [{ file_id: 'img-lg1' }] };
+    const q2 = { ...doc.data, question_text: 'Đề 2', solutionSteps: [{ text: doc.data.solution }] };
+    doc.data = { question_text: q1.question_text, questions: [q1, q2] };
+    state.db.set(KEY, [{ ...post, content: JSON.stringify(doc) }]);
+    const { manifest } = await exportChapterOutcomes(chapter);
+    const packet = { schema: 'physivault.questions.update.v1', chapter_id: chapter, export_id: manifest.export_id,
+      updates: [
+        { question_id: 'post:0', set: { question_text: 'Đề 1 đã sửa [image:h1]' } },
+        { question_id: 'post:1', set: { correctChoice: 'B', solution: 'Cách giải mới' } },
+      ] };
+    const preview = await reviewChapterCorrections(chapter, JSON.stringify(packet));
+    expect(preview.errors).toEqual([]);
+    expect(preview.changes).toHaveLength(2);
+    expect(state.sync).not.toHaveBeenCalled();
+    const movedImage = structuredClone(packet);
+    movedImage.updates[0].set.question_text = 'Mất điểm chèn ảnh';
+    expect((await reviewChapterCorrections(chapter, JSON.stringify(movedImage))).errors).toHaveLength(1);
+    await applyChapterCorrections(chapter, preview.input);
+    const records = state.db.get(KEY);
+    const updated = JSON.parse(records[0].content);
+    expect(updated.data.question_text).toBe('Đề 1 đã sửa [image:h1]');
+    expect(updated.data.questions[0]).toMatchObject({ question_images: q1.question_images, solution_images: q1.solution_images });
+    expect(updated.data.questions[1]).toMatchObject({ correctChoice: 'B', solution: 'Cách giải mới', solutionSteps: [{ text: 'Cách giải mới' }] });
+    const [batch] = await getCorrectionHistory(chapter);
+    expect(state.db.get(OUTCOME_SYNC_KEY)).toBe(batch.id);
+    updated.data.questions[1].learning_outcomes = ['YCCĐ nhập sau'];
+    records[0].content = JSON.stringify(updated);
+    await undoChapterCorrections(chapter, batch.id);
+    doc.data.questions[1].learning_outcomes = ['YCCĐ nhập sau'];
+    expect(JSON.parse(state.db.get(KEY)[0].content)).toEqual(doc);
+  });
+
+  it('rejects the entire content batch when a question changes after preview', async () => {
+    const { manifest } = await exportChapterOutcomes(chapter);
+    const preview = await reviewChapterCorrections(chapter, JSON.stringify({
+      schema: 'physivault.questions.update.v1', chapter_id: chapter, export_id: manifest.export_id,
+      updates: [{ question_id: 'post:0', set: { correctChoice: 'B' } }],
+    }));
+    state.beforeTransaction = () => {
+      const records = state.db.get(KEY);
+      const doc = JSON.parse(records[0].content);
+      doc.data.solution = 'Người dùng vừa sửa';
+      records[0].content = JSON.stringify(doc);
+    };
+    await expect(applyChapterCorrections(chapter, preview.input)).rejects.toThrow('đã đổi');
+    expect(JSON.parse(state.db.get(KEY)[0].content).data.correctChoice).toBe('A');
+    expect(await getCorrectionHistory(chapter)).toEqual([]);
     expect(state.sync).not.toHaveBeenCalled();
   });
 
