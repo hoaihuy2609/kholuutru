@@ -17,18 +17,35 @@ describe('matrix planner specification', () => {
             { ...allocation, type: 'written' },
         ]);
         expect(slots.map(({ type, units, canChoose }) => [type, units, canChoose])).toEqual([
-            ['trac_nghiem', 1, true], ['dung_sai', 4, true], ['dung_sai', 1, false],
-            ['dung_sai', 3, false], ['written', 1, false],
+            ['trac_nghiem', 1, true], ['dung_sai', 4, true], ['dung_sai', 4, true], ['written', 1, false],
         ]);
         expect(matrixPlanSlots([{ ...allocation, count: 2 }])[0].id).toBe(slots[0].id);
+        expect(slots.slice(1, 3).map(slot => slot.statementLevels)).toEqual([[1, 1, 1, 2], [1, 1, 2, 2]]);
         expect(matchesMatrixPlanSlot(slots[1], {
             chapterId: allocation.chapterId, energyTopic: 'work',
-            item: { type: 'dung_sai', level: 1, statements: [{}, {}, {}, {}] },
+            item: { type: 'dung_sai', level: 0, statements: [1, 1, 1, 2].map(cognitive_level => ({ cognitive_level })) },
         })).toBe(true);
         expect(matchesMatrixPlanSlot(slots[1], {
             chapterId: allocation.chapterId, energyTopic: 'work',
             item: { type: 'dung_sai', level: 1, statements: [{}, {}, {}] },
         })).toBe(false);
+    });
+
+    it('matches the exact mix of true-false levels without requiring their order to match the allocation', () => {
+        const [slot] = matrixPlanSlots([
+            { ...allocation, type: 'dung_sai', level: 1, count: 1 },
+            { ...allocation, type: 'dung_sai', level: 2, count: 2 },
+            { ...allocation, type: 'dung_sai', level: 3, count: 1 },
+        ]);
+        expect(slot).toMatchObject({ level: 0, statementLevels: [1, 2, 2, 3], canChoose: true });
+        const candidate = {
+            chapterId: allocation.chapterId, energyTopic: 'work' as const,
+            item: { type: 'dung_sai' as const, level: 0,
+                statements: [2, 1, 3, 2].map(cognitive_level => ({ cognitive_level })) },
+        };
+        expect(matchesMatrixPlanSlot(slot, candidate)).toBe(true);
+        expect(matchesMatrixPlanSlot(slot, { ...candidate, item: { ...candidate.item,
+            statements: [1, 1, 2, 3].map(cognitive_level => ({ cognitive_level })) } })).toBe(false);
     });
 
     it('filters by chapter, content, type and stored level without requiring a YCCĐ or question group', () => {

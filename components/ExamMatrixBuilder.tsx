@@ -128,7 +128,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
             const { item } = candidate;
             if (grade && candidate.grade !== grade) return [];
             const match = matrixCandidateFit(slot.rows, {
-                type: item.type, level: item.level, outcomes: candidate.outcomes,
+                type: item.type, level: item.level, statements: item.statements, outcomes: candidate.outcomes,
                 chapterId: candidate.chapterId, energyTopic: candidate.energyTopic,
             }, grade);
             if (!match) return [];

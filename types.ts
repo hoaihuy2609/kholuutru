@@ -45,6 +45,7 @@ export interface SolutionStep {
 }
 
 export interface SolutionStatement {
+  cognitive_level?: number;
   label: 'a' | 'b' | 'c' | 'd';
   claim: string;
   claim_latex: string;
@@ -181,7 +182,7 @@ export interface BlogPost {
   tags: string[];
   is_published: boolean;
   grade: number; // 10, 11, 12 hoặc 0 (Tất cả — mặc định)
-  level?: number;  // 1–4: Mức độ khó (Nhận biết / Thông hiếu / Vận dụng / Vận dụng cao)
+  level?: number;  // Mức mặc định của dữ liệu cũ. Câu mới dùng cognitive_level, Đúng/Sai lưu trên từng ý.
   studySection?: StudySection | null;
   created_at: string;
   updated_at: string;

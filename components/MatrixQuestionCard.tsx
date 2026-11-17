@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Check, X } from 'lucide-react';
 import { MATRIX_LEVELS, type MatrixMatchEvidence } from '../src/utils/examMatrix';
 import { STUDY_QUESTION_GROUPS } from '../src/utils/studyLibrary';
+import { questionLevelLabel, questionLevels } from '../src/utils/cognitiveLevels';
 import SolutionRenderer, { SolutionQuestionPrompt } from './SolutionRenderer';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 
@@ -47,12 +48,15 @@ export function MatrixQuestionCard({ candidate, score, evidence, selected, used,
         <article className={'min-w-0 space-y-3 rounded-xl border bg-white p-4 ' + (selected ? 'border-amber-500' : 'border-stone-200')}>
             <div className="flex flex-wrap items-center gap-2 text-xs text-stone-600">
                 <span className="font-bold text-stone-900">{item.questionNo}</span>
-                <span>{[candidate.topic, candidate.grade && `Lớp ${candidate.grade}`, item.level && MATRIX_LEVELS[item.level]].filter(Boolean).join(' · ')}</span>
+                <span>{[candidate.topic, candidate.grade && `Lớp ${candidate.grade}`, questionLevelLabel(item)].filter(Boolean).join(' · ')}</span>
                 {showOutcomes && item.type === 'trac_nghiem' && STUDY_QUESTION_GROUPS.filter(group => candidate.groups?.includes(group.value))
                     .map(group => <span key={group.value} className="rounded bg-stone-100 px-2 py-0.5">{group.label}</span>)}
                 {recent && <span className="rounded bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-900">Vừa soạn</span>}
                 {selected && <span className="inline-flex items-center gap-1 font-semibold text-emerald-800"><Check aria-hidden="true" className="size-3.5" /> Đã chọn</span>}
             </div>
+            {item.type === 'dung_sai' && <p className="text-xs text-stone-600">
+                {questionLevels(item).map((level, index) => `${'abcd'[index]}) ${MATRIX_LEVELS[level]}`).join(' · ')}
+            </p>}
 
             {evidence.length > 0 ? <div className="space-y-1.5 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950">
                 <p className="text-xs font-semibold">{score === 1 ? 'Khớp trực tiếp' : 'Gần khớp'} · {evidence.length} yêu cầu</p>

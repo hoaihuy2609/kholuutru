@@ -102,7 +102,7 @@ export interface SelectedQuestionItem {
   solutionImages?: StudyImage[];
   choices?: string[];
   correctChoice?: string;
-  statements?: Array<{ label: string; claim: string; verdict?: boolean | null; steps?: any[] }>;
+  statements?: Array<{ label: string; claim: string; verdict?: boolean | null; steps?: any[]; cognitive_level?: number }>;
   solutionSteps?: Array<{ title?: string; text?: string; formula?: string; formula2?: string }>;
   steps?: Array<{ title?: string; text?: string; formula?: string; formula2?: string }>;
   level?: number;

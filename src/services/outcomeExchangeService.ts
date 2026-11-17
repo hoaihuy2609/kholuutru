@@ -6,11 +6,13 @@ import { makeOutcomeExport, parseOutcomeResult, patchOutcomeBlogs, previewOutcom
   type OutcomeChange, type OutcomeExport, type OutcomePreview, type OutcomeResult } from '../utils/outcomeExchange';
 import { parseQuestionCorrections, patchQuestionCorrections, previewQuestionCorrections,
   type QuestionCorrection, type QuestionCorrectionFile } from '../utils/questionCorrections';
+import { parseCognitiveResult, previewCognitiveResult, type CognitiveResult } from '../utils/cognitiveExchange';
 
 const BLOGS = 'physivault_blogs_local';
 const EXPORTS = 'pv_outcome_exports_v1';
 const HISTORY = 'pv_outcome_history_v1';
 const CORRECTION_HISTORY = 'pv_question_corrections_v1';
+const COGNITIVE_HISTORY = 'pv_cognitive_history_v1';
 export const OUTCOME_SYNC_KEY = 'pv_outcome_pending_sync';
 type RecordItem = BlogPost | StudyLesson;
 const isBlog = (item: RecordItem): item is BlogPost => !('kind' in item && item.kind === 'study_lesson');
@@ -232,6 +234,67 @@ export async function undoChapterCorrections(chapterId: string, batchId: string)
     return {
       [BLOGS]: records.map(record => isBlog(record) ? patched.get(record.id)! : record),
       [CORRECTION_HISTORY]: history.map(item => item.id === batch.id ? { ...item, undone_at: new Date().toISOString() } : item),
+      [OUTCOME_SYNC_KEY]: crypto.randomUUID(),
+    };
+  });
+  void syncBlogs();
+}
+
+function cognitivePreview(blogs: BlogPost[], manifest: OutcomeExport, result: CognitiveResult, values: Record<string, any>) {
+  const outcomes: OutcomeBatch[] = values[HISTORY] ?? [];
+  const history = [...(values[CORRECTION_HISTORY] ?? []),
+    ...outcomes.filter(batch => batch.corrections?.length).map(batch => ({ ...batch, changes: batch.corrections! }))];
+  return previewCognitiveResult(blogs, manifest, result, history);
+}
+
+export async function reviewChapterCognitive(chapterId: string, text: string) {
+  const result = parseCognitiveResult(text);
+  const manifest = findManifest(await dbGet(EXPORTS) ?? [], result, chapterId);
+  const { blogs } = await freshLibrary();
+  const values = { [HISTORY]: await dbGet(HISTORY), [CORRECTION_HISTORY]: await dbGet(CORRECTION_HISTORY) };
+  return { result, preview: cognitivePreview(blogs, manifest, result, values) };
+}
+
+export async function getCognitiveHistory(chapterId: string): Promise<CorrectionBatch[]> {
+  const history: CorrectionBatch[] = await dbGet(COGNITIVE_HISTORY) ?? [];
+  return history.filter(batch => batch.chapter_id === chapterId).reverse();
+}
+
+export async function applyChapterCognitive(chapterId: string, input: CognitiveResult, reviewed?: QuestionCorrection[]) {
+  const result = parseCognitiveResult(JSON.stringify(input));
+  await freshLibrary();
+  await dbUpdateBatch([BLOGS, EXPORTS, HISTORY, CORRECTION_HISTORY, COGNITIVE_HISTORY, OUTCOME_SYNC_KEY], values => {
+    const records: RecordItem[] = values[BLOGS] ?? [];
+    const blogs = records.filter(isBlog);
+    if (reviewed) patchQuestionCorrections(blogs, chapterId, reviewed);
+    const manifest = findManifest(values[EXPORTS] ?? [], result, chapterId);
+    const preview = cognitivePreview(blogs, manifest, result, values);
+    if (preview.errors.length) throw new Error(preview.errors.join('\n'));
+    if (!preview.changes.length) throw new Error('Mức độ của các câu đã khớp file.');
+    const patched = new Map(patchQuestionCorrections(blogs, chapterId, preview.changes).map(blog => [blog.id, blog]));
+    const batch: CorrectionBatch = { id: crypto.randomUUID(), chapter_id: chapterId, export_id: result.export_id,
+      created_at: new Date().toISOString(), changes: preview.changes };
+    return {
+      [BLOGS]: records.map(record => isBlog(record) ? patched.get(record.id)! : record),
+      [COGNITIVE_HISTORY]: [...(values[COGNITIVE_HISTORY] ?? []), batch],
+      [OUTCOME_SYNC_KEY]: batch.id,
+    };
+  });
+  void syncBlogs();
+}
+
+export async function undoChapterCognitive(chapterId: string, batchId: string) {
+  await freshLibrary();
+  await dbUpdateBatch([BLOGS, COGNITIVE_HISTORY, OUTCOME_SYNC_KEY], values => {
+    const history: CorrectionBatch[] = values[COGNITIVE_HISTORY] ?? [];
+    const batch = history.find(item => item.chapter_id === chapterId && item.id === batchId && !item.undone_at);
+    if (!batch) throw new Error('Không tìm thấy đợt mức độ còn có thể hoàn tác.');
+    const records: RecordItem[] = values[BLOGS] ?? [];
+    const patched = new Map(patchQuestionCorrections(records.filter(isBlog), chapterId, batch.changes, true)
+      .map(blog => [blog.id, blog]));
+    return {
+      [BLOGS]: records.map(record => isBlog(record) ? patched.get(record.id)! : record),
+      [COGNITIVE_HISTORY]: history.map(item => item.id === batch.id ? { ...item, undone_at: new Date().toISOString() } : item),
       [OUTCOME_SYNC_KEY]: crypto.randomUUID(),
     };
   });

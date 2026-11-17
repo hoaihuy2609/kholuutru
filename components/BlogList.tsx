@@ -13,6 +13,7 @@ import QuestionTable from './QuestionTable';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { questionEnergyMatrixTopic, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
+import { COGNITIVE_LEVELS, questionLevel, questionLevels, readCognitiveLevel } from '../src/utils/cognitiveLevels';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
@@ -76,6 +77,7 @@ interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
     'type' | 'choices' | 'correctChoice' | 'statements' | 'solution' | 'steps' | 'solutionSteps'
     | 'tikzCode' | 'imageSvg' | 'imageUrl' | 'imageTelegramFileId' | 'imageLayout' | 'imageWidth'>> {
     question_no?: string;
+    cognitive_level?: number;
     question_groups?: StudyQuestionGroup[];
     learning_outcomes?: string[];
     matrix_topic?: unknown;
@@ -93,6 +95,7 @@ interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
 }
 
 interface CardQuestionData {
+    levels: number[];
     questionNo: string;
     questionText: string;
     questionImages?: StudyImage[];
@@ -124,6 +127,7 @@ function getStoredQuestions(solution: ReturnType<typeof parsePhysicsSolution>): 
 function toCardQuestion(question?: StoredQuestion): CardQuestionData | null {
     if (!question) return null;
     return {
+        levels: questionLevels(question),
         questionNo: question.question_no || '',
         questionText: question.question_text || '',
         questionImages: readStudyImages(question.question_images),
@@ -148,7 +152,7 @@ function getBlogCards(blog: BlogPost) {
             index,
             solution,
             questionCount: questions.length,
-            data: toCardQuestion(question),
+            data: question ? { ...toCardQuestion(question)!, levels: questionLevels(question, blog.level) } : null,
             number: parseStudyQuestionNumber(question?.question_no) ?? Number.MAX_SAFE_INTEGER,
         }]
     );
@@ -177,7 +181,7 @@ function toSelectedQuestion(blog: BlogPost, question: StoredQuestion | undefined
         solutionImages: readStudyImages(question?.solution_images),
         solutionSteps: question?.solutionSteps,
         steps: question?.steps,
-        level: blog.level,
+        level: questionLevel(question, blog.level),
         tikzCode: question?.tikz_code || question?.tikzCode,
         imageSvg: card?.imageSvg,
         imageUrl: card?.imageUrl,
@@ -292,9 +296,11 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
                         </span>
                     )}
                     <span className="truncate text-xs font-semibold text-stone-700">{question ? cardTypes[question.type] : 'Bài viết'}</span>
-                    {!!blog.level && (
-                        <span className="shrink-0 rounded-md bg-stone-100 px-1.5 py-0.5 text-xs font-medium text-stone-700">
-                            Mức {blog.level}
+                    {question?.levels.some(Boolean) && (
+                        <span title={question.levels.map((value, index) =>
+                            (question.type === 'dung_sai' ? 'abcd'[index] + ') ' : '') + COGNITIVE_LEVELS[value]).join(' · ')}
+                            className="max-w-[45%] truncate rounded-md bg-stone-100 px-1.5 py-0.5 text-xs font-medium text-stone-700">
+                            {new Set(question.levels).size > 1 ? 'Nhiều mức' : COGNITIVE_LEVELS[question.levels[0]]}
                         </span>
                     )}
                 </div>
@@ -403,7 +409,6 @@ const levelOptions = [
     { value: 1, label: 'Nhận biết' },
     { value: 2, label: 'Thông hiểu' },
     { value: 3, label: 'Vận dụng' },
-    { value: 4, label: 'Vận dụng cao' },
 ] as const;
 
 function indexQuestion(card: BlogCard) {
@@ -411,7 +416,7 @@ function indexQuestion(card: BlogCard) {
     return {
         card,
         type: question?.type ?? 'tu_luan',
-        level: blog.level ?? 0,
+        levels: question?.levels ?? [readCognitiveLevel(blog.level)],
         hasImage: !!(question?.imageSvg || question?.imageUrl || question?.imageTelegramFileId
             || question?.questionImages?.some(studyImageSrc)),
         searchFields: [
@@ -431,14 +436,14 @@ function filterQuestions(
 ) {
     const filteredCards: BlogCard[] = [];
     const typeCounts = { all: 0, trac_nghiem: 0, dung_sai: 0, tu_luan: 0 };
-    const levelCounts = [0, 0, 0, 0, 0];
+    const levelCounts = [0, 0, 0, 0];
     let withImage = 0;
     const query = normalizeSearchText(search);
 
-    for (const { card, type, level, hasImage, searchFields } of questions) {
+    for (const { card, type, levels, hasImage, searchFields } of questions) {
         if (query && !searchFields.some(field => field.includes(query))) continue;
         const matchesType = questionType === 'all' || questionType === type;
-        const matchesLevel = difficulty === 0 || difficulty === level;
+        const matchesLevel = difficulty === 0 || levels.includes(difficulty);
         const matchesImage = !imagesOnly || hasImage;
 
         // Each badge counts results after replacing just its own filter.
@@ -448,7 +453,7 @@ function filterQuestions(
         }
         if (matchesType && matchesImage) {
             levelCounts[0]++;
-            if (Number.isInteger(level) && level >= 1 && level <= 4) levelCounts[level]++;
+            for (const level of new Set(levels)) if (level >= 1 && level <= 3) levelCounts[level]++;
         }
         if (matchesType && matchesLevel && hasImage) withImage++;
         if (matchesType && matchesLevel && matchesImage) filteredCards.push(card);

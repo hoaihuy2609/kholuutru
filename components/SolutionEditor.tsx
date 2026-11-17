@@ -8,6 +8,7 @@ import { supabase } from "../src/lib/supabase";
 import { useUIStore } from "../src/stores/useUIStore";
 import { SolutionStep as Step, SolutionStatement as Statement, StudyLesson, StudyQuestionGroup, StudyQuestionType } from '../types';
 import { isStudyQuestionGroup, isStudyQuestionType, STUDY_QUESTION_GROUPS, STUDY_QUESTION_TYPES, supportsStudyGroups } from '../src/utils/studyLibrary';
+import { COGNITIVE_LEVELS, readCognitiveLevel } from '../src/utils/cognitiveLevels';
 import { classifyImportedQuestion, matchingStudyImportLessons } from '../src/utils/studyJsonImport';
 import type { saveStudyQuestionImport } from '../src/services/blogService';
 import type { BlogImageUpload } from '../src/utils/blogImageUploads';
@@ -85,6 +86,7 @@ function OutcomesJsonInput({ onApply }: { onApply: (outcomes: string[]) => void 
 type QuestionType = StudyQuestionType;
 
 interface Question {
+  cognitiveLevel: number;
   questionNo: string;
   qText: string;
   qFormula: string;
@@ -143,6 +145,7 @@ const emptyStatement = (label: 'a' | 'b' | 'c' | 'd'): Statement => ({
 });
 
 const emptyQuestion = (type: StudyQuestionType = 'tu_luan', group?: StudyQuestionGroup): Question => ({
+  cognitiveLevel: 0,
   questionNo: "",
   qText: "",
   qFormula: "",
@@ -163,7 +166,7 @@ const emptyQuestion = (type: StudyQuestionType = 'tu_luan', group?: StudyQuestio
 });
 
 // Normalize question từ JSON (backward compat & new format)
-const normalizeQuestion = (q: any): Question => {
+const normalizeQuestion = (q: any, fallbackLevel = 0): Question => {
   let sol = q.solution || "";
   if (!sol) {
     if (q.type === 'trac_nghiem' && q.solutionSteps?.length) {
@@ -201,6 +204,8 @@ const normalizeQuestion = (q: any): Question => {
         if (v === true || v === 'true' || v === 'Đúng' || v === 'dung' || v === 'D') verdictVal = true;
         else if (v === false || v === 'false' || v === 'Sai' || v === 'sai' || v === 'S') verdictVal = false;
         return {
+          cognitive_level: st.cognitive_level === undefined
+            ? readCognitiveLevel(q.cognitive_level ?? fallbackLevel) : readCognitiveLevel(st.cognitive_level),
           label: lbl,
           claim: st.claim || '',
           claim_latex: st.claim_latex || st.claimLatex || '',
@@ -211,6 +216,7 @@ const normalizeQuestion = (q: any): Question => {
     : STMT_LABELS.map(emptyStatement);
 
   return {
+    cognitiveLevel: readCognitiveLevel(q.cognitive_level ?? fallbackLevel),
     questionNo: q.question_no || q.questionNo || "",
     qText:      q.question_text || q.qText || "",
     questionTable: normalizeQuestionTable(q.question_table ?? q.questionTable),
@@ -245,6 +251,7 @@ function serializeQuestion(q: Question, questionNo: string) {
     question_table: q.questionTable,
     question_latex: q.qFormula,
     type:           q.type,
+    ...(q.type !== 'dung_sai' ? { cognitive_level: q.cognitiveLevel } : {}),
     ...(outcomes.length ? { learning_outcomes: outcomes } : {}),
     ...(q.matrixTopic ? { matrix_topic: q.matrixTopic } : {}),
     ...(supportsStudyGroups(q.type) && q.groups.length ? { question_groups: q.groups } : {}),
@@ -548,6 +555,12 @@ function StatementEditor({
           </span>
           Mệnh đề {st.label.toUpperCase()}
         </span>
+        <select aria-label={'Mức độ mệnh đề ' + st.label.toUpperCase()}
+          className="rounded-md border border-stone-200 bg-white p-1.5 text-xs"
+          value={readCognitiveLevel(st.cognitive_level)}
+          onChange={event => onUpdate(si, { ...st, cognitive_level: Number(event.target.value) })}>
+          {COGNITIVE_LEVELS.map((label, value) => <option key={value} value={value}>{label}</option>)}
+        </select>
         <div className="flex items-center gap-1.5">
           <button type="button" aria-pressed={st.verdict === true}
             onClick={() => onUpdate(si, { ...st, verdict: st.verdict === true ? null : true })}
@@ -651,6 +664,8 @@ export default function SolutionEditor({
   const [examName,   setExamName]   = useState("");
   const [questions,  setQuestions]  = useState<Question[]>(() => [{
     ...emptyQuestion(matrixDraft?.type ?? studyQuestionType, initialQuestionGroup),
+    cognitiveLevel: readCognitiveLevel(matrixDraft?.level),
+    statements: STMT_LABELS.map(label => ({ ...emptyStatement(label), cognitive_level: readCognitiveLevel(matrixDraft?.level) })),
     outcomeText: matrixDraft?.outcomes.join('\n') ?? '',
   }]);
   const [activeQIdx, setActiveQIdx] = useState(0);
@@ -905,7 +920,7 @@ export default function SolutionEditor({
         if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
           throw new Error(`Câu thứ ${index + 1} phải là một đối tượng JSON.`);
         }
-        const question = normalizeQuestion(raw);
+        const question = normalizeQuestion(raw, readCognitiveLevel(matrixDraft?.level));
         if ((raw.question_table !== undefined || raw.questionTable !== undefined) && !question.questionTable) {
           throw new Error(`Câu thứ ${index + 1}. Bảng cần ít nhất một tiêu đề cột và mỗi hàng phải có số ô văn bản bằng số tiêu đề.`);
         }
@@ -1013,7 +1028,7 @@ export default function SolutionEditor({
   useEffect(() => {
     if (!blog) return;
     setCategory(blog.category || "");
-    setLevel(blog.level || 0);
+    setLevel(readCognitiveLevel(blog.level));
     setIsPublished(!!blog.is_published);
     setGrade(blog.grade || 0);
 
@@ -1026,7 +1041,7 @@ export default function SolutionEditor({
           // Bài cũ có thể chỉ lưu một câu ở cấp data.
           const savedQuestions = Array.isArray(parsed.data.questions) && parsed.data.questions.length
             ? parsed.data.questions : [parsed.data];
-          setQuestions(savedQuestions.map(normalizeQuestion));
+          setQuestions(savedQuestions.map((question: any) => normalizeQuestion(question, readCognitiveLevel(blog.level))));
           setActiveQIdx(savedQuestions[initialQuestionIndex] ? initialQuestionIndex : 0);
         }
       } catch (e) {
@@ -1224,7 +1239,8 @@ export default function SolutionEditor({
         return;
       }
       const outcomes = questionOutcomes(activeQuestion.outcomeText.split('\n'));
-      if (!matrixMatchScore(matrixDraft.rows, { type: activeQuestion.type, level, outcomes })) {
+      if (!matrixMatchScore(matrixDraft.rows, { type: activeQuestion.type, level: activeQuestion.cognitiveLevel,
+        statements: activeQuestion.statements, outcomes })) {
         showToast('Yêu cầu cần đạt phải khớp với vị trí đang soạn trong ma trận.', 'error');
         return;
       }
@@ -1309,12 +1325,13 @@ export default function SolutionEditor({
     <div role="group" aria-label="Mức độ" className="flex min-w-0 flex-wrap items-center gap-2">
       <span className="text-sm font-medium text-stone-700">Mức độ</span>
       <div className="flex min-w-0 flex-wrap gap-1 rounded-lg border border-stone-200 bg-stone-50 p-1">
-        {['—', 'Mức 1', 'Mức 2', 'Mức 3', 'Mức 4'].map((label, value) => (
-          <button key={value} type="button" aria-pressed={level === value} onClick={() => setLevel(value)}
+        {COGNITIVE_LEVELS.map((label, value) => (
+          <button key={value} type="button" aria-pressed={activeQuestion.cognitiveLevel === value}
+            onClick={() => updateQ('cognitiveLevel', value)}
             disabled={!!matrixDraft?.level && value !== matrixDraft.level}
             aria-label={value === 0 ? 'Chưa chọn mức độ' : label}
             className={'min-h-8 rounded-md px-2.5 text-xs font-semibold '
-              + (level === value ? 'bg-amber-100 text-amber-950' : 'text-stone-600 hover:bg-stone-100')}>
+              + (activeQuestion.cognitiveLevel === value ? 'bg-amber-100 text-amber-950' : 'text-stone-600 hover:bg-stone-100')}>
             {label}
           </button>
         ))}
@@ -1383,10 +1400,9 @@ export default function SolutionEditor({
           className="min-w-0 space-y-3 rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm sm:p-4">
           <h2 id="solution-placement-heading" className="text-sm font-bold text-stone-900">Vị trí trong Góc Học Tập</h2>
           {studyPlacement}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-stone-100 pt-3">
-            {!studyGrade && !matrixDraft && gradeControl}
-            {levelControl}
-          </div>
+          {!studyGrade && !matrixDraft && <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-stone-100 pt-3">
+            {gradeControl}
+          </div>}
         </section>
       ) : (
         <>
@@ -1410,8 +1426,6 @@ export default function SolutionEditor({
                   value={category} onChange={e => setCategory(e.target.value)} />
                 <datalist id="sol-cat-list">{CATEGORIES.map(c => <option key={c} value={c} />)}</datalist>
               </div>
-              <div className="hidden md:block w-px h-6 bg-[#E9E9E7]" />
-              {levelControl}
             </div>
           </div>
         </>
@@ -1556,6 +1570,9 @@ export default function SolutionEditor({
                     {savedOutcomes.map(outcome => <option key={outcome}>{outcome}</option>)}
                   </select>}
                 </div>}
+                {activeQuestion.type === 'dung_sai'
+                  ? <p className="text-xs text-stone-600">Chọn mức độ riêng tại từng mệnh đề a, b, c, d.</p>
+                  : levelControl}
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-stone-800">Mô tả đề bài</label>
                   <AutoResizeTextarea rows={2}

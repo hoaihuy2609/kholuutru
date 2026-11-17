@@ -2,9 +2,9 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import type { StudyQuestionGroup } from '../types';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
-import { ENERGY_MATRIX_CHAPTER_ID, MATRIX_LEVELS, matrixMatch, type MatrixRow } from '../src/utils/examMatrix';
+import { ENERGY_MATRIX_CHAPTER_ID, matrixMatch, type MatrixRow } from '../src/utils/examMatrix';
 import { energyCurriculumGoals, matchEnergyCurriculumGoal, type EnergyCurriculumGoal } from '../src/utils/energyCurriculum';
-import { matrixPlanSlots, matchesMatrixPlanSlot, plannedOutcome, type MatrixAllocation, type MatrixPlanSlot } from '../src/utils/matrixPlan';
+import { matrixPlanSlots, matrixPlanLevelLabel, matchesMatrixPlanSlot, plannedOutcome, type MatrixAllocation, type MatrixPlanSlot } from '../src/utils/matrixPlan';
 import { STUDY_QUESTION_GROUPS, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import { MatrixDialog, MatrixQuestionCard, MatrixSolutionDialog } from './MatrixQuestionCard';
@@ -27,7 +27,7 @@ function CurriculumPicker({ slot, goals, selectedGoal, candidates, onChoose }: {
     const eligible = useMemo(() => candidates.filter(candidate => matchesMatrixPlanSlot(slot, candidate)), [candidates, slot]);
     return <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50/60 p-2">
         <p className="px-1 text-xs font-semibold text-stone-700">
-            {slot.canChoose ? 'Mức lọc của ô · ' : 'YCCĐ theo PPCT · '}{MATRIX_LEVELS[slot.level]}
+            {slot.canChoose ? 'Mức lọc của ô · ' : 'YCCĐ theo PPCT · '}{matrixPlanLevelLabel(slot)}
         </p>
         <ul className="space-y-1" aria-label="Các yêu cầu cần đạt theo PPCT">
             {goals.map(goal => <li key={goal.id}>
@@ -64,7 +64,8 @@ function MatrixPlanPicker({ slot, outcome, curriculumGoal, candidates, selectedI
             .map(candidate => ({
                 candidate,
                 ...(curriculumGoal ? matchEnergyCurriculumGoal(curriculumGoal, candidate.outcomes)
-                    : matrixMatch([row], { type: candidate.item.type, level: candidate.item.level, outcomes: candidate.outcomes })),
+                    : matrixMatch([row], { type: candidate.item.type, level: candidate.item.level,
+                        statements: candidate.item.statements, outcomes: candidate.outcomes })),
             }))
             .sort((a, b) => b.score - a.score);
     }, [candidates, slot, outcome, curriculumGoal]);
@@ -75,7 +76,7 @@ function MatrixPlanPicker({ slot, outcome, curriculumGoal, candidates, selectedI
 
     return (
         <MatrixDialog title={'Chọn câu · ' + slot.label}
-            subtitle={[slot.topic, typeLabel(slot.type), MATRIX_LEVELS[slot.level]].join(' · ')}
+            subtitle={[slot.topic, typeLabel(slot.type), matrixPlanLevelLabel(slot)].join(' · ')}
             closeLabel="Đóng bộ chọn câu" onClose={onClose}>
             <div className="space-y-3">
                 {outcome.trim() && <div className="space-y-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
@@ -198,7 +199,7 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                 </div>
             </header>
             {pendingIdeas > 0 && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                {pendingIdeas} ý Đúng/Sai đang chờ ghép. Bộ chọn ghép 4 ý cùng nội dung và mức độ thành một câu.
+                {pendingIdeas} ý Đúng/Sai đang chờ ghép. Mỗi câu cần 4 ý cùng nội dung, có thể gồm nhiều mức độ.
             </p>}
             <div className="space-y-2">
                 {[...topics].map(([topicId, rows]) => {
@@ -228,7 +229,7 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                                 return <div key={slot.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(9.5rem,0.7fr)_minmax(0,2fr)_minmax(8rem,0.6fr)]">
                                     <div className="space-y-0.5">
                                         <p className="text-sm font-semibold">{typeLabel(slot.type)}</p>
-                                        <p className="text-xs text-stone-600">{slot.label} · {MATRIX_LEVELS[slot.level]}{slot.units === 4 ? ' · 4 ý' : ''}</p>
+                                        <p className="text-xs text-stone-600">{slot.label} · {matrixPlanLevelLabel(slot)}</p>
                                     </div>
                                     <div className="min-w-0 space-y-1.5">
                                         <div className="flex flex-wrap items-center justify-between gap-1">

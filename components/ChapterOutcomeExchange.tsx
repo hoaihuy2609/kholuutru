@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Download, FileJson, History, Pencil, Printer, Upload } from 'lucide-react';
 import OutcomeReviewPrint from './OutcomeReviewPrint';
 import ChapterQuestionCorrections, { displayChanges } from './ChapterQuestionCorrections';
+import ChapterCognitiveExchange from './ChapterCognitiveExchange';
 import type { StudyLibrary } from '../types';
 import { MatrixDialog } from './MatrixQuestionCard';
 import { STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
@@ -29,7 +30,7 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
   chapter: { id: string; name: string }; onChanged: (library: StudyLibrary) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<'export' | 'import' | 'history' | 'pdf' | 'corrections'>('export');
+  const [tab, setTab] = useState<'export' | 'import' | 'history' | 'pdf' | 'corrections' | 'levels'>('export');
   const [prepared, setPrepared] = useState<Awaited<ReturnType<typeof exportChapterOutcomes>>>();
   const [text, setText] = useState('');
   const [review, setReview] = useState<{ preview: ChapterOutcomePreview; result?: ChapterOutcomeResult; batchId?: string }>();
@@ -80,7 +81,8 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
         </p>}
         <div className="flex flex-wrap gap-2" role="group" aria-label="Thao tác YCCĐ">
           {([['export', '1. Xuất để rà', Download], ['import', '2. Nhập kết quả', Upload], ['pdf', 'Xuất PDF rà câu', Printer],
-            ['corrections', 'Sửa nội dung hàng loạt', Pencil], ['history', 'Lịch sử / hoàn tác YCCĐ', History]] as const).map(([value, label, Icon]) =>
+            ['corrections', 'Sửa nội dung hàng loạt', Pencil], ['levels', 'Nhập mức độ', FileJson],
+            ['history', 'Lịch sử / hoàn tác YCCĐ', History]] as const).map(([value, label, Icon]) =>
             <button type="button" key={value} disabled={busy} aria-pressed={tab === value} className={tab === value ? primary : button}
               onClick={() => changeTab(value)}><Icon className="size-4" />{label}</button>)}
         </div>
@@ -90,6 +92,12 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
         {busy && <p role="status" className="text-sm text-amber-900">Đang kiểm tra và xử lí…</p>}
 
         {tab === 'pdf' && <OutcomeReviewPrint chapter={chapter} />}
+        {tab === 'levels' && <ChapterCognitiveExchange key={chapter.id} chapterId={chapter.id} busy={busy} run={run}
+          onApplied={async count => {
+            setPrepared(undefined);
+            setNotice(`Đã lưu thay đổi của ${count} câu trên máy. Theo dõi trạng thái Kho câu hỏi để biết khi đồng bộ xong.`);
+            onChanged(await getStudyLibrary(true));
+          }} />}
         {tab === 'corrections' && <ChapterQuestionCorrections key={chapter.id} chapterId={chapter.id} busy={busy} run={run}
           onApplied={async (count, undone) => {
             setPrepared(undefined);

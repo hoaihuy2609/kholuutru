@@ -22,7 +22,8 @@ vi.mock('../services/blogService', () => ({
 }));
 import { applyChapterOutcomes, exportChapterOutcomes, getOutcomeHistory, reviewChapterOutcomes,
   reviewOutcomeUndo, undoChapterOutcomes, OUTCOME_SYNC_KEY, reviewChapterCorrections, applyChapterCorrections,
-  getCorrectionHistory, undoChapterCorrections } from '../services/outcomeExchangeService';
+  getCorrectionHistory, undoChapterCorrections, reviewChapterCognitive, applyChapterCognitive,
+  getCognitiveHistory, undoChapterCognitive } from '../services/outcomeExchangeService';
 
 const KEY = 'physivault_blogs_local';
 const chapter = 'g10-ch3';
@@ -196,5 +197,50 @@ describe('outcome exchange transactions', () => {
     await expect(exportChapterOutcomes(chapter)).rejects.toThrow('bản kho mới nhất');
     await expect(applyChapterOutcomes(chapter, review.result)).rejects.toThrow('bản kho mới nhất');
     expect(state.sync).not.toHaveBeenCalled();
+  });
+
+  it('commits cognitive metadata and its journal atomically, rechecks concurrent edits and supports rollback', async () => {
+    const { manifest } = await exportChapterOutcomes(chapter);
+    const text = JSON.stringify({ schema: 'physivault.cognitive.update.v1', chapter_id: chapter,
+      export_id: manifest.export_id, updates: [{ question_id: 'post:0', cognitive_level: 3 }] });
+    const review = await reviewChapterCognitive(chapter, text);
+    expect(review.preview.errors).toEqual([]);
+    const original = structuredClone(state.db.get(KEY));
+    state.failCommit = true;
+    await expect(applyChapterCognitive(chapter, review.result)).rejects.toThrow('quota');
+    expect(state.db.get(KEY)).toEqual(original);
+    expect(await getCognitiveHistory(chapter)).toEqual([]);
+    state.failCommit = false;
+    await applyChapterCognitive(chapter, review.result);
+    expect(JSON.parse(state.db.get(KEY)[0].content).data.cognitive_level).toBe(3);
+    const [batch] = await getCognitiveHistory(chapter);
+    expect(state.db.get(OUTCOME_SYNC_KEY)).toBe(batch.id);
+    await undoChapterCognitive(chapter, batch.id);
+    expect(JSON.parse(state.db.get(KEY)[0].content)).toEqual(JSON.parse(original[0].content));
+    state.beforeTransaction = () => {
+      const records = state.db.get(KEY);
+      const doc = JSON.parse(records[0].content);
+      doc.data.question_text = 'Vừa sửa đề';
+      records[0].content = JSON.stringify(doc);
+    };
+    await expect(applyChapterCognitive(chapter, review.result)).rejects.toThrow('đã đổi');
+    expect(JSON.parse(state.db.get(KEY)[0].content).data.cognitive_level).toBeUndefined();
+  });
+
+  it('rejects an intervening level edit after the displayed cognitive preview', async () => {
+    const { manifest } = await exportChapterOutcomes(chapter);
+    const review = await reviewChapterCognitive(chapter, JSON.stringify({
+      schema: 'physivault.cognitive.update.v1', chapter_id: chapter, export_id: manifest.export_id,
+      updates: [{ question_id: 'post:0', cognitive_level: 3 }],
+    }));
+    state.beforeTransaction = () => {
+      const records = state.db.get(KEY);
+      const doc = JSON.parse(records[0].content);
+      doc.data.cognitive_level = 1;
+      records[0].content = JSON.stringify(doc);
+    };
+    await expect(applyChapterCognitive(chapter, review.result, review.preview.changes)).rejects.toThrow('thay đổi');
+    expect(await getCognitiveHistory(chapter)).toEqual([]);
+    expect(JSON.parse(state.db.get(KEY)[0].content).data.cognitive_level).toBe(1);
   });
 });

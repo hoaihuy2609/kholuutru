@@ -1,6 +1,7 @@
 import CryptoJS from 'crypto-js';
 import type { BlogPost, StudyLesson } from '../../types';
 import { getStudyChapter, isStudyQuestionType } from './studyLibrary';
+import { questionLevel } from './cognitiveLevels';
 
 type JsonObject = Record<string, any>;
 export type OutcomeValue = { present: boolean; value?: unknown };
@@ -38,8 +39,14 @@ export function readOutcomeQuestions(blog: BlogPost): { document: JsonObject; qu
 }
 
 export function outcomeQuestionFingerprint(blog: BlogPost, question: JsonObject, index: number, count: number) {
-  const { learning_outcomes: _ignored, ...rest } = question;
-  return CryptoJS.SHA256(canonical({ question: rest, index, count, section: blog.studySection,
+  const { learning_outcomes: _ignored, cognitive_level: _level, ...rest } = question;
+  const content = { ...rest, ...(Array.isArray(rest.statements)
+    ? { statements: rest.statements.map((statement: unknown) => {
+      if (!object(statement)) return statement;
+      const { cognitive_level: _statementLevel, ...claim } = statement;
+      return claim;
+    }) } : {}) };
+  return CryptoJS.SHA256(canonical({ question: content, index, count, section: blog.studySection,
     title: blog.title, level: blog.level, grade: blog.grade })).toString();
 }
 
@@ -76,7 +83,7 @@ export function makeOutcomeExport(blogs: BlogPost[], lessons: StudyLesson[], cha
         ...(parsed.array && index === 0 ? { rootBefore: outcome(parsed.document.data) } : {}),
       };
       sources.push(source);
-      questions.push({ question_id: source.question_id, lesson: source.lesson, level: blog.level ?? 0,
+      questions.push({ question_id: source.question_id, lesson: source.lesson, level: questionLevel(q, blog.level),
         is_published: blog.is_published, context: exportContext(q) });
     });
   }

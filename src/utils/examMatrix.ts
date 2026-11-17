@@ -1,5 +1,6 @@
 import type { StudyLesson, StudyQuestionType, StudySection } from '../../types';
 import { STUDY_CHAPTERS } from './studyLibrary';
+import { COGNITIVE_LEVELS, questionLevels, readCognitiveLevel } from './cognitiveLevels';
 
 export type MatrixQuestionType = StudyQuestionType | 'written' | '';
 
@@ -27,7 +28,7 @@ export interface MatrixQuestionDraft {
     rows: MatrixRow[];
 }
 
-export const MATRIX_LEVELS = ['Chưa rõ', 'Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'];
+export const MATRIX_LEVELS = COGNITIVE_LEVELS;
 export const ENERGY_MATRIX_CHAPTER_ID = 'g10-ch3';
 export const ENERGY_MATRIX_TOPICS = [
     ['work', 'Công và năng lượng', ['Năng lượng', 'Công cơ học', 'Năng lượng và công cơ học']],
@@ -96,7 +97,7 @@ export function matrixLevel(text: string) {
     if (/^(?:nhan biet|biet|nb|muc 1)$/.test(key)) return 1;
     if (/^(?:thong hieu|hieu|th|muc 2)$/.test(key)) return 2;
     if (/^(?:van dung|vd|muc 3)$/.test(key)) return 3;
-    if (/^(?:van dung cao|vdc|vd cao|muc 4)$/.test(key)) return 4;
+    if (/^(?:van dung cao|vdc|vd cao|muc 4)$/.test(key)) return 3;
     return 0;
 }
 
@@ -186,12 +187,36 @@ export interface MatrixMatchEvidence {
     score: number;
 }
 
+function matchesRowLevels(rows: MatrixRow[], candidate: {
+    type: StudyQuestionType; level?: number; statements?: readonly { label?: string; cognitive_level?: unknown }[];
+}) {
+    if (rows.some(row => row.type !== candidate.type)) return false;
+    if (candidate.type !== 'dung_sai') return rows.every(row => !row.level || readCognitiveLevel(row.level) === readCognitiveLevel(candidate.level));
+    const levels = questionLevels(candidate);
+    if (candidate.statements?.length !== 4) return false;
+    const specified = rows.filter(row => row.level);
+    // References in imported specifications identify the particular a/b/c/d statement.
+    if (specified.every(row => row.references.length && row.references.every(reference => /[a-d]$/i.test(reference)))) {
+        return specified.every(row => row.references.every(reference => {
+            const label = reference.slice(-1).toLowerCase();
+            const index = candidate.statements!.findIndex(statement => statement.label?.toLowerCase() === label);
+            return index >= 0 && levels[index] === readCognitiveLevel(row.level);
+        }));
+    }
+    if (rows.every(row => row.countUnit === 'statement')) {
+        return [1, 2, 3].every(level => levels.filter(value => value === level).length
+            >= specified.filter(row => readCognitiveLevel(row.level) === level).reduce((sum, row) => sum + row.count, 0));
+    }
+    return specified.every(row => levels.every(level => level === readCognitiveLevel(row.level)));
+}
+
 export function matrixMatch(rows: MatrixRow[], candidate: {
     type: StudyQuestionType;
     level?: number;
+    statements?: readonly { label?: string; cognitive_level?: unknown }[];
     outcomes: string[];
 }) {
-    if (!rows.length || rows.some(row => row.type !== candidate.type || (row.level && row.level !== candidate.level))) {
+    if (!rows.length || !matchesRowLevels(rows, candidate)) {
         return { score: 0, evidence: [] as MatrixMatchEvidence[] };
     }
     const evidence: MatrixMatchEvidence[] = [];
@@ -223,7 +248,7 @@ export function matrixCandidateFit(rows: MatrixRow[], candidate: Parameters<type
     chapterId?: string;
     energyTopic?: EnergyMatrixTopic;
 }, grade: number) {
-    if (!rows.length || rows.some(row => row.type !== candidate.type || (row.level && row.level !== candidate.level))) return null;
+    if (!rows.length || !matchesRowLevels(rows, candidate)) return null;
     const topic = !grade || grade === 10 ? energyMatrixTopic(rows[0].topic) : undefined;
     const sharedTopic = topic && rows.every(row => energyMatrixTopic(row.topic) === topic) ? topic : undefined;
     if (sharedTopic && (
@@ -245,13 +270,22 @@ export function matrixSlots(rows: MatrixRow[]) {
             return;
         }
         const section = normalizeMatrixText(row.section) || row.type || 'unspecified';
+        const statementRows = new Map<string, MatrixRow>();
         for (let i = 0; i < (row.references.length || row.count); i++) {
             const reference = row.references[i];
             const number = reference?.match(/\d+/)?.[0];
             const id = number ? `${section}:C${Number(number)}` : `row:${index}:${i}`;
             const label = [row.section, number ? `Câu ${Number(number)}` : `Mục ${index + 1} · Câu ${i + 1}`].filter(Boolean).join(' · ');
             const slot = slots.get(id) ?? { id, label, number: number ? Number(number) : undefined, rows: [], statements: [] };
-            if (!slot.rows.includes(row)) slot.rows.push(row);
+            if (row.countUnit === 'statement' && reference) {
+                const part = statementRows.get(id);
+                if (part) { part.references.push(reference); part.count++; }
+                else {
+                    const first = { ...row, count: 1, references: [reference] };
+                    statementRows.set(id, first);
+                    slot.rows.push(first);
+                }
+            } else if (!slot.rows.includes(row)) slot.rows.push(row);
             if (row.countUnit === 'statement' && reference) slot.statements.push(reference);
             slots.set(id, slot);
         }
