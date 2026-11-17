@@ -40,11 +40,18 @@ const formats: { value: Exclude<MatrixQuestionType, ''>; label: string }[] = [
     ...STUDY_QUESTION_TYPES,
     { value: 'written', label: 'Tự luận' },
 ];
+const formatColors: Record<typeof formats[number]['value'], { header: string; band: string; body: string }> = {
+    trac_nghiem: { header: 'bg-blue-700', band: 'bg-blue-100 text-blue-950', body: 'bg-blue-50' },
+    dung_sai: { header: 'bg-violet-700', band: 'bg-violet-100 text-violet-950', body: 'bg-violet-50' },
+    tu_luan: { header: 'bg-amber-800', band: 'bg-amber-100 text-amber-950', body: 'bg-amber-50' },
+    written: { header: 'bg-emerald-800', band: 'bg-emerald-100 text-emerald-950', body: 'bg-emerald-50' },
+};
 const levels = [1, 2, 3].map(value => ({ value, label: MATRIX_LEVELS[value] }));
 const columns = formats.flatMap(format => levels.map(level => ({
     key: format.value + ':' + level.value,
     format: format.label,
     level: level.label,
+    colors: formatColors[format.value],
 })));
 const cell = 'border-b border-r border-stone-200 px-2 py-2';
 const check = 'size-4 shrink-0 accent-amber-800';
@@ -57,11 +64,12 @@ export default function MatrixPlanner() {
     const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
     const [counts, setCounts] = useState<Record<string, Record<string, number>>>({});
 
-    const topicRows = chapters.flatMap(chapter => chapter.topics
-        .filter(([topicId]) => selected.has(topicId))
-        .map(([topicId, name]) => ({ topicId, name, chapter: chapter.name })));
+    const selectedChapters = chapters.map(chapter => ({
+        ...chapter, topics: chapter.topics.filter(([topicId]) => selected.has(topicId)),
+    })).filter(chapter => chapter.topics.length > 0);
+    const selectedTopics = selectedChapters.flatMap(chapter => chapter.topics);
     const totals = Object.fromEntries(columns.map(({ key }) =>
-        [key, topicRows.reduce((sum, { topicId }) => sum + (counts[topicId]?.[key] ?? 0), 0)]));
+        [key, selectedTopics.reduce((sum, [topicId]) => sum + (counts[topicId]?.[key] ?? 0), 0)]));
 
     function toggleExpanded(chapterId: string) {
         setExpanded(previous => {
@@ -157,24 +165,30 @@ export default function MatrixPlanner() {
                                 <th scope="col" rowSpan={2} className={cell + ' text-left'}>Chương</th>
                                 <th scope="col" rowSpan={2} className={cell + ' text-left'}>Nội dung</th>
                                 {formats.map(format => (
-                                    <th key={format.value} scope="colgroup" colSpan={levels.length} className={cell + ' bg-amber-50 font-semibold text-amber-950'}>
+                                    <th key={format.value} scope="colgroup" colSpan={levels.length}
+                                        className={cell + ' font-semibold text-white ' + formatColors[format.value].header}>
                                         {format.label}{format.value === 'dung_sai' ? ' (ý)' : ''}
                                     </th>
                                 ))}
                             </tr>
                             <tr>
-                                {columns.map(({ key, level }) => (
-                                    <th key={key} scope="col" className={cell + ' text-xs font-semibold'}>{level}</th>
+                                {columns.map(({ key, level, colors }) => (
+                                    <th key={key} scope="col" className={cell + ' text-xs font-semibold ' + colors.band}>{level}</th>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody>
-                            {topicRows.map(({ topicId, name, chapter }) => (
+                        {selectedChapters.map(chapter => <tbody key={chapter.id}>
+                            {chapter.topics.map(([topicId, name], index) => (
                                 <tr key={topicId} className="group">
-                                    <td className={cell + ' text-sm text-stone-600 group-hover:bg-stone-50'}>{chapter}</td>
+                                    {index === 0 && (
+                                        <th scope="rowgroup" rowSpan={chapter.topics.length}
+                                            className={cell + ' bg-stone-50 text-left font-semibold text-stone-800'}>
+                                            {chapter.name}
+                                        </th>
+                                    )}
                                     <th scope="row" className={cell + ' text-left font-medium group-hover:bg-stone-50'}>{name}</th>
-                                    {columns.map(({ key, format, level }) => (
-                                        <td key={key} className={cell + ' group-hover:bg-stone-50'}>
+                                    {columns.map(({ key, format, level, colors }) => (
+                                        <td key={key} className={cell + ' ' + colors.body}>
                                             <input type="number" min={0} max={maxCount} step={1}
                                                 aria-label={name + ' · ' + format + ' · ' + level}
                                                 className="h-9 w-full min-w-0 rounded-md border border-stone-300 bg-white px-1 text-center tabular-nums focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700"
@@ -190,19 +204,21 @@ export default function MatrixPlanner() {
                                     ))}
                                 </tr>
                             ))}
-                            {!topicRows.length && <tr><td colSpan={columns.length + 2} className="px-4 py-6 text-stone-600">
+                        </tbody>)}
+                        {!selectedChapters.length && <tbody>
+                            <tr><td colSpan={columns.length + 2} className="px-4 py-6 text-stone-600">
                                 Chưa chọn nội dung nào.
-                            </td></tr>}
-                        </tbody>
+                            </td></tr>
+                        </tbody>}
                         <tfoot className="bg-stone-100 text-center font-semibold tabular-nums">
                             <tr>
                                 <th scope="row" colSpan={2} className={cell + ' text-left'}>Tổng theo mức độ</th>
-                                {columns.map(({ key }) => <td key={key} className={cell}>{totals[key]}</td>)}
+                                {columns.map(({ key, colors }) => <td key={key} className={cell + ' ' + colors.body}>{totals[key]}</td>)}
                             </tr>
                             <tr>
                                 <th scope="row" colSpan={2} className={cell + ' text-left'}>Tổng theo loại</th>
                                 {formats.map(format => (
-                                    <td key={format.value} colSpan={levels.length} className={cell + ' bg-amber-50 text-amber-950'}>
+                                    <td key={format.value} colSpan={levels.length} className={cell + ' ' + formatColors[format.value].band}>
                                         {levels.reduce((sum, level) => sum + totals[format.value + ':' + level.value], 0)}
                                         {format.value === 'dung_sai' ? ' ý' : ' câu'}
                                     </td>
