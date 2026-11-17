@@ -82,9 +82,75 @@ export interface EnergyCurriculumGoal {
     aliases: readonly string[];
 }
 
+// Reviewed links from the chapter's standardized outcomes to the assessed PPCT idea.
+// Each link is a related suggestion (score <= 0.9), while the stored level remains an independent filter.
+// Recognizing a conservation example does not establish the ability to build a model or derive a theorem.
+const standardizedOutcomes: Record<string, readonly string[]> = {
+    'work-transfer': [
+        'Xác định được tình huống truyền năng lượng giữa các vật thông qua thực hiện công.',
+    ],
+    'work-expression': [
+        'Nhận biết được biểu thức công của lực không đổi và sự phụ thuộc của công vào lực, độ dịch chuyển, góc giữa chúng.',
+    ],
+    'work-unit': [
+        'Nhận biết được đơn vị đo công và năng lượng, thực hiện được phép đổi đơn vị tương ứng.',
+    ],
+    'work-calculate': [
+        'Tính được công của lực không đổi hoặc đại lượng liên quan bằng biểu thức A = Fd cosα.',
+        'Tính và so sánh được công của trọng lực theo độ chênh cao, nhận biết công này không phụ thuộc hình dạng đường đi.',
+        'Kết hợp phân tích lực và các định luật chuyển động để tính công của lực kéo, lực nâng hoặc lực cản.',
+        'Xác định được công từ diện tích trên đồ thị lực theo độ dịch chuyển dọc phương của lực.',
+    ],
+    'potential-expression': [
+        'Nhận biết được khái niệm và biểu thức thế năng trọng trường trong trọng trường đều.',
+    ],
+    'potential-apply': [
+        'Xác định được dấu và giá trị thế năng trọng trường theo mốc thế năng đã chọn.',
+        'So sánh được thế năng trọng trường theo khối lượng và độ cao so với cùng một mốc.',
+        'Tính được thế năng trọng trường hoặc đại lượng liên quan bằng biểu thức Wt = mgh.',
+        'Vận dụng được mối liên hệ giữa công của trọng lực và độ giảm thế năng trọng trường.',
+    ],
+    'energy-conversion': [
+        'Phân tích được sự chuyển hóa giữa động năng và thế năng, xác định vị trí các dạng năng lượng đạt cực trị.',
+    ],
+    'mechanical-definition': [
+        'Nhận biết được cơ năng là tổng động năng và thế năng của vật.',
+        'Xác định được sự phụ thuộc của giá trị cơ năng vào mốc thế năng đã chọn.',
+    ],
+    'mechanical-law': [
+        'Xác định được điều kiện và nội dung của định luật bảo toàn cơ năng.',
+    ],
+    'mechanical-apply': [
+        'Vận dụng bảo toàn cơ năng trong trọng trường để xác định tốc độ, độ cao hoặc quan hệ giữa động năng và thế năng.',
+        'Vận dụng bảo toàn cơ năng cho con lắc đơn để xác định tốc độ, độ cao, góc lệch hoặc năng lượng.',
+    ],
+    'power-meaning': [
+        'Nhận biết được ý nghĩa vật lí, định nghĩa và biểu thức công suất trung bình.',
+        'Nhận biết được mối quan hệ giữa công và thời gian khi công suất không đổi.',
+    ],
+    'power-definition': [
+        'Nhận biết được ý nghĩa vật lí, định nghĩa và biểu thức công suất trung bình.',
+        'Nhận biết được mối quan hệ giữa công và thời gian khi công suất không đổi.',
+    ],
+    'power-force-velocity': [
+        'Nhận biết và giải thích được mối liên hệ giữa công suất, lực và vận tốc theo P = Fv cosα.',
+        'Vận dụng mối liên hệ giữa công suất, lực và vận tốc để giải bài toán chuyển động trong tình huống thực tế.',
+        'Phân biệt và tính được công suất trung bình, công suất tức thời trong chuyển động có tốc độ thay đổi.',
+    ],
+    'efficiency-definition': [
+        'Nhận biết được ý nghĩa, biểu thức và giới hạn giá trị của hiệu suất.',
+        'Xác định được năng lượng có ích và năng lượng hao phí theo mục đích sử dụng của thiết bị.',
+    ],
+    'efficiency-apply': [
+        'Vận dụng được hiệu suất để xác định phần có ích, phần hao phí, hiệu suất hoặc đại lượng liên quan trong tình huống cụ thể.',
+    ],
+};
+
 const goalsByTopic = new Map(Object.entries(curriculum).map(([topic, entries]) => [
     topic,
-    entries.flatMap(([source, seeds]): EnergyCurriculumGoal[] => seeds.map(([id, label, aliases = []]) => ({ id, label, source, aliases }))),
+    entries.flatMap(([source, seeds]): EnergyCurriculumGoal[] => seeds.map(([id, label, aliases = []]) => ({
+        id, label, source, aliases: [...aliases, ...(standardizedOutcomes[id] ?? [])],
+    }))),
 ]));
 const noGoals: readonly EnergyCurriculumGoal[] = [];
 
