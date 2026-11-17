@@ -7,7 +7,7 @@ export interface MatrixPage {
 }
 
 const outcomeHeader = /^(?:yeu cau(?: can dat)?|yccd|muc tieu(?: danh gia)?)$/;
-const topicHeader = /^(?:chu de|noi dung(?: kien thuc)?|don vi kien thuc|bai hoc|mach noi dung)$/;
+const topicHeader = /^(?:chu de|chuong(?: chu de)?|noi dung(?: kien thuc| don vi kien thuc)?|don vi kien thuc|bai hoc|mach noi dung)$/;
 const countHeader = /^(?:so (?:luong )?cau(?: hoi)?(?: y)?|so y)$/;
 const referenceHeader = /^(?:cau hoi|vi tri(?: cau)?|so thu tu cau|cau so|ma cau)$/;
 const sectionName = /\bphan (?:[ivx]+|\d+)\b/;

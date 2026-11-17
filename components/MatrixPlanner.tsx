@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { MATRIX_LEVELS, type MatrixQuestionType } from '../src/utils/examMatrix';
+import { ENERGY_MATRIX_CHAPTER_ID, ENERGY_MATRIX_TOPICS, MATRIX_LEVELS, type MatrixQuestionType } from '../src/utils/examMatrix';
 import { STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 
 const chapters: readonly { id: string; name: string; topics: readonly (readonly [id: string, name: string])[] }[] = [
@@ -17,11 +17,8 @@ const chapters: readonly { id: string; name: string; topics: readonly (readonly 
         ['equilibrium', 'Cân bằng lực, moment lực'],
         ['pressure', 'Khối lượng riêng, áp suất chất lỏng'],
     ] },
-    { id: 'g10-ch3', name: 'Công, năng lượng, công suất', topics: [
-        ['work', 'Công và năng lượng'],
-        ['mechanical-energy', 'Động năng và thế năng'],
-        ['power', 'Công suất và hiệu suất'],
-    ] },
+    { id: ENERGY_MATRIX_CHAPTER_ID, name: 'Công, năng lượng, công suất',
+        topics: ENERGY_MATRIX_TOPICS.map(([id, name]) => [id, name] as const) },
     { id: 'g10-ch4', name: 'Động lượng', topics: [
         ['momentum', 'Định nghĩa động lượng, bảo toàn động lượng'],
         ['collisions', 'Động lượng và va chạm'],

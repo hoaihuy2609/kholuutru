@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, ChevronLeft, FileUp, Pencil, Plus, Table2, Trash2 } from 'lucide-react';
 import { isStudyQuestionType, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
-import { isMatrixLevelHeading, MATRIX_LEVELS, matrixMatch, matrixOutcomeOptions, matrixReferences, matrixSlots, normalizeMatrixText, type MatrixQuestionDraft, type MatrixQuestionType, type MatrixRow } from '../src/utils/examMatrix';
+import { energyMatrixTopic, isMatrixLevelHeading, MATRIX_LEVELS, matrixCandidateFit, matrixOutcomeOptions, matrixReferences, matrixSlots, normalizeMatrixText, type MatrixQuestionDraft, type MatrixQuestionType, type MatrixRow } from '../src/utils/examMatrix';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
 import { MatrixQuestionCard, MatrixSolutionDialog } from './MatrixQuestionCard';
 import MatrixPlanner from './MatrixPlanner';
@@ -9,7 +9,9 @@ import MatrixPlanner from './MatrixPlanner';
 export interface MatrixCandidate {
     item: SelectedQuestionItem;
     grade?: number;
+    chapterId?: string;
     topic: string;
+    energyTopic?: ReturnType<typeof energyMatrixTopic>;
     outcomes: string[];
     preview: () => string;
 }
@@ -122,13 +124,16 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
         return candidates.flatMap(candidate => {
             const { item } = candidate;
             if (grade && candidate.grade !== grade) return [];
-            const match = matrixMatch(slot.rows, { type: item.type, level: item.level, outcomes: candidate.outcomes });
-            if (!match.score) return [];
+            const match = matrixCandidateFit(slot.rows, {
+                type: item.type, level: item.level, outcomes: candidate.outcomes,
+                chapterId: candidate.chapterId, energyTopic: candidate.energyTopic,
+            }, grade);
+            if (!match) return [];
             const topic = normalizeMatrixText(candidate.topic);
             const topicMatch = slot.rows.some(row => row.topic && topic.includes(normalizeMatrixText(row.topic)));
             return [{ candidate, ...match, topicMatch }];
         }).sort((a, b) => Number(b.candidate.item.id === recentId) - Number(a.candidate.item.id === recentId)
-            || b.score - a.score || Number(b.topicMatch) - Number(a.topicMatch));
+            || b.score - a.score || Number(b.sameContent) - Number(a.sameContent) || Number(b.topicMatch) - Number(a.topicMatch));
     }, [candidates, grade, reviewing, slot, recentId]);
     const visibleMatches = available.slice(0, limit);
     const matchingLines = new Set(visibleMatches.flatMap(result =>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { importedQuestionOutcomes, matrixDraftPlacement, matrixMatch, matrixMatchScore, matrixOutcomeOptions, matrixReferences, matrixSlots, type MatrixQuestionDraft, type MatrixRow } from '../utils/examMatrix';
+import { energyMatrixTopic, importedQuestionOutcomes, matrixCandidateFit, matrixDraftPlacement, matrixMatch, matrixMatchScore, matrixOutcomeOptions, matrixReferences, matrixSlots, type MatrixQuestionDraft, type MatrixRow } from '../utils/examMatrix';
 import { parsePdfMatrix, type MatrixPage } from '../utils/pdfExamMatrix';
 
 describe('exam matrix', () => {
@@ -27,6 +27,37 @@ describe('exam matrix', () => {
         }]);
         expect(matrixMatch([row, { ...row, outcome: 'Nêu được định luật Coulomb' }], candidate)).toEqual({ score: 0, evidence: [] });
         expect(matrixMatch([row], { ...candidate, level: 2 })).toEqual({ score: 0, evidence: [] });
+    });
+
+    it('maps Energy lessons and filters same-topic suggestions by the stored question type and level', () => {
+        expect(energyMatrixTopic('BÀI 1.2: CÔNG CƠ HỌC')).toBe('work');
+        expect(energyMatrixTopic('BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC')).toBe('work');
+        expect(energyMatrixTopic('BÀI 4.1: CƠ NĂNG - ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG')).toBe('mechanical-energy');
+        expect(energyMatrixTopic('BÀI 4.2: CON LẮC ĐƠN')).toBe('mechanical-energy');
+        expect(energyMatrixTopic('BÀI 5: HIỆU SUẤT')).toBe('power');
+        expect(energyMatrixTopic('BÀI 4.3: DAO ĐỘNG ĐIỀU HÒA')).toBeUndefined();
+
+        const { rows } = parsePdfMatrix([{
+            fragments: [
+                [8, 64, 'Chương/Chủ đề'], [128, 64, 'Nội dung/đơn vị kiến thức'], [258, 64, 'Yêu cầu cần đạt'],
+                [498, 64, 'Mức độ'], [568, 64, 'Nhiều lựa chọn'], [8, 19, 'Công, năng lượng, công suất'],
+                [128, 19, 'Động năng và thế năng'], [258, 19, 'Vận dụng định luật bảo toàn cơ năng'],
+                [498, 19, 'VD'], [568, 19, '1'],
+            ].map(([x, y, text]) => ({ x: Number(x), y: Number(y), text: String(text), width: 45, height: 11 })),
+            rules: [
+                ...[0, 120, 250, 490, 560, 650].map(x => [x, 0, x, 90]),
+                ...[0, 45, 90].map(y => [0, y, 650, y]),
+            ],
+        }]);
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({ topic: 'Công, năng lượng, công suất · Động năng và thế năng', level: 3 });
+        const candidate = { type: 'trac_nghiem' as const, level: 3, outcomes: [], energyTopic: energyMatrixTopic('Con lắc đơn') };
+        expect(matrixCandidateFit(rows, candidate, 10)).toEqual({ score: 0, evidence: [], sameContent: true });
+        expect(matrixCandidateFit(rows, { ...candidate, outcomes: [rows[0].outcome] }, 10)).toMatchObject({ score: 1, sameContent: true });
+        expect(matrixCandidateFit(rows, { ...candidate, level: undefined }, 10)).toBeNull();
+        expect(matrixCandidateFit(rows, { ...candidate, type: 'dung_sai' }, 10)).toBeNull();
+        expect(matrixCandidateFit(rows, { ...candidate, energyTopic: 'power' }, 10)).toBeNull();
+        expect(matrixCandidateFit(rows, { ...candidate, chapterId: 'g11-ch1', outcomes: [rows[0].outcome] }, 10)).toBeNull();
     });
 
     it('prefills a matrix draft from actual outcomes and a matching lesson in the same grade and format', () => {

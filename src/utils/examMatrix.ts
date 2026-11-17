@@ -28,10 +28,32 @@ export interface MatrixQuestionDraft {
 }
 
 export const MATRIX_LEVELS = ['Chưa rõ', 'Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'];
+export const ENERGY_MATRIX_CHAPTER_ID = 'g10-ch3';
+export const ENERGY_MATRIX_TOPICS = [
+    ['work', 'Công và năng lượng', ['Năng lượng', 'Công cơ học', 'Năng lượng và công cơ học']],
+    ['mechanical-energy', 'Động năng và thế năng', [
+        'Động năng', 'Thế năng', 'Cơ năng', 'Định luật bảo toàn cơ năng',
+        'Cơ năng và định luật bảo toàn cơ năng', 'Cơ năng - Định luật bảo toàn cơ năng', 'Con lắc đơn',
+    ]],
+    ['power', 'Công suất và hiệu suất', ['Công suất', 'Hiệu suất']],
+] as const;
+type EnergyMatrixTopic = typeof ENERGY_MATRIX_TOPICS[number][0];
 
 export function normalizeMatrixText(text: string) {
     return text.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd')
         .replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function cleanMatrixTitle(text: string) {
+    return normalizeMatrixText(text).replace(/^(?:bai|chuong) (?:\d+(?: \d+)?|[ivx]+) /, '');
+}
+
+const energyTopicByTitle = new Map(ENERGY_MATRIX_TOPICS.flatMap(([topic, name, aliases]) =>
+    [name, ...aliases].map(title => [cleanMatrixTitle(title), topic] as const)));
+
+export function energyMatrixTopic(title: string): EnergyMatrixTopic | undefined {
+    const content = title.split('·').at(-1) ?? title;
+    return energyTopicByTitle.get(cleanMatrixTitle(content));
 }
 
 export function questionOutcomes(value: unknown): string[] {
@@ -82,16 +104,15 @@ export function matrixOutcomeOptions(outcome: string) {
 }
 
 export function matrixDraftPlacement(draft: MatrixQuestionDraft, lessons: StudyLesson[]): StudySection | undefined {
-    const cleanTitle = (value: string) => normalizeMatrixText(value).replace(/^(?:bai|chuong) (?:\d+(?: \d+)?|[ivx]+) /, '');
-    const topics = draft.topic.split('·').map(cleanTitle).filter(Boolean);
+    const topics = draft.topic.split('·').map(cleanMatrixTitle).filter(Boolean);
     const chapters = STUDY_CHAPTERS.filter(chapter => !draft.grade || chapter.grade === draft.grade);
     const chapterIds = new Set(chapters.map(chapter => chapter.id));
     const matchingLessons = lessons.filter(lesson =>
         lesson.studySection.questionType === draft.type && chapterIds.has(lesson.studySection.chapterId)
-        && topics.includes(cleanTitle(lesson.title)));
+        && topics.includes(cleanMatrixTitle(lesson.title)));
     if (matchingLessons.length === 1) return { ...matchingLessons[0].studySection, lessonId: matchingLessons[0].id };
     const matchingChapters = chapters.filter(chapter => {
-        const name = cleanTitle(chapter.name);
+        const name = cleanMatrixTitle(chapter.name);
         return topics.some(topic => ` ${topic} `.includes(` ${name} `));
     });
     if (matchingChapters.length === 1) return { chapterId: matchingChapters[0].id, questionType: draft.type };
@@ -188,6 +209,23 @@ export function matrixMatch(rows: MatrixRow[], candidate: {
 
 export function matrixMatchScore(rows: MatrixRow[], candidate: Parameters<typeof matrixMatch>[1]) {
     return matrixMatch(rows, candidate).score;
+}
+
+export function matrixCandidateFit(rows: MatrixRow[], candidate: Parameters<typeof matrixMatch>[1] & {
+    chapterId?: string;
+    energyTopic?: EnergyMatrixTopic;
+}, grade: number) {
+    if (!rows.length || rows.some(row => row.type !== candidate.type || (row.level && row.level !== candidate.level))) return null;
+    const topic = !grade || grade === 10 ? energyMatrixTopic(rows[0].topic) : undefined;
+    const sharedTopic = topic && rows.every(row => energyMatrixTopic(row.topic) === topic) ? topic : undefined;
+    if (sharedTopic && (
+        (candidate.chapterId && candidate.chapterId !== ENERGY_MATRIX_CHAPTER_ID)
+        || (candidate.energyTopic && sharedTopic !== candidate.energyTopic)
+    )) return null;
+
+    const fit = matrixMatch(rows, candidate);
+    const sameContent = !!sharedTopic && sharedTopic === candidate.energyTopic;
+    return fit.score || sameContent ? { ...fit, sameContent } : null;
 }
 
 export function matrixSlots(rows: MatrixRow[]) {

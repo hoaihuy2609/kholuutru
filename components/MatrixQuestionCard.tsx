@@ -49,7 +49,7 @@ export function MatrixQuestionCard({ candidate, score, evidence, selected, used,
                 {selected && <span className="inline-flex items-center gap-1 font-semibold text-emerald-800"><Check aria-hidden="true" className="size-3.5" /> Đã chọn</span>}
             </div>
 
-            <div className="space-y-1.5 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            {evidence.length > 0 ? <div className="space-y-1.5 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950">
                 <p className="text-xs font-semibold">{score === 1 ? 'Khớp trực tiếp' : 'Gần khớp'} · {evidence.length} yêu cầu</p>
                 <ul className="space-y-1.5">
                     {evidence.map(match => <li key={`${match.rowIndex}:${match.lineIndex}`}>
@@ -59,7 +59,11 @@ export function MatrixQuestionCard({ candidate, score, evidence, selected, used,
                         </>}
                     </li>)}
                 </ul>
-            </div>
+            </div> : (
+                <p className="rounded-lg bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-700">
+                    Cùng nội dung · Chưa xác nhận khớp yêu cầu cần đạt
+                </p>
+            )}
 
             <div id={promptId} ref={viewport} className={'relative min-w-0 ' + (expanded ? '' : 'max-h-64 overflow-hidden')}>
                 <div ref={prompt}><SolutionQuestionPrompt content={content} /></div>
