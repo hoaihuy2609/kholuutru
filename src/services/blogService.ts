@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { dbGet, dbSetBatch, dbUpdate } from '../lib/db';
+import { dbGet, dbSetBatch, dbUpdate, dbUpdateBatch } from '../lib/db';
 import { fetchViaCloudflareProxy, TELEGRAM_CHAT_ID, CLOUDFLARE_PROXY_URL, ADMIN_AUTH_HEADER } from '../lib/telegram';
 import { packBlogSnapshot, unpackBlogSnapshot } from './blogSnapshot';
 import { useBlogStore } from '../stores/useContentStore';
@@ -13,6 +13,7 @@ const BLOG_LOCAL_KEY = 'physivault_blogs_local';
 const BLOG_READER_KEY = 'physivault_blogs_reader';
 const BLOG_READER_FILE_ID = 'physivault_blogs_reader_file_id';
 const BLOG_PENDING_SYNC = 'pv_blog_pending_sync';
+const OUTCOME_PENDING_SYNC = 'pv_outcome_pending_sync';
 type LocalBlog = BlogPost & {
     pendingImages?: { files: BlogImageUpload[]; previous?: BlogPost };
     uploadedImages?: Record<string, string>;
@@ -357,11 +358,15 @@ async function flushSync() {
     const upload = async () => {
         const pending = localStorage.getItem(BLOG_PENDING_SYNC);
         if (!pending) return { success: true, blogCount: 0 };
+        const outcomePending = await dbGet(OUTCOME_PENDING_SYNC);
         const result = await uploadBlogRecords(pct => {
             for (const request of requests) request.onProgress?.(pct);
         });
         if (result.success && localStorage.getItem(BLOG_PENDING_SYNC) === pending) {
             localStorage.removeItem(BLOG_PENDING_SYNC);
+        }
+        if (result.success && outcomePending) {
+            await dbUpdate<string | null>(OUTCOME_PENDING_SYNC, current => current === outcomePending ? null : current ?? null);
         }
         return result;
     };
@@ -394,6 +399,10 @@ export function syncBlogs(onProgress?: (pct: number) => void): Promise<SyncResul
 
 export function resumeBlogSync() {
     if (localStorage.getItem(BLOG_PENDING_SYNC) && !syncing && !waiting.length) void syncBlogs();
+    // A committed outcome batch survives a tab closing before the sync queue is scheduled.
+    void dbGet(OUTCOME_PENDING_SYNC).then(pending => {
+        if (pending && !syncing && !waiting.length) void syncBlogs();
+    }).catch(error => console.warn('[Blog] Không đọc được trạng thái đồng bộ YCCĐ:', error));
 }
 
 function finishLocalSave(saved: LocalBlog[]): BlogPost[] {
@@ -472,7 +481,8 @@ export function resumeBlogImageUploads(): Promise<void> {
 export const fetchBlogsForEditing = async (): Promise<{ blogs: BlogPost[]; loaded: boolean }> => {
     try {
         const local: BlogRecord[] = await dbGet(BLOG_LOCAL_KEY) ?? [];
-        if (localStorage.getItem(BLOG_PENDING_SYNC) || local.some(record => isBlogPost(record) && record.pendingImages)) {
+        if (localStorage.getItem(BLOG_PENDING_SYNC) || await dbGet(OUTCOME_PENDING_SYNC)
+            || local.some(record => isBlogPost(record) && record.pendingImages)) {
             const blogs = local.filter(isBlogPost);
             cacheLocalBlogImages(blogs);
             return { blogs: blogs.map(plainBlog), loaded: false };
@@ -486,12 +496,14 @@ export const fetchBlogsForEditing = async (): Promise<{ blogs: BlogPost[]; loade
         const records = await fetchBlogRecords(fileId);
         let loaded = true;
         let blogs: LocalBlog[] = [];
-        await dbUpdate<BlogRecord[]>(BLOG_LOCAL_KEY, (current = []) => {
+        await dbUpdateBatch([BLOG_LOCAL_KEY, OUTCOME_PENDING_SYNC], values => {
+            const current: BlogRecord[] = values[BLOG_LOCAL_KEY] ?? [];
             loaded = !localStorage.getItem(BLOG_PENDING_SYNC)
+                && !values[OUTCOME_PENDING_SYNC]
                 && !current.some(record => isBlogPost(record) && record.pendingImages);
             const next = loaded ? records : current;
             blogs = next.filter(isBlogPost);
-            return next;
+            return { [BLOG_LOCAL_KEY]: next };
         });
         cacheLocalBlogImages(blogs);
         return { blogs: blogs.map(plainBlog), loaded };

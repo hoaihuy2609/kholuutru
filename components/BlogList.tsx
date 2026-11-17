@@ -17,6 +17,7 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
 const ExamMatrixBuilder = React.lazy(() => import('./ExamMatrixBuilder'));
+const ChapterOutcomeExchange = React.lazy(() => import('./ChapterOutcomeExchange'));
 
 // ─────────────────────────────────────────────────────────────
 // Mini renderers — tái sử dụng logic của SolutionRenderer để
@@ -771,6 +772,13 @@ const BlogList: React.FC<BlogListProps> = ({
     };
 
     const chapterStudyList = activeChapter && (
+        <>
+        {isAdmin && <React.Suspense fallback={null}>
+            <ChapterOutcomeExchange key={activeChapter.id} chapter={activeChapter} onChanged={library => {
+                setBlogs(library.blogs);
+                onLibraryLoaded(library);
+            }} />
+        </React.Suspense>}
         <ChapterStudyList key={activeChapter.id + ':' + (selectedType ?? '') + ':' + (selectedGroup ?? '')}
             chapter={activeChapter} selectedType={selectedType} selectedLessonId={selectedLessonId}
             selectedGroup={selectedGroup} matchesByGroup={matchesByGroup}
@@ -796,6 +804,7 @@ const BlogList: React.FC<BlogListProps> = ({
                 true,
             )}
             onSaveLesson={onSaveLesson} onDeleteEmptyLesson={onDeleteEmptyLesson} />
+        </>
     );
     const isLessonOpen = chapterLessons.some(lesson =>
         lesson.id === selectedLessonId && lesson.studySection.questionType === selectedType

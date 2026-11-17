@@ -22,11 +22,19 @@ vi.mock('../lib/supabase', () => ({
 }));
 vi.mock('../lib/db', () => ({
     dbGet: async (key: string) => key === 'physivault_blogs_local' ? [...mocks.records] : mocks.cache.get(key),
-    dbUpdate: async (_key: string, update: (records: typeof mocks.records) => typeof mocks.records) => {
-        mocks.records = update(mocks.records);
+    dbUpdate: async (key: string, update: (value: any) => any) => {
+        if (key === 'physivault_blogs_local') mocks.records = update(mocks.records);
+        else mocks.cache.set(key, update(mocks.cache.get(key)));
     },
     dbSetBatch: async (entries: [string, unknown][]) => {
         for (const [key, value] of entries) mocks.cache.set(key, value);
+    },
+    dbUpdateBatch: async (keys: string[], update: (values: Record<string, unknown>) => Record<string, unknown>) => {
+        const next = update(Object.fromEntries(keys.map(key => [key, key === 'physivault_blogs_local' ? mocks.records : mocks.cache.get(key)])));
+        for (const [key, value] of Object.entries(next)) {
+            if (key === 'physivault_blogs_local') mocks.records = value as typeof mocks.records;
+            else mocks.cache.set(key, value);
+        }
     },
 }));
 vi.mock('../lib/telegram', () => ({
@@ -37,7 +45,7 @@ vi.mock('../lib/telegram', () => ({
 }));
 vi.mock('../services/tikzService', () => ({ uploadQuestionImageToTelegram: mocks.uploadImage }));
 
-import { deleteEmptyStudyLesson, getStudyLibrary, resumeBlogImageUploads, resumeBlogSync, saveBlog, saveStudyLesson, saveStudyQuestionImport, syncBlogs } from '../services/blogService';
+import { deleteEmptyStudyLesson, fetchBlogsForEditing, getStudyLibrary, resumeBlogImageUploads, resumeBlogSync, saveBlog, saveStudyLesson, saveStudyQuestionImport, syncBlogs } from '../services/blogService';
 
 const telegramResponse = (id: string) => Response.json({ result: { document: { file_id: id } } });
 
@@ -67,6 +75,31 @@ describe('blog snapshot sync', () => {
 
     afterEach(() => {
         vi.unstubAllGlobals();
+    });
+
+    it('khôi phục hàng đợi YCCĐ từ IndexedDB và xóa dấu chờ sau khi phát hành thành công', async () => {
+        mocks.records = [{ id: 'outcome-edited' }];
+        mocks.cache.set('pv_outcome_pending_sync', 'batch-recover');
+        send.mockResolvedValue(telegramResponse('outcome-snapshot'));
+        resumeBlogSync();
+        await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1), { timeout: 5000 });
+        await vi.waitFor(() => expect(mocks.cache.get('pv_outcome_pending_sync')).toBeNull());
+        expect(mocks.records).toEqual([{ id: 'outcome-edited' }]);
+    }, 10000);
+
+    it('không thay bản YCCĐ mới bằng bản tải cũ khi cập nhật xảy ra trong lúc tải', async () => {
+        mocks.records = [{ id: 'local-before' }];
+        mocks.index.mockResolvedValue({ data: { telegram_file_id: 'remote-snapshot' }, error: null });
+        let complete!: (buffer: ArrayBuffer) => void;
+        mocks.proxyDownload.mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+        const loading = fetchBlogsForEditing();
+        await vi.waitFor(() => expect(complete).toBeDefined());
+        mocks.records = [{ id: 'local-after-outcome-edit' }];
+        mocks.cache.set('pv_outcome_pending_sync', 'new-batch');
+        const snapshot = await packBlogSnapshot([{ id: 'remote-before' }]);
+        complete(await snapshot.blob.arrayBuffer());
+        expect(await loading).toMatchObject({ loaded: false, blogs: [{ id: 'local-after-outcome-edit' }] });
+        expect(mocks.records).toEqual([{ id: 'local-after-outcome-edit' }]);
     });
 
     it('xóa đúng mục trống trùng tên và giữ mục còn câu hỏi nháp', async () => {
