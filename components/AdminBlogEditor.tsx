@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BlogPost, StudyLesson, StudyQuestionGroup, StudyQuestionType, StudySection } from '../types';
 import { getStudyChapter, isStudyQuestionType, nextStudyQuestionNumber, STUDY_CHAPTERS, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
-import { matrixDraftPlacement, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
+import { ENERGY_MATRIX_CHAPTER_ID, matrixDraftPlacement, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
 import {
     ChevronDown, ChevronLeft, Save, Trash2, Eye, PenTool, Bold, Italic, List,
     ImageIcon, Link as LinkIcon, HelpCircle, AlignLeft, AlignCenter,
@@ -384,6 +384,7 @@ const AdminBlogEditor: React.FC<AdminBlogEditorProps> = ({ blog, initialSection,
                     studyDefaults={chapter || matrixDraft ? { title: lesson?.title || chapter?.name || matrixDraft?.topic || 'Bài tập Vật lý', firstQuestionNumber } : undefined}
                     studyGrade={chapter?.grade}
                     studyQuestionType={chapter && studyType ? studyType : undefined}
+                    studyMatrix={chapter?.id === ENERGY_MATRIX_CHAPTER_ID ? { lessonTitle: lesson?.title ?? blog?.title } : undefined}
                     studyImport={!blog && !matrixDraft && lesson && saveStudyQuestionImport
                         ? { source: lesson, lessons: studyLessons, save: saveStudyQuestionImport } : undefined}
                     initialQuestionGroup={initialQuestionGroup}

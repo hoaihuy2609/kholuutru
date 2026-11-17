@@ -21,7 +21,7 @@ import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
 import { renderTikzToSvg, uploadQuestionImageToTelegram, uploadSvgToTelegram } from "../src/services/tikzService";
 import { pdfSolutionText, type PdfQuestionSource } from '../src/utils/pdfExamQuestions';
-import { importedQuestionOutcomes, matrixMatchScore, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
+import { ENERGY_MATRIX_TOPICS, energyMatrixTopic, importedQuestionOutcomes, matrixMatchScore, questionOutcomes, readEnergyMatrixTopic, type EnergyMatrixTopic, type MatrixQuestionDraft } from '../src/utils/examMatrix';
 import type { ReviewedPdfQuestion } from './PdfExamImport';
 import StudyImageBatch, { type StudyImageTarget } from './StudyImageBatch';
 import IllustrationEditor from './IllustrationEditor';
@@ -90,6 +90,7 @@ interface Question {
   qFormula: string;
   questionTable?: QuestionTableData;
   outcomeText: string;
+  matrixTopic?: EnergyMatrixTopic;
   type: QuestionType;
   groups: StudyQuestionGroup[];
   solution: string;        // Ô lời giải chi tiết duy nhất (hỗ trợ text & LaTeX)
@@ -215,6 +216,7 @@ const normalizeQuestion = (q: any): Question => {
     questionTable: normalizeQuestionTable(q.question_table ?? q.questionTable),
     qFormula:   q.question_latex || q.qFormula || "",
     outcomeText: questionOutcomes(q.learning_outcomes).join('\n'),
+    matrixTopic: readEnergyMatrixTopic(q.matrix_topic),
     type:       qType,
     groups: Array.isArray(q.question_groups) ? q.question_groups.filter(isStudyQuestionGroup) : [],
     solution:   sol,
@@ -244,6 +246,7 @@ function serializeQuestion(q: Question, questionNo: string) {
     question_latex: q.qFormula,
     type:           q.type,
     ...(outcomes.length ? { learning_outcomes: outcomes } : {}),
+    ...(q.matrixTopic ? { matrix_topic: q.matrixTopic } : {}),
     ...(supportsStudyGroups(q.type) && q.groups.length ? { question_groups: q.groups } : {}),
     solution:       q.solution || '',
     ...(q.questionImages?.length ? { question_images: q.questionImages.map(({ file, ...image }) => image) } : {}),
@@ -588,6 +591,7 @@ interface SolutionEditorProps {
   studyDefaults?: { title: string; firstQuestionNumber: number };
   studyGrade?: number;
   studyQuestionType?: StudyQuestionType;
+  studyMatrix?: { lessonTitle?: string };
   studyImport?: { source: StudyLesson; lessons: StudyLesson[]; save: typeof saveStudyQuestionImport };
   initialQuestionIndex?: number;
   initialQuestionGroup?: StudyQuestionGroup;
@@ -641,7 +645,7 @@ function stageQuestionImages(questions: Question[]) {
 
 export default function SolutionEditor({
   blog, saveBlog, deleteBlog, syncBlogs, onSaved, onBack, switchToMarkdown, switchToExamPaper, hideTopBar,
-  studyPlacement, studyDefaults, studyGrade, studyQuestionType, studyImport, initialQuestionIndex = 0, initialQuestionGroup, savedOutcomes = [], matrixDraft
+  studyPlacement, studyDefaults, studyGrade, studyQuestionType, studyMatrix, studyImport, initialQuestionIndex = 0, initialQuestionGroup, savedOutcomes = [], matrixDraft
 }: SolutionEditorProps) {
   const splitImportedQuestions = !!saveBlog && !studyGrade;
   const [examName,   setExamName]   = useState("");
@@ -677,6 +681,8 @@ export default function SolutionEditor({
   };
 
   const activeQuestion = questions[activeQIdx] ?? emptyQuestion();
+  const inferredMatrixTopic = energyMatrixTopic(studyMatrix?.lessonTitle ?? '');
+  const inferredMatrixLabel = ENERGY_MATRIX_TOPICS.find(([topic]) => topic === inferredMatrixTopic)?.[1];
   const questionTable = activeQuestion.questionTable;
   const uploadedImageIds = useRef(new WeakMap<File, string>());
   const [imagePreview, setImagePreview] = useState<{ file: File; url: string }>();
@@ -1521,6 +1527,15 @@ export default function SolutionEditor({
                     {examName && examName + ' · '}{activeQuestion.pdfSource.label} · Trang {activeQuestion.pdfSource.page}
                   </p>
                 )}
+                {studyMatrix && <label className="block space-y-1.5 text-sm font-semibold text-stone-800">
+                  <span>Nội dung ma trận</span>
+                  <select className="block w-full rounded-lg border border-stone-200 bg-white px-2.5 py-2 font-normal"
+                    value={activeQuestion.matrixTopic ?? ''}
+                    onChange={event => updateQuestion({ matrixTopic: readEnergyMatrixTopic(event.target.value) })}>
+                    <option value="">Tự động theo tên bài · {inferredMatrixLabel ?? 'Chưa xác định'}</option>
+                    {ENERGY_MATRIX_TOPICS.map(([topic, label]) => <option key={topic} value={topic}>{label}</option>)}
+                  </select>
+                </label>}
                 {saveBlog && <div className="space-y-1.5">
                   <label className="block text-sm font-semibold text-stone-800" htmlFor="question-learning-outcomes">Yêu cầu cần đạt</label>
                   <AutoResizeTextarea id="question-learning-outcomes" rows={2}

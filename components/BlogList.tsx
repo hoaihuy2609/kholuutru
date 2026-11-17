@@ -11,7 +11,7 @@ import { readStudyImages, studyImageParts, studyImageSrc, studyQuestionIllustrat
 import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/questionTable';
 import QuestionTable from './QuestionTable';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
-import { ENERGY_MATRIX_CHAPTER_ID, energyMatrixTopic, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
+import { questionEnergyMatrixTopic, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -77,6 +77,7 @@ interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
     question_no?: string;
     question_groups?: StudyQuestionGroup[];
     learning_outcomes?: string[];
+    matrix_topic?: unknown;
     question_text?: string;
     question_images?: StudyImage[];
     solution_images?: StudyImage[];
@@ -619,7 +620,7 @@ const BlogList: React.FC<BlogListProps> = ({
             const outcomes = questionOutcomes(question.learning_outcomes);
             const chapter = getStudyChapter(blog.studySection?.chapterId);
             const title = lessonTitles.get(blog.studySection?.lessonId ?? '');
-            const energyTopic = chapter?.id === ENERGY_MATRIX_CHAPTER_ID ? energyMatrixTopic(title ?? blog.title) : undefined;
+            const energyTopic = questionEnergyMatrixTopic(chapter?.id, title ?? blog.title, question.matrix_topic);
             if (!outcomes.length && !energyTopic) return [];
             return [{
                 item: toSelectedQuestion(blog, question, index, index + 1),

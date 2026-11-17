@@ -37,7 +37,7 @@ export const ENERGY_MATRIX_TOPICS = [
     ]],
     ['power', 'Công suất và hiệu suất', ['Công suất', 'Hiệu suất']],
 ] as const;
-type EnergyMatrixTopic = typeof ENERGY_MATRIX_TOPICS[number][0];
+export type EnergyMatrixTopic = typeof ENERGY_MATRIX_TOPICS[number][0];
 
 export function normalizeMatrixText(text: string) {
     return text.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd')
@@ -54,6 +54,14 @@ const energyTopicByTitle = new Map(ENERGY_MATRIX_TOPICS.flatMap(([topic, name, a
 export function energyMatrixTopic(title: string): EnergyMatrixTopic | undefined {
     const content = title.split('·').at(-1) ?? title;
     return energyTopicByTitle.get(cleanMatrixTitle(content));
+}
+
+export function readEnergyMatrixTopic(value: unknown): EnergyMatrixTopic | undefined {
+    return ENERGY_MATRIX_TOPICS.find(([topic]) => topic === value)?.[0];
+}
+
+export function questionEnergyMatrixTopic(chapterId: string | undefined, title: string, value: unknown) {
+    if (chapterId === ENERGY_MATRIX_CHAPTER_ID) return readEnergyMatrixTopic(value) ?? energyMatrixTopic(title);
 }
 
 export function questionOutcomes(value: unknown): string[] {

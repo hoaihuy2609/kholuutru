@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { energyMatrixTopic, importedQuestionOutcomes, matrixCandidateFit, matrixDraftPlacement, matrixMatch, matrixMatchScore, matrixOutcomeOptions, matrixReferences, matrixSlots, type MatrixQuestionDraft, type MatrixRow } from '../utils/examMatrix';
+import { energyMatrixTopic, importedQuestionOutcomes, matrixCandidateFit, matrixDraftPlacement, matrixMatch, matrixMatchScore, matrixOutcomeOptions, matrixReferences, matrixSlots, questionEnergyMatrixTopic, type MatrixQuestionDraft, type MatrixRow } from '../utils/examMatrix';
 import { parsePdfMatrix, type MatrixPage } from '../utils/pdfExamMatrix';
 
 describe('exam matrix', () => {
@@ -58,6 +58,24 @@ describe('exam matrix', () => {
         expect(matrixCandidateFit(rows, { ...candidate, type: 'dung_sai' }, 10)).toBeNull();
         expect(matrixCandidateFit(rows, { ...candidate, energyTopic: 'power' }, 10)).toBeNull();
         expect(matrixCandidateFit(rows, { ...candidate, chapterId: 'g11-ch1', outcomes: [rows[0].outcome] }, 10)).toBeNull();
+    });
+
+    it('uses the selected matrix content for a question and restores the lesson default when cleared', () => {
+        const title = 'Bài 4.2: Con lắc đơn';
+        const row: MatrixRow = {
+            section: 'Phần I', topic: 'Công và năng lượng', outcome: 'Nêu được ví dụ về công',
+            type: 'trac_nghiem', level: 2, count: 1, references: [],
+        };
+        const savedQuestion = { matrix_topic: 'work' };
+        const candidate = { type: 'trac_nghiem' as const, level: 2, outcomes: [], chapterId: 'g10-ch3' };
+
+        expect(questionEnergyMatrixTopic('g10-ch3', title, savedQuestion.matrix_topic)).toBe('work');
+        expect(matrixCandidateFit([row], {
+            ...candidate, energyTopic: questionEnergyMatrixTopic(candidate.chapterId, title, savedQuestion.matrix_topic),
+        }, 10)).toMatchObject({ sameContent: true });
+        expect(questionEnergyMatrixTopic('g10-ch3', title, '')).toBe('mechanical-energy');
+        expect(questionEnergyMatrixTopic('g10-ch3', title, 'unknown')).toBe('mechanical-energy');
+        expect(questionEnergyMatrixTopic('g11-ch1', title, savedQuestion.matrix_topic)).toBeUndefined();
     });
 
     it('prefills a matrix draft from actual outcomes and a matching lesson in the same grade and format', () => {
