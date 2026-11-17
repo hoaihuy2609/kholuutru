@@ -4,6 +4,7 @@ import { isStudyQuestionType, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/
 import { isMatrixLevelHeading, MATRIX_LEVELS, matrixMatch, matrixOutcomeOptions, matrixReferences, matrixSlots, normalizeMatrixText, type MatrixQuestionDraft, type MatrixQuestionType, type MatrixRow } from '../src/utils/examMatrix';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
 import { MatrixQuestionCard, MatrixSolutionDialog } from './MatrixQuestionCard';
+import MatrixPlanner from './MatrixPlanner';
 
 export interface MatrixCandidate {
     item: SelectedQuestionItem;
@@ -70,6 +71,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
     const [rows, setRows] = useState(() => [emptyRow()]);
     const [grade, setGrade] = useState(0);
     const [reviewing, setReviewing] = useState(true);
+    const [planning, setPlanning] = useState(false);
     const [source, setSource] = useState<File>();
     const [busy, setBusy] = useState(false);
     const [notice, setNotice] = useState('');
@@ -258,7 +260,9 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-bold">Soạn đề theo ma trận</h1>
-                    <p className="mt-1 text-sm text-stone-600">Rà bản đặc tả, rồi chọn câu trong kho cho từng vị trí.</p>
+                    <p className="mt-1 text-sm text-stone-600">{planning
+                        ? 'Chọn nội dung kiểm tra và phân bổ số câu, số ý.'
+                        : 'Rà bản đặc tả, rồi chọn câu trong kho cho từng vị trí.'}</p>
                 </div>
                 {!reviewing && <button className={button} onClick={() => {
                     setReviewTarget(undefined);
@@ -266,7 +270,15 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
                 }}>Rà lại ma trận</button>}
             </div>
 
-            {reviewing ? <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-4">
+            {reviewing && <div className="flex flex-wrap gap-2" role="group" aria-label="Cách chuẩn bị ma trận">
+                <button type="button" aria-pressed={planning} className={planning ? primary : button}
+                    onClick={() => setPlanning(true)}>Lập ma trận mới</button>
+                <button type="button" aria-pressed={!planning} className={planning ? button : primary}
+                    onClick={() => setPlanning(false)}>Nhập PDF / Bản đặc tả</button>
+            </div>}
+            <div hidden={!planning}><MatrixPlanner /></div>
+
+            {planning ? null : reviewing ? <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-4">
                 <div className="flex flex-wrap items-center gap-3">
                     <label className={button + (busy ? ' pointer-events-none opacity-50' : ' cursor-pointer')}>
                         <FileUp className="size-4" aria-hidden="true" /> {busy ? 'Đang đọc PDF…' : 'Nạp ma trận PDF'}
