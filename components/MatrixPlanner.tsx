@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { MATRIX_LEVELS, type MatrixQuestionType } from '../src/utils/examMatrix';
 import { STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 
@@ -52,6 +52,7 @@ const maxCount = 99;
 
 export default function MatrixPlanner() {
     const id = useId();
+    const [showContents, setShowContents] = useState(true);
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
     const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
     const [counts, setCounts] = useState<Record<string, Record<string, number>>>({});
@@ -83,10 +84,25 @@ export default function MatrixPlanner() {
     }
 
     return (
-        <div className="grid items-start gap-4 lg:grid-cols-[minmax(235px,285px)_minmax(0,1fr)]">
-            <aside className="rounded-xl border border-stone-200 bg-white">
-                <h2 className="border-b border-stone-200 px-4 py-3 font-bold">Nội dung Vật lí 10</h2>
-                <ul className="space-y-2 p-2">
+        <div className={'grid items-start gap-3 ' + (showContents
+            ? 'lg:grid-cols-[minmax(235px,285px)_minmax(0,1fr)]'
+            : 'lg:grid-cols-[auto_minmax(0,1fr)]')}>
+            <aside className="rounded-xl border border-stone-200 bg-white" aria-label="Nội dung Vật lí 10">
+                <div className={'flex items-center justify-between gap-2 ' + (showContents
+                    ? 'border-b border-stone-200 px-3 py-2'
+                    : 'p-1')}>
+                    {showContents && <h2 className="min-w-0 font-bold">Nội dung Vật lí 10</h2>}
+                    <button type="button"
+                        className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-semibold text-stone-700 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700"
+                        title={showContents ? 'Thu gọn khung nội dung' : 'Mở khung nội dung Vật lí 10'}
+                        aria-expanded={showContents} aria-controls={id + '-contents'}
+                        onClick={() => setShowContents(open => !open)}>
+                        {showContents ? <PanelLeftClose aria-hidden="true" className="size-4" />
+                            : <PanelLeftOpen aria-hidden="true" className="size-4" />}
+                        {showContents ? 'Thu gọn' : <span className="lg:sr-only">Mở nội dung Vật lí 10</span>}
+                    </button>
+                </div>
+                <ul id={id + '-contents'} hidden={!showContents} className="space-y-2 p-2">
                     {chapters.map(chapter => {
                         const open = expanded.has(chapter.id);
                         const panelId = id + '-' + chapter.id;
@@ -128,13 +144,18 @@ export default function MatrixPlanner() {
                     <p className="text-sm text-stone-600">Chọn nội dung bên trái rồi nhập số câu theo từng mức độ. Riêng Đúng/Sai nhập số ý.</p>
                 </div>
                 <div className="overflow-x-auto rounded-b-xl" tabIndex={0} role="region" aria-label="Bảng phân số câu theo mức độ">
-                    <table className="w-full min-w-[1080px] border-separate border-spacing-0 text-sm">
-                        <colgroup span={2} />
-                        {formats.map(format => <colgroup key={format.value} span={levels.length} />)}
+                    <table className="w-full min-w-[1080px] table-fixed border-separate border-spacing-0 text-sm">
+                        <colgroup>
+                            <col className="w-[10%]" />
+                            <col className="w-[14%]" />
+                        </colgroup>
+                        {formats.map(format => <colgroup key={format.value}>
+                            {levels.map(level => <col key={level.value} className="w-[6.3333%]" />)}
+                        </colgroup>)}
                         <thead className="bg-stone-100 text-stone-800">
                             <tr>
-                                <th scope="col" rowSpan={2} className={cell + ' w-28 text-left'}>Chương</th>
-                                <th scope="col" rowSpan={2} className={cell + ' w-48 text-left'}>Nội dung</th>
+                                <th scope="col" rowSpan={2} className={cell + ' text-left'}>Chương</th>
+                                <th scope="col" rowSpan={2} className={cell + ' text-left'}>Nội dung</th>
                                 {formats.map(format => (
                                     <th key={format.value} scope="colgroup" colSpan={levels.length} className={cell + ' bg-amber-50 font-semibold text-amber-950'}>
                                         {format.label}{format.value === 'dung_sai' ? ' (ý)' : ''}
@@ -143,7 +164,7 @@ export default function MatrixPlanner() {
                             </tr>
                             <tr>
                                 {columns.map(({ key, level }) => (
-                                    <th key={key} scope="col" className={cell + ' whitespace-nowrap text-xs font-semibold'}>{level}</th>
+                                    <th key={key} scope="col" className={cell + ' text-xs font-semibold'}>{level}</th>
                                 ))}
                             </tr>
                         </thead>
@@ -156,7 +177,7 @@ export default function MatrixPlanner() {
                                         <td key={key} className={cell + ' group-hover:bg-stone-50'}>
                                             <input type="number" min={0} max={maxCount} step={1}
                                                 aria-label={name + ' · ' + format + ' · ' + level}
-                                                className="h-9 w-full min-w-11 rounded-md border border-stone-300 bg-white px-1 text-center tabular-nums focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700"
+                                                className="h-9 w-full min-w-0 rounded-md border border-stone-300 bg-white px-1 text-center tabular-nums focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700"
                                                 value={counts[topicId]?.[key] || ''}
                                                 onChange={event => {
                                                     const count = Math.max(0, Math.min(maxCount, Math.trunc(event.currentTarget.valueAsNumber || 0)));
