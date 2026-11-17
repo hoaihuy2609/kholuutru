@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, FileJson, History, Upload } from 'lucide-react';
+import { Download, FileJson, History, Printer, Upload } from 'lucide-react';
+import OutcomeReviewPrint from './OutcomeReviewPrint';
 import type { StudyLibrary } from '../types';
 import { MatrixDialog } from './MatrixQuestionCard';
 import { STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
@@ -26,7 +27,7 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
   chapter: { id: string; name: string }; onChanged: (library: StudyLibrary) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<'export' | 'import' | 'history'>('export');
+  const [tab, setTab] = useState<'export' | 'import' | 'history' | 'pdf'>('export');
   const [prepared, setPrepared] = useState<Awaited<ReturnType<typeof exportChapterOutcomes>>>();
   const [text, setText] = useState('');
   const [review, setReview] = useState<{ preview: OutcomePreview; result?: OutcomeResult; batchId?: string }>();
@@ -76,7 +77,7 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
           Đề, đáp án, lời giải, mức độ và ảnh được giữ nguyên.
         </p>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Thao tác YCCĐ">
-          {([['export', '1. Xuất để rà', Download], ['import', '2. Nhập kết quả', Upload], ['history', 'Lịch sử / hoàn tác', History]] as const).map(([value, label, Icon]) =>
+          {([['export', '1. Xuất để rà', Download], ['import', '2. Nhập kết quả', Upload], ['pdf', 'Xuất PDF rà câu', Printer], ['history', 'Lịch sử / hoàn tác', History]] as const).map(([value, label, Icon]) =>
             <button type="button" key={value} disabled={busy} aria-pressed={tab === value} className={tab === value ? primary : button}
               onClick={() => changeTab(value)}><Icon className="size-4" />{label}</button>)}
         </div>
@@ -84,6 +85,8 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
         {error && <p role="alert" className="whitespace-pre-wrap rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{error}</p>}
         {notice && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
         {busy && <p role="status" className="text-sm text-amber-900">Đang kiểm tra và xử lí…</p>}
+
+        {tab === 'pdf' && <OutcomeReviewPrint chapter={chapter} />}
 
         {tab === 'export' && <section className="space-y-3 rounded-xl border bg-white p-4">
           <h3 className="font-bold">Xuất một lần cho cả chương</h3>

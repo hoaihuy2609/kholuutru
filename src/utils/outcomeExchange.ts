@@ -37,7 +37,7 @@ export function readOutcomeQuestions(blog: BlogPost): { document: JsonObject; qu
   return { document, questions, array };
 }
 
-function fingerprint(blog: BlogPost, question: JsonObject, index: number, count: number) {
+export function outcomeQuestionFingerprint(blog: BlogPost, question: JsonObject, index: number, count: number) {
   const { learning_outcomes: _ignored, ...rest } = question;
   return CryptoJS.SHA256(canonical({ question: rest, index, count, section: blog.studySection,
     title: blog.title, level: blog.level, grade: blog.grade })).toString();
@@ -69,7 +69,7 @@ export function makeOutcomeExport(blogs: BlogPost[], lessons: StudyLesson[], cha
     parsed.questions.forEach((q, index) => {
       const source: OutcomeSource = {
         question_id: `${blog.id}:${index}`, blogId: blog.id, index,
-        fingerprint: fingerprint(blog, q, index, parsed.questions.length),
+        fingerprint: outcomeQuestionFingerprint(blog, q, index, parsed.questions.length),
         lesson: titles.get(blog.studySection?.lessonId ?? '') ?? blog.title,
         label: String(q.question_no || `Câu ${index + 1}`), type: q.type,
         text: String(q.question_text ?? q.question_latex ?? ''), before: outcome(q),
@@ -143,7 +143,7 @@ export function validateOutcomeChanges(blogs: BlogPost[], chapterId: string, cha
     try {
       const { questions, document } = readOutcomeQuestions(blog);
       const q = questions[change.index];
-      if (!q || fingerprint(blog, q, change.index, questions.length) !== change.fingerprint
+      if (!q || outcomeQuestionFingerprint(blog, q, change.index, questions.length) !== change.fingerprint
         || !sameOutcome(outcome(q), change.before)
         || (change.rootBefore && !sameOutcome(outcome(document.data), change.rootBefore))) errors.push(`${label}: nội dung hoặc YCCĐ đã đổi. Hãy xuất lại để rà.`);
     } catch { errors.push(`${label}: cấu trúc câu đã đổi.`); }

@@ -1,6 +1,7 @@
 import type { BlogPost, StudyLesson } from '../../types';
 import { dbGet, dbUpdate, dbUpdateBatch } from '../lib/db';
 import { fetchBlogsForEditing, getStudyLibrary, syncBlogs } from './blogService';
+import { parseReviewPrintRequest, resolveReviewPrintCards } from '../utils/outcomeReviewPrint';
 import { makeOutcomeExport, parseOutcomeResult, patchOutcomeBlogs, previewOutcomeResult, reverseOutcomeChanges,
   type OutcomeChange, type OutcomeExport, type OutcomePreview, type OutcomeResult } from '../utils/outcomeExchange';
 
@@ -33,11 +34,18 @@ export async function getOutcomeHistory(chapterId: string): Promise<OutcomeBatch
   return history.filter(batch => batch.chapter_id === chapterId).reverse();
 }
 
-function findManifest(manifests: OutcomeExport[], result: OutcomeResult, chapterId: string) {
+function findManifest(manifests: OutcomeExport[], result: Pick<OutcomeResult, 'chapter_id' | 'export_id'>, chapterId: string) {
   if (result.chapter_id !== chapterId) throw new Error('File thuộc chương khác. Hãy mở đúng chương trước khi nhập.');
   const manifest = manifests.find(item => item.export_id === result.export_id);
   if (!manifest) throw new Error('Không có bản đối chiếu của lượt xuất này. Hãy nhập trên trình duyệt đã xuất file, hoặc xuất lại chương để xử lí.');
   return manifest;
+}
+
+export async function prepareOutcomeReviewPrint(chapterId: string, text: string) {
+  const request = parseReviewPrintRequest(text);
+  const manifest = findManifest(await dbGet(EXPORTS) ?? [], request, chapterId);
+  const library = await freshLibrary();
+  return resolveReviewPrintCards(library.blogs, manifest, request);
 }
 
 export async function reviewChapterOutcomes(chapterId: string, text: string) {
