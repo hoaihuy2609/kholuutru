@@ -6,6 +6,7 @@ import { energyMatrixTopic, isMatrixLevelHeading, MATRIX_LEVELS, matrixCandidate
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
 import { MatrixQuestionCard, MatrixSolutionDialog } from './MatrixQuestionCard';
 import MatrixPlanner from './MatrixPlanner';
+import type { ProgrammeMatch } from '../src/data/programmeRows';
 
 export interface MatrixCandidate {
     item: SelectedQuestionItem;
@@ -16,6 +17,9 @@ export interface MatrixCandidate {
     energyTopic?: ReturnType<typeof energyMatrixTopic>;
     groups?: StudyQuestionGroup[];
     outcomes: string[];
+    /** Dòng YCCĐ chương trình mà câu được rót vào (programmeRows), nếu đã gắn. */
+    programmeRow?: string;
+    programmeMatch?: ProgrammeMatch;
     preview: () => string;
 }
 

@@ -57,6 +57,41 @@ describe('per-question cognitive levels', () => {
     expect(() => patchQuestionCorrections(changed, chapter, preview.changes, true)).toThrow('thay đổi');
   });
 
+  it('stores the programme row on corrected questions without levels, mirrors the root and keeps the export valid', () => {
+    const blogs = [fixture()];
+    const { manifest } = makeOutcomeExport(blogs, [], chapter, 'exp');
+    const patch = { schema: 'physivault.questions.update.v1' as const, export_id: 'exp', chapter_id: chapter,
+      updates: [{ question_id: 'post:0', set: { question_text: 'Một vật rơi tự do từ nghỉ.' } }] };
+    const prior = previewQuestionCorrections(blogs, manifest, patch).changes;
+    const current = patchQuestionCorrections(blogs, chapter, prior);
+    const history = [{ export_id: 'exp', chapter_id: chapter, created_at: '2026-11-18', changes: prior }];
+    const result = parseCognitiveResult(JSON.stringify({ schema: 'physivault.cognitive.update.v1', export_id: 'exp', chapter_id: chapter,
+      updates: [{ question_id: 'post:0', programme_row: 'g10-ch3-yc07b', programme_match: 'direct' },
+        { question_id: 'post:1', programme_row: 'g10-ch3-yc01', programme_match: 'extended' }] }));
+    const preview = previewCognitiveResult(current, manifest, result, history);
+    expect(preview.errors).toEqual([]);
+    expect(preview.changes).toHaveLength(2);
+    const edited = patchQuestionCorrections(current, chapter, preview.changes);
+    const parsed = readOutcomeQuestions(edited[0]);
+    expect(parsed.questions[0]).toMatchObject({ programme_row: 'g10-ch3-yc07b', programme_match: 'direct' });
+    expect(parsed.questions[0].statements).toEqual(q.statements);
+    expect(parsed.document.data.programme_row).toBe('g10-ch3-yc07b');
+    expect(parsed.questions[1]).toMatchObject({ programme_row: 'g10-ch3-yc01', programme_match: 'extended' });
+    // Classification fields do not count as content: a later import against the same export still applies.
+    expect(previewCognitiveResult(edited, manifest, result, history)).toMatchObject({ errors: [], changes: [], unchanged: 2 });
+  });
+
+  it('rejects programme rows of another chapter, unknown rows and rows without a match', () => {
+    const packet = (update: Record<string, unknown>) => JSON.stringify({ schema: 'physivault.cognitive.update.v1',
+      export_id: 'exp', chapter_id: chapter, updates: [{ question_id: 'post:0', ...update }] });
+    expect(() => parseCognitiveResult(packet({ programme_row: 'g10-ch3-yc03' , programme_match: 'direct' }))).toThrow();
+    expect(() => parseCognitiveResult(packet({ programme_row: 'g10-ch3-yc03b' }))).toThrow();
+    expect(() => parseCognitiveResult(packet({ programme_row: 'g10-ch3-yc03b', programme_match: 'close' }))).toThrow();
+    expect(() => parseCognitiveResult(packet({}))).toThrow();
+    expect(() => parseCognitiveResult(packet({ cognitive_level: 1, statement_levels: [1, 1, 1, 1] }))).toThrow();
+    expect(parseCognitiveResult(packet({ programme_row: 'g10-ch3-yc03b', programme_match: 'direct' })).updates).toHaveLength(1);
+  });
+
   it('rejects malformed level packets including duplicated question IDs and incomplete statement arrays', () => {
     const input = { schema: 'physivault.cognitive.update.v1', chapter_id: chapter, export_id: 'exp',
       updates: [{ question_id: 'post:0', statement_levels: [1, 2, 3] }] };

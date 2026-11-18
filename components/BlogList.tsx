@@ -12,6 +12,7 @@ import { normalizeQuestionTable, type QuestionTableData } from '../src/utils/que
 import QuestionTable from './QuestionTable';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { questionEnergyMatrixTopic, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
+import { programmeRow, readProgrammeMatch } from '../src/data/programmeRows';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import { COGNITIVE_LEVELS, questionLevel, questionLevels, readCognitiveLevel } from '../src/utils/cognitiveLevels';
 import katex from 'katex';
@@ -81,6 +82,8 @@ interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
     question_groups?: StudyQuestionGroup[];
     learning_outcomes?: string[];
     matrix_topic?: unknown;
+    programme_row?: unknown;
+    programme_match?: unknown;
     question_text?: string;
     question_images?: StudyImage[];
     solution_images?: StudyImage[];
@@ -637,6 +640,8 @@ const BlogList: React.FC<BlogListProps> = ({
                 energyTopic,
                 groups: Array.isArray(question.question_groups) ? question.question_groups.filter(isStudyQuestionGroup) : undefined,
                 outcomes,
+                programmeRow: programmeRow(question.programme_row)?.chapterId === chapter?.id ? String(question.programme_row) : undefined,
+                programmeMatch: readProgrammeMatch(question.programme_match),
                 preview: () => JSON.stringify({ ...solution, data: { questions: [question] } }),
             }];
         });

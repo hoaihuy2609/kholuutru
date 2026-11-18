@@ -17,11 +17,15 @@ interface CardProps {
     used: boolean;
     recent?: boolean;
     showOutcomes?: boolean;
+    /** Why the question cannot be chosen here, shown on the disabled button instead of the default text. */
+    blockedLabel?: string;
+    /** Extra labels shown in the card header, e.g. how the question matches its programme requirement. */
+    badges?: ReactNode;
     onPreview: () => void;
     onChoose: () => void;
 }
 
-export function MatrixQuestionCard({ candidate, score, evidence, selected, used, recent, showOutcomes, onPreview, onChoose }: CardProps) {
+export function MatrixQuestionCard({ candidate, score, evidence, selected, used, recent, showOutcomes, blockedLabel, badges, onPreview, onChoose }: CardProps) {
     const { item } = candidate;
     const [expanded, setExpanded] = useState(false);
     const [clipped, setClipped] = useState(false);
@@ -53,6 +57,7 @@ export function MatrixQuestionCard({ candidate, score, evidence, selected, used,
                     .map(group => <span key={group.value} className="rounded bg-stone-100 px-2 py-0.5">{group.label}</span>)}
                 {recent && <span className="rounded bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-900">Vừa soạn</span>}
                 {selected && <span className="inline-flex items-center gap-1 font-semibold text-emerald-800"><Check aria-hidden="true" className="size-3.5" /> Đã chọn</span>}
+                {badges}
             </div>
             {item.type === 'dung_sai' && <p className="text-xs text-stone-600">
                 {questionLevels(item).map((level, index) => `${'abcd'[index]}) ${MATRIX_LEVELS[level]}`).join(' · ')}
@@ -91,7 +96,8 @@ export function MatrixQuestionCard({ candidate, score, evidence, selected, used,
 
             <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 pt-3">
                 <button type="button" className="rounded-lg bg-amber-800 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-50"
-                    disabled={used} onClick={onChoose}>{used ? 'Đã dùng ở vị trí khác' : selected ? 'Bỏ câu này' : 'Chọn câu này'}</button>
+                    disabled={used || (!selected && !!blockedLabel)} onClick={onChoose}>
+                    {used ? 'Đã dùng ở vị trí khác' : selected ? 'Bỏ câu này' : blockedLabel ?? 'Chọn câu này'}</button>
                 <button type="button" className={action} aria-haspopup="dialog" onClick={onPreview}>Xem lời giải</button>
                 {!showOutcomes && otherOutcomes.length > 0 && <details className="basis-full text-sm text-stone-600">
                     <summary className="cursor-pointer py-1">Xem {otherOutcomes.length} yêu cầu khác của câu</summary>
