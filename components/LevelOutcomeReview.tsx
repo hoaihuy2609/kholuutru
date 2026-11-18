@@ -152,7 +152,9 @@ export default function LevelOutcomeReview({ chapterId, busy, run, onUpdateReady
                     Xem thêm ({visible.length - limit} câu)</button>}
             </div>
             <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
-                <p className="text-sm text-stone-700">{update?.updates.length ? update.updates.length + ' câu sẽ được sửa trong kho.' : 'Chưa có câu nào cần sửa.'}</p>
+                <p className="text-sm text-stone-700">{update?.updates.length ? update.updates.length + ' câu đã xác nhận sẽ được sửa trong kho.'
+                    : summary.reviewed ? 'Các câu đã xác nhận đều giữ nguyên, kho không cần sửa.'
+                    : 'Chưa xác nhận câu nào. Bấm nút "Xác nhận" ở cuối từng câu; nút bên phải sẽ sáng khi có câu cần sửa.'}</p>
                 <div className="flex flex-wrap gap-2">
                     <button type="button" className={button} disabled={!summary.reviewed}
                         onClick={() => download('ra-muc-do-yccd-' + chapterId + '.csv', levelReviewCsv(items, decisions), 'text/csv;charset=utf-8')}>
