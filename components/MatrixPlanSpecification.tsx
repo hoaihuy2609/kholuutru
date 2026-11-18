@@ -58,7 +58,7 @@ function MatrixPlanPicker({ slot, outcome, curriculumGoal, candidates, selectedI
     const [group, setGroup] = useState<StudyQuestionGroup | ''>('');
     const [limit, setLimit] = useState(pageSize);
     const [preview, setPreview] = useState<MatrixCandidate>();
-    const [showSameTopic, setShowSameTopic] = useState(false);
+    const [showSameTopic, setShowSameTopic] = useState(true);
     const matches = useMemo(() => {
         const row: MatrixRow = { ...slot, section: '', count: 1, references: [], outcome };
         return candidates.filter(candidate => matchesMatrixPlanSlot(slot, candidate))
