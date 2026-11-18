@@ -5,11 +5,13 @@ import { COGNITIVE_LEVELS, questionLevelLabel } from '../src/utils/cognitiveLeve
 const button = 'rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-stone-50 disabled:opacity-50';
 const limit = 10 * 1024 * 1024;
 
-export default function ChapterCognitiveExchange({ chapterId, busy, run, onApplied }: {
+export default function ChapterCognitiveExchange({ chapterId, busy, run, onApplied, initialText = '' }: {
   chapterId: string; busy: boolean; run: (task: () => Promise<void>) => Promise<void>;
   onApplied: (count: number) => Promise<void>;
+  /** Update prepared elsewhere (the level review), shown ready to check. */
+  initialText?: string;
 }) {
-  const [text, setText] = useState('');
+  const [text, setText] = useState(initialText);
   const [review, setReview] = useState<Awaited<ReturnType<typeof reviewChapterCognitive>>>();
   const [history, setHistory] = useState<Awaited<ReturnType<typeof getCognitiveHistory>>>([]);
   const [confirmed, setConfirmed] = useState(false);
