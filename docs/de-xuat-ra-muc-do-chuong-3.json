@@ -1,7 +1,7 @@
 {
  "schema": "physivault.level-review.suggestions.v1",
  "chapter_id": "g10-ch3",
- "note": "Đề xuất của AI (Claude) dựa trên đề, phương án và lời giải trong file xuất ngày 18/11/2026; chưa xem hình. Giáo viên cần duyệt từng câu.",
+ "note": "Đề xuất của AI (Claude) dựa trên đề, phương án, lời giải và hình trong phiếu rà PDF của 43 câu (18/11/2026). Giáo viên cần duyệt từng câu.",
  "suggestions": [
   {
    "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:9",
@@ -232,7 +232,7 @@
    "learning_outcomes": [
     "Xác định được dạng đồ thị công theo thời gian khi công suất không đổi."
    ],
-   "reason": "Đọc dạng đồ thị A theo t: Thông hiểu; sửa động từ \"Nhận biết\". Cần xem hình để chắc chắn."
+   "reason": "Đọc dạng đồ thị A theo t: Thông hiểu; sửa động từ \"Nhận biết\". Đã xem hình: bốn đồ thị A theo t, đáp án là đường thẳng qua gốc; phải biết A = Pt tỉ lệ với t."
   },
   {
    "question_id": "8b574036-82b7-4f49-a287-3c9df70b69b9:1",
@@ -254,7 +254,7 @@
    "learning_outcomes": [
     "So sánh được công của các lực dựa vào biểu thức A = Fd cosα."
    ],
-   "reason": "So sánh công qua hình chiếu lực lên độ dịch chuyển: Thông hiểu; sửa động từ \"Nhận biết\". Cần xem hình để chắc chắn."
+   "reason": "So sánh công qua hình chiếu lực lên độ dịch chuyển: Thông hiểu; sửa động từ \"Nhận biết\". Đã xem hình: ba lực có cùng hình chiếu lên AB nên công bằng nhau."
   },
   {
    "question_id": "3e06216b-35cb-4668-8917-9ab87bccc477:1",
@@ -270,7 +270,7 @@
    "learning_outcomes": [
     "So sánh được công của lực theo góc giữa lực và độ dịch chuyển."
    ],
-   "reason": "Xếp thứ tự công theo góc: Thông hiểu; sửa động từ \"Nhận biết\". Cần xem hình để chắc chắn."
+   "reason": "Xếp thứ tự công theo góc: Thông hiểu; sửa động từ \"Nhận biết\". Đã xem hình: lực xiên, lực cùng hướng và lực vuông góc với vận tốc."
   },
   {
    "question_id": "a164718a-99ed-48f2-ae45-0370c97d926f:1",
@@ -315,7 +315,7 @@
   {
    "question_id": "15b92b17-5acd-42dc-8780-d30c6c03642b:3",
    "level": 1,
-   "reason": "Nhận ra dạng năng lượng trong hình: Nhận biết, khớp YCCĐ. Cần xem hình để chắc chắn."
+   "reason": "Nhận ra dạng năng lượng trong hình: Nhận biết, khớp YCCĐ. Đã xem hình: ảnh pin mặt trời và tuabin gió."
   }
  ]
 }
