@@ -35,6 +35,8 @@ export interface MatrixExportSelection {
     /** All YCCĐ stored on the question, offered when reviewing each true-false statement. */
     outcomeOptions?: readonly string[];
     curriculumSource?: string;
+    /** The outcome is the programme requirement row, so it also applies to every true-false statement. */
+    fixedOutcome?: boolean;
 }
 
 export interface MatrixExportUnit {
@@ -183,7 +185,7 @@ export function buildMatrixExport(allocations: MatrixAllocation[], selections: M
             const suffix = slot.type === 'dung_sai' ? String.fromCharCode(97 + index) : '';
             const key = slot.id + '|' + item.id + '|' + index;
             // A question-level outcome does not establish what each true-false statement assesses.
-            const outcome = (outcomes[key] ?? (slot.type === 'dung_sai' ? '' : selection.outcome)).trim();
+            const outcome = (outcomes[key] ?? (slot.type === 'dung_sai' && !selection.fixedOutcome ? '' : selection.outcome)).trim();
             const rawPoints = settings.points[slot.type] / levels.length;
             const unit: MatrixExportUnit = { key, slotId: slot.id, questionId: item.id,
                 chapterId: slot.chapterId, chapter: slot.chapter, topicId: slot.topicId, topic: slot.topic,

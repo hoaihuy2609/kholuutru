@@ -39,7 +39,8 @@ export function readOutcomeQuestions(blog: BlogPost): { document: JsonObject; qu
 }
 
 export function outcomeQuestionFingerprint(blog: BlogPost, question: JsonObject, index: number, count: number) {
-  const { learning_outcomes: _ignored, cognitive_level: _level, ...rest } = question;
+  // Classification fields (YCCĐ, level, programme row) can change without invalidating a review of the content.
+  const { learning_outcomes: _ignored, cognitive_level: _level, programme_row: _row, programme_match: _match, ...rest } = question;
   const content = { ...rest, ...(Array.isArray(rest.statements)
     ? { statements: rest.statements.map((statement: unknown) => {
       if (!object(statement)) return statement;

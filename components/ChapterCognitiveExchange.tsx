@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { applyChapterCognitive, getCognitiveHistory, reviewChapterCognitive, undoChapterCognitive } from '../src/services/outcomeExchangeService';
 import { COGNITIVE_LEVELS, questionLevelLabel } from '../src/utils/cognitiveLevels';
+import { PROGRAMME_MATCH_LABELS, programmeRow, programmeRowLabel, readProgrammeMatch } from '../src/data/programmeRows';
 
 const button = 'rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-stone-50 disabled:opacity-50';
 const limit = 10 * 1024 * 1024;
@@ -26,7 +27,7 @@ export default function ChapterCognitiveExchange({ chapterId, busy, run, onAppli
   return <section className="space-y-4">
     <div className="space-y-3 rounded-xl border bg-white p-4">
       <h3 className="font-bold">Nhập mức độ theo câu và mệnh đề</h3>
-      <p className="text-sm text-stone-600">Nhận biết · Thông hiểu · Vận dụng. Câu Đúng/Sai lưu riêng mức độ của a, b, c, d.</p>
+      <p className="text-sm text-stone-600">Nhận biết · Thông hiểu · Vận dụng. Câu Đúng/Sai lưu riêng mức độ của a, b, c, d. File này cũng dùng để gắn câu vào dòng YCCĐ chương trình của bản đặc tả.</p>
       <input type="file" accept=".json,application/json" disabled={busy} aria-label="Chọn JSON mức độ"
         onChange={event => {
           const file = event.target.files?.[0]; event.target.value = '';
@@ -63,6 +64,16 @@ export default function ChapterCognitiveExchange({ chapterId, busy, run, onAppli
               </span>;
             })}
           </div>;
+          if (field.key === 'programme_row') {
+            const row = programmeRow(field.after.value);
+            const before = programmeRow(field.before.value);
+            return <p key={field.key}><span className="font-semibold">YCCĐ chương trình: </span>
+              {before ? programmeRowLabel(before) + ' → ' : ''}{row ? programmeRowLabel(row) + ' · ' + row.text : String(field.after.value)}</p>;
+          }
+          if (field.key === 'programme_match') {
+            const match = readProgrammeMatch(field.after.value);
+            return <p key={field.key} className="text-stone-600">Mức khớp: {match ? PROGRAMME_MATCH_LABELS[match] : String(field.after.value)}</p>;
+          }
           if (field.key === 'learning_outcomes') return <ul key={field.key} className="list-disc pl-4">
             {(field.after.value as string[]).map(outcome => <li key={outcome}>{outcome}</li>)}
           </ul>;
@@ -71,7 +82,7 @@ export default function ChapterCognitiveExchange({ chapterId, busy, run, onAppli
       </article>)}
       {!!review.preview.changes.length && !review.preview.errors.length && <div className="sticky bottom-0 space-y-3 rounded-xl border bg-white p-4 shadow-sm">
         <label className="flex gap-2 text-sm"><input type="checkbox" checked={confirmed} disabled={busy}
-          onChange={event => setConfirmed(event.target.checked)} />Tôi đã rà mức độ của các câu hiển thị.</label>
+          onChange={event => setConfirmed(event.target.checked)} />Tôi đã rà các thay đổi của những câu hiển thị.</label>
         <button type="button" className={button + ' !bg-amber-800 !text-white'} disabled={busy || !confirmed}
           onClick={() => void run(async () => {
             const count = review.preview.changes.length;

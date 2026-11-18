@@ -5,6 +5,8 @@ import { ENERGY_MATRIX_CHAPTER_ID, ENERGY_MATRIX_TOPICS, MATRIX_LEVELS, type Mat
 import { STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import MatrixPlanSpecification from './MatrixPlanSpecification';
+import ProgrammeSpecification from './ProgrammeSpecification';
+import { programmeTopics } from '../src/utils/programmeSpec';
 
 const chapters: readonly { id: string; name: string; topics: readonly (readonly [id: string, name: string])[] }[] = [
     { id: 'g10-ch0', name: 'Mở đầu', topics: [
@@ -81,6 +83,12 @@ export default function MatrixPlanner({ candidates, onCompose }: {
             return count ? [{ chapterId: chapter.id, chapter: chapter.name, topicId, topic, type, level: levelValue, count }] : [];
         }))
     ), [selectedChapters, counts]);
+    /** Bản đặc tả theo YCCĐ khi mọi nội dung đã chọn có dòng YCCĐ và kho đã gắn câu vào các dòng đó. */
+    const rowTopics = useMemo(() => programmeTopics(allocations), [allocations]);
+    const hasAssignments = !!rowTopics && candidates.some(candidate => candidate.programmeRow
+        && rowTopics.some(topic => topic.chapterId === candidate.chapterId));
+    const programme = hasAssignments ? rowTopics : undefined;
+    const programmeChapterWithoutRows = !!rowTopics && !hasAssignments;
 
     function toggleExpanded(chapterId: string) {
         setExpanded(previous => {
@@ -253,6 +261,13 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                 </div>
             </section>
         </div>
-        <MatrixPlanSpecification allocations={allocations} candidates={candidates} onCompose={onCompose} />
+        {programme
+            ? <ProgrammeSpecification key={programme.map(topic => topic.key).join('|')} allocations={allocations} topics={programme} candidates={candidates} onCompose={onCompose} />
+            : <>
+                {programmeChapterWithoutRows && <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                    Câu của chương này chưa được gắn vào dòng YCCĐ chương trình, nên bản đặc tả dùng cách chọn theo vị trí câu. Nạp file gắn YCCĐ ở mục Rà YCCĐ → Nhập mức độ để dùng bản đặc tả theo YCCĐ.
+                </p>}
+                <MatrixPlanSpecification allocations={allocations} candidates={candidates} onCompose={onCompose} />
+            </>}
     </>;
 }
