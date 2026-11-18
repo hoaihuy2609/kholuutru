@@ -94,7 +94,7 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false) 
             <tr><th class="left">Số điểm</th>${[1, 2, 3].map(level => `<td>${n(document.levelScores[level])}</td>`).join('')}<td>${n(document.totalScore)}</td></tr>
             <tr><th class="left">Tỉ lệ điểm (%)</th>${[1, 2, 3].map(level => `<td>${n(document.totalScore ? document.levelScores[level] / document.totalScore * 100 : 0)}</td>`).join('')}<td>${document.totalScore ? '100' : '0'}</td></tr></tbody></table>
             <p class="note">${formats.map(({ type, label }) => text(label) + ': ' + n(settings.points[type]) + ' điểm/câu').join('; ')}.
-            ${hasStatements ? 'Điểm Đúng/Sai được phân bổ đều cho 4 ý để tính tỉ lệ mức độ trong ma trận; đây không phải quy tắc chấm theo số ý đúng.' : ''}</p>${warnings}
+            ${hasStatements ? 'Điểm Đúng/Sai được phân bổ đều cho 4 ý để tính tỉ lệ mức độ trong ma trận; khi chấm, mỗi câu Đúng/Sai tính theo số ý đúng: 1 ý 0,1 điểm; 2 ý 0,25 điểm; 3 ý 0,5 điểm; 4 ý 1 điểm.' : ''}</p>${warnings}
         </section>
         <section class="specification-section"><h2>II. BẢN ĐẶC TẢ ĐỀ KIỂM TRA</h2>
             <table class="specification"><colgroup><col style="width:4%"><col style="width:17%"><col style="width:40%">

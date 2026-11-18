@@ -15,13 +15,18 @@ const makeSelections = (allocations: MatrixAllocation[]): MatrixExportSelection[
     } }));
 
 describe('matrix and specification export', () => {
+    it('scores the national physics paper structure 18 + 4 + 6 at 10 points by default', () => {
+        const { points } = defaultMatrixExportSettings();
+        expect(18 * points.trac_nghiem + 4 * points.dung_sai + 6 * points.tu_luan).toBe(10);
+    });
+
     it('groups shared outcomes, counts every question once and assigns new per-section references', () => {
         const allocations = [allocation, { ...allocation, type: 'tu_luan' as const, count: 1 }];
-        const settings = { ...defaultMatrixExportSettings(), targetScore: 1 };
+        const settings = { ...defaultMatrixExportSettings(), targetScore: 0.75 };
         const selections = makeSelections(allocations);
         const result = buildMatrixExport(allocations, selections, settings);
         expect(result.issues).toEqual([]);
-        expect(result).toMatchObject({ questionCount: 3, unitCount: 3, totalScore: 1, levelCounts: [0, 3, 0, 0] });
+        expect(result).toMatchObject({ questionCount: 3, unitCount: 3, totalScore: 0.75, levelCounts: [0, 3, 0, 0] });
         const rows = matrixSpecificationRows(result.units);
         expect(rows).toHaveLength(1);
         expect(rows[0].references).toEqual({ trac_nghiem: ['C1', 'C2'], dung_sai: [], tu_luan: ['C1'], written: [] });
