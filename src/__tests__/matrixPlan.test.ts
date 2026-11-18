@@ -162,5 +162,9 @@ describe('matrix planner specification', () => {
         expect(matchEnergyCurriculumGoal(derive, [
             'Nhận biết được mối liên hệ giữa độ biến thiên động năng và tổng công của các lực tác dụng lên vật.',
         ]).score).toBe(0);
+        const kinetic = energyCurriculumGoals('mechanical-energy').find(goal => goal.id === 'kinetic-apply')!;
+        expect(matchEnergyCurriculumGoal(kinetic, [
+            'Nhận biết được mối liên hệ giữa độ biến thiên động năng và tổng công của các lực tác dụng lên vật.',
+        ]).score).toBe(0.9);
     });
 });

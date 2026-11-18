@@ -35,6 +35,7 @@ const curriculum: Record<EnergyMatrixTopic, readonly SourceEntry[]> = {
     'mechanical-energy': [
         ['Từ phương trình chuyển động thẳng biến đổi đều với vận tốc ban đầu bằng không, rút ra được động năng của vật có giá trị bằng công của lực tác dụng lên vật.', [
             ['work-kinetic', 'Rút ra được hệ thức giữa động năng và công của lực khi vật chuyển động thẳng biến đổi đều từ trạng thái nghỉ'],
+            ['kinetic-apply', 'Vận dụng được động năng và định lí động năng trong trường hợp đơn giản'],
         ]],
         ['Nêu được công thức tính thế năng trong trường trọng lực đều, vận dụng được trong một số trường hợp đơn giản.', [
             ['potential-expression', 'Nêu được công thức tính thế năng trong trường trọng lực đều', ['Nêu được công thức tính thế năng trọng trường']],
@@ -87,6 +88,9 @@ export interface EnergyCurriculumGoal {
 // Recognizing a conservation example does not establish the ability to build a model or derive a theorem.
 const standardizedOutcomes: Record<string, readonly string[]> = {
     'work-transfer': [
+        'Xác định được các dạng năng lượng chuyển hóa trong một hiện tượng hoặc thiết bị cụ thể.',
+        'Nhận biết được các dạng năng lượng và tính chất chung của năng lượng.',
+        'Vận dụng được nguyên lí bảo toàn năng lượng để nhận xét sự chuyển hóa, truyền và phân tán năng lượng.',
         'Xác định được tình huống truyền năng lượng giữa các vật thông qua thực hiện công.',
     ],
     'work-expression': [
@@ -96,10 +100,19 @@ const standardizedOutcomes: Record<string, readonly string[]> = {
         'Nhận biết được đơn vị đo công và năng lượng, thực hiện được phép đổi đơn vị tương ứng.',
     ],
     'work-calculate': [
+        'Xác định được công dương, công âm hoặc công bằng không từ hướng lực và hướng dịch chuyển.',
         'Tính được công của lực không đổi hoặc đại lượng liên quan bằng biểu thức A = Fd cosα.',
         'Tính và so sánh được công của trọng lực theo độ chênh cao, nhận biết công này không phụ thuộc hình dạng đường đi.',
         'Kết hợp phân tích lực và các định luật chuyển động để tính công của lực kéo, lực nâng hoặc lực cản.',
         'Xác định được công từ diện tích trên đồ thị lực theo độ dịch chuyển dọc phương của lực.',
+    ],
+    'kinetic-apply': [
+        'Nhận biết được khái niệm, biểu thức và tính chất của động năng.',
+        'Tính được động năng, khối lượng hoặc tốc độ bằng biểu thức Wđ = mv²/2.',
+        'So sánh được động năng khi khối lượng hoặc tốc độ của vật thay đổi.',
+        'Xác định được sự phụ thuộc của động năng vào hệ quy chiếu và tính động năng trong hệ quy chiếu được chọn.',
+        'Nhận biết được mối liên hệ giữa độ biến thiên động năng và tổng công của các lực tác dụng lên vật.',
+        'Vận dụng được định lí động năng để xác định công, lực, tốc độ hoặc quãng đường chuyển động.',
     ],
     'potential-expression': [
         'Nhận biết được khái niệm và biểu thức thế năng trọng trường trong trọng trường đều.',
@@ -114,6 +127,7 @@ const standardizedOutcomes: Record<string, readonly string[]> = {
         'Phân tích được sự chuyển hóa giữa động năng và thế năng, xác định vị trí các dạng năng lượng đạt cực trị.',
     ],
     'mechanical-definition': [
+        'Tính được cơ năng của vật từ động năng và thế năng tại một vị trí xác định.',
         'Nhận biết được cơ năng là tổng động năng và thế năng của vật.',
         'Xác định được sự phụ thuộc của giá trị cơ năng vào mốc thế năng đã chọn.',
     ],
@@ -121,6 +135,8 @@ const standardizedOutcomes: Record<string, readonly string[]> = {
         'Xác định được điều kiện và nội dung của định luật bảo toàn cơ năng.',
     ],
     'mechanical-apply': [
+        'Giải thích được sự biến đổi cơ năng khi có công của lực cản hoặc tác động từ bên ngoài.',
+        'Tính được phần cơ năng hao hụt hoặc công của lực cản từ độ biến thiên cơ năng.',
         'Vận dụng bảo toàn cơ năng trong trọng trường để xác định tốc độ, độ cao hoặc quan hệ giữa động năng và thế năng.',
         'Vận dụng bảo toàn cơ năng cho con lắc đơn để xác định tốc độ, độ cao, góc lệch hoặc năng lượng.',
     ],
@@ -129,6 +145,8 @@ const standardizedOutcomes: Record<string, readonly string[]> = {
         'Nhận biết được mối quan hệ giữa công và thời gian khi công suất không đổi.',
     ],
     'power-definition': [
+        'Tính được công suất trung bình, công hoặc thời gian bằng hệ thức P = A/t.',
+        'Nhận biết và quy đổi được các đơn vị công suất.',
         'Nhận biết được ý nghĩa vật lí, định nghĩa và biểu thức công suất trung bình.',
         'Nhận biết được mối quan hệ giữa công và thời gian khi công suất không đổi.',
     ],
