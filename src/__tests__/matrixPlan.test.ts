@@ -162,6 +162,11 @@ describe('matrix planner specification', () => {
         expect(matchEnergyCurriculumGoal(derive, [
             'Nhận biết được mối liên hệ giữa độ biến thiên động năng và tổng công của các lực tác dụng lên vật.',
         ]).score).toBe(0);
+        const transfer = energyCurriculumGoals('work').find(goal => goal.id === 'work-transfer')!;
+        const forms = energyCurriculumGoals('work').find(goal => goal.id === 'energy-forms')!;
+        const conservation = 'Vận dụng được nguyên lí bảo toàn năng lượng để nhận xét sự chuyển hóa, truyền và phân tán năng lượng.';
+        expect(matchEnergyCurriculumGoal(forms, [conservation]).score).toBe(0.9);
+        expect(matchEnergyCurriculumGoal(transfer, [conservation]).score).toBe(0);
         const kinetic = energyCurriculumGoals('mechanical-energy').find(goal => goal.id === 'kinetic-apply')!;
         expect(matchEnergyCurriculumGoal(kinetic, [
             'Nhận biết được mối liên hệ giữa độ biến thiên động năng và tổng công của các lực tác dụng lên vật.',

@@ -14,6 +14,7 @@ const curriculum: Record<EnergyMatrixTopic, readonly SourceEntry[]> = {
                 'Nhận biết được ví dụ truyền năng lượng bằng cách thực hiện công',
                 'Nhận biết được hiện tượng truyền năng lượng giữa các vật thông qua tác dụng lực',
             ]],
+            ['energy-forms', 'Nhận biết được các dạng năng lượng và vận dụng nguyên lí bảo toàn năng lượng'],
         ]],
         ['Nêu được biểu thức tính công bằng tích của lực tác dụng và độ dịch chuyển theo phương của lực, nêu được đơn vị đo công là đơn vị đo năng lượng (với 1 J = 1 Nm); Tính được công trong một số trường hợp đơn giản.', [
             ['work-expression', 'Nêu được biểu thức tính công khi vật dịch chuyển theo phương của lực', [
@@ -88,10 +89,12 @@ export interface EnergyCurriculumGoal {
 // Recognizing a conservation example does not establish the ability to build a model or derive a theorem.
 const standardizedOutcomes: Record<string, readonly string[]> = {
     'work-transfer': [
+        'Xác định được tình huống truyền năng lượng giữa các vật thông qua thực hiện công.',
+    ],
+    'energy-forms': [
         'Xác định được các dạng năng lượng chuyển hóa trong một hiện tượng hoặc thiết bị cụ thể.',
         'Nhận biết được các dạng năng lượng và tính chất chung của năng lượng.',
         'Vận dụng được nguyên lí bảo toàn năng lượng để nhận xét sự chuyển hóa, truyền và phân tán năng lượng.',
-        'Xác định được tình huống truyền năng lượng giữa các vật thông qua thực hiện công.',
     ],
     'work-expression': [
         'Nhận biết được biểu thức công của lực không đổi và sự phụ thuộc của công vào lực, độ dịch chuyển, góc giữa chúng.',
