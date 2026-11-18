@@ -1,0 +1,2352 @@
+{
+ "schema": "physivault.curriculum-assignment.v1",
+ "chapter_id": "g10-ch3",
+ "source_export_id": "ff163e9e-eab3-4f74-8b99-bbf449186b19",
+ "method": "AI (Claude) đọc đề, phương án, đáp án và lời giải của từng câu, không dựa vào YCCĐ ghi trên câu; giáo viên cần duyệt.",
+ "rows": [
+  {
+   "id": "r1",
+   "programme_requirement": 3,
+   "text": "Nêu được biểu thức tính công bằng tích của lực tác dụng và độ dịch chuyển theo phương của lực, nêu được đơn vị đo công là đơn vị đo năng lượng (với 1 J = 1 Nm).",
+   "levels": [
+    1
+   ]
+  },
+  {
+   "id": "r2",
+   "programme_requirement": 2,
+   "text": "Trình bày được ví dụ chứng tỏ có thể truyền năng lượng từ vật này sang vật khác bằng cách thực hiện công.",
+   "levels": [
+    2
+   ]
+  },
+  {
+   "id": "r3",
+   "programme_requirement": 3,
+   "text": "Tính được công trong một số trường hợp đơn giản.",
+   "levels": [
+    2,
+    3
+   ]
+  },
+  {
+   "id": "r4",
+   "programme_requirement": 1,
+   "text": "Chế tạo mô hình đơn giản minh hoạ được định luật bảo toàn năng lượng, liên quan đến một số dạng năng lượng khác nhau.",
+   "levels": []
+  },
+  {
+   "id": "r5",
+   "programme_requirement": 4,
+   "text": "Từ phương trình chuyển động thẳng biến đổi đều với vận tốc ban đầu bằng không, rút ra được động năng của vật có giá trị bằng công của lực tác dụng lên vật.",
+   "levels": [
+    2
+   ]
+  },
+  {
+   "id": "r6",
+   "programme_requirement": 5,
+   "text": "Nêu được công thức tính thế năng trong trường trọng lực đều.",
+   "levels": [
+    1
+   ]
+  },
+  {
+   "id": "r7",
+   "programme_requirement": 5,
+   "text": "Vận dụng được công thức tính thế năng trong một số trường hợp đơn giản.",
+   "levels": [
+    2,
+    3
+   ]
+  },
+  {
+   "id": "r8",
+   "programme_requirement": 6,
+   "text": "Phân tích được sự chuyển hoá động năng và thế năng của vật trong một số trường hợp đơn giản.",
+   "levels": [
+    2
+   ]
+  },
+  {
+   "id": "r9",
+   "programme_requirement": 7,
+   "text": "Nêu được khái niệm cơ năng; phát biểu được định luật bảo toàn cơ năng.",
+   "levels": [
+    1
+   ]
+  },
+  {
+   "id": "r10",
+   "programme_requirement": 7,
+   "text": "Vận dụng được định luật bảo toàn cơ năng trong một số trường hợp đơn giản.",
+   "levels": [
+    2,
+    3
+   ]
+  },
+  {
+   "id": "r11",
+   "programme_requirement": 8,
+   "text": "Từ một số tình huống thực tế, thảo luận để nêu được ý nghĩa vật lí và định nghĩa công suất.",
+   "levels": [
+    1,
+    2
+   ]
+  },
+  {
+   "id": "r12",
+   "programme_requirement": 9,
+   "text": "Vận dụng được mối liên hệ công suất (hay tốc độ thực hiện công) với tích của lực và vận tốc trong một số tình huống thực tế.",
+   "levels": [
+    2,
+    3
+   ]
+  },
+  {
+   "id": "r13",
+   "programme_requirement": 10,
+   "text": "Từ tình huống thực tế, thảo luận để nêu được định nghĩa hiệu suất.",
+   "levels": [
+    1
+   ]
+  },
+  {
+   "id": "r14",
+   "programme_requirement": 10,
+   "text": "Vận dụng được hiệu suất trong một số trường hợp thực tế.",
+   "levels": [
+    2,
+    3
+   ]
+  }
+ ],
+ "assignments": [
+  {
+   "question_id": "0642c449-674b-4202-8cc3-d1ad5d6cd737:0",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Nhận xét hiện tượng theo định luật bảo toàn năng lượng: kiến thức nền của YCCĐ 1, kiểm tra trên giấy."
+  },
+  {
+   "question_id": "0642c449-674b-4202-8cc3-d1ad5d6cd737:1",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Thí nghiệm Joule minh họa bảo toàn năng lượng, xác định chuyển hóa cơ năng → nhiệt năng."
+  },
+  {
+   "question_id": "0642c449-674b-4202-8cc3-d1ad5d6cd737:2",
+   "row": "r2",
+   "programme_requirement": 2,
+   "match": "direct",
+   "reason": "Chọn ví dụ năng lượng truyền giữa các vật qua tác dụng lực (gió – diều)."
+  },
+  {
+   "question_id": "15b92b17-5acd-42dc-8780-d30c6c03642b:0",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Nhận biết các dạng năng lượng (nhiệt lượng không phải dạng năng lượng)."
+  },
+  {
+   "question_id": "15b92b17-5acd-42dc-8780-d30c6c03642b:1",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Dạng năng lượng mà pin Mặt Trời chuyển hóa."
+  },
+  {
+   "question_id": "15b92b17-5acd-42dc-8780-d30c6c03642b:2",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Nguồn gốc năng lượng Mặt Trời (năng lượng hạt nhân): dạng năng lượng, vượt nội dung lớp 10."
+  },
+  {
+   "question_id": "15b92b17-5acd-42dc-8780-d30c6c03642b:3",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Nhận ra dạng năng lượng trong hình."
+  },
+  {
+   "question_id": "6cb372ca-29a4-4066-a4aa-03495b2948fc:0",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Tính chất chung của năng lượng."
+  },
+  {
+   "question_id": "6cb372ca-29a4-4066-a4aa-03495b2948fc:1",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đơn vị năng lượng trong SI là J (đơn vị đo công là đơn vị đo năng lượng)."
+  },
+  {
+   "question_id": "b2e5a49a-2253-4ad9-93c8-18cf0d397d5e:0",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Chuỗi chuyển hóa hóa năng → cơ năng."
+  },
+  {
+   "question_id": "b2e5a49a-2253-4ad9-93c8-18cf0d397d5e:1",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Nhận ra phát biểu định luật bảo toàn năng lượng."
+  },
+  {
+   "question_id": "b2e5a49a-2253-4ad9-93c8-18cf0d397d5e:2",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Giải thích hao phí năng lượng trong máy điện theo bảo toàn năng lượng."
+  },
+  {
+   "question_id": "dd00e3c6-124e-42f5-a8c9-5669aada5a07:0",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Chuyển hóa năng lượng trong máy phát điện gió."
+  },
+  {
+   "question_id": "dd00e3c6-124e-42f5-a8c9-5669aada5a07:1",
+   "row": "r2",
+   "programme_requirement": 2,
+   "match": "direct",
+   "reason": "Xoa tay: thực hiện công làm tăng nhiệt năng, truyền và chuyển hóa năng lượng bằng thực hiện công."
+  },
+  {
+   "question_id": "dd00e3c6-124e-42f5-a8c9-5669aada5a07:2",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Thiết bị không chuyển hóa điện năng → cơ năng."
+  },
+  {
+   "question_id": "dd00e3c6-124e-42f5-a8c9-5669aada5a07:3",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Chuyển hóa năng lượng chính trong ấm điện."
+  },
+  {
+   "question_id": "dd00e3c6-124e-42f5-a8c9-5669aada5a07:4",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Chuỗi chuyển hóa quang năng → hóa năng."
+  },
+  {
+   "question_id": "1e1692d0-2faa-4674-8712-d27789fcd25f:0",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Lập biểu thức công của trọng lực khi vật đi lên mặt phẳng nghiêng."
+  },
+  {
+   "question_id": "1e1692d0-2faa-4674-8712-d27789fcd25f:1",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Lập biểu thức công của lực ma sát trên mặt phẳng nghiêng."
+  },
+  {
+   "question_id": "3e06216b-35cb-4668-8917-9ab87bccc477:0",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "So sánh công qua biểu thức A = Fs cosα (cùng hình chiếu lực lên phương dịch chuyển)."
+  },
+  {
+   "question_id": "3e06216b-35cb-4668-8917-9ab87bccc477:1",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Hiểu biểu thức công: giá trị cực đại Fs khi lực cùng hướng dịch chuyển."
+  },
+  {
+   "question_id": "3e06216b-35cb-4668-8917-9ab87bccc477:2",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công của trọng lực trên mặt phẳng nghiêng bằng P.h."
+  },
+  {
+   "question_id": "54579bdc-a392-42a7-aac3-58d705690b18:0",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Nêu biểu thức A = Fs cosα."
+  },
+  {
+   "question_id": "54579bdc-a392-42a7-aac3-58d705690b18:1",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "So sánh công theo góc giữa lực và độ dịch chuyển."
+  },
+  {
+   "question_id": "677cf9a6-a47e-4040-975f-58335899cb2d:0",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Trọng lực vuông góc với dịch chuyển ngang thì không sinh công."
+  },
+  {
+   "question_id": "677cf9a6-a47e-4040-975f-58335899cb2d:1",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Phản lực vuông góc với dịch chuyển nên không sinh công."
+  },
+  {
+   "question_id": "677cf9a6-a47e-4040-975f-58335899cb2d:2",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Điều kiện có công cơ học: có lực và dịch chuyển theo phương của lực."
+  },
+  {
+   "question_id": "677cf9a6-a47e-4040-975f-58335899cb2d:3",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Dấu của công: lực hãm ngược chiều chuyển động sinh công âm."
+  },
+  {
+   "question_id": "677cf9a6-a47e-4040-975f-58335899cb2d:4",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công cản: trọng lực khi vật đi lên mặt phẳng nghiêng."
+  },
+  {
+   "question_id": "7dcbb89f-47be-40bf-96e5-fc3f68340a46:0",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Xác định dấu công của ba lực theo hình (cần hình để kiểm đáp án)."
+  },
+  {
+   "question_id": "7dcbb89f-47be-40bf-96e5-fc3f68340a46:1",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đánh giá các phát biểu về công."
+  },
+  {
+   "question_id": "82a1c0d6-d8fd-4615-9330-9cf5c175a327:0",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Nhận ra trường hợp có công cơ học."
+  },
+  {
+   "question_id": "82a1c0d6-d8fd-4615-9330-9cf5c175a327:1",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Nhận ra trường hợp có công cơ học."
+  },
+  {
+   "question_id": "82a1c0d6-d8fd-4615-9330-9cf5c175a327:2",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Khái niệm động năng: vật đứng yên không có động năng. Câu nằm trong bài Công cơ học nhưng thuộc nội dung động năng."
+  },
+  {
+   "question_id": "82a1c0d6-d8fd-4615-9330-9cf5c175a327:3",
+   "row": "r2",
+   "programme_requirement": 2,
+   "match": "extended",
+   "reason": "Năng lượng đặc trưng cho khả năng sinh công: liên hệ năng lượng và công."
+  },
+  {
+   "question_id": "8ef405ed-3b7f-4b78-9d01-9dda4ba1f322:0",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Xác định lực sinh công dương theo hướng lực và vận tốc (theo hình)."
+  },
+  {
+   "question_id": "8ef405ed-3b7f-4b78-9d01-9dda4ba1f322:1",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công bằng 0 khi lực vuông góc với phương chuyển động."
+  },
+  {
+   "question_id": "8ef405ed-3b7f-4b78-9d01-9dda4ba1f322:2",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Lực vuông góc với phương dịch chuyển không sinh công (theo hình)."
+  },
+  {
+   "question_id": "8ef405ed-3b7f-4b78-9d01-9dda4ba1f322:3",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Trọng lực và phản lực vuông góc dịch chuyển ngang nên công bằng 0."
+  },
+  {
+   "question_id": "a164718a-99ed-48f2-ae45-0370c97d926f:0",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Nêu công thức A = Fs khi lực cùng hướng dịch chuyển."
+  },
+  {
+   "question_id": "a164718a-99ed-48f2-ae45-0370c97d926f:1",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đơn vị của công."
+  },
+  {
+   "question_id": "a164718a-99ed-48f2-ae45-0370c97d926f:2",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đơn vị đo công."
+  },
+  {
+   "question_id": "a164718a-99ed-48f2-ae45-0370c97d926f:3",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Định nghĩa đơn vị jun (1 J = 1 N·m)."
+  },
+  {
+   "question_id": "ee181066-745c-44d7-a431-ab0d504c361a:0",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công là đại lượng vô hướng, có thể âm, dương, bằng 0."
+  },
+  {
+   "question_id": "ee181066-745c-44d7-a431-ab0d504c361a:1",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Dấu của công phụ thuộc góc giữa lực và dịch chuyển, không phụ thuộc độ lớn lực."
+  },
+  {
+   "question_id": "ee181066-745c-44d7-a431-ab0d504c361a:2",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công phát động khi 0 ≤ α < π/2."
+  },
+  {
+   "question_id": "ee181066-745c-44d7-a431-ab0d504c361a:3",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Lực cùng chiều dịch chuyển thì A > 0."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:0",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đổi đơn vị năng lượng cal → J (140 × 4,186 = 586,04 J, đáp án đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:1",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Tính độ dịch chuyển từ A = Fd cosα (d = 6 m, đáp án đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:10",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Tính công của lực kéo thang máy, phối hợp định luật II Newton (37 800 J, đáp án đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:11",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công của lực nâng trong giây thứ 5: tính a, F, quãng đường giây thứ 5 (1,944·10^5 J, đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:12",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công của lực đẩy ngang trên mặt nghiêng nhẵn: A = P s sinα ≈ 21,13 J (đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:13",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Từ công của trọng lực suy ra góc nghiêng (sinβ = 0,4, β ≈ 24°, đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:14",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công của trọng lực khi lên dốc: −mgh = −60 J (đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:15",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Lực kéo khi lên dốc đều (định luật I Newton), A = 2900 J (đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:2",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Từ công suy ra góc kéo (cosα = 5/8, α ≈ 51°, đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:3",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công của lực xiên trong 1 phút: 36√3 kJ (đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:4",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công của lực ma sát −200 kJ (đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:5",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công của trọng lực trong giây thứ 5: 900 J (đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:6",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công của trọng lực khi vật trở về vị trí ném bằng 0."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:7",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công của trọng lực theo hiệu độ cao: −40 J (đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:8",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công của trọng lực khi ném ngang 4 s: 160 J (đúng)."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:9",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công của lực kéo ô tô (định luật II Newton): 115 200 J (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:0",
+   "row": "r2",
+   "programme_requirement": 2,
+   "match": "direct",
+   "reason": "Đúng/Sai về truyền năng lượng bằng thực hiện công, công là số đo năng lượng chuyển hóa (cả 4 ý mức Biết)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:1",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai về công cản, điều kiện công bằng 0, dấu của công."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:10",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai tính công của trọng lực và lực cản lên giọt mưa rơi đều (các ý đều đúng đáp án)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:11",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai tính quãng đường rơi tự do và công của trọng lực trong giây thứ 4 (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:12",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai tính lực nâng, quãng đường, công của cần cẩu (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:13",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai tính lực kéo, quãng đường, công của động cơ thang máy (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:14",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai tính lực kéo, quãng đường giây thứ 5, công của động cơ thang máy (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:15",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: gia tốc, lực kéo, quãng đường, công của động cơ xe (đáp án đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:16",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: gia tốc, lực kéo, thời gian, công của đầu máy tàu (4 ý đều Sai, tính lại khớp)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:17",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: gia tốc, lực kéo, công của lực kéo và lực ma sát (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:18",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: trọng lượng, lực ma sát, công của lực kéo xiên và lực ma sát (đáp án khớp lời giải)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:19",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: lực kéo xiên khi trượt đều (F ≈ 171 N), công của F và lực ma sát ±855 J (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:2",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: dấu công của trọng lực, phản lực, lực kéo, lực ma sát."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:20",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: công của trọng lực, phản lực, lực kéo xiên, lực ma sát (−64,9 J, đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:21",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: lực kéo xiên có gia tốc (≈ 41 N), quãng đường, công (≈ 887,5 J) (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:22",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: lực đẩy ô tô lên dốc đều, công của người và của trọng lực (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:23",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: lực giữ đàn trượt đều xuống dốc, công của người, trọng lực, tổng công (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:3",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: dấu công của ba lực theo hướng (theo hình)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:4",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: tính công theo A = Fs cosα và điều kiện công lớn nhất (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:5",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: công phát động, công của trọng lực, công của lực kéo xiên 7,5 J (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:6",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: công của lực ma sát là công cản, công của lực kéo 259,8 J (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:7",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: công từ đồ thị lực theo độ dịch chuyển (tổng 400 J, khớp)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:8",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: công của trọng lực trên các đoạn đường lên, ngang, xuống dốc (đúng)."
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:9",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: lực căng cực tiểu và công cực tiểu kéo thang máy (đúng)."
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:0",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Tính công của lực đẩy xe băng ca (định luật II Newton): 64,8 J (đúng)."
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:1",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Công của trọng lực trong 2 giây cuối khi rơi tự do: 8000 J (đúng)."
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:2",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Trả lời ngắn: lực kéo xiên có ma sát, quãng đường sau 5 s, công ≈ 306 J (đúng)."
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:3",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Trả lời ngắn: lực kéo xiên có gia tốc, công trong 4 s ≈ 141 J (đúng)."
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:4",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Trả lời ngắn: công của lực giữ đàn trượt đều xuống dốc ≈ −1,9 kJ (đúng; cùng tình huống với câu Đúng/Sai số 24 của bài)."
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:5",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Trả lời ngắn: công của lực ma sát trên nửa mặt phẳng nghiêng −16 J (đúng)."
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:6",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Trả lời ngắn: từ tổng công suy ra quãng đường ≈ 4 m (đúng)."
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:7",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Trả lời ngắn: quãng đường từ đồ thị v–t, công của lực ma sát ≈ −605 kJ (khớp lời giải, cần hình để kiểm số liệu đồ thị)."
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:8",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Trả lời ngắn: công bằng diện tích dưới đồ thị F–s, 88 J (khớp lời giải, cần hình để kiểm)."
+  },
+  {
+   "question_id": "500a3940-d4c0-4e5c-9a79-3608afd527b1:0",
+   "row": null,
+   "programme_requirement": null,
+   "match": "outside",
+   "reason": "Phát minh của Giêm Oát: lịch sử vật lí, không thuộc YCCĐ chương trình."
+  },
+  {
+   "question_id": "500a3940-d4c0-4e5c-9a79-3608afd527b1:1",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Công suất trung bình bằng tích lực và tốc độ trung bình (P = Fv)."
+  },
+  {
+   "question_id": "500a3940-d4c0-4e5c-9a79-3608afd527b1:2",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Công suất của lực không đổi cùng hướng vận tốc: P = Fv."
+  },
+  {
+   "question_id": "663daf95-c38d-4d8c-b035-c6e9654591cb:0",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Đồ thị công theo thời gian khi công suất không đổi (A = Pt): hiểu định nghĩa công suất."
+  },
+  {
+   "question_id": "663daf95-c38d-4d8c-b035-c6e9654591cb:1",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Ý nghĩa và định nghĩa công suất (chọn phát biểu sai)."
+  },
+  {
+   "question_id": "663daf95-c38d-4d8c-b035-c6e9654591cb:2",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Ý nghĩa, định nghĩa và đơn vị công suất."
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:0",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Đơn vị công suất trong SI."
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:1",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Đơn vị oát: 1 W = 1 J/s."
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:2",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Đơn vị không phải của công suất."
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:3",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Đơn vị công suất: 1 CV = 736 W."
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:4",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "kWh là đơn vị của công (đơn vị đo công là đơn vị đo năng lượng)."
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:5",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Ý nghĩa đơn vị kWh qua định nghĩa công suất A = P·t."
+  },
+  {
+   "question_id": "8b574036-82b7-4f49-a287-3c9df70b69b9:0",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Định nghĩa công suất (tốc độ sinh công)."
+  },
+  {
+   "question_id": "8b574036-82b7-4f49-a287-3c9df70b69b9:1",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Cùng thời gian, công lớn hơn thì công suất lớn hơn (định nghĩa)."
+  },
+  {
+   "question_id": "8b574036-82b7-4f49-a287-3c9df70b69b9:2",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Định nghĩa công suất: công sinh ra trong một đơn vị thời gian."
+  },
+  {
+   "question_id": "8b574036-82b7-4f49-a287-3c9df70b69b9:3",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Biểu thức P = A/t."
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:0",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Trả lời ngắn: tính công suất trung bình leo cầu thang P = A/t ≈ 377 W (đúng); vượt mức \"nêu định nghĩa\"."
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:1",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Trả lời ngắn: P = Fv cosα, đổi ra mã lực ≈ 2,32 HP (đúng)."
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:2",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Trả lời ngắn: từ P = Fv suy ra lực kéo và hệ số ma sát 0,05 (đúng)."
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:3",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Trả lời ngắn: công suất trung bình của đầu máy P = F·v_tb ≈ 893 kW (đúng)."
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:4",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Trả lời ngắn: công suất lên dốc đều P = Fv = 100 kW (đúng)."
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:5",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Trả lời ngắn: từ P = Fv suy ra hệ số ma sát khi lên dốc ≈ 0,58 (đúng)."
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:6",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Trả lời ngắn: công suất cần khi lên dốc cùng tốc độ ≈ 11 kW (đúng)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:0",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đổi 2 kWh sang J = 7,2·10^6 J (đúng)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:1",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Đơn vị công suất HP, đổi 50 HP = 37,3 kW (đúng)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:10",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Công suất trung bình của trọng lực P = A/t ≈ 115,25 W (đúng); vượt mức \"nêu định nghĩa\"."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:11",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Công suất tức thời của trọng lực P = mgv ≈ 230,5 W (đúng)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:12",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Từ công suất trung bình P = A/t và chuyển động nhanh dần đều suy ra thời gian ≈ 50,4 s (đúng)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:13",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Công suất của trọng lực khi xe xuống dốc đều: P = mg sinα·v = 171 500 W (đúng)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:14",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Lực kéo lên dốc đều có ma sát, P = Fv ≈ 94 662 W (đúng)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:2",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Từ định nghĩa P = A/t tính công trong 1 phút: 6000 J (đúng)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:3",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Công suất tối thiểu của thang cuốn P = A/t = 1 kW (đúng); tính toán vượt mức \"nêu định nghĩa\"."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:4",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Thời gian tối thiểu t = A/P = 20 s (đúng)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:5",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Công suất máy bơm P = mgh/t = 1500 W (đúng)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:6",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Từ P = Fv suy ra lực phát động, tính công trên 6 km = 18·10^6 J (đúng)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:7",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Thời gian t = A/P = 0,8 s (đúng theo số liệu)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:8",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Công suất trung bình P = F·v_tb trong chuyển động nhanh dần đều ≈ 5,82·10^4 W (đúng)."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:9",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Công suất trung bình P = F·v_tb = 5 W (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:0",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Đúng/Sai: định nghĩa, đơn vị công suất và P = Fv (mức Biết)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:1",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "direct",
+   "reason": "Đúng/Sai: định nghĩa, đơn vị, tính chất của công suất (mức Biết)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:10",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Đúng/Sai: công, công suất trung bình 180 W và tức thời P = mgv = 360 W của trọng lực (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:11",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Đúng/Sai: công suất tức thời P = mgv, công của trọng lực, dạng đồ thị P(t) (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:12",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Đúng/Sai: lực nâng, tốc độ nâng v = P/F, thời gian nâng (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:13",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Đúng/Sai: lực kéo, công, thời gian và công suất theo P = A/t (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:14",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Đúng/Sai: lực kéo thang máy có lực cản, công, công suất P = Fv = 64 920 W (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:15",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Đúng/Sai: gia tốc, lực nâng, công, công suất trung bình P = A/t = 120 kW (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:16",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Đúng/Sai: lực nâng, công, công suất trung bình và tức thời P = Fv (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:17",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Đúng/Sai: gia tốc, thời gian, công và công suất trung bình P = A/t của đầu máy (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:18",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Đúng/Sai: hệ số ma sát từ P = Fv, công suất tức thời và trung bình khi tăng tốc (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:2",
+   "row": "r1",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: biểu thức công A = Fd cosα, công lớn nhất, đơn vị, kèm công suất trung bình."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:3",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Đúng/Sai: dấu và độ lớn công suất P = Fv cosα theo góc giữa lực và vận tốc (theo hình)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:4",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Đúng/Sai: công của tim A = Pt trong một ngày, một phút, 70 năm; so với ô tô (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:5",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Đúng/Sai: hộp số, công suất không đổi nên F = P/v (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:6",
+   "row": "r12",
+   "programme_requirement": 9,
+   "match": "direct",
+   "reason": "Đúng/Sai: hộp số, F = P/v, từ lực suy ra tốc độ 24 km/h (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:7",
+   "row": "r3",
+   "programme_requirement": 3,
+   "match": "direct",
+   "reason": "Đúng/Sai: công của lực kéo xiên khi kéo đều, công của lực ma sát, kèm công suất (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:8",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Đúng/Sai: công của lực kéo xiên và công suất trung bình P = A/t (đúng)."
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:9",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Đúng/Sai: quãng đường, lực kéo, công và công suất trung bình P = A/t của ô tô (đúng)."
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:0",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Đúng/Sai: động năng của vận động viên nhảy cầu ở các giai đoạn và sự chuyển hóa năng lượng."
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:1",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đúng/Sai: động năng tỉ lệ v², định lí động năng: độ biến thiên động năng bằng tổng công (đúng)."
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:2",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đúng/Sai: xe leo dốc, động năng giảm, độ biến thiên động năng bằng công của trọng lực."
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:3",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đúng/Sai: tính động năng và công của lực theo định lí động năng 18,75 J (đúng)."
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:4",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đúng/Sai: động năng ô tô, công của động cơ theo định lí động năng 525 kJ, công suất 52,5 kW (đúng)."
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:5",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đúng/Sai: vật từ nghỉ chịu lực không đổi, công của lực bằng động năng lớn nhất 337,5 J (đúng)."
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:6",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "extended",
+   "reason": "Đúng/Sai: động năng ban đầu, sự thay đổi động năng, độ cao cực đại khi ném thẳng đứng (đúng)."
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:7",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đúng/Sai: động năng quả tạ, độ cao cực đại, tốc độ chạm đất theo định lí động năng ≈ 15,63 m/s (đúng)."
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:8",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "extended",
+   "reason": "Đúng/Sai: động năng phụ thuộc hệ quy chiếu (vận tốc quả bóng so với đất và so với xe) (đúng)."
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:9",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đúng/Sai: định lí động năng (tổng công), công của lực đẩy, động năng so với gió, vận tốc cuối (đúng)."
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:0",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Độ biến thiên động năng bằng công của ngoại lực (định lí động năng)."
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:1",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Biểu thức định lí động năng."
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:2",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Hợp lực triệt tiêu thì động năng không đổi (định lí động năng)."
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:3",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Động năng tăng khi các lực sinh công dương (định lí động năng)."
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:4",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Lực cùng chiều chuyển động làm động năng tăng (định lí động năng)."
+  },
+  {
+   "question_id": "2dc3401c-cf6e-4722-bff9-ae6888b53e0c:0",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Khái niệm động năng."
+  },
+  {
+   "question_id": "2dc3401c-cf6e-4722-bff9-ae6888b53e0c:1",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Công thức động năng ½mv²."
+  },
+  {
+   "question_id": "2dc3401c-cf6e-4722-bff9-ae6888b53e0c:2",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đơn vị động năng."
+  },
+  {
+   "question_id": "2dc3401c-cf6e-4722-bff9-ae6888b53e0c:3",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đơn vị không phải của động năng."
+  },
+  {
+   "question_id": "2dc3401c-cf6e-4722-bff9-ae6888b53e0c:4",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đồ thị động năng theo vận tốc (parabol) từ công thức ½mv² (theo hình)."
+  },
+  {
+   "question_id": "72568568-723b-483b-a3f0-98e3ab2aa832:0",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Động năng phụ thuộc khối lượng và tốc độ."
+  },
+  {
+   "question_id": "72568568-723b-483b-a3f0-98e3ab2aa832:1",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Động năng là đại lượng vô hướng, không âm."
+  },
+  {
+   "question_id": "72568568-723b-483b-a3f0-98e3ab2aa832:2",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đặc điểm của động năng (không tỉ lệ với vận tốc)."
+  },
+  {
+   "question_id": "72568568-723b-483b-a3f0-98e3ab2aa832:3",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Động năng tăng khi vật chuyển động nhanh dần."
+  },
+  {
+   "question_id": "72568568-723b-483b-a3f0-98e3ab2aa832:4",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "extended",
+   "reason": "Động năng của xe tải đối với người trên taxi: phụ thuộc hệ quy chiếu (vận tốc tương đối)."
+  },
+  {
+   "question_id": "c8c4ab27-6429-463e-88d5-4f0c5bc7d000:0",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Lực vuông góc vận tốc không sinh công nên không làm thay đổi động năng (định lí động năng)."
+  },
+  {
+   "question_id": "c8c4ab27-6429-463e-88d5-4f0c5bc7d000:1",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Vận tốc không đổi nên công của hợp lực bằng 0 (định lí động năng)."
+  },
+  {
+   "question_id": "45276f9b-aa92-4139-a541-51af7b979257:0",
+   "row": "r6",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Thế năng trọng trường không phụ thuộc vận tốc (khái niệm, biểu thức thế năng)."
+  },
+  {
+   "question_id": "45276f9b-aa92-4139-a541-51af7b979257:1",
+   "row": "r6",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Thế năng là đại lượng vô hướng, có thể âm, dương, bằng 0."
+  },
+  {
+   "question_id": "45276f9b-aa92-4139-a541-51af7b979257:2",
+   "row": "r6",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Đặc điểm thế năng trọng trường (phụ thuộc mốc, tỉ lệ khối lượng)."
+  },
+  {
+   "question_id": "45276f9b-aa92-4139-a541-51af7b979257:3",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Bóng ném ngang rơi xuống: thế năng giảm (chuyển hóa thế năng → động năng)."
+  },
+  {
+   "question_id": "45276f9b-aa92-4139-a541-51af7b979257:4",
+   "row": "r6",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Thang máy đi lên đều: thế năng tăng, động năng không đổi (theo biểu thức thế năng)."
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:0",
+   "row": "r2",
+   "programme_requirement": 2,
+   "match": "extended",
+   "reason": "Cung truyền năng lượng cho mũi tên bằng thực hiện công; nêu thế năng đàn hồi (ngoài nội dung thế năng trọng trường lớp 10)."
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:1",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Vật đi lên: thế năng tăng, trọng lực sinh công âm (liên hệ công của trọng lực và thế năng)."
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:2",
+   "row": "r6",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Độ biến thiên thế năng không phụ thuộc mốc thế năng."
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:3",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Công của trọng lực bằng hiệu thế năng đầu và cuối."
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:4",
+   "row": null,
+   "programme_requirement": null,
+   "match": "outside",
+   "reason": "Lực thế và thế năng xác định sai kém một hằng số: ngoài YCCĐ chương trình lớp 10."
+  },
+  {
+   "question_id": "5a75d578-d195-4b82-8443-5ea415c3834d:0",
+   "row": "r6",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Khái niệm thế năng."
+  },
+  {
+   "question_id": "5a75d578-d195-4b82-8443-5ea415c3834d:1",
+   "row": "r6",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Thế năng trọng trường là năng lượng tương tác giữa Trái Đất và vật."
+  },
+  {
+   "question_id": "5a75d578-d195-4b82-8443-5ea415c3834d:2",
+   "row": "r6",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Công thức Wt = mgh."
+  },
+  {
+   "question_id": "5a75d578-d195-4b82-8443-5ea415c3834d:3",
+   "row": "r6",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Đơn vị thế năng."
+  },
+  {
+   "question_id": "5a75d578-d195-4b82-8443-5ea415c3834d:4",
+   "row": "r6",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Phát biểu sai về thế năng trọng trường (đơn vị)."
+  },
+  {
+   "question_id": "5a75d578-d195-4b82-8443-5ea415c3834d:5",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "So sánh thế năng tại các vị trí theo mốc đã chọn (theo hình)."
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:0",
+   "row": "r6",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Đúng/Sai: khái niệm, đơn vị, dấu của thế năng; ý b về thực hiện công (thuộc nội dung Công và năng lượng)."
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:1",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Đúng/Sai: tính thế năng tại các vị trí theo hình, so sánh lớn nhất, nhỏ nhất (đúng)."
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:2",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Đúng/Sai: dấu công của trọng lực, thế năng ở độ cao 10,7 m = 8913,1 J, công suất tối thiểu 384,2 W (đúng)."
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:3",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Đúng/Sai: thế năng ở các vị trí trọng tâm, công của trọng lực = hiệu thế năng (đúng)."
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:4",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Đúng/Sai: thế năng theo các mốc khác nhau, công của trọng lực (đúng)."
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:5",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Đúng/Sai: thế năng âm, dương theo mốc, đổi mốc, công của trọng lực (đúng)."
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:6",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Đúng/Sai: quả táo rơi, động năng tăng, thế năng giảm, so sánh động năng và thế năng ở độ cao 2 m (đúng)."
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:7",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: thế năng ở đỉnh chuyển hết thành động năng khi không ma sát, tốc độ chân đồi 10 m/s (đúng)."
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:8",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đúng/Sai: công của trọng lực, tốc độ cuối máng theo định lí động năng, có và không có ma sát (đúng)."
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:9",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Đúng/Sai: thế năng, công của trọng lực, lực ma sát và hệ số ma sát theo định lí động năng (đúng)."
+  },
+  {
+   "question_id": "97452387-ee30-43a2-aff6-0ce33beea9b7:0",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "extended",
+   "reason": "Trả lời ngắn: động năng tỉ lệ v², tìm động năng vật thứ ba 2,25 J (đúng)."
+  },
+  {
+   "question_id": "97452387-ee30-43a2-aff6-0ce33beea9b7:1",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "extended",
+   "reason": "Trả lời ngắn: động năng vận động viên chạy đều 4680 J (đúng)."
+  },
+  {
+   "question_id": "97452387-ee30-43a2-aff6-0ce33beea9b7:2",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Trả lời ngắn: công từ đồ thị F–s bằng động năng (định lí động năng), v ≈ 9,38 m/s (đúng)."
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:0",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "extended",
+   "reason": "So sánh động năng ba xe theo m và v (đúng)."
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:1",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "extended",
+   "reason": "Từ động năng suy ra tốc độ 10 m/s (đúng)."
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:2",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "extended",
+   "reason": "Tỉ số động năng đạn và ô tô = 18 (đúng)."
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:3",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "extended",
+   "reason": "Từ tỉ số động năng và tốc độ suy ra tỉ số khối lượng 12 (đúng)."
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:4",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "extended",
+   "reason": "Động năng tỉ lệ v², tìm v3 = 5 m/s (đúng)."
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:5",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Xe khởi hành từ nghỉ, nhanh dần đều: động năng sau 5 m = 5000 J (đúng tình huống của YCCĐ 4)."
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:6",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "extended",
+   "reason": "Từ phương trình chuyển động tính vận tốc rồi động năng 0,8 J (đúng)."
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:7",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Công để tăng tốc = độ biến thiên động năng: 18 150 J (đúng)."
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:8",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "direct",
+   "reason": "Vật rơi từ nghỉ: động năng bằng công của trọng lực, 250 J ở độ cao 50 m (đúng)."
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:9",
+   "row": "r5",
+   "programme_requirement": 4,
+   "match": "extended",
+   "reason": "Động năng trong các hệ quy chiếu khác nhau (vận tốc tương đối); phát biểu sai là C (đúng)."
+  },
+  {
+   "question_id": "a6f96b32-dcdd-477e-b5ae-bfa3be5e72c5:0",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Khái niệm cơ năng: thế năng và động năng là hai dạng của cơ năng."
+  },
+  {
+   "question_id": "a6f96b32-dcdd-477e-b5ae-bfa3be5e72c5:1",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Cơ năng bằng tổng động năng và thế năng."
+  },
+  {
+   "question_id": "a6f96b32-dcdd-477e-b5ae-bfa3be5e72c5:2",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Phát biểu sai về cơ năng."
+  },
+  {
+   "question_id": "a6f96b32-dcdd-477e-b5ae-bfa3be5e72c5:3",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Cơ năng có thể âm, dương, bằng 0 (phụ thuộc mốc thế năng)."
+  },
+  {
+   "question_id": "a6f96b32-dcdd-477e-b5ae-bfa3be5e72c5:4",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Biểu thức cơ năng trong trọng trường."
+  },
+  {
+   "question_id": "a6f96b32-dcdd-477e-b5ae-bfa3be5e72c5:5",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đơn vị cơ năng."
+  },
+  {
+   "question_id": "dfb56aac-d998-4af6-b93a-0c1361cb2a1c:0",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Đúng/Sai: chuyển hóa động năng – thế năng của tàu lượn trên từng đoạn (theo hình)."
+  },
+  {
+   "question_id": "dfb56aac-d998-4af6-b93a-0c1361cb2a1c:1",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Đúng/Sai: máy đóng cọc, chuyển hóa thế năng → động năng, búa sinh công đóng cọc."
+  },
+  {
+   "question_id": "dfb56aac-d998-4af6-b93a-0c1361cb2a1c:2",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Đúng/Sai: máy đóng cọc, độ giảm thế năng bằng công của trọng lực, chuyển hóa thế năng → động năng."
+  },
+  {
+   "question_id": "dfb56aac-d998-4af6-b93a-0c1361cb2a1c:3",
+   "row": "r4",
+   "programme_requirement": 1,
+   "match": "extended",
+   "reason": "Đúng/Sai: chuyển hóa năng lượng trong nhà máy thủy điện (thế năng → động năng → điện năng, hao phí nhiệt)."
+  },
+  {
+   "question_id": "56abf59c-88a7-41ec-b086-155099a52d12:0",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Trả lời ngắn: vị trí động năng cực đại trên đường trượt ván (theo hình)."
+  },
+  {
+   "question_id": "56abf59c-88a7-41ec-b086-155099a52d12:1",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Trả lời ngắn: số vị trí thế năng cực đại trên đường trượt ván (theo hình)."
+  },
+  {
+   "question_id": "56abf59c-88a7-41ec-b086-155099a52d12:2",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Trả lời ngắn: bảo toàn cơ năng tính tốc độ người trượt tuyết ≈ 45 m/s (đúng)."
+  },
+  {
+   "question_id": "56abf59c-88a7-41ec-b086-155099a52d12:3",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Trả lời ngắn: bảo toàn cơ năng, vận tốc khi thế năng bằng 3/4 cơ năng = 10 m/s (đúng)."
+  },
+  {
+   "question_id": "a92aa410-3cfc-4f73-b837-77cf04b16707:0",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Tính cơ năng tại vị trí ném W = Wt + Wđ = 10,4 J (đúng)."
+  },
+  {
+   "question_id": "a92aa410-3cfc-4f73-b837-77cf04b16707:1",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Bảo toàn cơ năng: động năng tại B = 6000 J (đúng)."
+  },
+  {
+   "question_id": "a92aa410-3cfc-4f73-b837-77cf04b16707:2",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Bảo toàn cơ năng: tốc độ cá heo rời mặt biển 10 m/s (đúng)."
+  },
+  {
+   "question_id": "16a8769a-26c5-44e5-99ed-e111a90aa802:0",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Con lắc đơn: bảo toàn cơ năng, vận tốc qua vị trí cân bằng ≈ 1,715 m/s (đúng)."
+  },
+  {
+   "question_id": "16a8769a-26c5-44e5-99ed-e111a90aa802:1",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Con lắc đơn: bảo toàn cơ năng, tốc độ qua vị trí cân bằng ≈ 2,4 m/s (đúng)."
+  },
+  {
+   "question_id": "16a8769a-26c5-44e5-99ed-e111a90aa802:2",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Con lắc đơn: bảo toàn cơ năng, vận tốc khi dây lệch 30° ≈ 1,78 m/s (đúng)."
+  },
+  {
+   "question_id": "16a8769a-26c5-44e5-99ed-e111a90aa802:3",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Con lắc đơn: tốc độ khi động năng bằng thế năng ≈ 1,69 m/s (đúng)."
+  },
+  {
+   "question_id": "336f8444-4c72-459d-b487-e9756d556fd9:0",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Trả lời ngắn: tính cơ năng con lắc W = Wđ + Wt = 3,8 J (đúng)."
+  },
+  {
+   "question_id": "336f8444-4c72-459d-b487-e9756d556fd9:1",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Trả lời ngắn: bảo toàn cơ năng, động năng khi dây lệch 30° ≈ 0,16 J (đúng)."
+  },
+  {
+   "question_id": "7ff7c123-e30d-47c6-9112-6b91bf8f92b4:0",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Vật rơi tự do: cơ năng tại M bằng cơ năng tại N (định luật bảo toàn cơ năng)."
+  },
+  {
+   "question_id": "7ff7c123-e30d-47c6-9112-6b91bf8f92b4:1",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Rơi tự do: tổng động năng và thế năng không đổi."
+  },
+  {
+   "question_id": "7ff7c123-e30d-47c6-9112-6b91bf8f92b4:2",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Ở độ cao cực đại: động năng cực tiểu, thế năng cực đại."
+  },
+  {
+   "question_id": "7ff7c123-e30d-47c6-9112-6b91bf8f92b4:3",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Động năng cực đại thì thế năng cực tiểu."
+  },
+  {
+   "question_id": "7ff7c123-e30d-47c6-9112-6b91bf8f92b4:4",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Điều kiện bảo toàn cơ năng: vật chỉ chịu tác dụng của lực thế."
+  },
+  {
+   "question_id": "a817af31-bebd-44ac-9059-bc96d03504d8:0",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Con lắc đồng hồ: động năng và thế năng chuyển hóa nhờ công của trọng lực."
+  },
+  {
+   "question_id": "a817af31-bebd-44ac-9059-bc96d03504d8:1",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Con lắc đơn ở vị trí cao nhất: thế năng cực đại."
+  },
+  {
+   "question_id": "a817af31-bebd-44ac-9059-bc96d03504d8:2",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Con lắc đơn ở vị trí cân bằng: động năng cực đại."
+  },
+  {
+   "question_id": "a817af31-bebd-44ac-9059-bc96d03504d8:3",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Con lắc đơn: vị trí động năng cực đại, cực tiểu (theo hình)."
+  },
+  {
+   "question_id": "a817af31-bebd-44ac-9059-bc96d03504d8:4",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Con lắc đơn từ A đến O: thế năng giảm, động năng tăng, cơ năng không đổi."
+  },
+  {
+   "question_id": "b0b8b4d1-f690-49c6-9a83-630f13ed07c1:0",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Biểu thức tốc độ qua vị trí cân bằng của con lắc đơn từ bảo toàn cơ năng."
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:0",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Điều kiện cơ năng không được bảo toàn (có lực cản, ma sát)."
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:1",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Phát biểu sai về cơ năng và điều kiện bảo toàn."
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:2",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "extended",
+   "reason": "Có ma sát: toàn bộ thế năng ban đầu chuyển thành nhiệt, Q = mgh (bảo toàn năng lượng, vượt bảo toàn cơ năng)."
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:3",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Viết phương trình bảo toàn cơ năng cho bi lên mặt phẳng nghiêng."
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:4",
+   "row": "r9",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Biểu thức cơ năng của con lắc đơn mgℓ(1 − cosα0)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:0",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Đúng/Sai: nước rơi từ thác, trọng lực sinh công, độ tăng động năng bằng độ giảm thế năng."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:1",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: bảo toàn cơ năng trên đường trượt ván, so sánh thế năng và động năng ở các vị trí (theo hình)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:10",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: bảo toàn cơ năng khi ném thẳng đứng, độ cao cực đại 1,8 m, tỉ số động năng/thế năng (đúng)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:11",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: cơ năng 7,2 J, độ cao có động năng bằng thế năng 3,6 m (đúng)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:12",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: cơ năng 0,48 J, độ cao cực đại 2,4 m, vị trí Wđ = Wt, tốc độ khi Wđ = 2Wt (đúng)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:13",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: bảo toàn cơ năng khi ném lên từ độ cao 20 m, độ cao cực đại 25 m, tốc độ ở 22 m ≈ 7,7 m/s (đúng)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:14",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: độ cao cực đại 11,25 m, tốc độ khi Wđ = Wt, cơ năng 22,5 J, tốc độ chạm đất 15 m/s (đúng)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:15",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: thế năng, động năng, cơ năng của vận động viên trượt ván theo hình (đúng)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:16",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: cơ năng quả bóng ném ngang 1,8 J, tốc độ chạm sàn 6 m/s (đúng)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:17",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: con lắc đơn, thế năng ở biên ≈ 0,86 J bằng động năng qua O (đúng)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:2",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Đúng/Sai: chuyển hóa động năng – thế năng của người trượt ván, cơ năng không đổi (theo hình)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:3",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Đúng/Sai: con lắc giữa hai biên A, B: chuyển hóa động năng – thế năng, cơ năng bảo toàn (theo hình)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:4",
+   "row": "r8",
+   "programme_requirement": 6,
+   "match": "direct",
+   "reason": "Đúng/Sai: chuyển hóa năng lượng trên đường trượt, cơ năng bảo toàn khi không ma sát, giảm khi có ma sát (theo hình)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:5",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: rơi tự do, cơ năng 125 J, động năng cực đại khi chạm đất (đúng)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:6",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: thế năng, cơ năng 150 J, động năng chạm đất, vị trí Wđ = Wt (đúng)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:7",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: rơi tự do 20 m, cơ năng 200 J, vận tốc cực đại 20 m/s, vận tốc khi Wđ = Wt là 10√2 m/s (đúng)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:8",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: cơ năng 88,2 J, vận tốc chạm đất 21√2 m/s, độ cao khi Wđ = 2Wt là 15 m (đúng)."
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:9",
+   "row": "r10",
+   "programme_requirement": 7,
+   "match": "direct",
+   "reason": "Đúng/Sai: ném thẳng đứng, cơ năng không đổi, độ cao cực đại 5 m, vận tốc khi Wđ = Wt (đúng)."
+  },
+  {
+   "question_id": "0e0b05d1-4b6f-4bce-8b42-1490518a7982:0",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Trả lời ngắn: thế năng khi vật đã rơi 20 m: 490 J (đúng)."
+  },
+  {
+   "question_id": "0e0b05d1-4b6f-4bce-8b42-1490518a7982:1",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Trả lời ngắn: độ cao để thế năng giảm 4 lần: 12,5 m (đúng)."
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:0",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "So sánh thế năng hai vật theo m và h (đúng)."
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:1",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Từ thế năng suy ra độ cao ≈ 0,102 m (đúng)."
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:2",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Từ thế năng suy ra khối lượng 0,5 kg (đúng)."
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:3",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Thế năng dương, âm theo mốc mặt đường: 150 kJ và −15 kJ (đúng)."
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:4",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Từ thế năng âm tại mặt đất suy ra vị trí mốc thế năng cao 22,5 m (đúng)."
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:5",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Từ hiệu thế năng suy ra độ cao 50 m (đúng)."
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:6",
+   "row": "r7",
+   "programme_requirement": 5,
+   "match": "direct",
+   "reason": "Độ giảm thế năng trong giây thứ hai: 15 J (đúng)."
+  },
+  {
+   "question_id": "05c1e089-bca5-4f21-a6d4-c0c95c7bc2db:0",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Trả lời ngắn: hiệu suất động cơ 96%, công toàn phần, thời gian 50 s (đúng)."
+  },
+  {
+   "question_id": "05c1e089-bca5-4f21-a6d4-c0c95c7bc2db:1",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Trả lời ngắn: hiệu suất pin mặt trời 15%, diện tích cần ≈ 33,3 m² (đúng)."
+  },
+  {
+   "question_id": "05c1e089-bca5-4f21-a6d4-c0c95c7bc2db:2",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Trả lời ngắn: tỉ lệ động năng ở điểm thấp nhất so với thế năng ban đầu ≈ 89,4% (đúng)."
+  },
+  {
+   "question_id": "05c1e089-bca5-4f21-a6d4-c0c95c7bc2db:3",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Trả lời ngắn: hiệu suất xe 18%, năng lượng xăng cần để tăng tốc, ≈ 0,03 lít (đúng)."
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:0",
+   "row": "r13",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Đúng/Sai: ý nghĩa và định nghĩa hiệu suất, giá trị nhỏ hơn 1."
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:1",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Đúng/Sai: cơ năng ban đầu và ở điểm cao nhất, tỉ lệ cơ năng hao hụt do lực cản 12,9% (đúng)."
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:2",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Đúng/Sai: nhiệt lượng của xăng, công có ích A = Pt, hiệu suất xe máy 19,6% (đúng)."
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:3",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Đúng/Sai: lực động cơ F = P/v, công, nhiệt lượng 10 lít xăng, hiệu suất ≈ 31% (đúng)."
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:4",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Đúng/Sai: công của người kéo, công có ích, hiệu suất ròng rọc 85,4% (đúng)."
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:5",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Đúng/Sai: khối lượng nước, công có ích, công suất có ích 1500 W, công suất máy bơm 2 kW (đúng)."
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:6",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Đúng/Sai: công suất 1472 W, công trong 1 giờ, công có ích, lượng nước bơm (đúng)."
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:7",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Đúng/Sai: công của lực nâng, công toàn phần theo hiệu suất 60%, công suất ≈ 5555,6 W, thời gian nâng 2 tấn (đúng)."
+  },
+  {
+   "question_id": "6812e3f5-249f-44b9-8c54-1ac3b75349eb:0",
+   "row": "r13",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Ý nghĩa hiệu suất: hiệu suất cao thì tỉ lệ hao phí nhỏ."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:0",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Tính hiệu suất H = A_ci/A_tp = 60% (đúng)."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:1",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Công suất toàn phần theo hiệu suất 80%: ≈ 8,2 kW (đúng)."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:10",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Lượng nước bơm trong 1 giờ theo hiệu suất 50%: 17,664 m³ (đúng)."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:11",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Hiệu suất quy ước khi nâng nhanh dần đều H = g/(g + a) = 98% (đúng)."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:12",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Hiệu suất quy ước khi kéo vật có ma sát ≈ 65,36% (đúng)."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:2",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Công suất có ích theo hiệu suất, tốc độ kéo v = 8 m/s (đúng)."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:3",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Công hao phí của ròng rọc 500 J (đúng)."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:4",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Hiệu suất mặt phẳng nghiêng 80% (đúng)."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:5",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Lực kéo trên mặt phẳng nghiêng theo hiệu suất 80%: 150 N (đúng)."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:6",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Công suất tua bin thủy điện theo hiệu suất 80%: 40 MW (đúng)."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:7",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Công toàn phần của máy bơm theo hiệu suất 70%: ≈ 3857 kJ (đúng)."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:8",
+   "row": "r14",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Lượng nước bơm trong nửa giờ theo hiệu suất 70%: 18,9 m³ (đúng)."
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:9",
+   "row": "r11",
+   "programme_requirement": 8,
+   "match": "extended",
+   "reason": "Đổi 2 CV sang W rồi tính công A = Pt = 5 299 200 J; không dùng hiệu suất (câu thuộc bài Hiệu suất nhưng nội dung là công suất)."
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:0",
+   "row": "r13",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Năng lượng hao phí của quạt điện là nhiệt năng (năng lượng có ích, hao phí)."
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:1",
+   "row": "r13",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Ý nghĩa của hiệu suất."
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:2",
+   "row": "r13",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Định nghĩa hiệu suất."
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:3",
+   "row": "r13",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Công thức hiệu suất theo năng lượng."
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:4",
+   "row": "r13",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Công thức hiệu suất theo công suất."
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:5",
+   "row": "r13",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Ý nghĩa đại lượng trong công thức hiệu suất động cơ nhiệt."
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:6",
+   "row": "r13",
+   "programme_requirement": 10,
+   "match": "direct",
+   "reason": "Phát biểu sai về hiệu suất."
+  }
+ ]
+}
