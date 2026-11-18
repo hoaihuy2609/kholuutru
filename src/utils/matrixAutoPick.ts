@@ -17,6 +17,8 @@ export interface AutoPickOptions {
     goalUsage?: ReadonlyMap<string, number>;
     /** Goal the teacher already chose for a slot; it is honoured when it has matching questions. */
     preferredGoal?: ReadonlyMap<string, string>;
+    /** Extra condition per slot, e.g. the textbook lesson the teacher picked. */
+    accepts?: (slot: MatrixPlanSlot, candidate: Candidate) => boolean;
     /** Question ids to skip when another question is available (re-roll). */
     avoid?: Iterable<string>;
     rng?: () => number;
@@ -35,7 +37,8 @@ export function autoPickMatrixPlan<T extends Candidate>(
     const avoid = new Set(options.avoid);
     const usage = new Map(options.goalUsage);
     const pick = <V,>(list: readonly V[]) => list[Math.floor(rng() * list.length)];
-    const eligibleFor = (slot: MatrixPlanSlot) => candidates.filter(candidate => !used.has(candidate.item.id) && matchesMatrixPlanSlot(slot, candidate));
+    const eligibleFor = (slot: MatrixPlanSlot) => candidates.filter(candidate => !used.has(candidate.item.id) && matchesMatrixPlanSlot(slot, candidate)
+        && (!options.accepts || options.accepts(slot, candidate)));
     const order = targets.filter(slot => slot.canChoose)
         .map(slot => ({ slot, count: eligibleFor(slot).length })).sort((a, b) => a.count - b.count);
     const picks = new Map<string, AutoPick>();

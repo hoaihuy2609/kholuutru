@@ -9,6 +9,7 @@ Tài liệu này sinh từ `src/data/physics10Curriculum.ts`. Mỗi yêu cầu g
 - Tổng cộng 69 yêu cầu cần đạt (phần nội dung cốt lõi, không gồm chuyên đề học tập).
 - Chủ đề "Khối lượng riêng, áp suất chất lỏng" thuộc mạch Động lực học trong chương trình, nhưng được xếp vào chương VI của kho cho khớp sách Kết nối tri thức.
 - Khi trích từ PDF, số mũ trong a = rω², a = v²/r, F = mrω², F = mv²/r bị mất và đã được khôi phục.
+- Bảng đối chiếu bài SGK với YCCĐ do tác giả lập, cần giáo viên thẩm định trước khi dùng làm căn cứ.
 - Cụm "ở trong trong nước" (YCCĐ về lực nâng) có trong văn bản gốc, được giữ nguyên.
 
 ## MỞ ĐẦU. GIỚI THIỆU MÔN VẬT LÍ (6 YCCĐ)
@@ -21,6 +22,14 @@ Tài liệu này sinh từ `src/data/physics10Curriculum.ts`. Mỗi yêu cầu g
 - `g10-ch0-yc04` Nêu được một số ví dụ về phương pháp nghiên cứu vật lí (phương pháp thực nghiệm và phương pháp lí thuyết).
 - `g10-ch0-yc05` Mô tả được các bước trong tiến trình tìm hiểu thế giới tự nhiên dưới góc độ vật lí.
 - `g10-ch0-yc06` Thảo luận để nêu được:<br>+ Một số loại sai số đơn giản hay gặp khi đo các đại lượng vật lí và cách khắc phục chúng;<br>+ Các quy tắc an toàn trong nghiên cứu và học tập môn Vật lí.
+
+#### Đối chiếu bài SGK Kết nối tri thức (Chương I. Mở đầu)
+
+| Bài | YCCĐ được dạy |
+|---|---|
+| Bài 1. Làm quen với Vật lí | `g10-ch0-yc01`, `g10-ch0-yc02`, `g10-ch0-yc03`, `g10-ch0-yc04`, `g10-ch0-yc05` |
+| Bài 2. Các quy tắc an toàn trong phòng thực hành Vật lí | `g10-ch0-yc06` |
+| Bài 3. Thực hành tính sai số trong phép đo. Ghi kết quả đo | `g10-ch0-yc06` |
 
 ## CHƯƠNG I. ĐỘNG HỌC (18 YCCĐ)
 
@@ -46,6 +55,20 @@ Tài liệu này sinh từ `src/data/physics10Curriculum.ts`. Mỗi yêu cầu g
 - `g10-ch1-yc16` Mô tả và giải thích được chuyển động khi vật có vận tốc không đổi theo một phương và có gia tốc không đổi theo phương vuông góc với phương này.
 - `g10-ch1-yc17` Thảo luận để thiết kế phương án hoặc lựa chọn phương án và thực hiện phương án, đo được gia tốc rơi tự do bằng dụng cụ thực hành.
 - `g10-ch1-yc18` Thực hiện được dự án hay đề tài nghiên cứu tìm điều kiện ném vật trong không khí ở độ cao nào đó để đạt độ cao hoặc tầm xa lớn nhất.
+
+#### Đối chiếu bài SGK Kết nối tri thức (Chương II. Động học)
+
+| Bài | YCCĐ được dạy |
+|---|---|
+| Bài 4. Độ dịch chuyển và quãng đường đi được | `g10-ch1-yc02`, `g10-ch1-yc03` |
+| Bài 5. Tốc độ và vận tốc | `g10-ch1-yc01`, `g10-ch1-yc04`, `g10-ch1-yc07`, `g10-ch1-yc08` |
+| Bài 6. Thực hành: Đo tốc độ của vật chuyển động | `g10-ch1-yc09`, `g10-ch1-yc10` |
+| Bài 7. Đồ thị độ dịch chuyển – thời gian | `g10-ch1-yc05`, `g10-ch1-yc06` |
+| Bài 8. Chuyển động biến đổi. Gia tốc | `g10-ch1-yc11` |
+| Bài 9. Chuyển động thẳng biến đổi đều | `g10-ch1-yc12`, `g10-ch1-yc13`, `g10-ch1-yc14`, `g10-ch1-yc15` |
+| Bài 10. Sự rơi tự do | `g10-ch1-yc15` |
+| Bài 11. Thực hành: Đo gia tốc rơi tự do | `g10-ch1-yc17` |
+| Bài 12. Chuyển động ném | `g10-ch1-yc16`, `g10-ch1-yc18` |
 
 ## CHƯƠNG II. ĐỘNG LỰC HỌC (18 YCCĐ)
 
@@ -74,6 +97,21 @@ Tài liệu này sinh từ `src/data/physics10Curriculum.ts`. Mỗi yêu cầu g
 - `g10-ch2-yc17` Thảo luận để rút ra được điều kiện để vật cân bằng: lực tổng hợp tác dụng lên vật bằng không và tổng moment lực tác dụng lên vật (đối với một điểm bất kì) bằng không.
 - `g10-ch2-yc18` Thảo luận để thiết kế phương án hoặc lựa chọn phương án và thực hiện phương án, tổng hợp được hai lực song song bằng dụng cụ thực hành.
 
+#### Đối chiếu bài SGK Kết nối tri thức (Chương III. Động lực học)
+
+| Bài | YCCĐ được dạy |
+|---|---|
+| Bài 13. Tổng hợp và phân tích lực. Cân bằng lực | `g10-ch2-yc06`, `g10-ch2-yc12`, `g10-ch2-yc13` |
+| Bài 14. Định luật 1 Newton | `g10-ch2-yc03` |
+| Bài 15. Định luật 2 Newton | `g10-ch2-yc01`, `g10-ch2-yc02`, `g10-ch2-yc04` |
+| Bài 16. Định luật 3 Newton | `g10-ch2-yc09` |
+| Bài 17. Trọng lực và lực căng | `g10-ch2-yc05`, `g10-ch2-yc10` |
+| Bài 18. Lực ma sát | `g10-ch2-yc10` |
+| Bài 19. Lực cản và lực nâng | `g10-ch2-yc07`, `g10-ch2-yc08`, `g10-ch2-yc10`, `g10-ch2-yc11` |
+| Bài 20. Một số ví dụ về cách giải các bài toán thuộc phần động lực học | `g10-ch2-yc01`, `g10-ch2-yc09` |
+| Bài 21. Moment lực. Cân bằng của vật rắn | `g10-ch2-yc15`, `g10-ch2-yc16`, `g10-ch2-yc17` |
+| Bài 22. Thực hành: Tổng hợp lực | `g10-ch2-yc14`, `g10-ch2-yc18` |
+
 ## CHƯƠNG III. NĂNG LƯỢNG, CÔNG, CÔNG SUẤT (10 YCCĐ)
 
 ### Công, năng lượng, công suất · Công và năng lượng
@@ -93,6 +131,16 @@ Tài liệu này sinh từ `src/data/physics10Curriculum.ts`. Mỗi yêu cầu g
 - `g10-ch3-yc09` Vận dụng được mối liên hệ công suất (hay tốc độ thực hiện công) với tích của lực và vận tốc trong một số tình huống thực tế.
 - `g10-ch3-yc10` Từ tình huống thực tế, thảo luận để nêu được định nghĩa hiệu suất, vận dụng được hiệu suất trong một số trường hợp thực tế.
 
+#### Đối chiếu bài SGK Kết nối tri thức (Chương IV. Năng lượng, công, công suất)
+
+| Bài | YCCĐ được dạy |
+|---|---|
+| Bài 23. Năng lượng. Công cơ học | `g10-ch3-yc01`, `g10-ch3-yc02`, `g10-ch3-yc03` |
+| Bài 24. Công suất | `g10-ch3-yc08`, `g10-ch3-yc09` |
+| Bài 25. Động năng, thế năng | `g10-ch3-yc04`, `g10-ch3-yc05` |
+| Bài 26. Cơ năng và định luật bảo toàn cơ năng | `g10-ch3-yc06`, `g10-ch3-yc07` |
+| Bài 27. Hiệu suất | `g10-ch3-yc10` |
+
 ## CHƯƠNG IV. ĐỘNG LƯỢNG VÀ VA CHẠM (7 YCCĐ)
 
 ### Động lượng · Định nghĩa động lượng
@@ -109,6 +157,14 @@ Tài liệu này sinh từ `src/data/physics10Curriculum.ts`. Mỗi yêu cầu g
 - `g10-ch4-yc06` Thảo luận để giải thích được một số hiện tượng đơn giản.
 - `g10-ch4-yc07` Thảo luận để thiết kế phương án hoặc lựa chọn phương án, thực hiện phương án, xác định được tốc độ và đánh giá được động lượng của vật trước và sau va chạm bằng dụng cụ thực hành.
 
+#### Đối chiếu bài SGK Kết nối tri thức (Chương V. Động lượng)
+
+| Bài | YCCĐ được dạy |
+|---|---|
+| Bài 28. Động lượng | `g10-ch4-yc01`, `g10-ch4-yc04` |
+| Bài 29. Định luật bảo toàn động lượng | `g10-ch4-yc02`, `g10-ch4-yc03`, `g10-ch4-yc05`, `g10-ch4-yc06` |
+| Bài 30. Thực hành: Xác định động lượng của vật trước và sau va chạm | `g10-ch4-yc07` |
+
 ## CHƯƠNG V. CHUYỂN ĐỘNG TRÒN (5 YCCĐ)
 
 ### Chuyển động tròn · Động học của chuyển động tròn đều
@@ -121,6 +177,13 @@ Tài liệu này sinh từ `src/data/physics10Curriculum.ts`. Mỗi yêu cầu g
 - `g10-ch5-yc04` Vận dụng được biểu thức lực hướng tâm F = mrω², F = mv²/r.
 - `g10-ch5-yc05` Thảo luận và đề xuất giải pháp an toàn cho một số tình huống chuyển động tròn trong thực tế.
 
+#### Đối chiếu bài SGK Kết nối tri thức (Chương VI. Chuyển động tròn)
+
+| Bài | YCCĐ được dạy |
+|---|---|
+| Bài 31. Động học của chuyển động tròn đều | `g10-ch5-yc01`, `g10-ch5-yc02` |
+| Bài 32. Lực hướng tâm và gia tốc hướng tâm | `g10-ch5-yc03`, `g10-ch5-yc04`, `g10-ch5-yc05` |
+
 ## CHƯƠNG VI. BIẾN DẠNG CỦA VẬT RẮN & ÁP SUẤT (5 YCCĐ)
 
 ### Động lực học · Khối lượng riêng, áp suất chất lỏng
@@ -132,3 +195,10 @@ Tài liệu này sinh từ `src/data/physics10Curriculum.ts`. Mỗi yêu cầu g
 - `g10-ch6-yc03` Thực hiện thí nghiệm đơn giản (hoặc sử dụng tài liệu đa phương tiện), nêu được sự biến dạng kéo, biến dạng nén; mô tả được các đặc tính của lò xo: giới hạn đàn hồi, độ dãn, độ cứng.
 - `g10-ch6-yc04` Thảo luận để thiết kế phương án hoặc lựa chọn phương án và thực hiện phương án, tìm mối liên hệ giữa lực đàn hồi và độ biến dạng của lò xo, từ đó phát biểu được định luật Hooke.
 - `g10-ch6-yc05` Vận dụng được định luật Hooke trong một số trường hợp đơn giản.
+
+#### Đối chiếu bài SGK Kết nối tri thức (Chương VII. Biến dạng của vật rắn. Áp suất chất lỏng)
+
+| Bài | YCCĐ được dạy |
+|---|---|
+| Bài 33. Biến dạng của vật rắn | `g10-ch6-yc03`, `g10-ch6-yc04`, `g10-ch6-yc05` |
+| Bài 34. Khối lượng riêng. Áp suất chất lỏng | `g10-ch6-yc01`, `g10-ch6-yc02` |

@@ -46,4 +46,11 @@ describe('autoPickMatrixPlan', () => {
         const only = autoPickMatrixPlan([slot], [candidate('only', unit)], { avoid: ['only'] });
         expect(only.picks.get(slot.id)?.questionId).toBe('only');
     });
+
+    it('respects an extra per-slot condition such as the chosen lesson', () => {
+        const slots = matrixPlanSlots([allocation(2)]);
+        const { picks, unfilled } = autoPickMatrixPlan(slots, pool, { accepts: (_, candidate) => candidate.item.id.startsWith('b') });
+        expect([...picks.values()].map(pick => pick.questionId).sort()).toEqual(['b1', 'b2']);
+        expect(unfilled).toEqual([]);
+    });
 });
