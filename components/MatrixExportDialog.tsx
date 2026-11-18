@@ -128,16 +128,33 @@ export default function MatrixExportDialog({ allocations, selections }: {
                 </div>}
                 {tab === 'outcomes' && <div className="space-y-3">
                     <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-950">Viết đúng phần kiến thức mà câu/ý thực sự đánh giá. Các yêu cầu giống nhau trong cùng nội dung và mức độ sẽ tự gộp thành một dòng, kèm các mã câu. Chỉnh ở đây chỉ áp dụng cho bản xuất, không sửa câu trong kho.</p>
+                    {document.units.some(unit => unit.type === 'dung_sai' && !unit.outcome) && <button type="button"
+                        className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950 hover:bg-amber-100"
+                        onClick={() => setOutcomes(previous => {
+                            const next = { ...previous };
+                            for (const unit of document.units) {
+                                const shared = selections.find(item => item.slot.id === unit.slotId)?.outcome;
+                                if (unit.type === 'dung_sai' && !unit.outcome && shared) next[unit.key] = shared;
+                            }
+                            return next;
+                        })}>Điền YCCĐ chung của câu cho các ý Đúng/Sai còn trống (rà lại từng ý sau)</button>}
                     {!document.units.length && <p className="p-3 text-sm text-stone-600">Chọn câu trong bản đặc tả trước để rà YCCĐ.</p>}
                     {document.units.map(unit => {
-                        const common = selections.find(selection => selection.slot.id === unit.slotId)?.outcome;
+                        const selection = selections.find(selection => selection.slot.id === unit.slotId);
+                        const common = selection?.outcome;
+                        const options = unit.type === 'dung_sai' ? (selection?.outcomeOptions ?? []).filter(option => option !== unit.outcome) : [];
                         return <div key={unit.key} className="space-y-2 rounded-lg border border-stone-200 bg-white p-3">
                             <p className="text-sm font-bold">{unit.fullReference} · {MATRIX_LEVELS[unit.level]}<span className="ml-2 font-normal text-stone-600">{unit.topic}</span></p>
                             {unit.claim && <p className="whitespace-pre-wrap text-sm text-stone-600">{unit.claim}</p>}
                             <textarea aria-label={'YCCĐ ' + unit.fullReference} rows={2} className={field} value={unit.outcome}
                                 placeholder="Nhập YCCĐ cụ thể của câu/ý này"
                                 onChange={event => setOutcomes(previous => ({ ...previous, [unit.key]: event.target.value }))} />
-                            {unit.type === 'dung_sai' && common && <button type="button" className="text-xs font-semibold text-amber-900 underline"
+                            {options.length > 1 && <div className="flex flex-wrap gap-1.5" role="group" aria-label={'YCCĐ của câu cho ' + unit.fullReference}>
+                                {options.map(option => <button key={option} type="button"
+                                    className="rounded-md border border-stone-200 bg-stone-50 px-2 py-1 text-left text-xs text-stone-800 hover:bg-amber-50"
+                                    onClick={() => setOutcomes(previous => ({ ...previous, [unit.key]: option }))}>{option}</button>)}
+                            </div>}
+                            {unit.type === 'dung_sai' && common && options.length <= 1 && <button type="button" className="text-xs font-semibold text-amber-900 underline"
                                 onClick={() => setOutcomes(previous => ({ ...previous, [unit.key]: common }))}>Lấy YCCĐ chung của câu rồi điều chỉnh</button>}
                             {unit.curriculumSource && <details className="text-xs text-stone-600"><summary className="cursor-pointer">Đối chiếu YCCĐ chương trình</summary><p className="mt-1 leading-relaxed">{unit.curriculumSource}</p></details>}
                         </div>;

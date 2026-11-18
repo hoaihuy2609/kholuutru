@@ -6,6 +6,7 @@ import { lessonRequirements, textbookLessonFor, textbookLessonLabel, textbookLes
 import { ENERGY_MATRIX_CHAPTER_ID, normalizeMatrixText } from '../src/utils/examMatrix';
 import { energyCurriculumGoals, matchEnergyCurriculumGoal } from '../src/utils/energyCurriculum';
 import { autoPickMatrixPlan } from '../src/utils/matrixAutoPick';
+import { questionLevels } from '../src/utils/cognitiveLevels';
 import { matrixPlanSlots, matrixPlanLevelLabel, matchesMatrixPlanSlot, plannedOutcome, type MatrixAllocation, type MatrixPlanSlot } from '../src/utils/matrixPlan';
 import { STUDY_QUESTION_GROUPS, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
@@ -25,6 +26,22 @@ const lessonOf = (candidate: MatrixCandidate) => textbookLessonFor(candidate.cha
 /** A question fits a slot when it has the slot's content, format and level, and the lesson the teacher picked, if any. */
 function fitsSlot(slot: MatrixPlanSlot, lessonNumber: number | undefined, candidate: MatrixCandidate) {
     return matchesMatrixPlanSlot(slot, candidate) && (!lessonNumber || lessonOf(candidate)?.number === lessonNumber);
+}
+
+const LEVEL_SHORT = ['?', 'NB', 'TH', 'VD'];
+
+/** True-false level patterns the bank holds for a slot's content, e.g. ["TH TH VD VD", 27], most common first. */
+function trueFalsePatterns(slot: MatrixPlanSlot, candidates: readonly MatrixCandidate[]) {
+    const probe: MatrixPlanSlot = { ...slot, type: 'trac_nghiem', level: 1, statementLevels: undefined };
+    const counts = new Map<string, number>();
+    for (const candidate of candidates) {
+        if (candidate.item.type !== 'dung_sai' || candidate.item.statements?.length !== 4) continue;
+        // Same chapter and content as the slot, ignoring format and level.
+        if (!matchesMatrixPlanSlot(probe, { ...candidate, item: { type: 'trac_nghiem', level: 1 } })) continue;
+        const pattern = questionLevels(candidate.item).sort().map(level => LEVEL_SHORT[level]).join(' ');
+        counts.set(pattern, (counts.get(pattern) ?? 0) + 1);
+    }
+    return [...counts].sort((a, b) => b[1] - a[1]);
 }
 
 /** Programme requirement the chosen YCCĐ most likely belongs to. Shown for reference only; it never hides a question. */
@@ -190,7 +207,7 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                 <div className="flex flex-wrap items-center gap-2">
                     <MatrixExportDialog allocations={allocations} selections={selectedSlots.map(({ slot, candidate }) => {
                         const outcome = outcomeFor(slot.id, candidate);
-                        return { slot, item: candidate.item, outcome, curriculumSource: programmeSource(slot, outcome) };
+                        return { slot, item: candidate.item, outcome, outcomeOptions: candidate.outcomes, curriculumSource: programmeSource(slot, outcome) };
                     })} />
                     <span className="rounded-md bg-amber-50 px-2.5 py-1.5 text-sm font-semibold tabular-nums text-amber-950" role="status">
                         Đã chọn {selectedSlots.length}/{selectableCount} câu
@@ -235,6 +252,9 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                                     option, available: candidates.filter(item => fitsSlot(slot, option.number, item)).length,
                                 })).filter(({ option, available }) => available > 0 || option.number === lesson?.number) : [];
                                 const chosenLesson = candidate && lessonOf(candidate);
+                                const missingTrueFalse = slot.type === 'dung_sai' && slot.canChoose && !candidate
+                                    && !candidates.some(item => fitsSlot(slot, undefined, item));
+                                const patterns = missingTrueFalse ? trueFalsePatterns(slot, candidates) : [];
                                 return <div key={slot.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(9.5rem,0.7fr)_minmax(0,2fr)_minmax(8rem,0.6fr)]">
                                     <div className="space-y-0.5">
                                         <p className="text-sm font-semibold">{typeLabel(slot.type)}</p>
@@ -257,6 +277,11 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                                                 {lessonRequirements(lesson).map(requirement => <li key={requirement.id} className="whitespace-pre-wrap">{requirement.text}</li>)}
                                             </ul>
                                         </details>}
+                                        {missingTrueFalse && <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-950" role="note">
+                                            <p className="font-semibold">Kho chưa có câu Đúng/Sai gồm {matrixPlanLevelLabel(slot)} ở nội dung này.</p>
+                                            {patterns.length ? <p className="mt-1">Kho đang có: {patterns.slice(0, 4).map(([pattern, count]) => pattern + ' (' + count + ' câu)').join(' · ')}. Chỉnh mức độ các ý Đúng/Sai trong ma trận theo một tổ hợp này.</p>
+                                                : <p className="mt-1">Nội dung này chưa có câu Đúng/Sai nào trong kho.</p>}
+                                        </div>}
                                         <label htmlFor={fieldId} className="block text-xs font-semibold text-stone-700">Yêu cầu cần đạt</label>
                                         <textarea id={fieldId} rows={2} className={input + ' resize-y'} value={outcome}
                                             placeholder={slot.canChoose ? 'Chọn câu để lấy YCCĐ của câu' : 'Nhập yêu cầu cần đạt'}
