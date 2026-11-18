@@ -32,6 +32,8 @@ export interface MatrixExportSelection {
     slot: MatrixPlanSlot;
     item: SelectedQuestionItem;
     outcome: string;
+    /** All YCCĐ stored on the question, offered when reviewing each true-false statement. */
+    outcomeOptions?: readonly string[];
     curriculumSource?: string;
 }
 
