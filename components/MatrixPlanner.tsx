@@ -197,7 +197,15 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                                             {chapter.name}
                                         </th>
                                     )}
-                                    <th scope="row" className={cell + ' text-left font-medium group-hover:bg-stone-50'}>{name}</th>
+                                    <th scope="row" className={cell + ' text-left font-medium group-hover:bg-stone-50'}>
+                                        {name}
+                                        {(() => {
+                                            const statements = levels.reduce((sum, level) => sum + (counts[topicId]?.['dung_sai:' + level.value] || 0), 0);
+                                            return statements % 4 ? <span className="mt-1 block text-xs font-semibold text-red-700">
+                                                Đúng/Sai {statements} ý: {statements < 4 ? 'thiếu ' + (4 - statements) + ' ý' : 'dư ' + (statements % 4) + ' ý'}, cần bội của 4
+                                            </span> : null;
+                                        })()}
+                                    </th>
                                     {columns.map(({ key, format, level, colors }) => (
                                         <td key={key} className={cell + ' ' + colors.body}>
                                             <input type="number" min={0} max={maxCount} step={1}
@@ -230,8 +238,13 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                                 <th scope="row" colSpan={2} className={cell + ' text-left'}>Tổng theo loại</th>
                                 {formats.map(format => (
                                     <td key={format.value} colSpan={levels.length} className={cell + ' ' + formatColors[format.value].band}>
-                                        {levels.reduce((sum, level) => sum + totals[format.value + ':' + level.value], 0)}
-                                        {format.value === 'dung_sai' ? ' ý' : ' câu'}
+                                        {(() => {
+                                            const total = levels.reduce((sum, level) => sum + totals[format.value + ':' + level.value], 0);
+                                            if (format.value !== 'dung_sai') return total + ' câu';
+                                            const whole = selectedChapters.flatMap(chapter => chapter.topics).reduce((sum, [topicId]) =>
+                                                sum + Math.floor(levels.reduce((count, level) => count + (counts[topicId]?.['dung_sai:' + level.value] || 0), 0) / 4), 0);
+                                            return total + ' ý = ' + whole + ' câu' + (whole * 4 < total ? ' (' + (total - whole * 4) + ' ý lẻ)' : '');
+                                        })()}
                                     </td>
                                 ))}
                             </tr>
