@@ -111,4 +111,29 @@ describe('matrix and specification export', () => {
         expect(matrixExportHtml(result, true)).toContain('BẢN NHÁP');
         expect(html).not.toContain('BẢN NHÁP');
     });
+
+    it('accepts true-false questions with different level mixes when together they match the content', () => {
+        const allocations = [
+            { ...allocation, type: 'dung_sai' as const, level: 2, count: 6 },
+            { ...allocation, type: 'dung_sai' as const, level: 3, count: 2 },
+        ];
+        const settings = { ...defaultMatrixExportSettings(), targetScore: 2 };
+        const build = (mixes: number[][]) => {
+            const slots = matrixPlanSlots(allocations).filter(slot => slot.canChoose);
+            const selections = slots.map((slot, index): MatrixExportSelection => ({ slot, outcome: 'YCCĐ', item: {
+                id: 'tf-' + index, questionNo: 'Câu ' + index, qText: 'Đề', type: 'dung_sai', level: 0,
+                statements: mixes[index].map((level, statement) => ({ label: 'abcd'[statement], claim: 'Ý', cognitive_level: level })),
+            } }));
+            const outcomes = Object.fromEntries(slots.flatMap((slot, index) => [0, 1, 2, 3].map(statement =>
+                [slot.id + '|tf-' + index + '|' + statement, 'YCCĐ ý'])));
+            return buildMatrixExport(allocations, selections, settings, outcomes);
+        };
+        expect(build([[2, 2, 2, 2], [2, 2, 3, 3]]).issues).toEqual([]);
+        expect(build([[2, 2, 2, 3], [3, 2, 2, 2]]).issues).toEqual([]);
+        expect(build([[2, 2, 2, 2], [2, 2, 2, 2]]).issues).toEqual(
+            ['Công và năng lượng: các câu Đúng/Sai đã chọn gồm 8 Thông hiểu, ma trận cần 6 Thông hiểu · 2 Vận dụng.']);
+        expect(build([[2, 2, 2, 2], [1, 2, 2, 2]]).issues.join(' ')).toContain('không còn đúng loại hoặc mức độ');
+        expect(build([[2, 2, 3, 3], [2, 2, 3, 2]]).issues).toEqual(
+            ['Công và năng lượng: các câu Đúng/Sai đã chọn gồm 5 Thông hiểu · 3 Vận dụng, ma trận cần 6 Thông hiểu · 2 Vận dụng.']);
+    });
 });
