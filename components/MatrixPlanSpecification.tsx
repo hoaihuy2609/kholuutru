@@ -7,7 +7,7 @@ import { ENERGY_MATRIX_CHAPTER_ID, normalizeMatrixText } from '../src/utils/exam
 import { energyCurriculumGoals, matchEnergyCurriculumGoal } from '../src/utils/energyCurriculum';
 import { autoPickMatrixPlan } from '../src/utils/matrixAutoPick';
 import { questionLevels } from '../src/utils/cognitiveLevels';
-import { matrixPlanSlots, matrixPlanLevelLabel, matchesMatrixPlanSlot, plannedOutcome, type MatrixAllocation, type MatrixPlanSlot } from '../src/utils/matrixPlan';
+import { fitsCounts, matrixPlanSlots, matrixPlanLevelLabel, matchesMatrixPlanSlot, plannedOutcome, statementCountsLabel, subtractCounts, trueFalseCounts, trueFalseGroup, type MatrixAllocation, type MatrixPlanSlot, type StatementCounts } from '../src/utils/matrixPlan';
 import { STUDY_QUESTION_GROUPS, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import { MatrixDialog, MatrixQuestionCard, MatrixSolutionDialog } from './MatrixQuestionCard';
@@ -23,16 +23,21 @@ type Choice = { questionId?: string; outcome?: string; pickedOutcome?: string; l
 
 const lessonOf = (candidate: MatrixCandidate) => textbookLessonFor(candidate.chapterId, candidate.lessonTitle);
 
-/** A question fits a slot when it has the slot's content, format and level, and the lesson the teacher picked, if any. */
-function fitsSlot(slot: MatrixPlanSlot, lessonNumber: number | undefined, candidate: MatrixCandidate) {
-    return matchesMatrixPlanSlot(slot, candidate) && (!lessonNumber || lessonOf(candidate)?.number === lessonNumber);
+/**
+ * A question fits a slot when it has the slot's content, format and level, and the lesson the teacher picked, if any.
+ * A true-false question must also fit the statements its content still needs next to the other chosen true-false questions.
+ */
+function fitsSlot(slot: MatrixPlanSlot, lessonNumber: number | undefined, candidate: MatrixCandidate, remaining?: StatementCounts) {
+    if (!matchesMatrixPlanSlot(slot, candidate) || (lessonNumber && lessonOf(candidate)?.number !== lessonNumber)) return false;
+    const counts = remaining && trueFalseCounts(candidate.item);
+    return !remaining || (!!counts && fitsCounts(remaining, counts));
 }
 
 const LEVEL_SHORT = ['?', 'NB', 'TH', 'VD'];
 
 /** True-false level patterns the bank holds for a slot's content, e.g. ["TH TH VD VD", 27], most common first. */
 function trueFalsePatterns(slot: MatrixPlanSlot, candidates: readonly MatrixCandidate[]) {
-    const probe: MatrixPlanSlot = { ...slot, type: 'trac_nghiem', level: 1, statementLevels: undefined };
+    const probe: MatrixPlanSlot = { ...slot, type: 'trac_nghiem', level: 1, statementBudget: undefined };
     const counts = new Map<string, number>();
     for (const candidate of candidates) {
         if (candidate.item.type !== 'dung_sai' || candidate.item.statements?.length !== 4) continue;
@@ -55,9 +60,10 @@ function programmeSource(slot: MatrixPlanSlot, outcome: string) {
     return best?.source;
 }
 
-function MatrixPlanPicker({ slot, lesson, candidates, selectedId, usedIds, onChoose, onClose }: {
+function MatrixPlanPicker({ slot, lesson, remaining, candidates, selectedId, usedIds, onChoose, onClose }: {
     slot: MatrixPlanSlot;
     lesson?: TextbookLesson;
+    remaining?: StatementCounts;
     candidates: MatrixCandidate[];
     selectedId?: string;
     usedIds: ReadonlySet<string>;
@@ -68,19 +74,20 @@ function MatrixPlanPicker({ slot, lesson, candidates, selectedId, usedIds, onCho
     const [query, setQuery] = useState('');
     const [limit, setLimit] = useState(pageSize);
     const [preview, setPreview] = useState<MatrixCandidate>();
-    const matches = useMemo(() => candidates.filter(candidate => fitsSlot(slot, lesson?.number, candidate)).map(candidate => {
+    const matches = useMemo(() => candidates.filter(candidate => fitsSlot(slot, lesson?.number, candidate, remaining)).map(candidate => {
         const label = lessonOf(candidate);
         return {
             candidate: label ? { ...candidate, topic: textbookLessonLabel(label) } : candidate,
             text: normalizeMatrixText([candidate.preview(), ...candidate.outcomes].join(' ')),
         };
-    }), [candidates, slot, lesson]);
+    }), [candidates, slot, lesson, remaining]);
     const needle = normalizeMatrixText(query);
     const visible = matches.filter(({ candidate, text }) => (!group || candidate.groups?.includes(group)) && (!needle || text.includes(needle)));
 
     return (
         <MatrixDialog title={'Chọn câu · ' + slot.label}
-            subtitle={[lesson ? textbookLessonLabel(lesson) : slot.topic, typeLabel(slot.type), matrixPlanLevelLabel(slot)].join(' · ')}
+            subtitle={[lesson ? textbookLessonLabel(lesson) : slot.topic, typeLabel(slot.type),
+                remaining ? 'còn cần ' + statementCountsLabel(remaining) : matrixPlanLevelLabel(slot)].join(' · ')}
             closeLabel="Đóng bộ chọn câu" onClose={onClose}>
             <div className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -144,6 +151,12 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
     const chosenBySlot = new Map(selectedSlots.map(({ slot, candidate }) => [slot.id, candidate]));
     const usedIds = new Set(selectedSlots.map(({ candidate }) => candidate.item.id));
     const activeSlot = slots.find(slot => slot.id === activeId && slot.canChoose);
+    /** Statements a true-false slot may still take: the content's total minus the other chosen true-false questions. */
+    function remainingFor(slot: MatrixPlanSlot): StatementCounts | undefined {
+        if (!slot.statementBudget) return undefined;
+        return subtractCounts(slot.statementBudget, selectedSlots.flatMap(({ slot: other, candidate }) =>
+            other.id !== slot.id && trueFalseGroup(other) === trueFalseGroup(slot) ? [trueFalseCounts(candidate.item) ?? [0, 0, 0]] : []));
+    }
     const pendingIdeas = slots.reduce((sum, slot) => sum + (slot.type === 'dung_sai' && !slot.canChoose ? slot.units : 0), 0);
     const selectableCount = slots.filter(slot => slot.canChoose).length;
     const slotIds = useMemo(() => new Set(slots.map(slot => slot.id)), [slots]);
@@ -174,8 +187,15 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
         const targetIds = new Set(targets.map(slot => slot.id));
         const kept = selectedSlots.filter(({ slot }) => !targetIds.has(slot.id));
         const avoid = targets.flatMap(slot => chosenBySlot.get(slot.id)?.item.id ?? []);
+        const reservedStatements = new Map<string, StatementCounts>();
+        for (const { slot, candidate } of kept) {
+            const counts = slot.statementBudget && trueFalseCounts(candidate.item);
+            if (!counts) continue;
+            const previous = reservedStatements.get(trueFalseGroup(slot)) ?? [0, 0, 0];
+            reservedStatements.set(trueFalseGroup(slot), previous.map((value, index) => value + counts[index]) as unknown as StatementCounts);
+        }
         const { picks, unfilled } = autoPickMatrixPlan(targets, candidates, {
-            used: kept.map(({ candidate }) => candidate.item.id), avoid,
+            used: kept.map(({ candidate }) => candidate.item.id), avoid, reservedStatements,
             accepts: (slot, candidate) => fitsSlot(slot, choices[slot.id]?.lessonNumber, candidate as MatrixCandidate),
         });
         setChoices(previous => {
@@ -222,7 +242,7 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
             </header>
             {autoNote && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-950" role="status">{autoNote}</p>}
             {pendingIdeas > 0 && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                {pendingIdeas} ý Đúng/Sai đang chờ ghép. Mỗi câu cần 4 ý cùng nội dung, có thể gồm nhiều mức độ.
+                {pendingIdeas} ý Đúng/Sai còn lẻ. Mỗi câu Đúng/Sai có 4 ý, nên tổng số ý Đúng/Sai của mỗi nội dung phải chia hết cho 4: {slots.filter(slot => slot.type === 'dung_sai' && !slot.canChoose).map(slot => slot.topic + ' dư ' + slot.units + ' ý').join(', ')}.
             </p>}
             <div className="space-y-2">
                 {[...topics].map(([topicId, rows]) => {
@@ -252,13 +272,17 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                                     option, available: candidates.filter(item => fitsSlot(slot, option.number, item)).length,
                                 })).filter(({ option, available }) => available > 0 || option.number === lesson?.number) : [];
                                 const chosenLesson = candidate && lessonOf(candidate);
+                                const remaining = remainingFor(slot);
                                 const missingTrueFalse = slot.type === 'dung_sai' && slot.canChoose && !candidate
-                                    && !candidates.some(item => fitsSlot(slot, undefined, item));
+                                    && !candidates.some(item => !usedIds.has(item.item.id) && fitsSlot(slot, undefined, item, remaining));
                                 const patterns = missingTrueFalse ? trueFalsePatterns(slot, candidates) : [];
                                 return <div key={slot.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(9.5rem,0.7fr)_minmax(0,2fr)_minmax(8rem,0.6fr)]">
                                     <div className="space-y-0.5">
                                         <p className="text-sm font-semibold">{typeLabel(slot.type)}</p>
-                                        <p className="text-xs text-stone-600">{slot.label} · {matrixPlanLevelLabel(slot)}</p>
+                                        <p className="text-xs text-stone-600">{slot.label} · {slot.statementBudget
+                                            ? (candidate ? statementCountsLabel(trueFalseCounts(candidate.item) ?? [0, 0, 0])
+                                                : slot.canChoose && remaining ? 'còn cần ' + statementCountsLabel(remaining) : matrixPlanLevelLabel(slot))
+                                            : matrixPlanLevelLabel(slot)}</p>
                                     </div>
                                     <div className="min-w-0 space-y-1.5">
                                         {lessons.length > 0 && <label className="block space-y-1">
@@ -278,8 +302,8 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                                             </ul>
                                         </details>}
                                         {missingTrueFalse && <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-950" role="note">
-                                            <p className="font-semibold">Kho chưa có câu Đúng/Sai gồm {matrixPlanLevelLabel(slot)} ở nội dung này.</p>
-                                            {patterns.length ? <p className="mt-1">Kho đang có: {patterns.slice(0, 4).map(([pattern, count]) => pattern + ' (' + count + ' câu)').join(' · ')}. Chỉnh mức độ các ý Đúng/Sai trong ma trận theo một tổ hợp này.</p>
+                                            <p className="font-semibold">Không còn câu Đúng/Sai nào vừa với phần ý còn lại ({remaining ? statementCountsLabel(remaining) : ''}).</p>
+                                            {patterns.length ? <p className="mt-1">Kho có ở nội dung này: {patterns.slice(0, 5).map(([pattern, count]) => pattern + ' (' + count + ')').join(' · ')}. Đổi câu Đúng/Sai khác của nội dung, hoặc chỉnh số ý mỗi mức trong ma trận để các câu cộng lại khớp.</p>
                                                 : <p className="mt-1">Nội dung này chưa có câu Đúng/Sai nào trong kho.</p>}
                                         </div>}
                                         <label htmlFor={fieldId} className="block text-xs font-semibold text-stone-700">Yêu cầu cần đạt</label>
@@ -328,7 +352,7 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                 })}
             </div>
             {activeSlot && <MatrixPlanPicker key={activeSlot.id + ':' + (choices[activeSlot.id]?.lessonNumber ?? '')} slot={activeSlot}
-                lesson={lessonFor(activeSlot)} candidates={candidates} selectedId={chosenBySlot.get(activeSlot.id)?.item.id} usedIds={usedIds}
+                lesson={lessonFor(activeSlot)} remaining={remainingFor(activeSlot)} candidates={candidates} selectedId={chosenBySlot.get(activeSlot.id)?.item.id} usedIds={usedIds}
                 onClose={() => setActiveId(undefined)} onChoose={candidate => choose(activeSlot.id, candidate)} />}
         </section>
     );

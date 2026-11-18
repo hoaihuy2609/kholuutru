@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { energyCurriculumGoals, matchEnergyCurriculumGoal } from '../utils/energyCurriculum';
-import { matrixPlanSlots, matchesMatrixPlanSlot, plannedOutcome, type MatrixAllocation } from '../utils/matrixPlan';
+import { fitsCounts, matrixPlanSlots, matchesMatrixPlanSlot, plannedOutcome, subtractCounts, trueFalseCounts, type MatrixAllocation } from '../utils/matrixPlan';
 
 const allocation: MatrixAllocation = {
     chapterId: 'g10-ch3', chapter: 'Công, năng lượng, công suất',
@@ -9,7 +9,7 @@ const allocation: MatrixAllocation = {
 };
 
 describe('matrix planner specification', () => {
-    it('keeps question positions stable and groups four true-false statements at a time', () => {
+    it('keeps question positions stable and turns each four true-false statements of a content into one question', () => {
         const slots = matrixPlanSlots([
             allocation,
             { ...allocation, type: 'dung_sai', count: 5 },
@@ -20,32 +20,26 @@ describe('matrix planner specification', () => {
             ['trac_nghiem', 1, true], ['dung_sai', 4, true], ['dung_sai', 4, true], ['written', 1, false],
         ]);
         expect(matrixPlanSlots([{ ...allocation, count: 2 }])[0].id).toBe(slots[0].id);
-        expect(slots.slice(1, 3).map(slot => slot.statementLevels)).toEqual([[1, 1, 1, 2], [1, 1, 2, 2]]);
-        expect(matchesMatrixPlanSlot(slots[1], {
-            chapterId: allocation.chapterId, energyTopic: 'work',
-            item: { type: 'dung_sai', level: 0, statements: [1, 1, 1, 2].map(cognitive_level => ({ cognitive_level })) },
-        })).toBe(true);
-        expect(matchesMatrixPlanSlot(slots[1], {
-            chapterId: allocation.chapterId, energyTopic: 'work',
-            item: { type: 'dung_sai', level: 1, statements: [{}, {}, {}] },
-        })).toBe(false);
+        expect(slots[1].statementBudget).toEqual([5, 3, 0]);
+        const question = (levels: number[]) => ({ chapterId: allocation.chapterId, energyTopic: 'work' as const,
+            item: { type: 'dung_sai' as const, level: 0, statements: levels.map(cognitive_level => ({ cognitive_level })) } });
+        expect(matchesMatrixPlanSlot(slots[1], question([1, 1, 1, 1]))).toBe(true);
+        expect(matchesMatrixPlanSlot(slots[1], question([2, 2, 2, 1]))).toBe(true);
+        expect(matchesMatrixPlanSlot(slots[1], question([2, 2, 2, 2]))).toBe(false);
+        expect(matchesMatrixPlanSlot(slots[1], question([1, 1, 3, 3]))).toBe(false);
+        expect(matchesMatrixPlanSlot(slots[1], { ...question([1, 1, 1, 2]), item: { type: 'dung_sai', level: 1, statements: [{}, {}, {}] } })).toBe(false);
     });
 
-    it('matches the exact mix of true-false levels without requiring their order to match the allocation', () => {
-        const [slot] = matrixPlanSlots([
-            { ...allocation, type: 'dung_sai', level: 1, count: 1 },
-            { ...allocation, type: 'dung_sai', level: 2, count: 2 },
-            { ...allocation, type: 'dung_sai', level: 3, count: 1 },
+    it('keeps leftover true-false statements as a pending slot and tracks the remaining budget', () => {
+        const slots = matrixPlanSlots([
+            { ...allocation, type: 'dung_sai', level: 2, count: 4 },
+            { ...allocation, type: 'dung_sai', level: 3, count: 2 },
         ]);
-        expect(slot).toMatchObject({ level: 0, statementLevels: [1, 2, 2, 3], canChoose: true });
-        const candidate = {
-            chapterId: allocation.chapterId, energyTopic: 'work' as const,
-            item: { type: 'dung_sai' as const, level: 0,
-                statements: [2, 1, 3, 2].map(cognitive_level => ({ cognitive_level })) },
-        };
-        expect(matchesMatrixPlanSlot(slot, candidate)).toBe(true);
-        expect(matchesMatrixPlanSlot(slot, { ...candidate, item: { ...candidate.item,
-            statements: [1, 1, 2, 3].map(cognitive_level => ({ cognitive_level })) } })).toBe(false);
+        expect(slots.map(({ units, canChoose }) => [units, canChoose])).toEqual([[4, true], [2, false]]);
+        expect(subtractCounts([0, 4, 2], [[0, 3, 1]])).toEqual([0, 1, 1]);
+        expect(fitsCounts([0, 1, 1], [0, 2, 0])).toBe(false);
+        expect(trueFalseCounts({ type: 'dung_sai', statements: [2, 1, 3, 2].map(cognitive_level => ({ cognitive_level })) })).toEqual([1, 2, 1]);
+        expect(trueFalseCounts({ type: 'dung_sai', level: 0, statements: [{}, {}, {}, {}] })).toBeUndefined();
     });
 
     it('filters by chapter, content, type and stored level without requiring a YCCĐ or question group', () => {

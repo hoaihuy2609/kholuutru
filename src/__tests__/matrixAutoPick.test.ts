@@ -53,4 +53,29 @@ describe('autoPickMatrixPlan', () => {
         expect([...picks.values()].map(pick => pick.questionId).sort()).toEqual(['b1', 'b2']);
         expect(unfilled).toEqual([]);
     });
+
+    it('combines true-false questions whose statement levels add up to the content total', () => {
+        const trueFalse = (id: string, levels: number[]) => ({ item: { id, type: 'dung_sai' as const, level: 0,
+            statements: levels.map(cognitive_level => ({ cognitive_level })) }, chapterId: 'g10-ch3', energyTopic: 'work' as const,
+            topic: 'Công', outcomes: [] as string[] });
+        const bank = [trueFalse('mixed', [1, 1, 2, 2]), trueFalse('easy', [1, 1, 1, 1]), trueFalse('th', [2, 2, 2, 2]),
+            trueFalse('hard', [3, 3, 3, 3]), trueFalse('thvd', [2, 2, 3, 3])];
+        const slots = matrixPlanSlots([
+            { ...allocation(0), type: 'dung_sai', level: 2, count: 6 },
+            { ...allocation(0), type: 'dung_sai', level: 3, count: 2 },
+        ]);
+        for (const value of [0, 0.4, 0.99]) {
+            const { picks, unfilled } = autoPickMatrixPlan(slots, bank, { rng: () => value });
+            expect(unfilled).toEqual([]);
+            expect([...picks.values()].map(pick => pick.questionId).sort()).toEqual(['th', 'thvd']);
+        }
+        // Nothing in the bank adds up to 2 NB + 2 VD.
+        const none = matrixPlanSlots([{ ...allocation(0), type: 'dung_sai', level: 1, count: 2 }, { ...allocation(0), type: 'dung_sai', level: 3, count: 2 }]);
+        expect(autoPickMatrixPlan(none, bank).unfilled).toHaveLength(1);
+        // Re-rolling one question keeps what the other chosen question already uses.
+        const [first] = slots;
+        const again = autoPickMatrixPlan([first], [...bank, trueFalse('thvd2', [3, 2, 3, 2])],
+            { used: ['th'], reservedStatements: new Map([['g10-ch3:work', [0, 4, 0]]]), avoid: ['thvd'] });
+        expect(again.picks.get(first.id)?.questionId).toBe('thvd2');
+    });
 });

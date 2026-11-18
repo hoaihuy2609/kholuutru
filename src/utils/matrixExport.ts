@@ -1,6 +1,6 @@
 import type { SelectedQuestionItem } from '../services/examLatexService';
 import { questionLevels } from './cognitiveLevels';
-import { matrixPlanSlots, type MatrixAllocation, type MatrixPlanSlot } from './matrixPlan';
+import { fitsCounts, matrixPlanSlots, statementCountsLabel, trueFalseCounts, type MatrixAllocation, type MatrixPlanSlot, type StatementCounts } from './matrixPlan';
 
 export const MATRIX_EXPORT_FORMATS = [
     { type: 'trac_nghiem', label: 'Trắc nghiệm 4 đáp án', part: 'I' },
@@ -158,7 +158,7 @@ export function buildMatrixExport(allocations: MatrixAllocation[], selections: M
             continue;
         }
         if (!slot.canChoose) {
-            issues.push(slot.topic + ': còn ' + slot.units + ' ý Đúng/Sai chưa ghép đủ 4 ý.');
+            issues.push(slot.topic + ': dư ' + slot.units + ' ý Đúng/Sai, tổng số ý Đúng/Sai của nội dung phải chia hết cho 4.');
             continue;
         }
         const number = ++numbers[slot.type];
@@ -168,9 +168,9 @@ export function buildMatrixExport(allocations: MatrixAllocation[], selections: M
         if (!selection) { issues.push(fullReference + ': chưa chọn câu.'); continue; }
         const { item } = selection;
         const levels = questionLevels(item);
+        const counts = slot.type === 'dung_sai' ? trueFalseCounts(item) : undefined;
         if (item.type !== slot.type || (slot.type === 'dung_sai'
-            ? item.statements?.length !== 4 || ![1, 2, 3].every(level =>
-                levels.filter(value => value === level).length === slot.statementLevels?.filter(value => value === level).length)
+            ? !counts || !slot.statementBudget || !fitsCounts(slot.statementBudget, counts)
             : levels[0] !== slot.level)) {
             issues.push(fullReference + ': câu đã chọn không còn đúng loại hoặc mức độ phân bổ.');
             continue;
@@ -195,6 +195,17 @@ export function buildMatrixExport(allocations: MatrixAllocation[], selections: M
             topic.actual[slot.type][level]++;
             topic.units.push(unit);
             units.push(unit);
+        }
+    }
+    // True-false questions take any mix of levels; together they must match the content's statements per level.
+    for (const topic of topics.values()) {
+        const planned = [1, 2, 3].map(level => topic.planned.dung_sai[level]) as unknown as StatementCounts;
+        const actual = [1, 2, 3].map(level => topic.actual.dung_sai[level]) as unknown as StatementCounts;
+        const total = planned[0] + planned[1] + planned[2];
+        const chosen = actual[0] + actual[1] + actual[2];
+        if (total && total % 4 === 0 && chosen === total && planned.some((value, index) => value !== actual[index])) {
+            issues.push(topic.topic + ': các câu Đúng/Sai đã chọn gồm ' + statementCountsLabel(actual)
+                + ', ma trận cần ' + statementCountsLabel(planned) + '.');
         }
     }
     const levelCounts = [0, 0, 0, 0];

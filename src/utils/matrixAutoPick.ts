@@ -1,6 +1,6 @@
 import { ENERGY_MATRIX_CHAPTER_ID } from './examMatrix';
 import { energyCurriculumGoals, matchEnergyCurriculumGoal } from './energyCurriculum';
-import { matchesMatrixPlanSlot, type MatrixPlanSlot } from './matrixPlan';
+import { fitsCounts, matchesMatrixPlanSlot, subtractCounts, trueFalseCounts, trueFalseGroup, type MatrixPlanSlot, type StatementCounts } from './matrixPlan';
 
 type Candidate = Parameters<typeof matchesMatrixPlanSlot>[1] & { item: { id: string }; outcomes: readonly string[] };
 
@@ -19,6 +19,8 @@ export interface AutoPickOptions {
     preferredGoal?: ReadonlyMap<string, string>;
     /** Extra condition per slot, e.g. the textbook lesson the teacher picked. */
     accepts?: (slot: MatrixPlanSlot, candidate: Candidate) => boolean;
+    /** True-false statements per level already taken by chosen questions that stay, keyed by trueFalseGroup. */
+    reservedStatements?: ReadonlyMap<string, StatementCounts>;
     /** Question ids to skip when another question is available (re-roll). */
     avoid?: Iterable<string>;
     rng?: () => number;
@@ -44,7 +46,49 @@ export function autoPickMatrixPlan<T extends Candidate>(
     const picks = new Map<string, AutoPick>();
     const unfilled: string[] = [];
 
+    // True-false questions of one content are chosen together: their statement levels must add up to the content's total.
+    const trueFalse = new Map<string, MatrixPlanSlot[]>();
+    for (const slot of targets) {
+        if (!slot.canChoose || !slot.statementBudget) continue;
+        trueFalse.set(trueFalseGroup(slot), [...(trueFalse.get(trueFalseGroup(slot)) ?? []), slot]);
+    }
+    for (const [group, slots] of trueFalse) {
+        const remaining = subtractCounts(slots[0].statementBudget!, [options.reservedStatements?.get(group) ?? [0, 0, 0]]);
+        const pool = slots.map(slot => {
+            const all = eligibleFor(slot).flatMap(candidate => {
+                const counts = trueFalseCounts(candidate.item as Parameters<typeof trueFalseCounts>[0]);
+                return counts ? [{ candidate, counts }] : [];
+            });
+            // Prefer questions other than the ones being replaced, then shuffle.
+            return [...all].map(entry => ({ entry, key: (avoid.has(entry.candidate.item.id) ? 1 : 0) + rng() }))
+                .sort((a, b) => a.key - b.key).map(({ entry }) => entry);
+        });
+        const chosen: { candidate: T; counts: StatementCounts }[] = [];
+        const taken = new Set<string>();
+        const search = (index: number, left: StatementCounts): boolean => {
+            if (index === slots.length) return true;
+            const tried = new Set<string>();
+            for (const option of pool[index]) {
+                const pattern = option.counts.join(',');
+                if (tried.has(pattern) || taken.has(option.candidate.item.id) || !fitsCounts(left, option.counts)) continue;
+                tried.add(pattern);
+                chosen.push(option);
+                taken.add(option.candidate.item.id);
+                if (search(index + 1, subtractCounts(left, [option.counts]))) return true;
+                chosen.pop();
+                taken.delete(option.candidate.item.id);
+            }
+            return false;
+        };
+        if (!search(0, remaining)) { unfilled.push(...slots.map(slot => slot.id)); continue; }
+        slots.forEach((slot, index) => {
+            used.add(chosen[index].candidate.item.id);
+            picks.set(slot.id, { questionId: chosen[index].candidate.item.id });
+        });
+    }
+
     for (const { slot } of order) {
+        if (slot.statementBudget) continue;
         const all = eligibleFor(slot);
         const fresh = all.filter(candidate => !avoid.has(candidate.item.id));
         const eligible = fresh.length ? fresh : all;
