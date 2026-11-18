@@ -133,3 +133,30 @@ export function levelReviewSummary(items: readonly ReviewItem[], decisions: Read
     }
     return { total: items.length, flagged: flagged.length, reviewed, counts };
 }
+
+/**
+ * Loads suggested decisions (for example an AI first pass) into the review without confirming them:
+ * every suggestion still needs the reviewer's own confirmation. Questions already confirmed are left untouched.
+ */
+export function applyLevelSuggestions(items: readonly ReviewItem[], decisions: Readonly<Record<string, ReviewDecision>>, text: string) {
+    const input = JSON.parse(text.replace(/^﻿/, ''));
+    if (!input || input.schema !== 'physivault.level-review.suggestions.v1' || !Array.isArray(input.suggestions)) {
+        throw new Error('Cần file đề xuất với schema physivault.level-review.suggestions.v1.');
+    }
+    const label = typeof input.source === 'string' && input.source.trim() ? input.source.trim() : 'AI đề xuất';
+    const byId = new Map(items.map(item => [item.questionId, item]));
+    const next = { ...decisions };
+    let applied = 0, skipped = 0;
+    for (const suggestion of input.suggestions) {
+        const item = byId.get(suggestion?.question_id);
+        const outcomes = Array.isArray(suggestion?.learning_outcomes) ? outcomesOf(suggestion.learning_outcomes) : item?.outcomes;
+        if (!item || ![1, 2, 3].includes(suggestion.level) || !outcomes?.length || currentDecision(item, decisions[item.questionId])?.reviewed) {
+            skipped++;
+            continue;
+        }
+        next[item.questionId] = { fromLevel: item.level, fromOutcomes: item.outcomes, level: suggestion.level, outcomes,
+            reason: label + ': ' + String(suggestion.reason ?? '').trim(), reviewed: false };
+        applied++;
+    }
+    return { decisions: next, applied, skipped };
+}

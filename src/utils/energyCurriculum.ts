@@ -92,14 +92,22 @@ const standardizedOutcomes: Record<string, readonly string[]> = {
         'Xác định được tình huống truyền năng lượng giữa các vật thông qua thực hiện công.',
     ],
     'energy-forms': [
+        'Giải thích được các hiện tượng thực tế dựa vào định luật bảo toàn năng lượng.',
+        'Phát biểu được định luật bảo toàn năng lượng.',
+        'Giải thích được sự chuyển hóa và hao phí năng lượng trong thiết bị dựa vào định luật bảo toàn năng lượng.',
         'Xác định được các dạng năng lượng chuyển hóa trong một hiện tượng hoặc thiết bị cụ thể.',
         'Nhận biết được các dạng năng lượng và tính chất chung của năng lượng.',
         'Vận dụng được nguyên lí bảo toàn năng lượng để nhận xét sự chuyển hóa, truyền và phân tán năng lượng.',
     ],
     'work-expression': [
+        'Giải thích được sự phụ thuộc của công vào lực, độ dịch chuyển và góc giữa chúng.',
+        'So sánh được công của các lực dựa vào biểu thức A = Fd cosα.',
+        'So sánh được công của lực theo góc giữa lực và độ dịch chuyển.',
         'Nhận biết được biểu thức công của lực không đổi và sự phụ thuộc của công vào lực, độ dịch chuyển, góc giữa chúng.',
     ],
     'work-unit': [
+        'Đổi được đơn vị năng lượng từ kWh sang J.',
+        'Giải thích được ý nghĩa của đơn vị kWh của công.',
         'Nhận biết được đơn vị đo công và năng lượng, thực hiện được phép đổi đơn vị tương ứng.',
     ],
     'work-calculate': [
@@ -110,6 +118,8 @@ const standardizedOutcomes: Record<string, readonly string[]> = {
         'Xác định được công từ diện tích trên đồ thị lực theo độ dịch chuyển dọc phương của lực.',
     ],
     'kinetic-apply': [
+        'Tính được công từ độ biến thiên động năng (định lí động năng).',
+        'Giải thích được sự thay đổi động năng của vật dựa vào công của các lực tác dụng.',
         'Nhận biết được khái niệm, biểu thức và tính chất của động năng.',
         'Tính được động năng, khối lượng hoặc tốc độ bằng biểu thức Wđ = mv²/2.',
         'So sánh được động năng khi khối lượng hoặc tốc độ của vật thay đổi.',
@@ -121,6 +131,9 @@ const standardizedOutcomes: Record<string, readonly string[]> = {
         'Nhận biết được khái niệm và biểu thức thế năng trọng trường trong trọng trường đều.',
     ],
     'potential-apply': [
+        'Tính được công của trọng lực hoặc độ cao từ độ giảm thế năng trọng trường.',
+        'Xác định được dấu công của trọng lực và sự thay đổi thế năng khi vật thay đổi độ cao.',
+        'Nêu được mối liên hệ giữa công của trọng lực và độ giảm thế năng trọng trường.',
         'Xác định được dấu và giá trị thế năng trọng trường theo mốc thế năng đã chọn.',
         'So sánh được thế năng trọng trường theo khối lượng và độ cao so với cùng một mốc.',
         'Tính được thế năng trọng trường hoặc đại lượng liên quan bằng biểu thức Wt = mgh.',
@@ -135,6 +148,7 @@ const standardizedOutcomes: Record<string, readonly string[]> = {
         'Xác định được sự phụ thuộc của giá trị cơ năng vào mốc thế năng đã chọn.',
     ],
     'mechanical-law': [
+        'Xác định được biểu thức định luật bảo toàn cơ năng cho chuyển động trong trọng trường.',
         'Xác định được điều kiện và nội dung của định luật bảo toàn cơ năng.',
     ],
     'mechanical-apply': [
@@ -148,12 +162,16 @@ const standardizedOutcomes: Record<string, readonly string[]> = {
         'Nhận biết được mối quan hệ giữa công và thời gian khi công suất không đổi.',
     ],
     'power-definition': [
+        'Quy đổi được các đơn vị công suất.',
+        'Xác định được dạng đồ thị công theo thời gian khi công suất không đổi.',
         'Tính được công suất trung bình, công hoặc thời gian bằng hệ thức P = A/t.',
         'Nhận biết và quy đổi được các đơn vị công suất.',
         'Nhận biết được ý nghĩa vật lí, định nghĩa và biểu thức công suất trung bình.',
         'Nhận biết được mối quan hệ giữa công và thời gian khi công suất không đổi.',
     ],
     'power-force-velocity': [
+        'Vận dụng được các định luật chuyển động để tính công suất trung bình hoặc tức thời trong chuyển động có tốc độ thay đổi.',
+        'Tính được công suất từ lực và vận tốc theo P = Fv cosα.',
         'Nhận biết và giải thích được mối liên hệ giữa công suất, lực và vận tốc theo P = Fv cosα.',
         'Vận dụng mối liên hệ giữa công suất, lực và vận tốc để giải bài toán chuyển động trong tình huống thực tế.',
         'Phân biệt và tính được công suất trung bình, công suất tức thời trong chuyển động có tốc độ thay đổi.',
