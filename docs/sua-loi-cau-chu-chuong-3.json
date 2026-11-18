@@ -208,7 +208,7 @@
     {
       "question_id": "7dcbb89f-47be-40bf-96e5-fc3f68340a46:0",
       "set": {
-        "solution": "Viên gạch chuyển động sang trái. Lực có thành phần cùng chiều chuyển động sinh công dương, lực có thành phần ngược chiều chuyển động sinh công âm, lực vuông góc với phương chuyển động không sinh công.\nTheo hình: $\\vec{F}_1$ hướng theo chiều chuyển động nên $A_1>0$; $\\vec{F}_2$ hướng ngược chiều chuyển động nên $A_2<0$; $\\vec{F}_3$ vuông góc với phương chuyển động nên $A_3=0$. Chọn B."
+        "solution": "Viên gạch chuyển động sang trái. Lực hợp với hướng chuyển động một góc nhọn sinh công dương, góc tù sinh công âm, góc vuông thì không sinh công.\nTheo hình: $\\vec{F}_1$ hướng sang trái, cùng hướng chuyển động nên $A_1>0$; $\\vec{F}_2$ hướng xiên lên phía phải, hợp với hướng chuyển động một góc tù nên $A_2<0$; $\\vec{F}_3$ hướng thẳng đứng xuống, vuông góc với phương chuyển động nên $A_3=0$. Chọn B."
       }
     }
   ]
