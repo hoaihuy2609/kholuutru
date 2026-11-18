@@ -60,6 +60,16 @@ function programmeSource(slot: MatrixPlanSlot, outcome: string) {
     return best?.source;
 }
 
+const PARTS = [
+    { type: 'trac_nghiem', label: 'Phần I · Trắc nghiệm', short: 'Phần I' },
+    { type: 'dung_sai', label: 'Phần II · Đúng/Sai', short: 'Phần II' },
+    { type: 'tu_luan', label: 'Phần III · Trả lời ngắn', short: 'Phần III' },
+    { type: 'written', label: 'Tự luận', short: 'Tự luận' },
+] as const;
+const partOf = (type: MatrixPlanSlot['type']) => PARTS.find(part => part.type === type) ?? PARTS[3];
+const LEVEL_TONES = ['bg-violet-100 text-violet-950', 'bg-sky-100 text-sky-950', 'bg-amber-100 text-amber-950', 'bg-rose-100 text-rose-950'];
+const levelTone = (slot: MatrixPlanSlot) => LEVEL_TONES[slot.statementBudget ? 0 : slot.level] ?? LEVEL_TONES[0];
+
 function MatrixPlanPicker({ slot, lesson, remaining, candidates, selectedId, usedIds, onChoose, onClose }: {
     slot: MatrixPlanSlot;
     lesson?: TextbookLesson;
@@ -131,7 +141,8 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
 }) {
     const id = useId();
     const [choices, setChoices] = useState<Record<string, Choice>>({});
-    const [openTopic, setOpenTopic] = useState<string | null>();
+    const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+    const [detailId, setDetailId] = useState<string>();
     const [activeId, setActiveId] = useState<string>();
     const [autoNote, setAutoNote] = useState('');
     const slots = useMemo(() => matrixPlanSlots(allocations), [allocations]);
@@ -142,7 +153,6 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
         if (rows) rows.push(slot);
         else topics.set(slot.topicId, [slot]);
     }
-    const open = openTopic === null ? undefined : openTopic && topics.has(openTopic) ? openTopic : topics.keys().next().value;
     const selectedSlots = slots.flatMap(slot => {
         const questionId = choices[slot.id]?.questionId;
         const candidate = slot.canChoose && questionId ? byId.get(questionId) : undefined;
@@ -157,7 +167,6 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
         return subtractCounts(slot.statementBudget, selectedSlots.flatMap(({ slot: other, candidate }) =>
             other.id !== slot.id && trueFalseGroup(other) === trueFalseGroup(slot) ? [trueFalseCounts(candidate.item) ?? [0, 0, 0]] : []));
     }
-    const pendingIdeas = slots.reduce((sum, slot) => sum + (slot.type === 'dung_sai' && !slot.canChoose ? slot.units : 0), 0);
     const selectableCount = slots.filter(slot => slot.canChoose).length;
     const slotIds = useMemo(() => new Set(slots.map(slot => slot.id)), [slots]);
 
@@ -217,143 +226,211 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
 
     if (!slots.length) return null;
 
+    const emptySlots = slots.filter(slot => slot.canChoose && !chosenBySlot.has(slot.id));
+    const leftovers = slots.filter(slot => slot.type === 'dung_sai' && !slot.canChoose);
+    /** Empty slots the bank cannot fill at all with what is still allowed. */
+    const blocked = emptySlots.filter(slot => !candidates.some(item => !usedIds.has(item.item.id)
+        && fitsSlot(slot, choices[slot.id]?.lessonNumber, item, remainingFor(slot))));
+    const parts = PARTS.flatMap(part => {
+        const rows = slots.filter(slot => slot.type === part.type && (slot.canChoose || part.type === 'written'));
+        return rows.length ? [{ ...part, total: rows.length, done: rows.filter(slot => chosenBySlot.has(slot.id)).length }] : [];
+    });
+    const complete = !emptySlots.length && !leftovers.length;
+
     return (
-        <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-4" aria-labelledby={id}>
-            <header className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h2 id={id} className="text-lg font-bold">Bản đặc tả</h2>
-                    <p className="mt-0.5 text-sm text-stone-600">Chọn bài theo SGK rồi chọn câu. YCCĐ lấy từ câu đã chọn.</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <MatrixExportDialog allocations={allocations} selections={selectedSlots.map(({ slot, candidate }) => {
-                        const outcome = outcomeFor(slot.id, candidate);
-                        return { slot, item: candidate.item, outcome, outcomeOptions: candidate.outcomes, curriculumSource: programmeSource(slot, outcome) };
-                    })} />
-                    <span className="rounded-md bg-amber-50 px-2.5 py-1.5 text-sm font-semibold tabular-nums text-amber-950" role="status">
-                        Đã chọn {selectedSlots.length}/{selectableCount} câu
-                    </span>
-                    <button type="button" className={button} disabled={selectedSlots.length >= selectableCount}
-                        onClick={() => autoPick(slots.filter(slot => slot.canChoose && !chosenBySlot.has(slot.id)))}>Tự chọn câu</button>
-                    {selectedSlots.length > 0 && <button type="button" className={button}
-                        onClick={() => autoPick(slots.filter(slot => slot.canChoose))}>Chọn lại ngẫu nhiên</button>}
-                    <button type="button" className={primary} disabled={!selectedSlots.length}
-                        onClick={() => onCompose(selectedSlots.map(({ candidate }) => candidate.item))}>Biên soạn câu đã chọn</button>
-                </div>
+        <section className="space-y-5 rounded-xl border border-stone-200 bg-white p-4 sm:p-5" aria-labelledby={id}>
+            <header className="space-y-1">
+                <h2 id={id} className="text-lg font-bold">Bản đặc tả</h2>
+                <p className="text-sm text-stone-600">Mỗi dòng dưới đây là một vị trí câu hỏi lấy từ ma trận. Chọn một câu trong kho cho từng vị trí; YCCĐ của câu sẽ được ghi vào bản đặc tả.</p>
             </header>
-            {autoNote && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-950" role="status">{autoNote}</p>}
-            {pendingIdeas > 0 && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                {pendingIdeas} ý Đúng/Sai còn lẻ. Mỗi câu Đúng/Sai có 4 ý, nên tổng số ý Đúng/Sai của mỗi nội dung phải chia hết cho 4: {slots.filter(slot => slot.type === 'dung_sai' && !slot.canChoose).map(slot => slot.topic + ' dư ' + slot.units + ' ý').join(', ')}.
-            </p>}
-            <div className="space-y-2">
+
+            <div className="grid gap-3 rounded-xl bg-stone-50 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <ul className="grid gap-2 sm:grid-cols-3" aria-label="Tiến độ chọn câu">
+                    {parts.map(part => <li key={part.type} className="min-w-0 space-y-1">
+                        <div className="flex items-baseline justify-between gap-2 text-sm">
+                            <span className="truncate font-semibold text-stone-800">{part.label}</span>
+                            <span className="shrink-0 tabular-nums text-stone-700">{part.done}/{part.total} câu</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-stone-200" aria-hidden="true">
+                            <div className={'h-full rounded-full ' + (part.done === part.total ? 'bg-emerald-600' : 'bg-amber-600')}
+                                style={{ width: (part.total ? (part.done / part.total) * 100 : 0) + '%' }} />
+                        </div>
+                    </li>)}
+                </ul>
+                <div className="flex flex-wrap gap-2 sm:justify-end">
+                    {emptySlots.length > 0 && <button type="button" className={primary}
+                        onClick={() => autoPick(emptySlots)}>Tự chọn {emptySlots.length} vị trí còn trống</button>}
+                    {selectedSlots.length > 0 && <button type="button" className={button}
+                        onClick={() => autoPick(slots.filter(slot => slot.canChoose))}>Chọn lại tất cả</button>}
+                </div>
+            </div>
+
+            {autoNote && <p className="text-sm text-stone-700" role="status">{autoNote}</p>}
+
+            {(leftovers.length > 0 || blocked.length > 0) && <div className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-950" role="alert">
+                <p className="font-semibold">Cần sửa trước khi xuất</p>
+                <ul className="list-disc space-y-1.5 pl-5">
+                    {leftovers.map(slot => <li key={slot.id}>
+                        <strong>{slot.topic}</strong>: dư {slot.units} ý Đúng/Sai. Mỗi câu Đúng/Sai có 4 ý, nên quay lại ma trận và chỉnh tổng số ý Đúng/Sai của nội dung này thành bội của 4.
+                    </li>)}
+                    {blocked.map(slot => {
+                        const remaining = remainingFor(slot);
+                        const patterns = slot.type === 'dung_sai' ? trueFalsePatterns(slot, candidates) : [];
+                        return <li key={slot.id}>
+                            <strong>{partOf(slot.type).short} · {slot.label}</strong> ({slot.topic}): kho không còn câu phù hợp
+                            {remaining ? ' với phần ý còn thiếu (' + statementCountsLabel(remaining) + ')' : ' ở mức ' + matrixPlanLevelLabel(slot)}.
+                            {patterns.length > 0 && <> Kho có các câu Đúng/Sai: {patterns.slice(0, 5).map(([pattern, count]) => pattern + ' (' + count + ')').join(', ')}.</>}
+                        </li>;
+                    })}
+                </ul>
+            </div>}
+
+            <div className="space-y-3">
                 {[...topics].map(([topicId, rows]) => {
-                    const expanded = open === topicId;
+                    const expanded = !collapsed.has(topicId);
                     const panelId = id + '-' + topicId;
-                    const chosen = rows.filter(row => chosenBySlot.has(row.id)).length;
-                    const count = rows.filter(row => row.canChoose).length;
-                    return <div key={topicId} className="overflow-hidden rounded-lg border border-stone-200">
+                    const selectable = rows.filter(row => row.canChoose);
+                    const chosen = selectable.filter(row => chosenBySlot.has(row.id)).length;
+                    const missing = selectable.length - chosen;
+                    const extra = rows.filter(row => row.type === 'dung_sai' && !row.canChoose).reduce((sum, row) => sum + row.units, 0);
+                    return <div key={topicId} className="overflow-hidden rounded-xl border border-stone-200">
                         <button type="button" aria-expanded={expanded} aria-controls={panelId}
-                            className="flex w-full items-center gap-3 bg-stone-50 px-3 py-2.5 text-left hover:bg-stone-100"
-                            onClick={() => setOpenTopic(expanded ? null : topicId)}>
-                            <ChevronDown aria-hidden="true" className={'size-4 shrink-0 text-amber-800 ' + (expanded ? '' : '-rotate-90')} />
-                            <span className="min-w-0 flex-1">
-                                <span className="block font-semibold">{rows[0].topic}</span>
-                                <span className="block text-xs text-stone-600">{rows[0].chapter}</span>
+                            className="flex w-full items-center gap-3 bg-stone-50 px-3 py-3 text-left hover:bg-stone-100"
+                            onClick={() => setCollapsed(previous => {
+                                const next = new Set(previous);
+                                if (next.has(topicId)) next.delete(topicId); else next.add(topicId);
+                                return next;
+                            })}>
+                            <ChevronDown aria-hidden="true" className={'size-4 shrink-0 text-stone-500 ' + (expanded ? '' : '-rotate-90')} />
+                            <span className="min-w-0 flex-1 font-semibold">{rows[0].topic}</span>
+                            <span className={'shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums '
+                                + (missing || extra ? 'bg-amber-100 text-amber-950' : 'bg-emerald-100 text-emerald-900')}>
+                                {missing ? 'Còn trống ' + missing + '/' + selectable.length : 'Đủ ' + chosen + ' câu'}{extra ? ' · dư ' + extra + ' ý' : ''}
                             </span>
-                            {count > 0 && <span className="shrink-0 rounded bg-white px-2 py-1 text-xs font-semibold tabular-nums text-stone-700">{chosen}/{count} câu</span>}
                         </button>
-                        <div id={panelId} hidden={!expanded} className="divide-y divide-stone-100 border-t border-stone-200">
-                            {expanded && rows.map(slot => {
-                                const candidate = chosenBySlot.get(slot.id);
-                                const outcome = outcomeFor(slot.id, candidate);
-                                const source = programmeSource(slot, outcome);
-                                const fieldId = id + '-' + slot.id;
-                                const lesson = lessonFor(slot);
-                                const lessons = slot.canChoose ? textbookLessons(slot.chapterId).map(option => ({
-                                    option, available: candidates.filter(item => fitsSlot(slot, option.number, item)).length,
-                                })).filter(({ option, available }) => available > 0 || option.number === lesson?.number) : [];
-                                const chosenLesson = candidate && lessonOf(candidate);
-                                const remaining = remainingFor(slot);
-                                const missingTrueFalse = slot.type === 'dung_sai' && slot.canChoose && !candidate
-                                    && !candidates.some(item => !usedIds.has(item.item.id) && fitsSlot(slot, undefined, item, remaining));
-                                const patterns = missingTrueFalse ? trueFalsePatterns(slot, candidates) : [];
-                                return <div key={slot.id} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(9.5rem,0.7fr)_minmax(0,2fr)_minmax(8rem,0.6fr)]">
-                                    <div className="space-y-0.5">
-                                        <p className="text-sm font-semibold">{typeLabel(slot.type)}</p>
-                                        <p className="text-xs text-stone-600">{slot.label} · {slot.statementBudget
-                                            ? (candidate ? statementCountsLabel(trueFalseCounts(candidate.item) ?? [0, 0, 0])
-                                                : slot.canChoose && remaining ? 'còn cần ' + statementCountsLabel(remaining) : matrixPlanLevelLabel(slot))
-                                            : matrixPlanLevelLabel(slot)}</p>
-                                    </div>
-                                    <div className="min-w-0 space-y-1.5">
-                                        {lessons.length > 0 && <label className="block space-y-1">
-                                            <span className="text-xs font-semibold text-stone-700">Bài (SGK Kết nối tri thức)</span>
-                                            <select className={input} value={lesson?.number ?? ''}
-                                                onChange={event => updateChoice(slot.id, { lessonNumber: Number(event.target.value) || undefined })}>
-                                                <option value="">Tất cả bài của nội dung này</option>
-                                                {lessons.map(({ option, available }) => <option key={option.number} value={option.number}>
-                                                    {textbookLessonLabel(option)} ({available} câu)
-                                                </option>)}
-                                            </select>
-                                        </label>}
-                                        {lesson && <details className="text-xs text-stone-600">
-                                            <summary className="cursor-pointer font-semibold text-amber-900">YCCĐ chương trình của bài này</summary>
-                                            <ul className="mt-1 list-disc space-y-1 rounded bg-stone-50 p-2 pl-6 leading-relaxed">
-                                                {lessonRequirements(lesson).map(requirement => <li key={requirement.id} className="whitespace-pre-wrap">{requirement.text}</li>)}
-                                            </ul>
-                                        </details>}
-                                        {missingTrueFalse && <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-950" role="note">
-                                            <p className="font-semibold">Không còn câu Đúng/Sai nào vừa với phần ý còn lại ({remaining ? statementCountsLabel(remaining) : ''}).</p>
-                                            {patterns.length ? <p className="mt-1">Kho có ở nội dung này: {patterns.slice(0, 5).map(([pattern, count]) => pattern + ' (' + count + ')').join(' · ')}. Đổi câu Đúng/Sai khác của nội dung, hoặc chỉnh số ý mỗi mức trong ma trận để các câu cộng lại khớp.</p>
-                                                : <p className="mt-1">Nội dung này chưa có câu Đúng/Sai nào trong kho.</p>}
-                                        </div>}
-                                        <label htmlFor={fieldId} className="block text-xs font-semibold text-stone-700">Yêu cầu cần đạt</label>
-                                        <textarea id={fieldId} rows={2} className={input + ' resize-y'} value={outcome}
-                                            placeholder={slot.canChoose ? 'Chọn câu để lấy YCCĐ của câu' : 'Nhập yêu cầu cần đạt'}
-                                            onChange={event => updateChoice(slot.id, { outcome: event.target.value })} />
-                                        {candidate && candidate.outcomes.length > 1 && <select aria-label={'Lấy YCCĐ từ ' + slot.label}
-                                            value={candidate.outcomes.includes(outcome) ? outcome : ''}
-                                            className={input} onChange={event => {
-                                                const pickedOutcome = event.target.value;
-                                                if (pickedOutcome) updateChoice(slot.id, { pickedOutcome, outcome: undefined });
-                                            }}>
-                                            <option value="">Câu này có {candidate.outcomes.length} YCCĐ, chọn một…</option>
-                                            {candidate.outcomes.map(value => <option key={value} value={value}>{value}</option>)}
-                                        </select>}
-                                        {candidate?.outcomes.length === 1 && outcome !== candidate.outcomes[0] && (
-                                            <button type="button" className="text-xs font-semibold text-amber-900 underline underline-offset-2"
-                                                onClick={() => updateChoice(slot.id, { outcome: undefined, pickedOutcome: undefined })}>
-                                                Dùng YCCĐ của câu đã chọn
-                                            </button>
-                                        )}
-                                        {source && <details className="text-xs text-stone-600">
-                                            <summary className="cursor-pointer font-semibold text-amber-900">Đối chiếu YCCĐ chương trình</summary>
-                                            <p className="mt-1 rounded bg-stone-50 p-2 leading-relaxed">{source}</p>
-                                        </details>}
-                                    </div>
-                                    <div className="flex flex-wrap items-start gap-2 md:flex-col">
-                                        {slot.canChoose ? <>
-                                            <button type="button" className={candidate ? button : primary} aria-haspopup="dialog"
-                                                onClick={() => setActiveId(slot.id)}>{candidate ? 'Đổi câu' : 'Chọn câu'}</button>
-                                            {candidate && <>
-                                                <button type="button" className="text-xs font-semibold text-amber-900 underline underline-offset-2"
-                                                    onClick={() => autoPick([slot])}>Câu khác (ngẫu nhiên)</button>
-                                                <p className="flex items-center gap-1 text-xs font-semibold text-emerald-800"><Check aria-hidden="true" className="size-3.5 shrink-0" />
-                                                    {candidate.item.questionNo} · {chosenLesson ? textbookLessonLabel(chosenLesson) : candidate.lessonTitle ?? candidate.topic}
-                                                </p>
-                                                <button type="button" className="text-xs text-stone-600 underline underline-offset-2 hover:text-stone-900"
-                                                    onClick={() => updateChoice(slot.id, { questionId: undefined, pickedOutcome: undefined, outcome: undefined })}>Bỏ chọn</button>
-                                            </>}
-                                        </> : slot.type === 'written' && <p className="text-xs text-stone-600">Dạng này chưa có trong kho.</p>}
-                                    </div>
+                        <div id={panelId} hidden={!expanded} className="border-t border-stone-200">
+                            {expanded && PARTS.map(part => {
+                                const partRows = rows.filter(row => row.type === part.type);
+                                if (!partRows.length) return null;
+                                return <div key={part.type}>
+                                    <p className="bg-white px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-stone-500">{part.label}</p>
+                                    <ul className="divide-y divide-stone-100">
+                                        {partRows.map(slot => renderRow(slot))}
+                                    </ul>
                                 </div>;
                             })}
                         </div>
                     </div>;
                 })}
             </div>
+
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-200 pt-4">
+                <p className="text-sm text-stone-700">
+                    {complete ? 'Đã chọn đủ câu. Bước tiếp: rà YCCĐ và xuất ma trận, bản đặc tả.'
+                        : 'Đã chọn ' + selectedSlots.length + '/' + selectableCount + ' câu. Có thể xuất bản nháp để xem trước.'}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                    <MatrixExportDialog allocations={allocations} selections={selectedSlots.map(({ slot, candidate }) => {
+                        const outcome = outcomeFor(slot.id, candidate);
+                        return { slot, item: candidate.item, outcome, outcomeOptions: candidate.outcomes, curriculumSource: programmeSource(slot, outcome) };
+                    })} />
+                    <button type="button" className={complete ? primary : button} disabled={!selectedSlots.length}
+                        onClick={() => onCompose(selectedSlots.map(({ candidate }) => candidate.item))}>Biên soạn đề ({selectedSlots.length} câu)</button>
+                </div>
+            </footer>
+
             {activeSlot && <MatrixPlanPicker key={activeSlot.id + ':' + (choices[activeSlot.id]?.lessonNumber ?? '')} slot={activeSlot}
-                lesson={lessonFor(activeSlot)} remaining={remainingFor(activeSlot)} candidates={candidates} selectedId={chosenBySlot.get(activeSlot.id)?.item.id} usedIds={usedIds}
+                lesson={lessonFor(activeSlot)} remaining={remainingFor(activeSlot)} candidates={candidates}
+                selectedId={chosenBySlot.get(activeSlot.id)?.item.id} usedIds={usedIds}
                 onClose={() => setActiveId(undefined)} onChoose={candidate => choose(activeSlot.id, candidate)} />}
         </section>
     );
+
+    function renderRow(slot: MatrixPlanSlot) {
+        const candidate = chosenBySlot.get(slot.id);
+        const outcome = outcomeFor(slot.id, candidate);
+        const source = programmeSource(slot, outcome);
+        const fieldId = id + '-' + slot.id;
+        const lesson = lessonFor(slot);
+        const remaining = remainingFor(slot);
+        const showDetail = detailId === slot.id;
+        const chosenLesson = candidate && lessonOf(candidate);
+        const levelText = slot.statementBudget
+            ? candidate ? statementCountsLabel(trueFalseCounts(candidate.item) ?? [0, 0, 0])
+                : slot.canChoose && remaining ? 'còn cần ' + statementCountsLabel(remaining) : statementCountsLabel(slot.statementBudget)
+            : matrixPlanLevelLabel(slot);
+        if (!slot.canChoose) return <li key={slot.id} className="flex flex-wrap items-center gap-2 px-3 py-2.5 text-sm text-stone-600">
+            <span className="font-semibold text-stone-800">{slot.label}</span>
+            <span>{slot.type === 'written' ? 'Tự luận chưa có trong kho, cần soạn riêng.' : 'Không ghép được thành câu 4 ý, xem mục cần sửa ở trên.'}</span>
+        </li>;
+        const lessons = textbookLessons(slot.chapterId).map(option => ({
+            option, available: candidates.filter(item => fitsSlot(slot, option.number, item)).length,
+        })).filter(({ option, available }) => available > 0 || option.number === lesson?.number);
+        return <li key={slot.id} className={candidate ? 'bg-white' : 'bg-amber-50/40'}>
+            <div className="grid gap-2 px-3 py-3 sm:grid-cols-[7.5rem_minmax(0,1fr)_auto] sm:items-start">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:block sm:space-y-1">
+                    <p className="text-sm font-bold">{slot.label}</p>
+                    <span className={'inline-block rounded px-1.5 py-0.5 text-xs font-semibold ' + levelTone(slot)}>{levelText}</span>
+                </div>
+                <div className="min-w-0 space-y-1">
+                    {candidate ? <>
+                        <p className="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-stone-900">
+                            <Check aria-hidden="true" className="size-4 shrink-0 text-emerald-700" />
+                            <span className="font-normal text-stone-600">Lấy từ kho:</span>
+                            {chosenLesson ? textbookLessonLabel(chosenLesson) : candidate.lessonTitle ?? candidate.topic}
+                            <span className="font-normal text-stone-600">· {candidate.item.questionNo}</span>
+                        </p>
+                        {slot.type === 'dung_sai'
+                            ? <p className="text-sm text-stone-700">YCCĐ ghi riêng cho từng ý ở bước Xuất (tab "Rà YCCĐ từng câu/ý").</p>
+                            : <p className={'text-sm ' + (outcome ? 'text-stone-700' : 'italic text-amber-900')}>
+                                {outcome ? 'YCCĐ: ' + outcome : 'Câu có ' + candidate.outcomes.length + ' YCCĐ, mở "Chi tiết" để chọn một.'}
+                            </p>}
+                    </> : <p className="text-sm text-amber-900">Chưa chọn câu{lesson ? ' · lọc theo ' + textbookLessonLabel(lesson) : ''}</p>}
+                </div>
+                <div className="flex flex-wrap gap-1.5 sm:justify-end">
+                    <button type="button" className={candidate ? button : button + ' border-amber-700 text-amber-900'} aria-haspopup="dialog"
+                        onClick={() => setActiveId(slot.id)}>{candidate ? 'Đổi câu' : 'Chọn câu'}</button>
+                    <button type="button" className={button} onClick={() => autoPick([slot])}>{candidate ? 'Câu khác' : 'Ngẫu nhiên'}</button>
+                    <button type="button" className={button} aria-expanded={showDetail} aria-controls={fieldId + '-detail'}
+                        onClick={() => setDetailId(showDetail ? undefined : slot.id)}>Chi tiết</button>
+                </div>
+            </div>
+            <div id={fieldId + '-detail'} hidden={!showDetail} className="space-y-2 border-t border-dashed border-stone-200 bg-stone-50 px-3 py-3 sm:pl-[8.5rem]">
+                {showDetail && <>
+                    {lessons.length > 0 && <label className="block max-w-xl space-y-1">
+                        <span className="text-xs font-semibold text-stone-700">Lọc theo bài (SGK Kết nối tri thức)</span>
+                        <select className={input} value={lesson?.number ?? ''}
+                            onChange={event => updateChoice(slot.id, { lessonNumber: Number(event.target.value) || undefined })}>
+                            <option value="">Tất cả bài của nội dung này</option>
+                            {lessons.map(({ option, available }) => <option key={option.number} value={option.number}>
+                                {textbookLessonLabel(option)} ({available} câu)
+                            </option>)}
+                        </select>
+                    </label>}
+                    {lesson && <details className="text-xs text-stone-600">
+                        <summary className="cursor-pointer font-semibold text-stone-800">YCCĐ chương trình của {textbookLessonLabel(lesson)}</summary>
+                        <ul className="mt-1 list-disc space-y-1 pl-5 leading-relaxed">
+                            {lessonRequirements(lesson).map(requirement => <li key={requirement.id} className="whitespace-pre-wrap">{requirement.text}</li>)}
+                        </ul>
+                    </details>}
+                    <label htmlFor={fieldId} className="block text-xs font-semibold text-stone-700">YCCĐ ghi vào bản đặc tả</label>
+                    <textarea id={fieldId} rows={2} className={input + ' resize-y'} value={outcome}
+                        placeholder="Chọn câu để lấy YCCĐ của câu, hoặc tự nhập"
+                        onChange={event => updateChoice(slot.id, { outcome: event.target.value })} />
+                    {candidate && candidate.outcomes.length > 1 && <select aria-label={'Lấy YCCĐ từ ' + slot.label}
+                        value={candidate.outcomes.includes(outcome) ? outcome : ''} className={input}
+                        onChange={event => { if (event.target.value) updateChoice(slot.id, { pickedOutcome: event.target.value, outcome: undefined }); }}>
+                        <option value="">Câu này có {candidate.outcomes.length} YCCĐ, chọn một…</option>
+                        {candidate.outcomes.map(value => <option key={value} value={value}>{value}</option>)}
+                    </select>}
+                    {candidate?.outcomes.length === 1 && outcome !== candidate.outcomes[0] && <button type="button"
+                        className="text-xs font-semibold text-amber-900 underline underline-offset-2"
+                        onClick={() => updateChoice(slot.id, { outcome: undefined, pickedOutcome: undefined })}>Dùng lại YCCĐ của câu</button>}
+                    {source && <p className="text-xs leading-relaxed text-stone-600"><span className="font-semibold text-stone-800">Đối chiếu YCCĐ chương trình: </span>{source}</p>}
+                    {candidate && <button type="button" className="text-xs text-stone-600 underline underline-offset-2 hover:text-stone-900"
+                        onClick={() => updateChoice(slot.id, { questionId: undefined, pickedOutcome: undefined, outcome: undefined })}>Bỏ chọn câu này</button>}
+                </>}
+            </div>
+        </li>;
+    }
 }
