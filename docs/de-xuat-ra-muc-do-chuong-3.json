@@ -1,0 +1,321 @@
+{
+ "schema": "physivault.level-review.suggestions.v1",
+ "chapter_id": "g10-ch3",
+ "note": "Đề xuất của AI (Claude) dựa trên đề, phương án và lời giải trong file xuất ngày 18/11/2026; chưa xem hình. Giáo viên cần duyệt từng câu.",
+ "suggestions": [
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:9",
+   "level": 2,
+   "learning_outcomes": [
+    "Tính được công suất trung bình, công hoặc thời gian bằng hệ thức P = A/t.",
+    "Quy đổi được các đơn vị công suất."
+   ],
+   "reason": "Tính A = Pt kèm đổi cv sang W: một bước tính, đúng Thông hiểu. Đổi động từ \"Nhận biết và quy đổi\" thành \"Quy đổi\"."
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:5",
+   "level": 2,
+   "learning_outcomes": [
+    "Tính được công của trọng lực hoặc độ cao từ độ giảm thế năng trọng trường."
+   ],
+   "reason": "Chỉ dùng một hệ thức A = Wt(A) − Wt(O) = mgh: Thông hiểu; YCCĐ \"Vận dụng\" không khớp."
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:7",
+   "level": 2,
+   "learning_outcomes": [
+    "Tính được công từ độ biến thiên động năng (định lí động năng)."
+   ],
+   "reason": "Áp dụng trực tiếp A = Wđ2 − Wđ1: Thông hiểu; YCCĐ \"Vận dụng\" không khớp."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:0",
+   "level": 2,
+   "learning_outcomes": [
+    "Đổi được đơn vị năng lượng từ kWh sang J."
+   ],
+   "reason": "Phải nhớ 1 kWh = 3,6·10⁶ J rồi tính: Thông hiểu. Bỏ động từ \"Nhận biết\"."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:1",
+   "level": 1,
+   "reason": "Đề cho sẵn 1 HP ≈ 746 W, chỉ nhân một bước: Nhận biết, khớp YCCĐ."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:8",
+   "level": 3,
+   "learning_outcomes": [
+    "Vận dụng được các định luật chuyển động để tính công suất trung bình hoặc tức thời trong chuyển động có tốc độ thay đổi."
+   ],
+   "reason": "Phối hợp F = ma, v = at, v_tb và P = Fv: Vận dụng đúng; YCCĐ \"Phân biệt\" là động từ Thông hiểu."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:9",
+   "level": 3,
+   "learning_outcomes": [
+    "Vận dụng được các định luật chuyển động để tính công suất trung bình hoặc tức thời trong chuyển động có tốc độ thay đổi."
+   ],
+   "reason": "Phối hợp a = F/m, v = at, v_tb và P = Fv: Vận dụng đúng; sửa động từ YCCĐ."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:10",
+   "level": 3,
+   "learning_outcomes": [
+    "Vận dụng được các định luật chuyển động để tính công suất trung bình hoặc tức thời trong chuyển động có tốc độ thay đổi."
+   ],
+   "reason": "Tính quãng đường rơi, công trọng lực rồi P = A/t: Vận dụng đúng; sửa động từ YCCĐ."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:11",
+   "level": 2,
+   "reason": "Chỉ hai bước v = gt và P = mgv, phân biệt công suất tức thời: Thông hiểu, khớp YCCĐ \"Phân biệt và tính được\"."
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:12",
+   "level": 3,
+   "learning_outcomes": [
+    "Vận dụng được các định luật chuyển động để tính công suất trung bình hoặc tức thời trong chuyển động có tốc độ thay đổi."
+   ],
+   "reason": "Lập hệ thức P = 2ms²/t³ rồi giải: Vận dụng đúng; sửa động từ YCCĐ."
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:1",
+   "level": 2,
+   "learning_outcomes": [
+    "Tính được công suất từ lực và vận tốc theo P = Fv cosα.",
+    "Quy đổi được các đơn vị công suất."
+   ],
+   "reason": "Áp dụng trực tiếp P = Fv cosα và đổi sang HP: Thông hiểu; sửa động từ \"Vận dụng\", \"Nhận biết\"."
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:3",
+   "level": 3,
+   "learning_outcomes": [
+    "Vận dụng được các định luật chuyển động để tính công suất trung bình hoặc tức thời trong chuyển động có tốc độ thay đổi."
+   ],
+   "reason": "Tính gia tốc, lực ma sát, lực kéo rồi công suất trung bình: Vận dụng đúng; sửa động từ YCCĐ."
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:0",
+   "level": 1,
+   "reason": "Đề cho sẵn 1 cal = 4,186 J, chỉ nhân một bước: Nhận biết, khớp YCCĐ."
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:0",
+   "level": 1,
+   "learning_outcomes": [
+    "Xác định được điều kiện và nội dung của định luật bảo toàn cơ năng."
+   ],
+   "reason": "Chỉ nhớ điều kiện bảo toàn cơ năng: Nhận biết đúng; YCCĐ \"Giải thích\" không khớp."
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:2",
+   "level": 2,
+   "learning_outcomes": [
+    "Tính được phần cơ năng hao hụt hoặc công của lực cản từ độ biến thiên cơ năng."
+   ],
+   "reason": "Suy ra nhiệt năng bằng mgh: Thông hiểu đúng; bỏ YCCĐ \"Vận dụng\" trùng ý."
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:3",
+   "level": 2,
+   "learning_outcomes": [
+    "Xác định được biểu thức định luật bảo toàn cơ năng cho chuyển động trong trọng trường."
+   ],
+   "reason": "Chọn phương trình bảo toàn cơ năng, không tính toán: Thông hiểu; YCCĐ \"Vận dụng\" không khớp."
+  },
+  {
+   "question_id": "a817af31-bebd-44ac-9059-bc96d03504d8:0",
+   "level": 2,
+   "learning_outcomes": [
+    "Phân tích được sự chuyển hóa giữa động năng và thế năng, xác định vị trí các dạng năng lượng đạt cực trị."
+   ],
+   "reason": "Câu chỉ hỏi sự chuyển hóa năng lượng; bỏ YCCĐ về công của trọng lực không liên quan."
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:0",
+   "level": 2,
+   "learning_outcomes": [
+    "Xác định được thế năng đàn hồi của vật bị biến dạng trong tình huống thực tế.",
+    "Xác định được tình huống truyền năng lượng giữa các vật thông qua thực hiện công."
+   ],
+   "reason": "Phải xác định vật mang năng lượng và dạng năng lượng: Thông hiểu; sửa động từ \"Nhận biết\"."
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:1",
+   "level": 2,
+   "learning_outcomes": [
+    "Xác định được dấu công của trọng lực và sự thay đổi thế năng khi vật thay đổi độ cao."
+   ],
+   "reason": "Suy luận dấu công và chiều thay đổi thế năng: Thông hiểu; YCCĐ \"Vận dụng\" không khớp."
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:2",
+   "level": 2,
+   "learning_outcomes": [
+    "Xác định được dấu và giá trị thế năng trọng trường theo mốc thế năng đã chọn."
+   ],
+   "reason": "Câu hỏi sự phụ thuộc vào mốc thế năng; bỏ YCCĐ \"Vận dụng\" không liên quan."
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:3",
+   "level": 1,
+   "learning_outcomes": [
+    "Nêu được mối liên hệ giữa công của trọng lực và độ giảm thế năng trọng trường."
+   ],
+   "reason": "Chọn phát biểu đúng về hệ thức đã học: Nhận biết đúng; YCCĐ \"Vận dụng\" không khớp."
+  },
+  {
+   "question_id": "45276f9b-aa92-4139-a541-51af7b979257:0",
+   "level": 1,
+   "reason": "Nhớ thế năng không phụ thuộc vận tốc: Nhận biết, khớp YCCĐ."
+  },
+  {
+   "question_id": "c8c4ab27-6429-463e-88d5-4f0c5bc7d000:0",
+   "level": 2,
+   "learning_outcomes": [
+    "Giải thích được sự thay đổi động năng của vật dựa vào công của các lực tác dụng."
+   ],
+   "reason": "Suy luận lực vuông góc không sinh công nên động năng không đổi: Thông hiểu; sửa động từ \"Nhận biết\"."
+  },
+  {
+   "question_id": "c8c4ab27-6429-463e-88d5-4f0c5bc7d000:1",
+   "level": 2,
+   "learning_outcomes": [
+    "Giải thích được sự thay đổi động năng của vật dựa vào công của các lực tác dụng."
+   ],
+   "reason": "Suy luận vận tốc không đổi nên công hợp lực bằng 0: Thông hiểu; sửa động từ \"Nhận biết\"."
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:2",
+   "level": 2,
+   "learning_outcomes": [
+    "Giải thích được sự thay đổi động năng của vật dựa vào công của các lực tác dụng."
+   ],
+   "reason": "Suy luận hợp lực triệt tiêu nên động năng không đổi: Thông hiểu; sửa động từ \"Nhận biết\"."
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:3",
+   "level": 1,
+   "reason": "Phát biểu trực tiếp nội dung định lí động năng: Nhận biết, khớp YCCĐ."
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:4",
+   "level": 2,
+   "learning_outcomes": [
+    "Giải thích được sự thay đổi động năng của vật dựa vào công của các lực tác dụng."
+   ],
+   "reason": "Suy luận chiều lực và dấu công để kết luận động năng tăng: Thông hiểu; sửa động từ \"Nhận biết\"."
+  },
+  {
+   "question_id": "2dc3401c-cf6e-4722-bff9-ae6888b53e0c:3",
+   "level": 1,
+   "reason": "Nhận ra đơn vị không phải của năng lượng: Nhận biết, khớp YCCĐ."
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:2",
+   "level": 1,
+   "reason": "Nhận ra đơn vị không phải của công suất: Nhận biết, khớp YCCĐ."
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:5",
+   "level": 2,
+   "learning_outcomes": [
+    "Giải thích được ý nghĩa của đơn vị kWh của công.",
+    "Tính được công suất trung bình, công hoặc thời gian bằng hệ thức P = A/t."
+   ],
+   "reason": "Phải hiểu 1 kWh là công của máy 1 kW trong 1 giờ: Thông hiểu; sửa động từ \"Nhận biết\"."
+  },
+  {
+   "question_id": "663daf95-c38d-4d8c-b035-c6e9654591cb:0",
+   "level": 2,
+   "learning_outcomes": [
+    "Xác định được dạng đồ thị công theo thời gian khi công suất không đổi."
+   ],
+   "reason": "Đọc dạng đồ thị A theo t: Thông hiểu; sửa động từ \"Nhận biết\". Cần xem hình để chắc chắn."
+  },
+  {
+   "question_id": "8b574036-82b7-4f49-a287-3c9df70b69b9:1",
+   "level": 1,
+   "reason": "Suy ra trực tiếp từ định nghĩa công suất: Nhận biết, khớp YCCĐ."
+  },
+  {
+   "question_id": "7dcbb89f-47be-40bf-96e5-fc3f68340a46:1",
+   "level": 2,
+   "learning_outcomes": [
+    "Giải thích được sự phụ thuộc của công vào lực, độ dịch chuyển và góc giữa chúng.",
+    "Xác định được công dương, công âm hoặc công bằng không từ hướng lực và hướng dịch chuyển."
+   ],
+   "reason": "Phải đánh giá nhiều phát biểu về công: Thông hiểu; sửa động từ \"Nhận biết\"."
+  },
+  {
+   "question_id": "3e06216b-35cb-4668-8917-9ab87bccc477:0",
+   "level": 2,
+   "learning_outcomes": [
+    "So sánh được công của các lực dựa vào biểu thức A = Fd cosα."
+   ],
+   "reason": "So sánh công qua hình chiếu lực lên độ dịch chuyển: Thông hiểu; sửa động từ \"Nhận biết\". Cần xem hình để chắc chắn."
+  },
+  {
+   "question_id": "3e06216b-35cb-4668-8917-9ab87bccc477:1",
+   "level": 2,
+   "learning_outcomes": [
+    "Giải thích được sự phụ thuộc của công vào lực, độ dịch chuyển và góc giữa chúng."
+   ],
+   "reason": "Suy luận công cực đại khi lực cùng hướng dịch chuyển: Thông hiểu; sửa động từ \"Nhận biết\"."
+  },
+  {
+   "question_id": "54579bdc-a392-42a7-aac3-58d705690b18:1",
+   "level": 2,
+   "learning_outcomes": [
+    "So sánh được công của lực theo góc giữa lực và độ dịch chuyển."
+   ],
+   "reason": "Xếp thứ tự công theo góc: Thông hiểu; sửa động từ \"Nhận biết\". Cần xem hình để chắc chắn."
+  },
+  {
+   "question_id": "a164718a-99ed-48f2-ae45-0370c97d926f:1",
+   "level": 1,
+   "reason": "Nhận ra đơn vị không phải của công: Nhận biết, khớp YCCĐ."
+  },
+  {
+   "question_id": "82a1c0d6-d8fd-4615-9330-9cf5c175a327:2",
+   "level": 1,
+   "reason": "Nhận ra vật đứng yên không có động năng: Nhận biết, khớp YCCĐ."
+  },
+  {
+   "question_id": "0642c449-674b-4202-8cc3-d1ad5d6cd737:0",
+   "level": 2,
+   "learning_outcomes": [
+    "Giải thích được các hiện tượng thực tế dựa vào định luật bảo toàn năng lượng."
+   ],
+   "reason": "Đánh giá hiện tượng theo bảo toàn năng lượng: Thông hiểu; YCCĐ \"Vận dụng\" không khớp."
+  },
+  {
+   "question_id": "b2e5a49a-2253-4ad9-93c8-18cf0d397d5e:1",
+   "level": 1,
+   "learning_outcomes": [
+    "Phát biểu được định luật bảo toàn năng lượng."
+   ],
+   "reason": "Chỉ nhận ra tên định luật từ phát biểu: Nhận biết đúng; YCCĐ \"Vận dụng\" không khớp."
+  },
+  {
+   "question_id": "b2e5a49a-2253-4ad9-93c8-18cf0d397d5e:2",
+   "level": 2,
+   "learning_outcomes": [
+    "Giải thích được sự chuyển hóa và hao phí năng lượng trong thiết bị dựa vào định luật bảo toàn năng lượng.",
+    "Xác định được năng lượng có ích và năng lượng hao phí theo mục đích sử dụng của thiết bị."
+   ],
+   "reason": "Giải thích vì sao điện năng nhỏ hơn cơ năng: Thông hiểu; sửa động từ \"Vận dụng\"."
+  },
+  {
+   "question_id": "15b92b17-5acd-42dc-8780-d30c6c03642b:0",
+   "level": 1,
+   "reason": "Nhận ra nhiệt lượng không phải dạng năng lượng: Nhận biết, khớp YCCĐ."
+  },
+  {
+   "question_id": "15b92b17-5acd-42dc-8780-d30c6c03642b:3",
+   "level": 1,
+   "reason": "Nhận ra dạng năng lượng trong hình: Nhận biết, khớp YCCĐ. Cần xem hình để chắc chắn."
+  }
+ ]
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildLevelReview, levelReviewCsv, levelReviewSummary, levelReviewUpdate, outcomeVerbLevel, type ReviewDecision } from '../utils/levelOutcomeReview';
+import { applyLevelSuggestions, buildLevelReview, levelReviewCsv, levelReviewSummary, levelReviewUpdate, outcomeVerbLevel, type ReviewDecision } from '../utils/levelOutcomeReview';
 import { parseCognitiveResult } from '../utils/cognitiveExchange';
 
 const question = (id: string, level: number, outcomes: string[], type = 'trac_nghiem') =>
@@ -55,5 +55,24 @@ describe('level and YCCĐ review', () => {
         // A decision made for an older level is ignored once the bank changes.
         const moved = buildLevelReview([question('a', 1, ['Nhận biết được đơn vị đo công.'])]);
         expect(levelReviewUpdate('export-2', 'g10-ch3', moved, decisions).updates).toEqual([]);
+    });
+});
+
+describe('level review suggestions', () => {
+    it('pre-fills unconfirmed decisions and never overrides a confirmed one', () => {
+        const items = buildLevelReview([question('a', 2, ['Nhận biết được đơn vị đo công.']), question('b', 2, ['Nêu được định nghĩa.'])]);
+        const confirmed = { b: { fromLevel: 2, fromOutcomes: ['Nêu được định nghĩa.'], level: 2, outcomes: ['Nêu được định nghĩa.'], reason: '', reviewed: true } };
+        const text = JSON.stringify({ schema: 'physivault.level-review.suggestions.v1', suggestions: [
+            { question_id: 'a', level: 1, reason: 'Chỉ hỏi đơn vị' },
+            { question_id: 'b', level: 1, learning_outcomes: ['Khác'], reason: 'x' },
+            { question_id: 'missing', level: 1, reason: 'x' },
+        ] });
+        const result = applyLevelSuggestions(items, confirmed, text);
+        expect(result).toMatchObject({ applied: 1, skipped: 2 });
+        expect(result.decisions.a).toEqual({ fromLevel: 2, fromOutcomes: ['Nhận biết được đơn vị đo công.'], level: 1,
+            outcomes: ['Nhận biết được đơn vị đo công.'], reason: 'AI đề xuất: Chỉ hỏi đơn vị', reviewed: false });
+        expect(result.decisions.b).toBe(confirmed.b);
+        expect(levelReviewUpdate('e', 'g10-ch3', items, result.decisions).updates).toEqual([]);
+        expect(() => applyLevelSuggestions(items, {}, '{}')).toThrow('physivault.level-review.suggestions.v1');
     });
 });

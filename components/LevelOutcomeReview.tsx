@@ -3,7 +3,7 @@ import { Download, FileJson, ListChecks } from 'lucide-react';
 import { SolutionQuestionPrompt } from './SolutionRenderer';
 import { exportChapterOutcomes } from '../src/services/outcomeExchangeService';
 import { textbookLessonFor, textbookLessonLabel } from '../src/data/physics10Lessons';
-import { buildLevelReview, currentDecision, DECISION_LABELS, decisionKind, levelReviewCsv, levelReviewSummary, levelReviewUpdate,
+import { applyLevelSuggestions, buildLevelReview, currentDecision, DECISION_LABELS, decisionKind, levelReviewCsv, levelReviewSummary, levelReviewUpdate,
     REVIEW_LEVELS, type ReviewDecision, type ReviewItem } from '../src/utils/levelOutcomeReview';
 
 const button = 'inline-flex items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-stone-50 disabled:opacity-50';
@@ -87,6 +87,7 @@ export default function LevelOutcomeReview({ chapterId, busy, run, onUpdateReady
     const [showAll, setShowAll] = useState(false);
     const [onlyOpen, setOnlyOpen] = useState(false);
     const [limit, setLimit] = useState(pageSize);
+    const [loadNote, setLoadNote] = useState('');
     useEffect(() => {
         try { localStorage.setItem(storageKey(chapterId), JSON.stringify(decisions)); } catch { /* progress stays in memory */ }
     }, [chapterId, decisions]);
@@ -120,6 +121,23 @@ export default function LevelOutcomeReview({ chapterId, busy, run, onUpdateReady
                 <p><span className="block text-xs text-stone-600">Đã rà</span><strong className="tabular-nums">{summary.reviewed}/{summary.flagged}</strong></p>
                 <p><span className="block text-xs text-stone-600">Kết quả</span><span className="tabular-nums">
                     Giữ {summary.counts.keep} · Mức {summary.counts.level} · YCCĐ {summary.counts.outcomes} · Cả hai {summary.counts.both}</span></p>
+            </div>
+            <div className="space-y-1 rounded-xl border border-dashed border-stone-300 p-3 text-sm">
+                <label className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold">Nạp đề xuất (JSON):</span>
+                    <input type="file" accept=".json,application/json" disabled={busy} onChange={event => {
+                        const file = event.target.files?.[0]; event.target.value = '';
+                        if (!file) return;
+                        void run(async () => {
+                            const result = applyLevelSuggestions(items, decisions, await file.text());
+                            setDecisions(result.decisions);
+                            setLoadNote('Đã điền sẵn ' + result.applied + ' câu theo đề xuất' + (result.skipped ? ', bỏ qua ' + result.skipped + ' câu (đã xác nhận, không còn trong kho hoặc không hợp lệ)' : '')
+                                + '. Đề xuất chưa được tính là đã rà: đọc từng câu rồi bấm Xác nhận hoặc sửa lại.');
+                        });
+                    }} />
+                </label>
+                <p className="text-xs text-stone-600">Đề xuất chỉ điền sẵn mức độ, YCCĐ và lý do; người rà vẫn phải xác nhận từng câu.</p>
+                {loadNote && <p role="status" className="text-emerald-900">{loadNote}</p>}
             </div>
             <div className="flex flex-wrap items-center gap-4 text-sm">
                 <label className="flex items-center gap-2"><input type="checkbox" checked={onlyOpen} onChange={event => { setOnlyOpen(event.target.checked); setLimit(pageSize); }} />Chỉ hiện câu chưa rà</label>
