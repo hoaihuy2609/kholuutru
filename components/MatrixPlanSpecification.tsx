@@ -4,6 +4,7 @@ import type { StudyQuestionGroup } from '../types';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
 import { ENERGY_MATRIX_CHAPTER_ID, matrixMatch, type MatrixRow } from '../src/utils/examMatrix';
 import { energyCurriculumGoals, matchEnergyCurriculumGoal, type EnergyCurriculumGoal } from '../src/utils/energyCurriculum';
+import { autoPickMatrixPlan } from '../src/utils/matrixAutoPick';
 import { matrixPlanSlots, matrixPlanLevelLabel, matchesMatrixPlanSlot, plannedOutcome, type MatrixAllocation, type MatrixPlanSlot } from '../src/utils/matrixPlan';
 import { STUDY_QUESTION_GROUPS, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
@@ -128,6 +129,7 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
     const [openTopic, setOpenTopic] = useState<string | null>();
     const [activeId, setActiveId] = useState<string>();
     const [curriculumPickerId, setCurriculumPickerId] = useState<string>();
+    const [autoNote, setAutoNote] = useState('');
     const slots = useMemo(() => matrixPlanSlots(allocations), [allocations]);
     const byId = useMemo(() => new Map(candidates.map(candidate => [candidate.item.id, candidate])), [candidates]);
     const topics = new Map<string, MatrixPlanSlot[]>();
@@ -169,6 +171,34 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
         setChoices(previous => ({ ...previous, [slotId]: { ...previous[slotId], ...changes } }));
     }
 
+    function autoPick(targets: MatrixPlanSlot[]) {
+        const targetIds = new Set(targets.map(slot => slot.id));
+        const kept = selectedSlots.filter(({ slot }) => !targetIds.has(slot.id));
+        const goalUsage = new Map<string, number>();
+        for (const { slot } of kept) {
+            const goalId = choices[slot.id]?.curriculumId;
+            if (goalId) goalUsage.set(goalId, (goalUsage.get(goalId) ?? 0) + 1);
+        }
+        const preferredGoal = new Map(targets.flatMap(slot => {
+            const goalId = choices[slot.id]?.curriculumId;
+            return goalId ? [[slot.id, goalId] as const] : [];
+        }));
+        const avoid = targets.flatMap(slot => chosenBySlot.get(slot.id)?.item.id ?? []);
+        const { picks, unfilled } = autoPickMatrixPlan(targets, candidates, {
+            used: kept.map(({ candidate }) => candidate.item.id), goalUsage, preferredGoal, avoid,
+        });
+        setChoices(previous => {
+            const next = { ...previous };
+            for (const [slotId, pick] of picks) {
+                next[slotId] = { ...previous[slotId], questionId: pick.questionId,
+                    curriculumId: pick.curriculumId ?? previous[slotId]?.curriculumId, pickedOutcome: pick.pickedOutcome };
+            }
+            return next;
+        });
+        setAutoNote(picks.size + ' câu đã được chọn tự động'
+            + (unfilled.length ? ', còn ' + unfilled.length + ' ô chưa có câu phù hợp trong kho.' : '.'));
+    }
+
     function choose(slotId: string, candidate: MatrixCandidate) {
         const current = choices[slotId];
         if (current?.questionId === candidate.item.id) updateChoice(slotId, { questionId: undefined, pickedOutcome: undefined });
@@ -201,10 +231,15 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                     <span className="rounded-md bg-amber-50 px-2.5 py-1.5 text-sm font-semibold tabular-nums text-amber-950" role="status">
                         Đã chọn {selectedSlots.length}/{selectableCount} câu
                     </span>
+                    <button type="button" className={button} disabled={selectedSlots.length >= selectableCount}
+                        onClick={() => autoPick(slots.filter(slot => slot.canChoose && !chosenBySlot.has(slot.id)))}>Tự chọn câu</button>
+                    {selectedSlots.length > 0 && <button type="button" className={button}
+                        onClick={() => autoPick(slots.filter(slot => slot.canChoose))}>Chọn lại ngẫu nhiên</button>}
                     <button type="button" className={primary} disabled={!selectedSlots.length}
                         onClick={() => onCompose(selectedSlots.map(({ candidate }) => candidate.item))}>Biên soạn câu đã chọn</button>
                 </div>
             </header>
+            {autoNote && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-950" role="status">{autoNote}</p>}
             {pendingIdeas > 0 && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950">
                 {pendingIdeas} ý Đúng/Sai đang chờ ghép. Mỗi câu cần 4 ý cùng nội dung, có thể gồm nhiều mức độ.
             </p>}
@@ -280,6 +315,8 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                                             <button type="button" className={candidate ? button : primary} aria-haspopup="dialog"
                                                 onClick={() => setActiveId(slot.id)}>{candidate ? 'Đổi câu' : 'Chọn câu'}</button>
                                             {candidate && <>
+                                                <button type="button" className="text-xs font-semibold text-amber-900 underline underline-offset-2"
+                                                    onClick={() => autoPick([slot])}>Câu khác (ngẫu nhiên)</button>
                                                 <p className="flex items-center gap-1 text-xs font-semibold text-emerald-800"><Check aria-hidden="true" className="size-3.5 shrink-0" />
                                                     {candidate.item.questionNo} · {candidate.lessonTitle ?? candidate.topic}
                                                 </p>
