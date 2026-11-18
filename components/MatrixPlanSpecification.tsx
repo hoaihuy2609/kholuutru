@@ -8,6 +8,7 @@ import { matrixPlanSlots, matrixPlanLevelLabel, matchesMatrixPlanSlot, plannedOu
 import { STUDY_QUESTION_GROUPS, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import { MatrixDialog, MatrixQuestionCard, MatrixSolutionDialog } from './MatrixQuestionCard';
+import MatrixExportDialog from './MatrixExportDialog';
 
 const typeLabel = (type: MatrixAllocation['type']) => STUDY_QUESTION_TYPES.find(format => format.value === type)?.label ?? 'Tự luận';
 const button = 'inline-flex min-h-9 items-center justify-center rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm font-semibold text-stone-800 hover:bg-stone-100';
@@ -191,6 +192,12 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                     <p className="mt-0.5 text-sm text-stone-600">Điền YCCĐ để ưu tiên câu phù hợp hoặc chọn câu trước.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    <MatrixExportDialog allocations={allocations} selections={selectedSlots.map(({ slot, candidate }) => ({
+                        slot, item: candidate.item, outcome: outcomeFor(slot.id, candidate),
+                        curriculumSource: slot.chapterId === ENERGY_MATRIX_CHAPTER_ID
+                            ? energyCurriculumGoals(slot.topicId).find(goal => goal.id === choices[slot.id]?.curriculumId)?.source
+                            : undefined,
+                    }))} />
                     <span className="rounded-md bg-amber-50 px-2.5 py-1.5 text-sm font-semibold tabular-nums text-amber-950" role="status">
                         Đã chọn {selectedSlots.length}/{selectableCount} câu
                     </span>
