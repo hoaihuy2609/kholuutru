@@ -25,7 +25,7 @@ export interface MatrixExportSettings {
 export function defaultMatrixExportSettings(): MatrixExportSettings {
     return { title: 'KIỂM TRA ĐỊNH KÌ - VẬT LÍ 10', school: '', duration: 45,
         assessmentTime: '', scope: '', examCode: '', targetScore: 10,
-        points: { trac_nghiem: 0.25, dung_sai: 1, tu_luan: 0.5, written: 1 }, periods: {} };
+        points: { trac_nghiem: 0.25, dung_sai: 1, tu_luan: 0.25, written: 1 }, periods: {} };
 }
 
 export interface MatrixExportSelection {
