@@ -1,0 +1,153 @@
+{
+ "schema": "physivault.questions.update.v1",
+ "chapter_id": "g10-ch3",
+ "export_id": "ff163e9e-eab3-4f74-8b99-bbf449186b19",
+ "updates": [
+  {
+   "question_id": "b2e5a49a-2253-4ad9-93c8-18cf0d397d5e:0",
+   "set": {
+    "choices": [
+     "(1) hóa năng; (2) cơ năng.",
+     "(1) nhiệt năng; (2) cơ năng.",
+     "(1) quang năng; (2) cơ năng.",
+     "(1) điện năng; (2) cơ năng."
+    ]
+   }
+  },
+  {
+   "question_id": "dd00e3c6-124e-42f5-a8c9-5669aada5a07:4",
+   "set": {
+    "choices": [
+     "(1) hóa năng; (2) quang năng.",
+     "(1) quang năng; (2) nhiệt năng.",
+     "(1) quang năng; (2) hóa năng.",
+     "(1) điện năng; (2) nhiệt năng."
+    ]
+   }
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:10",
+   "set": {
+    "question_text": "Một động cơ bắt đầu kéo thang máy có khối lượng 900 kg chuyển động nhanh dần đều theo phương thẳng đứng lên trên. Lấy $g=10\\,\\mathrm{m/s^2}$. Sau khi bắt đầu chuyển động 4 s, thang máy có tốc độ 2 m/s. Công của lực kéo động cơ kéo thang trong thời gian đó bằng"
+   }
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:6",
+   "set": {
+    "question_text": "Một vật có khối lượng m ném thẳng đứng lên trên với vận tốc ban đầu $v_0$ sau một thời gian t vật chuyển động về vị trí ban đầu. Công của trọng lực của vật đã thực hiện trong thời gian nói trên bằng"
+   }
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:11",
+   "set": {
+    "statements": [
+     {
+      "index": 1,
+      "claim": "Trong 4 giây vật rơi được quãng đường 60 m."
+     }
+    ]
+   }
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:21",
+   "set": {
+    "question_text": "Một người kéo một vật có khối lượng 10 kg trượt trên mặt phẳng ngang có hệ số ma sát $\\mu=0{,}2$ bằng một sợi dây có phương hợp một góc $30^\\circ$ so với phương nằm ngang. Lực tác dụng lên dây bằng $\\vec{F}_k$, vật trượt không vận tốc đầu với gia tốc $2\\,m/s^2$, lấy $g=9{,}8\\,m/s^2$."
+   }
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:5",
+   "set": {
+    "question_text": "Một ô tô khối lượng m = 2 tấn lên dốc có độ nghiêng $\\alpha=30^\\circ$ so với phương ngang, vận tốc đều 10,8km/h. Công suất của động cơ lúc đó là 60 kW. Lấy $g=10m/s^2$. Tìm hệ số ma sát giữa ô tô và mặt đường (làm tròn kết quả đến chữ số hàng phần trăm)."
+   }
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:14",
+   "set": {
+    "question_text": "Ô tô nặng 5 tấn chuyển động thẳng đều với vận tốc 27km/h lên một đoạn dốc nghiêng góc $10^\\circ$ với phương ngang. Hệ số ma sát giữa bánh xe với mặt dốc là 0,08 và gia tốc rơi tự do là $10m/s^2$. Công suất của động cơ ô tô trong quá trình lên dốc bằng"
+   }
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:6",
+   "set": {
+    "statements": [
+     {
+      "index": 1,
+      "claim": "Lực phát động ở số 3 lớn hơn ở số 2."
+     }
+    ]
+   }
+  },
+  {
+   "question_id": "45276f9b-aa92-4139-a541-51af7b979257:4",
+   "set": {
+    "choices": [
+     "giảm và động năng tăng.",
+     "giảm và động năng không đổi.",
+     "tăng và động năng giảm.",
+     "tăng và động năng không đổi"
+    ]
+   }
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:3",
+   "set": {
+    "question_text": "Một vận động viên thể thao có khối lượng 52,0 kg đứng trên thảm để chuẩn bị thực hiện cú nhảy. Trọng tâm của vận động viên đó cách mặt đất một khoảng 1,20 m. Khi nhảy lên độ cao cực đại, trọng tâm của người đó cách mặt đất 2,20 m. Chọn mốc thế năng là mặt đất. Lấy $g=10\\,m/s^2$."
+   }
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:5",
+   "set": {
+    "question_text": "Một người có khối lượng 60kg đứng trên mặt đất và cạnh một cái giếng nước, lấy $g=10\\,m/s^2$. Xét người đó tại điểm A cao 3 m so với mặt đất và tại đáy giếng sâu 5 m so với mặt đất, chọn gốc thế năng tại mặt đất."
+   }
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:8",
+   "set": {
+    "statements": [
+     {
+      "index": 1,
+      "claim": "Công của trọng lực tác dụng lên người khi trượt từ đỉnh đến cuối máng trượt là 20000 J."
+     }
+    ]
+   }
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:10",
+   "set": {
+    "statements": [
+     {
+      "index": 3,
+      "claim": "Khi ở độ cao 0,5m vật có động năng gấp đôi thế năng."
+     }
+    ]
+   }
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:3",
+   "set": {
+    "question_text": "Một con lắc đơn dao động giữa hai vị trí biên A và B, O là vị trí cân bằng (hình vẽ). Nhận định đúng, sai?"
+   }
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:3",
+   "set": {
+    "statements": [
+     {
+      "index": 0,
+      "claim": "Lực do động cơ ô tô sinh ra là 200 N."
+     },
+     {
+      "index": 2,
+      "claim": "Nhiệt lượng do 10 lít xăng tỏa ra là $322\\cdot10^6\\,J$."
+     }
+    ]
+   }
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:0",
+   "set": {
+    "question_text": "Một máy nâng công suất 1500W, nâng một vật khối lượng 100kg lên độ cao 36m trong vòng 40 giây. Lấy $g=10m/s^2$. Hiệu suất của máy là"
+   }
+  }
+ ]
+}
