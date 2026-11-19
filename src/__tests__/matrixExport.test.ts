@@ -108,6 +108,9 @@ describe('matrix and specification export', () => {
         expect(html).toContain('A4 landscape');
         expect(html).toContain('table-header-group');
         expect(html).toContain('rowspan="2"');
+        // A content keeps one frame: the second row of the same content leaves its number and name cells empty.
+        expect(html).toContain('<td class="merged"></td>');
+        expect(html).not.toContain('(tiếp)');
         expect(matrixExportHtml(result, true)).toContain('BẢN NHÁP');
         expect(html).not.toContain('BẢN NHÁP');
     });

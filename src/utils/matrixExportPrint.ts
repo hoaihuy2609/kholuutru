@@ -51,12 +51,12 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false) 
             const rows = matrixSpecificationRows(topic.units);
             let previousLevel = 0;
             rows.forEach((row, index) => {
-                // Long rowspan cells can force an almost empty continuation page in Chromium.
-                // Limit each merged block and repeat its context when the topic continues.
-                const blockStart = index % 3 === 0;
-                const span = Math.min(3, rows.length - index);
-                specification.push(`<tr>${blockStart ? `<td rowspan="${span}">${topicNumber}</td><th class="left" rowspan="${span}">${text(topic.topic)}${index > 0 ? '<br><em>(tiếp)</em>' : ''}</th>` : ''}
-                    <td class="left outcome">${previousLevel !== row.level || blockStart ? `<strong class="level">${text(MATRIX_LEVELS[row.level])}:</strong>` : ''}${text(row.outcome || 'Chưa xác định YCCĐ')}</td>
+                // One frame per content: the first row carries the number and name, the next rows leave those cells
+                // empty without a top border. Avoids tall rowspan cells, which Chromium may push to an almost empty page.
+                const first = index === 0;
+                const merged = first ? '' : ' class="merged"';
+                specification.push(`<tr><td${merged}>${first ? topicNumber : ''}</td><th${first ? ' class="left"' : ' class="left merged"'}>${first ? text(topic.topic) : ''}</th>
+                    <td class="left outcome">${previousLevel !== row.level ? `<strong class="level">${text(MATRIX_LEVELS[row.level])}:</strong>` : ''}${text(row.outcome || 'Chưa xác định YCCĐ')}</td>
                     ${formats.map(({ type }) => `<td>${row.references[type].length || '-'}</td>`).join('')}
                     ${formats.map(({ type }) => `<td class="references">${row.references[type].map(escape).join(', ') || '-'}</td>`).join('')}</tr>`);
                 previousLevel = row.level;
@@ -123,6 +123,7 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false) 
         thead { display: table-header-group; background: #e0f2f1; }
         tr { break-inside: avoid; }
         .left { text-align: left; }
+        .merged { border-top-style: hidden; }
         .chapter { background: #f3f6fa; }
         .chapter-band { background: #e9e7f5; break-after: avoid; }
         .blue { background: #e5effc; } .violet { background: #efe7fc; }
