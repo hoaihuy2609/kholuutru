@@ -50,17 +50,25 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false) 
             topicNumber++;
             const rows = matrixSpecificationRows(topic.units);
             let previousLevel = 0;
-            rows.forEach((row, index) => {
-                // One frame per content: the first row carries the number and name, the next rows leave those cells
-                // empty without a top border. Avoids tall rowspan cells, which Chromium may push to an almost empty page.
-                const first = index === 0;
-                const merged = first ? '' : ' class="merged"';
-                specification.push(`<tr><td${merged}>${first ? topicNumber : ''}</td><th${first ? ' class="left"' : ' class="left merged"'}>${first ? text(topic.topic) : ''}</th>
-                    <td class="left outcome">${previousLevel !== row.level ? `<strong class="level">${text(MATRIX_LEVELS[row.level])}:</strong>` : ''}${text(row.outcome || 'Chưa xác định YCCĐ')}</td>
+            let first = true;
+            // One frame per content: only its first row carries the number and name; the next rows leave those cells
+            // empty with a hidden top border. Avoids tall rowspan cells, which Chromium may push to an almost empty page.
+            const frame = () => {
+                const cells = first ? `<td>${topicNumber}</td><th class="left">${text(topic.topic)}</th>` : '<td class="merged"></td><th class="left merged"></th>';
+                first = false;
+                return cells;
+            };
+            for (const row of rows) {
+                // Each level has its own heading row; its requirements follow, one per row.
+                if (row.level !== previousLevel) {
+                    specification.push(`<tr class="level-row">${frame()}<td class="left"><strong>${text(MATRIX_LEVELS[row.level])}:</strong></td>
+                        ${formats.map(() => '<td></td><td></td>').join('')}</tr>`);
+                    previousLevel = row.level;
+                }
+                specification.push(`<tr>${frame()}<td class="left outcome">${text(row.outcome || 'Chưa xác định YCCĐ')}</td>
                     ${formats.map(({ type }) => `<td>${row.references[type].length || '-'}</td>`).join('')}
                     ${formats.map(({ type }) => `<td class="references">${row.references[type].map(escape).join(', ') || '-'}</td>`).join('')}</tr>`);
-                previousLevel = row.level;
-            });
+            }
             if (!rows.length) specification.push(`<tr><td>${topicNumber}</td><th class="left">${text(topic.topic)}</th><td class="left">Chưa chọn câu.</td>${formats.map(() => '<td>-</td><td>-</td>').join('')}</tr>`);
         }
     }
@@ -133,7 +141,8 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false) 
         .level-summary th:first-child { width: 38%; }
         .note { font-size: 9.5pt; margin-top: 2mm; }
         .outcome { line-height: 1.3; }
-        .level { display: block; margin-bottom: 1mm; }
+        .level-row td:nth-child(n+3) { background: #f7f5ee; }
+        .level-row { break-after: avoid; }
         .references { font-weight: bold; }
         .draft-banner, .draft-note { padding: 2mm; border: .3mm solid #b45309; color: #92400e; }
         .draft-banner { text-align: center; font-weight: bold; }
