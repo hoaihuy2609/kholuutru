@@ -6,10 +6,10 @@ export interface MatrixPage {
     rules: number[][];
 }
 
-const outcomeHeader = /^(?:yeu cau(?: can dat)?|yccd|muc tieu(?: danh gia)?)$/;
+const outcomeHeader = /^(?:(?:muc do danh gia )?(?:yeu cau(?: can dat)?|yccd)|muc tieu(?: danh gia)?)$/;
 const topicHeader = /^(?:chu de|chuong(?: chu de)?|noi dung(?: kien thuc| don vi kien thuc)?|don vi kien thuc|bai hoc|mach noi dung)$/;
 const countHeader = /^(?:so (?:luong )?cau(?: hoi)?(?: y)?|so y)$/;
-const referenceHeader = /^(?:cau hoi|vi tri(?: cau)?|so thu tu cau|cau so|ma cau)$/;
+const referenceHeader = /^(?:cau hoi|vi tri(?: cau)?|so thu tu cau|cau so|ma cau(?: y)?(?: trong de)?)$/;
 const sectionName = /\bphan (?:[ivx]+|\d+)\b/;
 const genericObjectiveHeader = /^(?:tn|tnkq|trac nghiem(?: khach quan)?)$/;
 const romanParts = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
@@ -58,7 +58,9 @@ function createGrid({ rules, fragments }: MatrixPage) {
         const verticalEdges = distinctCoordinates(vertical
             .filter(([, bottom, , top]) => y > bottom && y < top)
             .map(([left, , right]) => (left + right) / 2));
-        const yRange = between(horizontalEdges, y);
+        // A merged cell cut by a page break may have no rule on that side; the table's own edge closes it then.
+        const yRange = between(horizontalEdges, y)
+            ?? (yEdges.length > 1 ? between(distinctCoordinates([yEdges[0], ...horizontalEdges, yEdges[yEdges.length - 1]]), y) : undefined);
         const xRange = between(verticalEdges, x);
         if (!xRange || !yRange) return { text: '', bottom: y, top: y, key: '' };
         const [left, right] = xRange;
