@@ -120,6 +120,28 @@ describe('exam matrix', () => {
         expect(parsePdfMatrix([genericPage]).rows[0]).toMatchObject({ section: 'TNKQ', type: '', count: 2 });
     });
 
+    it('reads the app\'s own specification export, including a content cell cut by a page break', () => {
+        const page: MatrixPage = {
+            rules: [
+                ...[0, 120, 360, 420, 560].map(x => [x, 0, x, 90]),
+                ...[90, 45, 30].map(y => [0, y, 560, y]),
+                // The content frame has no rule between its rows, nor at the foot of the page where it continues.
+                ...[15, 0].map(y => [120, y, 560, y]),
+            ],
+            fragments: [
+                [8, 64, 'Nội dung/ đơn vị kiến thức'], [128, 64, 'Mức độ đánh giá / Yêu cầu cần đạt'],
+                [368, 64, 'Số câu/ý'], [428, 64, 'Mã câu/ý trong đề'],
+                [8, 35, 'Công và năng lượng'], [128, 35, 'Nêu được biểu thức tính công'], [368, 35, '1'], [428, 35, 'C1'],
+                [8, 20, 'Động năng và thế năng'], [128, 20, 'Nêu được công thức tính thế năng'], [368, 20, '1'], [428, 20, 'C2'],
+                [128, 4, 'Vận dụng được định luật bảo toàn cơ năng'], [368, 4, '1'], [428, 4, 'C3'],
+            ].map(([x, y, text]) => ({ x: Number(x), y: Number(y), text: String(text), width: 45, height: 11 })),
+        };
+        const { rows } = parsePdfMatrix([page]);
+        expect(rows.map(row => [row.topic, row.references.join(), row.count])).toEqual([
+            ['Công và năng lượng', 'C1', 1], ['Động năng và thế năng', 'C2', 1], ['Động năng và thế năng', 'C3', 1],
+        ]);
+    });
+
     it('groups subparts within a section and keeps question numbers from different sections separate', () => {
         const base: MatrixRow = {
             section: 'Phần I', topic: 'Điện trường', outcome: 'Nêu được khái niệm điện trường',
