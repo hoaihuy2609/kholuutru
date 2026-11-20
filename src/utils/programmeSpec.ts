@@ -3,6 +3,7 @@ import { programmeRow, programmeRowLabel, programmeRows, type ProgrammeMatch, ty
 import { COGNITIVE_LEVELS, questionLevels, readCognitiveLevel } from './cognitiveLevels';
 import { matrixPlanSlots, statementCountsLabel, trueFalseCounts, type MatrixAllocation, type StatementCounts } from './matrixPlan';
 import type { MatrixExportSelection } from './matrixExport';
+import { trueFalseFills, trueFalsePatterns, type TrueFalseFill } from './trueFalseCombos';
 
 /**
  * Bản đặc tả theo YCCĐ chương trình: mỗi nội dung của ma trận có các dòng YCCĐ cố định (programmeRows).
@@ -227,6 +228,49 @@ export function suggestTrueFalse<C extends ProgrammeCandidate>(topic: ProgrammeT
     const picked = pickTrueFalse(topic, pools, programmeUsedIds({ ...state, trueFalse }), [0, 0, 0], rng);
     if (!picked.length) return undefined;
     for (const { candidate, row } of picked) (trueFalse[row.id] ??= []).push(candidate.item.id);
+    return { ...state, trueFalse };
+}
+
+/** Số ý Đúng/Sai từng mức nội dung còn cần, sau các câu đã chọn. */
+export function trueFalseRemaining(topic: ProgrammeTopic, state: ProgrammeState, byId: ReadonlyMap<string, ProgrammeCandidate>) {
+    const totals = programmeTopicTotals(topic, state, byId);
+    return topic.need.dung_sai.map((value, index) => value - totals.dung_sai[index]) as unknown as StatementCounts;
+}
+
+/**
+ * Cách ghép câu Đúng/Sai chưa dùng của nội dung cho vừa đúng phần ý còn thiếu. Rỗng khi đã đủ, đã vượt
+ * hoặc phần còn thiếu không chia hết cho 4. Cách có nhiều lựa chọn câu đứng trước.
+ */
+export function trueFalseFillOptions<C extends ProgrammeCandidate>(topic: ProgrammeTopic, state: ProgrammeState, pools: ProgrammePools<C>) {
+    const left = trueFalseRemaining(topic, state, pools.byId);
+    const total = left[0] + left[1] + left[2];
+    if (total <= 0 || total % 4 || left.some(value => value < 0)) return [];
+    const used = programmeUsedIds(state);
+    const counts = topic.rows.flatMap(row => (pools.trueFalse.get(row.id) ?? []).filter(candidate => !used.has(candidate.item.id)))
+        .flatMap(candidate => { const split = trueFalseCounts(candidate.item); return split ? [split] : []; });
+    return trueFalseFills(trueFalsePatterns(counts), total / 4, left).sort((a, b) => b.ways - a.ways);
+}
+
+/** Chọn câu theo một cách ghép, ưu tiên câu của `rowId`, câu khớp trực tiếp, rồi ngẫu nhiên. */
+export function applyTrueFalseFill<C extends ProgrammeCandidate>(topic: ProgrammeTopic, state: ProgrammeState, pools: ProgrammePools<C>,
+    fill: TrueFalseFill, rowId?: string, rng: () => number = Math.random): ProgrammeState | undefined {
+    const used = programmeUsedIds(state);
+    const options = shuffle(topic.rows.flatMap(row => (pools.trueFalse.get(row.id) ?? [])
+        .filter(candidate => !used.has(candidate.item.id)).map(candidate => ({ candidate, row }))), rng)
+        .sort((a, b) => Number(b.row.id === rowId) - Number(a.row.id === rowId)
+            || Number(a.candidate.programmeMatch === 'extended') - Number(b.candidate.programmeMatch === 'extended'));
+    const trueFalse = { ...state.trueFalse };
+    for (const { counts, times } of fill.patterns) {
+        const chosen = options.filter(({ candidate }) => {
+            const split = trueFalseCounts(candidate.item);
+            return !!split && split.every((value, index) => value === counts[index]) && !used.has(candidate.item.id);
+        }).slice(0, times);
+        if (chosen.length < times) return undefined;
+        for (const { candidate, row } of chosen) {
+            used.add(candidate.item.id);
+            trueFalse[row.id] = [...(trueFalse[row.id] ?? []), candidate.item.id];
+        }
+    }
     return { ...state, trueFalse };
 }
 

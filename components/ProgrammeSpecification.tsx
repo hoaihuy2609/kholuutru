@@ -5,12 +5,13 @@ import { PHYSICS_10_CURRICULUM_SOURCE } from '../src/data/physics10Curriculum';
 import { programmeRowLabel, type ProgrammeRow } from '../src/data/programmeRows';
 import { COGNITIVE_LEVELS, questionLevels } from '../src/utils/cognitiveLevels';
 import { statementCountsLabel, trueFalseCounts, type MatrixAllocation, type StatementCounts } from '../src/utils/matrixPlan';
-import { emptyProgrammeState, fillProgrammeCells, levelMismatch, programmeCellKey, programmeIssues, programmePools,
+import { applyTrueFalseFill, emptyProgrammeState, fillProgrammeCells, trueFalseFillOptions, levelMismatch, programmeCellKey, programmeIssues, programmePools,
     programmeRowQuestions, programmeSelections, programmeTopicTotals, programmeUsedIds, suggestProgramme, suggestTrueFalse,
     PROGRAMME_TYPE_LABELS, type ProgrammeCellType, type ProgrammePools, type ProgrammeState, type ProgrammeTopic, type ProgrammeType } from '../src/utils/programmeSpec';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import { MatrixDialog, MatrixQuestionCard, MatrixSolutionDialog } from './MatrixQuestionCard';
 import MatrixExportDialog from './MatrixExportDialog';
+import { patternLabel } from '../src/utils/trueFalseCombos';
 
 const button = 'inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm font-semibold text-stone-800 hover:bg-stone-100 disabled:opacity-50';
 const primary = 'inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-amber-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-50';
@@ -233,6 +234,7 @@ function CellPicker({ open, state, pools, codes, used, onChange, onClose }: {
         const options = (pools.trueFalse.get(row.id) ?? []).filter(candidate => mine.has(candidate.item.id) || !used.has(candidate.item.id))
             .sort((a, b) => Number(mine.has(b.item.id)) - Number(mine.has(a.item.id))
                 || levelMismatch(row, questionLevels(a.item)) - levelMismatch(row, questionLevels(b.item)));
+        const fills = trueFalseFillOptions(topic, state, pools);
         const toggle = (questionId: string) => {
             const list = state.trueFalse[row.id] ?? [];
             onChange({ ...state, trueFalse: { ...state.trueFalse, [row.id]: list.includes(questionId) ? list.filter(item => item !== questionId) : [...list, questionId] } });
@@ -247,6 +249,18 @@ function CellPicker({ open, state, pools, codes, used, onChange, onClose }: {
                         if (next) onChange(next);
                     }}>Gợi ý lại Đúng/Sai cho cả nội dung</button>
                 </div>
+                {fills.length > 0 && <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50 p-3">
+                    <p className="text-sm font-semibold text-violet-950">Bấm một cách ghép để chọn ngay các câu vừa đủ phần còn thiếu</p>
+                    <div className="flex flex-wrap gap-2">
+                        {fills.slice(0, 5).map(fill => <button key={fill.patterns.map(({ counts, times }) => times + ':' + counts.join()).join('|')} type="button"
+                            className="inline-flex min-h-9 flex-wrap items-center gap-x-2 rounded-lg border border-violet-300 bg-white px-2.5 py-1.5 text-left text-sm hover:border-violet-600"
+                            onClick={() => { const next = applyTrueFalseFill(topic, state, pools, fill, row.id); if (next) onChange(next); }}>
+                            <span className="font-semibold">{fill.patterns.map(({ counts, times }) => times + ' câu ' + patternLabel(counts)).join(' + ')}</span>
+                            <span className="text-xs text-stone-500">{fill.ways} cách</span>
+                        </button>)}
+                    </div>
+                    <p className="text-xs text-violet-900">B = ý Biết, H = ý Hiểu, VD = ý Vận dụng. Ưu tiên câu của dòng này, rồi đến các dòng khác trong cùng nội dung.</p>
+                </div>}
                 <p className="text-xs text-stone-600">Mỗi câu Đúng/Sai có 4 ý; các ý được đếm vào cột đúng mức của chúng. Câu của các dòng khác trong cùng nội dung cũng được tính.</p>
                 {options.length ? <div className="grid items-start gap-3 lg:grid-cols-2">
                     {options.map(candidate => {
