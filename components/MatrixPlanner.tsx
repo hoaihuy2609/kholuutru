@@ -6,7 +6,11 @@ import { STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import MatrixPlanSpecification from './MatrixPlanSpecification';
 import ProgrammeSpecification from './ProgrammeSpecification';
-import { programmeTopics } from '../src/utils/programmeSpec';
+import { programmePools, programmeTopics } from '../src/utils/programmeSpec';
+import { programmeRows } from '../src/data/programmeRows';
+import { matchesMatrixPlanSlot, trueFalseCounts, type MatrixPlanSlot, type StatementCounts } from '../src/utils/matrixPlan';
+import { trueFalsePatterns } from '../src/utils/trueFalseCombos';
+import TrueFalseComboPanel, { trueFalseStatus, type TrueFalseTopic } from './TrueFalseComboPanel';
 
 const chapters: readonly { id: string; name: string; topics: readonly (readonly [id: string, name: string])[] }[] = [
     { id: 'g10-ch0', name: 'Mở đầu', topics: [
@@ -89,6 +93,43 @@ export default function MatrixPlanner({ candidates, onCompose }: {
         && rowTopics.some(topic => topic.chapterId === candidate.chapterId));
     const programme = hasAssignments ? rowTopics : undefined;
     const programmeChapterWithoutRows = !!rowTopics && !hasAssignments;
+
+    /**
+     * Kiểu ý của câu Đúng/Sai trong kho cho từng nội dung đang chọn. Chương đã gắn câu vào dòng YCCĐ lấy theo dòng
+     * (giống bản đặc tả theo YCCĐ); chương khác lấy theo nội dung của câu, giống bản đặc tả theo vị trí.
+     */
+    const trueFalseTopics = useMemo<TrueFalseTopic[]>(() => {
+        const pools = programmePools(candidates);
+        return selectedChapters.flatMap(chapter => {
+            const rows = programmeRows(chapter.id);
+            const byRow = rows.length > 0 && candidates.some(candidate => candidate.programmeRow && candidate.chapterId === chapter.id);
+            return chapter.topics.map(([topicId, name]) => {
+                let list: StatementCounts[];
+                if (byRow) {
+                    list = rows.filter(row => row.topicId === topicId).flatMap(row => pools.trueFalse.get(row.id) ?? [])
+                        .flatMap(candidate => {
+                            const split = trueFalseCounts(candidate.item);
+                            return split ? [split] : [];
+                        });
+                } else {
+                    const probe: MatrixPlanSlot = { chapterId: chapter.id, chapter: chapter.name, topicId, topic: name, type: 'trac_nghiem',
+                        level: 1, id: 'probe', units: 1, label: '', canChoose: true };
+                    list = candidates.flatMap(candidate => {
+                        const split = trueFalseCounts(candidate.item);
+                        return split && matchesMatrixPlanSlot(probe, { ...candidate, item: { type: 'trac_nghiem', level: 1 } }) ? [split] : [];
+                    });
+                }
+                const current = levels.map(level => counts[topicId]?.['dung_sai:' + level.value] || 0) as unknown as StatementCounts;
+                return { topicId, name, patterns: trueFalsePatterns(list), current };
+            });
+        });
+    }, [selectedChapters, candidates, counts]);
+    const trueFalseByTopic = new Map(trueFalseTopics.map(topic => [topic.topicId, topic]));
+
+    function setTrueFalse(topicId: string, values: StatementCounts) {
+        setCounts(previous => ({ ...previous, [topicId]: { ...previous[topicId],
+            'dung_sai:1': values[0], 'dung_sai:2': values[1], 'dung_sai:3': values[2] } }));
+    }
 
     function toggleExpanded(chapterId: string) {
         setExpanded(previous => {
@@ -209,8 +250,13 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                                         {name}
                                         {(() => {
                                             const statements = levels.reduce((sum, level) => sum + (counts[topicId]?.['dung_sai:' + level.value] || 0), 0);
-                                            return statements % 4 ? <span className="mt-1 block text-xs font-semibold text-red-700">
+                                            if (statements % 4) return <span className="mt-1 block text-xs font-semibold text-red-700">
                                                 Đúng/Sai {statements} ý: {statements < 4 ? 'thiếu ' + (4 - statements) + ' ý' : 'dư ' + (statements % 4) + ' ý'}, cần bội của 4
+                                            </span>;
+                                            const topic = trueFalseByTopic.get(topicId);
+                                            const status = topic && trueFalseStatus(topic);
+                                            return status ? <span className={'mt-1 block text-xs font-semibold ' + (status.fits ? 'text-emerald-800' : 'text-red-700')}>
+                                                {status.fits ? 'Đúng/Sai: kho ghép được' : 'Đúng/Sai: kho không ghép được, xem gợi ý bên dưới'}
                                             </span> : null;
                                         })()}
                                     </th>
@@ -259,6 +305,7 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                         </tfoot>
                     </table>
                 </div>
+                <TrueFalseComboPanel topics={trueFalseTopics} onApply={setTrueFalse} />
             </section>
         </div>
         {programme
