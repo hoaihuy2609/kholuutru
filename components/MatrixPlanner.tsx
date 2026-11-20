@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react';
+import { Fragment, useId, useMemo, useState } from 'react';
 import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
 import { ENERGY_MATRIX_CHAPTER_ID, ENERGY_MATRIX_TOPICS, MATRIX_LEVELS, type MatrixQuestionType } from '../src/utils/examMatrix';
@@ -10,7 +10,7 @@ import { programmePools, programmeTopics } from '../src/utils/programmeSpec';
 import { programmeRows } from '../src/data/programmeRows';
 import { matchesMatrixPlanSlot, trueFalseCounts, type MatrixPlanSlot, type StatementCounts } from '../src/utils/matrixPlan';
 import { trueFalsePatterns } from '../src/utils/trueFalseCombos';
-import TrueFalseComboPanel, { trueFalseStatus, type TrueFalseTopic } from './TrueFalseComboPanel';
+import TrueFalseComboEditor, { trueFalseStatus, type TrueFalseTopic } from './TrueFalseComboPanel';
 
 const chapters: readonly { id: string; name: string; topics: readonly (readonly [id: string, name: string])[] }[] = [
     { id: 'g10-ch0', name: 'Mở đầu', topics: [
@@ -74,6 +74,8 @@ export default function MatrixPlanner({ candidates, onCompose }: {
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
     const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
     const [counts, setCounts] = useState<Record<string, Record<string, number>>>({});
+    /** Nội dung đang mở gợi ý Đúng/Sai (mở khi giáo viên bấm vào ô Đúng/Sai của nội dung đó). */
+    const [trueFalseOpen, setTrueFalseOpen] = useState<string>();
 
     const selectedChapters = useMemo(() => chapters.map(chapter => ({
         ...chapter, topics: chapter.topics.filter(([topicId]) => selected.has(topicId)),
@@ -209,7 +211,7 @@ export default function MatrixPlanner({ candidates, onCompose }: {
             <section className="min-w-0 rounded-xl border border-stone-200 bg-white" aria-labelledby={id + '-title'}>
                 <div className="space-y-1 px-4 py-3">
                     <h2 id={id + '-title'} className="font-bold">Ma trận đề kiểm tra</h2>
-                    <p className="text-sm text-stone-600">Chọn nội dung bên trái rồi nhập số câu theo từng mức độ. Riêng Đúng/Sai nhập số ý.</p>
+                    <p className="text-sm text-stone-600">Chọn nội dung bên trái rồi nhập số câu theo từng mức độ. Riêng Đúng/Sai nhập số ý; bấm vào ô Đúng/Sai để xem các cách chia ý mà kho ghép được.</p>
                 </div>
                 <div className="overflow-x-auto rounded-b-xl" tabIndex={0} role="region" aria-label="Bảng phân số câu theo mức độ">
                     <table className="w-full min-w-[1080px] table-fixed border-separate border-spacing-0 text-sm">
@@ -238,10 +240,10 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                             </tr>
                         </thead>
                         {selectedChapters.map(chapter => <tbody key={chapter.id}>
-                            {chapter.topics.map(([topicId, name], index) => (
-                                <tr key={topicId} className="group">
+                            {chapter.topics.map(([topicId, name], index) => <Fragment key={topicId}>
+                                <tr className="group">
                                     {index === 0 && (
-                                        <th scope="rowgroup" rowSpan={chapter.topics.length}
+                                        <th scope="rowgroup" rowSpan={chapter.topics.length + (chapter.topics.some(([id]) => id === trueFalseOpen) ? 1 : 0)}
                                             className={cell + ' bg-stone-50 text-left font-semibold text-stone-800'}>
                                             {chapter.name}
                                         </th>
@@ -255,9 +257,10 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                                             </span>;
                                             const topic = trueFalseByTopic.get(topicId);
                                             const status = topic && trueFalseStatus(topic);
-                                            return status ? <span className={'mt-1 block text-xs font-semibold ' + (status.fits ? 'text-emerald-800' : 'text-red-700')}>
-                                                {status.fits ? 'Đúng/Sai: kho ghép được' : 'Đúng/Sai: kho không ghép được, xem gợi ý bên dưới'}
-                                            </span> : null;
+                                            return status ? <button type="button" onClick={() => setTrueFalseOpen(topicId)}
+                                                className={'mt-1 block text-left text-xs font-semibold underline-offset-2 hover:underline ' + (status.fits ? 'text-emerald-800' : 'text-red-700')}>
+                                                {status.fits ? 'Đúng/Sai: kho ghép được' : 'Đúng/Sai: kho không ghép được, bấm xem gợi ý'}
+                                            </button> : null;
                                         })()}
                                     </th>
                                     {columns.map(({ key, format, level, colors }) => (
@@ -266,6 +269,7 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                                                 aria-label={name + ' · ' + format + ' · ' + level}
                                                 className="h-9 w-full min-w-0 rounded-md border border-stone-300 bg-white px-1 text-center tabular-nums focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700"
                                                 value={counts[topicId]?.[key] || ''}
+                                                onFocus={() => { if (key.startsWith('dung_sai:')) setTrueFalseOpen(topicId); }}
                                                 onChange={event => {
                                                     const count = Math.max(0, Math.min(maxCount, Math.trunc(event.currentTarget.valueAsNumber || 0)));
                                                     setCounts(previous => ({
@@ -276,7 +280,12 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                                         </td>
                                     ))}
                                 </tr>
-                            ))}
+                                {trueFalseOpen === topicId && trueFalseByTopic.get(topicId) && <tr>
+                                    <td colSpan={columns.length + 1} className={cell + ' bg-violet-50/60'}>
+                                        <TrueFalseComboEditor topic={trueFalseByTopic.get(topicId)!} onApply={setTrueFalse} onClose={() => setTrueFalseOpen(undefined)} />
+                                    </td>
+                                </tr>}
+                            </Fragment>)}
                         </tbody>)}
                         {!selectedChapters.length && <tbody>
                             <tr><td colSpan={columns.length + 2} className="px-4 py-6 text-stone-600">
@@ -305,7 +314,6 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                         </tfoot>
                     </table>
                 </div>
-                <TrueFalseComboPanel topics={trueFalseTopics} onApply={setTrueFalse} />
             </section>
         </div>
         {programme
