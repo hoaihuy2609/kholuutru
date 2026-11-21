@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
 import { PHYSICS_10_CURRICULUM_SOURCE } from '../src/data/physics10Curriculum';
-import { LESSON_LINES, lessonLineSource, type LessonLine } from '../src/data/lessonLines';
+import { LESSON_LINES, type LessonLine } from '../src/data/lessonLines';
 import { COGNITIVE_LEVELS } from '../src/utils/cognitiveLevels';
 import { statementCountsLabel, trueFalseCounts, type MatrixAllocation, type StatementCounts } from '../src/utils/matrixPlan';
 import { LESSON_TYPE_LABELS, LEVEL_TYPES, lessonIssues, lessonPool, lessonSelections, lessonStatus, lessonTotals, lessonUnits, suggestLessons,
@@ -18,9 +18,6 @@ const levelTab = ['', 'aria-pressed:border-sky-600 aria-pressed:bg-sky-50 aria-p
     'aria-pressed:border-amber-600 aria-pressed:bg-amber-50 aria-pressed:text-amber-950',
     'aria-pressed:border-rose-600 aria-pressed:bg-rose-50 aria-pressed:text-rose-950'];
 const codeColor: Record<LessonType, string> = { trac_nghiem: 'bg-blue-50 text-blue-900', dung_sai: 'bg-violet-50 text-violet-900', tu_luan: 'bg-amber-50 text-amber-950' };
-const sourceBadge = (line: LessonLine) => line.source === 'SGV' ? null
-    : <span className={'ml-1.5 inline-block whitespace-nowrap rounded-full border px-2 py-px align-middle text-[11px] font-semibold '
-        + (line.source === 'DX' ? 'border-orange-300 bg-orange-50 text-orange-900' : 'border-stone-300 text-stone-600')}>{lessonLineSource(line)}</span>;
 
 /** Mở chọn câu cho một dòng YCCĐ (hoặc các câu chưa khớp dòng nào, line = undefined) của một bài, ở một mức; level 0 là Đúng/Sai của bài. */
 type Open = { topic: LessonTopic; level: number; line?: LessonLine };
@@ -135,8 +132,8 @@ export default function LessonSpecification({ allocations, topics, candidates, o
             </details>}
 
             <ul className="list-disc space-y-1 pl-5 text-xs leading-relaxed text-stone-600">
-                <li>Yêu cầu cần đạt lấy nguyên văn mục tiêu bài học SGV Vật lí 10 (Kết nối tri thức). Dòng ghi "CT" là vế nguyên văn YCCĐ của {PHYSICS_10_CURRICULUM_SOURCE}</li>
-                <li>Dòng "CT, chương trước" là YCCĐ của chương trước mà ý hỗ trợ trong câu dùng tới. Dòng "Đề xuất, GV đã duyệt" do người soạn viết cho phần SGV và Chương trình chưa có câu chữ ở đúng mức.</li>
+                <li>Yêu cầu cần đạt lấy nguyên văn mục tiêu bài học SGV Vật lí 10 (Kết nối tri thức). Chỗ SGV mỏng, dòng là vế nguyên văn YCCĐ của {PHYSICS_10_CURRICULUM_SOURCE}</li>
+                <li>Một số dòng là YCCĐ của chương trước mà ý hỗ trợ trong câu dùng tới, hoặc do người soạn viết (giáo viên đã duyệt) cho phần SGV và Chương trình chưa có câu chữ ở đúng mức. Bản in ghi nguồn sau mỗi dòng.</li>
                 <li>Mức của câu, ý: nhắc lại là Nhận biết; định tính, không tính ra số là Thông hiểu; có tính toán ra số là Vận dụng.</li>
                 {unassigned > 0 && <li>{unassigned} câu của chương chưa gắn dòng YCCĐ theo bài hoặc nằm ngoài chương trình nên không hiện ở đây.</li>}
                 {written > 0 && <li>Ma trận có {written} câu tự luận; kho chưa có câu tự luận nên cần soạn riêng.</li>}
@@ -167,7 +164,7 @@ function Requirements({ candidate, lesson }: { candidate: MatrixCandidate; lesso
     return <ul className="space-y-1">
         {lessonUnits(candidate).map(unit => <li key={unit.index} className="leading-snug">
             {unit.label && <span className="font-semibold">{unit.label}) {COGNITIVE_LEVELS[unit.level]}: </span>}
-            {unit.line ? <>{unit.line.lesson && unit.line.lesson !== lesson ? '(YCCĐ Bài ' + unit.line.lesson + ') ' : ''}{unit.line.text}{sourceBadge(unit.line)}</>
+            {unit.line ? <>{unit.line.lesson && unit.line.lesson !== lesson ? '(YCCĐ Bài ' + unit.line.lesson + ') ' : ''}{unit.line.text}</>
                 : <span className="text-stone-500">chưa gắn dòng yêu cầu cần đạt</span>}
         </li>)}
     </ul>;
@@ -209,10 +206,10 @@ function LineList({ topic, level, chosen, pool, code, onOpen }: {
     const row = (line: LessonLine) => {
         const mine = units.filter(unit => unit.line?.id === line.id);
         const taken = chosenUnits(mine, chosen);
-        return <li key={line.id} className={'grid gap-2 border-b border-stone-200 px-4 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center ' + (line.source === 'DX' ? 'bg-orange-50/50' : '')}>
+        return <li key={line.id} className="grid gap-2 border-b border-stone-200 px-4 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
             <p className="text-sm leading-snug">
                 {line.lesson !== topic.lesson.id && <span className="mr-1.5 rounded bg-stone-100 px-1.5 py-px text-[11px] font-semibold text-stone-700">{line.lesson ? 'Bài ' + line.lesson : 'Chương trước'}</span>}
-                {line.text}{sourceBadge(line)}
+                {line.text}
             </p>
             <span className="flex flex-wrap gap-1">{taken.map(unit => <span key={unit.candidate.item.id}
                 className={'rounded px-1.5 py-px font-mono text-[11px] font-semibold ' + codeColor[unit.candidate.item.type]}>
@@ -322,7 +319,7 @@ function LinePicker({ open, chosen, pool, code, onToggle, onClose }: {
         const need = topic.need[candidate.item.type][level - 1];
         return totals[candidate.item.type][level - 1] < need ? undefined : need ? 'Bài đã đủ ' + need + ' câu ' + COGNITIVE_LEVELS[level] : 'Ma trận không cần câu này';
     };
-    const title = topic.lesson.name.replace(/\..*$/, '') + ' · ' + COGNITIVE_LEVELS[level] + (line && line.source !== 'SGV' ? ' · ' + lessonLineSource(line) : '');
+    const title = topic.lesson.name.replace(/\..*$/, '') + ' · ' + COGNITIVE_LEVELS[level];
     const subtitle = line ? (line.lesson && line.lesson !== topic.lesson.id ? '(YCCĐ Bài ' + line.lesson + ') ' : '') + line.text
         : 'Câu cùng mức nhưng chưa gắn dòng yêu cầu cần đạt nào.';
     return <MatrixDialog title={title} subtitle={subtitle} closeLabel="Đóng chọn câu" onClose={onClose}>
