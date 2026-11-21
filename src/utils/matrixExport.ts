@@ -124,7 +124,7 @@ export function buildMatrixExport(allocations: MatrixAllocation[], selections: M
     }
     const validAllocations = allocations.filter(row => {
         const valid = Number.isInteger(row.count) && row.count > 0 && row.count <= 99
-            && [1, 2, 3].includes(row.level) && MATRIX_EXPORT_FORMATS.some(format => format.type === row.type);
+            && ([1, 2, 3].includes(row.level) || (row.type === 'dung_sai' && row.level === 0)) && MATRIX_EXPORT_FORMATS.some(format => format.type === row.type);
         if (!valid) issues.push('Phân bổ không hợp lệ: ' + row.topic + '.');
         return valid;
     });
@@ -174,7 +174,7 @@ export function buildMatrixExport(allocations: MatrixAllocation[], selections: M
         const levels = questionLevels(item);
         const counts = slot.type === 'dung_sai' ? trueFalseCounts(item) : undefined;
         if (item.type !== slot.type || (slot.type === 'dung_sai'
-            ? !counts || !slot.statementBudget || !fitsCounts(slot.statementBudget, counts)
+            ? !counts || (!!slot.statementBudget && !fitsCounts(slot.statementBudget, counts))
             : levels[0] !== slot.level)) {
             issues.push(fullReference + ': câu đã chọn không còn đúng loại hoặc mức độ phân bổ.');
             continue;
@@ -220,9 +220,11 @@ export function buildMatrixExport(allocations: MatrixAllocation[], selections: M
     if (Number.isFinite(settings.targetScore) && Math.abs(totalScore - settings.targetScore) > 0.0001) {
         issues.push('Tổng điểm câu đã chọn là ' + totalScore + ', chưa bằng thang điểm ' + settings.targetScore + '.');
     }
-    // Match all allocation cells, rather than only the total number of selected questions.
-    const mismatch = [...topics.values()].some(topic => formats.some(({ type }) =>
-        [1, 2, 3].some(level => topic.planned[type][level] !== topic.actual[type][level])));
+    // Match all allocation cells, rather than only the total number of selected questions. True-false entered as whole
+    // questions (planned at level 0) matches by question count; its statements take the levels of the chosen questions.
+    const mismatch = [...topics.values()].some(topic => formats.some(({ type }) => type === 'dung_sai' && topic.planned.dung_sai[0]
+        ? topic.planned.dung_sai[0] * 4 !== [1, 2, 3].reduce((sum, level) => sum + topic.actual.dung_sai[level], 0)
+        : [1, 2, 3].some(level => topic.planned[type][level] !== topic.actual[type][level])));
     if (mismatch && !issues.length) issues.push('Câu đã chọn chưa khớp toàn bộ phân bổ ma trận.');
     return { settings, topics: [...topics.values()], formats, units, issues: [...new Set(issues)], invalidSettings,
         questionCount: seen.size, unitCount: units.length, totalScore, levelCounts,

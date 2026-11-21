@@ -7,10 +7,7 @@ import type { MatrixCandidate } from './ExamMatrixBuilder';
 import MatrixPlanSpecification from './MatrixPlanSpecification';
 import LessonSpecification from './LessonSpecification';
 import { lessonPool, lessonTopics } from '../src/utils/lessonSpec';
-import { lessonTopicId, specLessons, topicLesson } from '../src/data/lessonLines';
-import { matchesMatrixPlanSlot, trueFalseCounts, type MatrixPlanSlot, type StatementCounts } from '../src/utils/matrixPlan';
-import { trueFalsePatterns } from '../src/utils/trueFalseCombos';
-import TrueFalseComboEditor, { trueFalseStatus, type TrueFalseTopic } from './TrueFalseComboPanel';
+import { lessonTopicId, specLessons } from '../src/data/lessonLines';
 
 const chapters: readonly { id: string; name: string; topics: readonly (readonly [id: string, name: string])[] }[] = [
     { id: 'g10-ch0', name: 'Mở đầu', topics: [
@@ -53,7 +50,9 @@ const formatColors: Record<typeof formats[number]['value'], { header: string; ba
     written: { header: 'bg-emerald-800', band: 'bg-emerald-100 text-emerald-950', body: 'bg-emerald-50' },
 };
 const levels = [1, 2, 3].map(value => ({ value, label: MATRIX_LEVELS[value] }));
-const columns = formats.flatMap(format => levels.map(level => ({
+/** Đúng/Sai nhập số câu (một cột); các ý của câu đã chọn tự vào mức của chúng khi xuất. */
+const levelsOf = (type: typeof formats[number]['value']) => type === 'dung_sai' ? [{ value: 0, label: 'Số câu' }] : levels;
+const columns = formats.flatMap(format => levelsOf(format.value).map(level => ({
     key: format.value + ':' + level.value,
     format: format.label,
     type: format.value,
@@ -74,8 +73,6 @@ export default function MatrixPlanner({ candidates, onCompose }: {
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
     const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
     const [counts, setCounts] = useState<Record<string, Record<string, number>>>({});
-    /** Nội dung đang mở gợi ý Đúng/Sai (mở khi giáo viên bấm vào ô Đúng/Sai của nội dung đó). */
-    const [trueFalseOpen, setTrueFalseOpen] = useState<string>();
 
     const selectedChapters = useMemo(() => chapters.map(chapter => ({
         ...chapter, topics: chapter.topics.filter(([topicId]) => selected.has(topicId)),
@@ -91,46 +88,13 @@ export default function MatrixPlanner({ candidates, onCompose }: {
     ), [selectedChapters, counts]);
     /** Bản đặc tả theo bài khi mọi nội dung đã chọn là bài có dòng YCCĐ và kho đã gắn câu vào các dòng đó. */
     const lessonRows = useMemo(() => lessonTopics(allocations), [allocations]);
-    const pool = useMemo(() => lessonPool(candidates, [...new Set(chapters.map(chapter => chapter.id))]), [candidates]);
-    const hasAssignments = !!lessonRows && lessonRows.some(topic => pool.units.has(topic.lesson.id));
+    const hasAssignments = useMemo(() => {
+        if (!lessonRows) return false;
+        const pool = lessonPool(candidates, [...new Set(lessonRows.map(topic => topic.chapterId))]);
+        return lessonRows.some(topic => pool.units.has(topic.lesson.id));
+    }, [lessonRows, candidates]);
     const lessons = hasAssignments ? lessonRows : undefined;
     const lessonsWithoutLines = !!lessonRows && !hasAssignments;
-
-    /**
-     * Kiểu ý của câu Đúng/Sai trong kho cho từng nội dung đang chọn. Bài đã gắn câu vào dòng YCCĐ lấy câu của bài
-     * (giống bản đặc tả theo bài); nội dung khác lấy theo nội dung của câu, giống bản đặc tả theo vị trí.
-     */
-    const trueFalseTopics = useMemo<TrueFalseTopic[]>(() => {
-        return selectedChapters.flatMap(chapter => {
-            return chapter.topics.map(([topicId, name]) => {
-                let list: StatementCounts[];
-                const lesson = topicLesson(topicId);
-                if (lesson && pool.units.has(lesson)) {
-                    list = [...new Map((pool.units.get(lesson) ?? []).filter(unit => unit.candidate.chapterId === chapter.id)
-                        .map(unit => [unit.candidate.item.id, unit.candidate])).values()]
-                        .flatMap(candidate => {
-                            const split = trueFalseCounts(candidate.item);
-                            return split ? [split] : [];
-                        });
-                } else {
-                    const probe: MatrixPlanSlot = { chapterId: chapter.id, chapter: chapter.name, topicId, topic: name, type: 'trac_nghiem',
-                        level: 1, id: 'probe', units: 1, label: '', canChoose: true };
-                    list = candidates.flatMap(candidate => {
-                        const split = trueFalseCounts(candidate.item);
-                        return split && matchesMatrixPlanSlot(probe, { ...candidate, item: { type: 'trac_nghiem', level: 1 } }) ? [split] : [];
-                    });
-                }
-                const current = levels.map(level => counts[topicId]?.['dung_sai:' + level.value] || 0) as unknown as StatementCounts;
-                return { topicId, name, patterns: trueFalsePatterns(list), current };
-            });
-        });
-    }, [selectedChapters, candidates, counts, pool]);
-    const trueFalseByTopic = new Map(trueFalseTopics.map(topic => [topic.topicId, topic]));
-
-    function setTrueFalse(topicId: string, values: StatementCounts) {
-        setCounts(previous => ({ ...previous, [topicId]: { ...previous[topicId],
-            'dung_sai:1': values[0], 'dung_sai:2': values[1], 'dung_sai:3': values[2] } }));
-    }
 
     function toggleExpanded(chapterId: string) {
         setExpanded(previous => {
@@ -210,7 +174,7 @@ export default function MatrixPlanner({ candidates, onCompose }: {
             <section className="min-w-0 rounded-xl border border-stone-200 bg-white" aria-labelledby={id + '-title'}>
                 <div className="space-y-1 px-4 py-3">
                     <h2 id={id + '-title'} className="font-bold">Ma trận đề kiểm tra</h2>
-                    <p className="text-sm text-stone-600">Chọn nội dung bên trái rồi nhập số câu theo từng mức độ. Riêng Đúng/Sai nhập số ý; bấm vào ô Đúng/Sai để xem các cách chia ý mà kho ghép được.</p>
+                    <p className="text-sm text-stone-600">Chọn nội dung bên trái rồi nhập số câu theo từng mức độ. Riêng Đúng/Sai nhập số câu; các ý a, b, c, d của câu được chọn tự nằm ở mức của chúng.</p>
                 </div>
                 <div className="overflow-x-auto rounded-b-xl" tabIndex={0} role="region" aria-label="Bảng phân số câu theo mức độ">
                     <table className="w-full min-w-[1080px] table-fixed border-separate border-spacing-0 text-sm">
@@ -219,16 +183,16 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                             <col className="w-[14%]" />
                         </colgroup>
                         {formats.map(format => <colgroup key={format.value}>
-                            {levels.map(level => <col key={level.value} className="w-[6.3333%]" />)}
+                            {levelsOf(format.value).map(level => <col key={level.value} className={format.value === 'dung_sai' ? 'w-[9%]' : 'w-[7.0833%]'} />)}
                         </colgroup>)}
                         <thead className="bg-stone-100 text-stone-800">
                             <tr>
                                 <th scope="col" rowSpan={2} className={cell + ' text-left'}>Chương</th>
                                 <th scope="col" rowSpan={2} className={cell + ' text-left'}>Nội dung</th>
                                 {formats.map(format => (
-                                    <th key={format.value} scope="colgroup" colSpan={levels.length}
+                                    <th key={format.value} scope="colgroup" colSpan={levelsOf(format.value).length}
                                         className={cell + ' font-semibold text-white ' + formatColors[format.value].header}>
-                                        {format.label}{format.value === 'dung_sai' ? ' (ý)' : ''}
+                                        {format.label}
                                     </th>
                                 ))}
                             </tr>
@@ -242,25 +206,13 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                             {chapter.topics.map(([topicId, name], index) => <Fragment key={topicId}>
                                 <tr className="group">
                                     {index === 0 && (
-                                        <th scope="rowgroup" rowSpan={chapter.topics.length + (chapter.topics.some(([id]) => id === trueFalseOpen) ? 1 : 0)}
+                                        <th scope="rowgroup" rowSpan={chapter.topics.length}
                                             className={cell + ' bg-stone-50 text-left font-semibold text-stone-800'}>
                                             {chapter.name}
                                         </th>
                                     )}
                                     <th scope="row" className={cell + ' text-left font-medium group-hover:bg-stone-50'}>
                                         {name}
-                                        {(() => {
-                                            const statements = levels.reduce((sum, level) => sum + (counts[topicId]?.['dung_sai:' + level.value] || 0), 0);
-                                            if (statements % 4) return <span className="mt-1 block text-xs font-semibold text-red-700">
-                                                Đúng/Sai {statements} ý: {statements < 4 ? 'thiếu ' + (4 - statements) + ' ý' : 'dư ' + (statements % 4) + ' ý'}, cần bội của 4
-                                            </span>;
-                                            const topic = trueFalseByTopic.get(topicId);
-                                            const status = topic && trueFalseStatus(topic);
-                                            return status ? <button type="button" onClick={() => setTrueFalseOpen(topicId)}
-                                                className={'mt-1 block text-left text-xs font-semibold underline-offset-2 hover:underline ' + (status.fits ? 'text-emerald-800' : 'text-red-700')}>
-                                                {status.fits ? 'Đúng/Sai: kho ghép được' : 'Đúng/Sai: kho không ghép được, bấm xem gợi ý'}
-                                            </button> : null;
-                                        })()}
                                     </th>
                                     {columns.map(({ key, format, level, colors }) => (
                                         <td key={key} className={cell + ' ' + colors.body}>
@@ -268,7 +220,6 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                                                 aria-label={name + ' · ' + format + ' · ' + level}
                                                 className="h-9 w-full min-w-0 rounded-md border border-stone-300 bg-white px-1 text-center tabular-nums focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700"
                                                 value={counts[topicId]?.[key] || ''}
-                                                onFocus={() => { if (key.startsWith('dung_sai:')) setTrueFalseOpen(topicId); }}
                                                 onChange={event => {
                                                     const count = Math.max(0, Math.min(maxCount, Math.trunc(event.currentTarget.valueAsNumber || 0)));
                                                     setCounts(previous => ({
@@ -279,11 +230,6 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                                         </td>
                                     ))}
                                 </tr>
-                                {trueFalseOpen === topicId && trueFalseByTopic.get(topicId) && <tr>
-                                    <td colSpan={columns.length + 1} className={cell + ' bg-violet-50/60'}>
-                                        <TrueFalseComboEditor topic={trueFalseByTopic.get(topicId)!} onApply={setTrueFalse} onClose={() => setTrueFalseOpen(undefined)} />
-                                    </td>
-                                </tr>}
                             </Fragment>)}
                         </tbody>)}
                         {!selectedChapters.length && <tbody>
@@ -299,14 +245,8 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                             <tr>
                                 <th scope="row" colSpan={2} className={cell + ' text-left'}>Tổng theo loại</th>
                                 {formats.map(format => (
-                                    <td key={format.value} colSpan={levels.length} className={cell + ' ' + formatColors[format.value].band}>
-                                        {(() => {
-                                            const total = levels.reduce((sum, level) => sum + totals[format.value + ':' + level.value], 0);
-                                            if (format.value !== 'dung_sai') return total + ' câu';
-                                            const whole = selectedChapters.flatMap(chapter => chapter.topics).reduce((sum, [topicId]) =>
-                                                sum + Math.floor(levels.reduce((count, level) => count + (counts[topicId]?.['dung_sai:' + level.value] || 0), 0) / 4), 0);
-                                            return total + ' ý = ' + whole + ' câu' + (whole * 4 < total ? ' (' + (total - whole * 4) + ' ý lẻ)' : '');
-                                        })()}
+                                    <td key={format.value} colSpan={levelsOf(format.value).length} className={cell + ' ' + formatColors[format.value].band}>
+                                        {levelsOf(format.value).reduce((sum, level) => sum + totals[format.value + ':' + level.value], 0)} câu
                                     </td>
                                 ))}
                             </tr>
