@@ -182,8 +182,7 @@ export function suggestLessons<C extends LessonCandidate>(topics: readonly Lesso
             let need = topic.need[type][level - 1];
             if (!need) continue;
             const queues = new Map<string, C[]>();
-            for (const unit of shuffle(units.filter(unit => unit.candidate.item.type === type && unit.level === level), rng)
-                .sort((a, b) => Number(a.candidate.programmeMatch === 'extended') - Number(b.candidate.programmeMatch === 'extended'))) {
+            for (const unit of shuffle(units.filter(unit => unit.candidate.item.type === type && unit.level === level), rng)) {
                 const key = unit.line?.id ?? '';
                 const list = queues.get(key);
                 if (list) list.push(unit.candidate); else queues.set(key, [unit.candidate]);
@@ -197,8 +196,7 @@ export function suggestLessons<C extends LessonCandidate>(topics: readonly Lesso
         if (!topic.trueFalse) continue;
         const trueFalse = new Map(units.filter(unit => unit.candidate.item.type === 'dung_sai').map(unit => [unit.candidate.item.id, unit.candidate]));
         const options = shuffle([...trueFalse.values()], rng)
-            .sort((a, b) => lessonUnits(a).filter(unit => !unit.line).length - lessonUnits(b).filter(unit => !unit.line).length
-                || Number(a.programmeMatch === 'extended') - Number(b.programmeMatch === 'extended'))
+            .sort((a, b) => lessonUnits(a).filter(unit => !unit.line).length - lessonUnits(b).filter(unit => !unit.line).length)
             .slice(0, topic.trueFalse);
         options.forEach(candidate => chosen.add(candidate.item.id));
         if (options.length < topic.trueFalse) notes.push(topic.lesson.name + ' · Đúng/Sai: kho thiếu ' + (topic.trueFalse - options.length) + ' câu.');

@@ -162,6 +162,17 @@ function chosenUnits(units: readonly LessonUnit<MatrixCandidate>[] | undefined, 
     return (units ?? []).filter(unit => chosen.has(unit.candidate.item.id));
 }
 
+/** Dòng YCCĐ theo bài của câu (Đúng/Sai: của từng ý), đúng chữ sẽ in ra bản đặc tả. */
+function Requirements({ candidate, lesson }: { candidate: MatrixCandidate; lesson: number }) {
+    return <ul className="space-y-1">
+        {lessonUnits(candidate).map(unit => <li key={unit.index} className="leading-snug">
+            {unit.label && <span className="font-semibold">{unit.label}) {COGNITIVE_LEVELS[unit.level]}: </span>}
+            {unit.line ? <>{unit.line.lesson && unit.line.lesson !== lesson ? '(YCCĐ Bài ' + unit.line.lesson + ') ' : ''}{unit.line.text}{sourceBadge(unit.line)}</>
+                : <span className="text-stone-500">chưa gắn dòng yêu cầu cần đạt</span>}
+        </li>)}
+    </ul>;
+}
+
 function LevelTabs({ topic, level, chosen, pool, onSelect }: {
     topic: LessonTopic; level: number; chosen: ReadonlySet<string>; pool: LessonPool<MatrixCandidate>; onSelect: (level: number) => void;
 }) {
@@ -276,7 +287,7 @@ function TrueFalsePicker({ topic, chosen, pool, code, onToggle, onClose }: {
                     const counts = trueFalseCounts(candidate.item);
                     const loose = lessonUnits(candidate).filter(unit => !unit.line).map(unit => unit.label);
                     return <MatrixQuestionCard key={candidate.item.id} candidate={candidate} score={0} evidence={[]} showOutcomes
-                        selected={chosen.has(candidate.item.id)} used={false}
+                        selected={chosen.has(candidate.item.id)} used={false} requirements={<Requirements candidate={candidate} lesson={topic.lesson.id} />}
                         blockedLabel={chosen.has(candidate.item.id) || taken < topic.trueFalse ? undefined
                             : topic.trueFalse ? 'Bài đã đủ ' + topic.trueFalse + ' câu Đúng/Sai' : 'Ma trận không cần câu Đúng/Sai'}
                         badges={<>
@@ -327,9 +338,9 @@ function LinePicker({ open, chosen, pool, code, onToggle, onClose }: {
             {list.length ? <div className="grid items-start gap-3 lg:grid-cols-2">
                 {list.map(candidate => <MatrixQuestionCard key={candidate.item.id} candidate={candidate} score={0} evidence={[]} showOutcomes
                     selected={chosen.has(candidate.item.id)} used={false} blockedLabel={blocked(candidate)}
+                    requirements={<Requirements candidate={candidate} lesson={topic.lesson.id} />}
                     badges={<>
                         {code(candidate) && <span className="rounded bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-900">{code(candidate)} trong đề</span>}
-                        {candidate.programmeMatch === 'extended' && <span className="rounded bg-orange-50 px-2 py-0.5 font-semibold text-orange-900">mở rộng so với YCCĐ</span>}
                     </>}
                     onPreview={() => setPreview(candidate)} onChoose={() => onToggle(candidate.item.id)} />)}
             </div> : <p className="rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-600">Kho chưa có câu cho dòng này.</p>}
