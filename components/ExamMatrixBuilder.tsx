@@ -20,6 +20,10 @@ export interface MatrixCandidate {
     /** Dòng YCCĐ chương trình mà câu được rót vào (programmeRows), nếu đã gắn. */
     programmeRow?: string;
     programmeMatch?: ProgrammeMatch;
+    /** Bài SGK của câu (bản đặc tả theo bài), suy ra từ YCCĐ chương trình mà câu được rót vào. */
+    lesson?: number;
+    /** Dòng YCCĐ theo bài (lessonLines) của câu; Đúng/Sai có một dòng cho mỗi ý a, b, c, d. */
+    specLines?: (string | undefined)[];
     preview: () => string;
 }
 

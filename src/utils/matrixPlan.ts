@@ -1,6 +1,9 @@
 import type { StudyQuestionType } from '../../types';
 import { cleanMatrixTitle, ENERGY_MATRIX_CHAPTER_ID, type EnergyMatrixTopic, type MatrixQuestionType } from './examMatrix';
 import { COGNITIVE_LEVELS, questionLevels, readCognitiveLevel } from './cognitiveLevels';
+import { topicLesson } from '../data/lessonLines';
+
+const LESSON_ENERGY_TOPIC: Record<number, EnergyMatrixTopic> = { 23: 'work', 24: 'power', 25: 'mechanical-energy', 26: 'mechanical-energy', 27: 'power' };
 
 export interface MatrixAllocation {
     chapterId: string;
@@ -96,6 +99,7 @@ type PlanCandidate = {
     grade?: number;
     energyTopic?: EnergyMatrixTopic;
     lessonTitle?: string;
+    lesson?: number;
     item: { type: StudyQuestionType; level?: number; statements?: readonly { cognitive_level?: unknown }[] };
 };
 
@@ -118,7 +122,12 @@ export function matchesMatrixPlanSlot(slot: MatrixPlanSlot, candidate: PlanCandi
         const counts = trueFalseCounts(candidate.item);
         if (!counts || !fitsCounts(slot.statementBudget, counts)) return false;
     } else if (readCognitiveLevel(slot.level) !== readCognitiveLevel(candidate.item.level)) return false;
-    if (slot.chapterId === ENERGY_MATRIX_CHAPTER_ID) return slot.topicId === candidate.energyTopic;
+    if (slot.chapterId === ENERGY_MATRIX_CHAPTER_ID) {
+        // Bài SGK của ma trận theo bài; câu chưa biết bài thì so theo nội dung cũ chứa bài đó.
+        const lesson = topicLesson(slot.topicId);
+        if (!lesson) return slot.topicId === candidate.energyTopic;
+        return candidate.lesson ? candidate.lesson === lesson : LESSON_ENERGY_TOPIC[lesson] === candidate.energyTopic;
+    }
     return !!candidate.lessonTitle && cleanMatrixTitle(slot.topic) === cleanMatrixTitle(candidate.lessonTitle);
 }
 
