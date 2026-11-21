@@ -21,11 +21,13 @@ interface CardProps {
     blockedLabel?: string;
     /** Extra labels shown in the card header, e.g. how the question matches its programme requirement. */
     badges?: ReactNode;
+    /** Requirement lines shown instead of the question's own stored outcomes, e.g. its lines in the specification by lesson. */
+    requirements?: ReactNode;
     onPreview: () => void;
     onChoose: () => void;
 }
 
-export function MatrixQuestionCard({ candidate, score, evidence, selected, used, recent, showOutcomes, blockedLabel, badges, onPreview, onChoose }: CardProps) {
+export function MatrixQuestionCard({ candidate, score, evidence, selected, used, recent, showOutcomes, blockedLabel, badges, requirements, onPreview, onChoose }: CardProps) {
     const { item } = candidate;
     const [expanded, setExpanded] = useState(false);
     const [clipped, setClipped] = useState(false);
@@ -89,9 +91,9 @@ export function MatrixQuestionCard({ candidate, score, evidence, selected, used,
             </button>}
             {showOutcomes && <div className="space-y-1 rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-700">
                 <p className="text-xs font-semibold text-stone-900">Yêu cầu cần đạt</p>
-                {candidate.outcomes.length ? <ul className="list-disc space-y-1 pl-4">
+                {requirements ?? (candidate.outcomes.length ? <ul className="list-disc space-y-1 pl-4">
                     {candidate.outcomes.map(outcome => <li key={outcome}>{outcome}</li>)}
-                </ul> : <p className="text-xs text-stone-500">Câu này chưa có YCCĐ.</p>}
+                </ul> : <p className="text-xs text-stone-500">Câu này chưa có YCCĐ.</p>)}
             </div>}
 
             <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 pt-3">

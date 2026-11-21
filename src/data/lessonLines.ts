@@ -76,7 +76,7 @@ const CHAPTER_III: LineSpec[] = [
     ["C2-05", 0, 3, "CTP", "Động lực học, YCCĐ 5", "…trọng lượng của vật được tính bằng tích khối lượng của vật với gia tốc rơi tự do."],
     ["C1-16", 0, 3, "CTP", "Động học, YCCĐ 16", "Mô tả và giải thích được chuyển động khi vật có vận tốc không đổi theo một phương và có gia tốc không đổi theo phương vuông góc với phương này."],
     ["C1-07", 0, 3, "CTP", "Động học, YCCĐ 7", "Xác định được độ dịch chuyển tổng hợp, vận tốc tổng hợp."],
-    ["P23-B1", 23, 1, "DX", "", "Nhận biết được một số dạng năng lượng; phát biểu được định luật bảo toàn năng lượng."],
+    ["P23-B1", 23, 1, "DX", "", "Nhận biết được các dạng năng lượng, tính chất chung của năng lượng; phát biểu được định luật bảo toàn năng lượng."],
     ["P23-B2", 23, 1, "DX", "", "Nêu được thực hiện công là một cách truyền năng lượng."],
     ["P24-H", 24, 2, "DX", "", "Giải thích được mối liên hệ giữa lực phát động, tốc độ và công suất (định tính)."],
     ["P24-V", 24, 3, "DX", "", "Vận dụng được công thức P = A/t để tính công suất, công, thời gian."],
