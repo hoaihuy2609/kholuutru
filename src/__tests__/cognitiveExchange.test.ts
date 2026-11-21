@@ -81,6 +81,33 @@ describe('per-question cognitive levels', () => {
     expect(previewCognitiveResult(edited, manifest, result, history)).toMatchObject({ errors: [], changes: [], unchanged: 2 });
   });
 
+  it('stores lesson lines with the new levels on each statement and keeps the export valid', () => {
+    const blogs = [fixture()];
+    const { manifest } = makeOutcomeExport(blogs, [], chapter, 'exp');
+    const result = parseCognitiveResult(JSON.stringify({ schema: 'physivault.cognitive.update.v1', export_id: 'exp', chapter_id: chapter,
+      updates: [{ question_id: 'post:0', statement_levels: [1, 3, 3, 2],
+        statement_lines: ['g10-ch3-23-B1', 'g10-ch3-23-V2', 'g10-ch3-C1-15', null] }] }));
+    const preview = previewCognitiveResult(blogs, manifest, result, []);
+    expect(preview.errors).toEqual([]);
+    const edited = patchQuestionCorrections(blogs, chapter, preview.changes);
+    const statements = readOutcomeQuestions(edited[0]).questions[0].statements;
+    expect(statements.map((s: any) => [s.cognitive_level, s.spec_line])).toEqual([[1, 'g10-ch3-23-B1'], [3, 'g10-ch3-23-V2'], [3, 'g10-ch3-C1-15'], [2, undefined]]);
+    expect(statements.map((s: any) => s.claim)).toEqual(['a', 'b', 'c', 'd']);
+    expect(previewCognitiveResult(edited, manifest, result, [])).toMatchObject({ errors: [], changes: [], unchanged: 1 });
+    const wrong = parseCognitiveResult(JSON.stringify({ schema: 'physivault.cognitive.update.v1', export_id: 'exp', chapter_id: chapter,
+      updates: [{ question_id: 'post:1', spec_line: 'g10-ch3-23-B1' }] }));
+    expect(previewCognitiveResult(blogs, manifest, wrong, []).errors[0]).toContain('statement_lines');
+  });
+
+  it('rejects unknown lesson lines and lines of the wrong shape', () => {
+    const packet = (update: Record<string, unknown>) => JSON.stringify({ schema: 'physivault.cognitive.update.v1',
+      export_id: 'exp', chapter_id: chapter, updates: [{ question_id: 'post:0', ...update }] });
+    expect(() => parseCognitiveResult(packet({ spec_line: 'g10-ch3-99-B1' }))).toThrow();
+    expect(() => parseCognitiveResult(packet({ statement_lines: ['g10-ch3-23-B1', null, null] }))).toThrow();
+    expect(() => parseCognitiveResult(packet({ spec_line: 'g10-ch3-23-B1', statement_lines: [null, null, null, null] }))).toThrow();
+    expect(parseCognitiveResult(packet({ cognitive_level: 3, spec_line: 'g10-ch3-24-V1' })).updates).toHaveLength(1);
+  });
+
   it('rejects programme rows of another chapter, unknown rows and rows without a match', () => {
     const packet = (update: Record<string, unknown>) => JSON.stringify({ schema: 'physivault.cognitive.update.v1',
       export_id: 'exp', chapter_id: chapter, updates: [{ question_id: 'post:0', ...update }] });

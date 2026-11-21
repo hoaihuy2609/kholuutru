@@ -39,12 +39,12 @@ export function readOutcomeQuestions(blog: BlogPost): { document: JsonObject; qu
 }
 
 export function outcomeQuestionFingerprint(blog: BlogPost, question: JsonObject, index: number, count: number) {
-  // Classification fields (YCCĐ, level, programme row) can change without invalidating a review of the content.
-  const { learning_outcomes: _ignored, cognitive_level: _level, programme_row: _row, programme_match: _match, ...rest } = question;
+  // Classification fields (YCCĐ, level, programme row, lesson line) can change without invalidating a review of the content.
+  const { learning_outcomes: _ignored, cognitive_level: _level, programme_row: _row, programme_match: _match, spec_line: _line, ...rest } = question;
   const content = { ...rest, ...(Array.isArray(rest.statements)
     ? { statements: rest.statements.map((statement: unknown) => {
       if (!object(statement)) return statement;
-      const { cognitive_level: _statementLevel, ...claim } = statement;
+      const { cognitive_level: _statementLevel, spec_line: _statementLine, ...claim } = statement;
       return claim;
     }) } : {}) };
   return CryptoJS.SHA256(canonical({ question: content, index, count, section: blog.studySection,

@@ -1,13 +1,13 @@
 import { Fragment, useId, useMemo, useState } from 'react';
 import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
-import { ENERGY_MATRIX_CHAPTER_ID, ENERGY_MATRIX_TOPICS, MATRIX_LEVELS, type MatrixQuestionType } from '../src/utils/examMatrix';
+import { ENERGY_MATRIX_CHAPTER_ID, MATRIX_LEVELS, type MatrixQuestionType } from '../src/utils/examMatrix';
 import { STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import MatrixPlanSpecification from './MatrixPlanSpecification';
-import ProgrammeSpecification from './ProgrammeSpecification';
-import { programmePools, programmeTopics } from '../src/utils/programmeSpec';
-import { programmeRows } from '../src/data/programmeRows';
+import LessonSpecification from './LessonSpecification';
+import { lessonPool, lessonTopics } from '../src/utils/lessonSpec';
+import { lessonTopicId, specLessons, topicLesson } from '../src/data/lessonLines';
 import { matchesMatrixPlanSlot, trueFalseCounts, type MatrixPlanSlot, type StatementCounts } from '../src/utils/matrixPlan';
 import { trueFalsePatterns } from '../src/utils/trueFalseCombos';
 import TrueFalseComboEditor, { trueFalseStatus, type TrueFalseTopic } from './TrueFalseComboPanel';
@@ -27,7 +27,7 @@ const chapters: readonly { id: string; name: string; topics: readonly (readonly 
         ['pressure', 'Khối lượng riêng, áp suất chất lỏng'],
     ] },
     { id: ENERGY_MATRIX_CHAPTER_ID, name: 'Công, năng lượng, công suất',
-        topics: ENERGY_MATRIX_TOPICS.map(([id, name]) => [id, name] as const) },
+        topics: specLessons(ENERGY_MATRIX_CHAPTER_ID).map(lesson => [lessonTopicId(lesson.id), lesson.name] as const) },
     { id: 'g10-ch4', name: 'Động lượng', topics: [
         ['momentum', 'Định nghĩa động lượng, bảo toàn động lượng'],
         ['collisions', 'Động lượng và va chạm'],
@@ -89,26 +89,25 @@ export default function MatrixPlanner({ candidates, onCompose }: {
             return count ? [{ chapterId: chapter.id, chapter: chapter.name, topicId, topic, type, level: levelValue, count }] : [];
         }))
     ), [selectedChapters, counts]);
-    /** Bản đặc tả theo YCCĐ khi mọi nội dung đã chọn có dòng YCCĐ và kho đã gắn câu vào các dòng đó. */
-    const rowTopics = useMemo(() => programmeTopics(allocations), [allocations]);
-    const hasAssignments = !!rowTopics && candidates.some(candidate => candidate.programmeRow
-        && rowTopics.some(topic => topic.chapterId === candidate.chapterId));
-    const programme = hasAssignments ? rowTopics : undefined;
-    const programmeChapterWithoutRows = !!rowTopics && !hasAssignments;
+    /** Bản đặc tả theo bài khi mọi nội dung đã chọn là bài có dòng YCCĐ và kho đã gắn câu vào các dòng đó. */
+    const lessonRows = useMemo(() => lessonTopics(allocations), [allocations]);
+    const pool = useMemo(() => lessonPool(candidates, [...new Set(chapters.map(chapter => chapter.id))]), [candidates]);
+    const hasAssignments = !!lessonRows && lessonRows.some(topic => pool.units.has(topic.lesson.id));
+    const lessons = hasAssignments ? lessonRows : undefined;
+    const lessonsWithoutLines = !!lessonRows && !hasAssignments;
 
     /**
-     * Kiểu ý của câu Đúng/Sai trong kho cho từng nội dung đang chọn. Chương đã gắn câu vào dòng YCCĐ lấy theo dòng
-     * (giống bản đặc tả theo YCCĐ); chương khác lấy theo nội dung của câu, giống bản đặc tả theo vị trí.
+     * Kiểu ý của câu Đúng/Sai trong kho cho từng nội dung đang chọn. Bài đã gắn câu vào dòng YCCĐ lấy câu của bài
+     * (giống bản đặc tả theo bài); nội dung khác lấy theo nội dung của câu, giống bản đặc tả theo vị trí.
      */
     const trueFalseTopics = useMemo<TrueFalseTopic[]>(() => {
-        const pools = programmePools(candidates);
         return selectedChapters.flatMap(chapter => {
-            const rows = programmeRows(chapter.id);
-            const byRow = rows.length > 0 && candidates.some(candidate => candidate.programmeRow && candidate.chapterId === chapter.id);
             return chapter.topics.map(([topicId, name]) => {
                 let list: StatementCounts[];
-                if (byRow) {
-                    list = rows.filter(row => row.topicId === topicId).flatMap(row => pools.trueFalse.get(row.id) ?? [])
+                const lesson = topicLesson(topicId);
+                if (lesson && pool.units.has(lesson)) {
+                    list = [...new Map((pool.units.get(lesson) ?? []).filter(unit => unit.candidate.chapterId === chapter.id)
+                        .map(unit => [unit.candidate.item.id, unit.candidate])).values()]
                         .flatMap(candidate => {
                             const split = trueFalseCounts(candidate.item);
                             return split ? [split] : [];
@@ -125,7 +124,7 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                 return { topicId, name, patterns: trueFalsePatterns(list), current };
             });
         });
-    }, [selectedChapters, candidates, counts]);
+    }, [selectedChapters, candidates, counts, pool]);
     const trueFalseByTopic = new Map(trueFalseTopics.map(topic => [topic.topicId, topic]));
 
     function setTrueFalse(topicId: string, values: StatementCounts) {
@@ -316,11 +315,11 @@ export default function MatrixPlanner({ candidates, onCompose }: {
                 </div>
             </section>
         </div>
-        {programme
-            ? <ProgrammeSpecification key={programme.map(topic => topic.key).join('|')} allocations={allocations} topics={programme} candidates={candidates} onCompose={onCompose} />
+        {lessons
+            ? <LessonSpecification key={lessons.map(topic => topic.key).join('|')} allocations={allocations} topics={lessons} candidates={candidates} onCompose={onCompose} />
             : <>
-                {programmeChapterWithoutRows && <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-                    Câu của chương này chưa được gắn vào dòng YCCĐ chương trình, nên bản đặc tả dùng cách chọn theo vị trí câu. Nạp file gắn YCCĐ ở mục Rà YCCĐ → Nhập mức độ để dùng bản đặc tả theo YCCĐ.
+                {lessonsWithoutLines && <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                    Câu của chương này chưa được gắn vào dòng YCCĐ theo bài, nên bản đặc tả dùng cách chọn theo vị trí câu. Nạp file gắn dòng YCCĐ ở mục Rà YCCĐ → Nhập mức độ để dùng bản đặc tả theo bài.
                 </p>}
                 <MatrixPlanSpecification allocations={allocations} candidates={candidates} onCompose={onCompose} />
             </>}

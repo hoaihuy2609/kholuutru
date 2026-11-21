@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { applyChapterCognitive, getCognitiveHistory, reviewChapterCognitive, undoChapterCognitive } from '../src/services/outcomeExchangeService';
 import { COGNITIVE_LEVELS, questionLevelLabel } from '../src/utils/cognitiveLevels';
 import { PROGRAMME_MATCH_LABELS, programmeRow, programmeRowLabel, readProgrammeMatch } from '../src/data/programmeRows';
+import { lessonLine, lessonLineLabel } from '../src/data/lessonLines';
 
 const button = 'rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-stone-50 disabled:opacity-50';
 const limit = 10 * 1024 * 1024;
@@ -57,13 +58,20 @@ export default function ChapterCognitiveExchange({ chapterId, busy, run, onAppli
         <p className="line-clamp-2 text-stone-500">{change.source.text}</p>
         {change.fields.map(field => {
           if (field.key === 'statements') return <div key={field.key} className="flex flex-wrap gap-2">
-            {(field.after.value as { label: string; cognitive_level: number }[]).map((statement, index) => {
-              const before = (field.before.value as { cognitive_level?: number }[])[index];
+            {(field.after.value as { label: string; cognitive_level?: number; spec_line?: string }[]).map((statement, index) => {
+              const before = (field.before.value as { cognitive_level?: number; spec_line?: string }[])[index];
+              const line = lessonLine(statement.spec_line);
               return <span key={statement.label} className="rounded bg-blue-50 px-2 py-1 text-blue-950">
-                {statement.label}) {COGNITIVE_LEVELS[before.cognitive_level ?? 0]} → {COGNITIVE_LEVELS[statement.cognitive_level]}
+                {statement.label}) {before.cognitive_level === statement.cognitive_level ? COGNITIVE_LEVELS[statement.cognitive_level ?? 0]
+                  : COGNITIVE_LEVELS[before.cognitive_level ?? 0] + ' → ' + COGNITIVE_LEVELS[statement.cognitive_level ?? 0]}
+                {before.spec_line !== statement.spec_line && <span className="block text-xs text-blue-900">{line ? lessonLineLabel(line) : 'chưa có dòng YCCĐ'}</span>}
               </span>;
             })}
           </div>;
+          if (field.key === 'spec_line') {
+            const line = lessonLine(field.after.value);
+            return <p key={field.key}><span className="font-semibold">Dòng YCCĐ: </span>{line ? lessonLineLabel(line) : String(field.after.value)}</p>;
+          }
           if (field.key === 'programme_row') {
             const row = programmeRow(field.after.value);
             const before = programmeRow(field.before.value);

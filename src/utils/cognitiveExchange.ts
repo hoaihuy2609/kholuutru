@@ -2,10 +2,13 @@ import type { BlogPost } from '../../types';
 import { outcomeQuestionFingerprint, readOutcomeQuestions, sameOutcome, type OutcomeExport, type OutcomeValue } from './outcomeExchange';
 import type { FieldChange, QuestionCorrection } from './questionCorrections';
 import { programmeRow, readProgrammeMatch, type ProgrammeMatch } from '../data/programmeRows';
+import { lessonLine } from '../data/lessonLines';
 
 type LevelUpdate = { question_id: string; cognitive_level?: number; statement_levels?: number[]; learning_outcomes?: string[];
   /** Dòng YCCĐ chương trình (programmeRows) mà câu được rót vào, kèm mức khớp. */
-  programme_row?: string; programme_match?: ProgrammeMatch };
+  programme_row?: string; programme_match?: ProgrammeMatch;
+  /** Dòng YCCĐ theo bài (lessonLines) của câu trắc nghiệm, trả lời ngắn; Đúng/Sai dùng statement_lines (null: ý chưa có dòng). */
+  spec_line?: string; statement_lines?: (string | null)[] };
 export type CognitiveResult = {
   schema: 'physivault.cognitive.update.v1'; chapter_id: string; export_id: string; updates: LevelUpdate[];
 };
@@ -26,10 +29,14 @@ export function parseCognitiveResult(text: string): CognitiveResult {
   }
   const seen = new Set<string>();
   for (const update of input.updates) {
-    if (!object(update) || !only(update, ['question_id', 'cognitive_level', 'statement_levels', 'learning_outcomes', 'programme_row', 'programme_match'])
+    if (!object(update) || !only(update, ['question_id', 'cognitive_level', 'statement_levels', 'learning_outcomes', 'programme_row', 'programme_match', 'spec_line', 'statement_lines'])
       || typeof update.question_id !== 'string' || !update.question_id || seen.has(update.question_id)
       || (('cognitive_level' in update) && ('statement_levels' in update))
-      || !['cognitive_level', 'statement_levels', 'learning_outcomes', 'programme_row'].some(key => key in update)
+      || !['cognitive_level', 'statement_levels', 'learning_outcomes', 'programme_row', 'spec_line', 'statement_lines'].some(key => key in update)
+      || (('spec_line' in update) && ('statement_lines' in update))
+      || ('spec_line' in update && lessonLine(update.spec_line)?.chapterId !== input.chapter_id)
+      || ('statement_lines' in update && (!Array.isArray(update.statement_lines) || update.statement_lines.length !== 4
+        || !update.statement_lines.every((line: unknown) => line === null || lessonLine(line)?.chapterId === input.chapter_id)))
       || (('programme_row' in update) !== ('programme_match' in update))
       || ('programme_row' in update && programmeRow(update.programme_row)?.chapterId !== input.chapter_id)
       || ('programme_match' in update && !readProgrammeMatch(update.programme_match))
@@ -39,7 +46,7 @@ export function parseCognitiveResult(text: string): CognitiveResult {
       || ('learning_outcomes' in update && (!Array.isArray(update.learning_outcomes) || !update.learning_outcomes.length
         || update.learning_outcomes.length > 30 || update.learning_outcomes.some((line: unknown) =>
           typeof line !== 'string' || !line.trim() || line.length > 3000)))) {
-      throw new Error('Mã câu, mức độ hoặc dòng YCCĐ chương trình không hợp lệ. Dùng mức 1, 2, 3; Đúng/Sai cần đủ mức độ của a, b, c, d; dòng YCCĐ phải thuộc chương này và đi kèm programme_match.');
+      throw new Error('Mã câu, mức độ hoặc dòng YCCĐ không hợp lệ. Dùng mức 1, 2, 3; Đúng/Sai cần đủ mức độ và dòng YCCĐ của a, b, c, d; dòng YCCĐ phải thuộc chương này, dòng YCCĐ chương trình đi kèm programme_match.');
     }
     seen.add(update.question_id);
   }
@@ -80,17 +87,28 @@ export function previewCognitiveResult(blogs: BlogPost[], manifest: OutcomeExpor
       if (fingerprint !== fingerprints.get(source.question_id)) throw new Error('Nội dung đã đổi ngoài các đợt sửa đã đối chiếu.');
       const patch: Record<string, unknown> = {};
       const levelGiven = update.cognitive_level !== undefined || update.statement_levels !== undefined;
-      if (levelGiven && question.type === 'dung_sai') {
-        if (!update.statement_levels || !Array.isArray(question.statements) || question.statements.length !== 4
+      if (question.type === 'dung_sai' ? update.spec_line : update.statement_lines) {
+        throw new Error(question.type === 'dung_sai' ? 'Đúng/Sai cần statement_lines cho bốn ý.' : 'Trắc nghiệm và trả lời ngắn cần spec_line.');
+      }
+      if ((levelGiven || update.statement_lines) && question.type === 'dung_sai') {
+        if ((levelGiven && !update.statement_levels) || !Array.isArray(question.statements) || question.statements.length !== 4
           || question.statements.some((st: any, index: number) => String(st.label).toLowerCase() !== 'abcd'[index])) {
           throw new Error('Không khớp bốn mệnh đề a, b, c, d.');
         }
-        patch.statements = question.statements.map((statement: any, index: number) =>
-          ({ ...statement, cognitive_level: update.statement_levels![index] }));
+        patch.statements = question.statements.map((statement: any, index: number) => {
+          const next = { ...statement };
+          if (update.statement_levels) next.cognitive_level = update.statement_levels[index];
+          if (update.statement_lines) {
+            const line = update.statement_lines[index];
+            if (line) next.spec_line = line; else delete next.spec_line;
+          }
+          return next;
+        });
       } else if (levelGiven) {
         if (update.cognitive_level === undefined) throw new Error('Trắc nghiệm và trả lời ngắn cần cognitive_level.');
         patch.cognitive_level = update.cognitive_level;
       }
+      if (update.spec_line) patch.spec_line = update.spec_line;
       if (update.learning_outcomes) patch.learning_outcomes = update.learning_outcomes;
       if (update.programme_row) {
         patch.programme_row = update.programme_row;

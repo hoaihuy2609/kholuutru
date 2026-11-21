@@ -13,10 +13,16 @@ import QuestionTable from './QuestionTable';
 import { normalizeQuestionImageWidth } from '../src/utils/questionImage';
 import { questionEnergyMatrixTopic, questionOutcomes, type MatrixQuestionDraft } from '../src/utils/examMatrix';
 import { programmeRow, readProgrammeMatch } from '../src/data/programmeRows';
+import { lessonLine, lessonOfProgrammeRow } from '../src/data/lessonLines';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import { COGNITIVE_LEVELS, questionLevel, questionLevels, readCognitiveLevel } from '../src/utils/cognitiveLevels';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+
+const specLineOf = (chapterId: string | undefined, value: unknown) => {
+    const line = lessonLine(value);
+    return line && line.chapterId === chapterId ? line.id : undefined;
+};
 
 const ExamMatrixBuilder = React.lazy(() => import('./ExamMatrixBuilder'));
 const ChapterOutcomeExchange = React.lazy(() => import('./ChapterOutcomeExchange'));
@@ -84,6 +90,7 @@ interface StoredQuestion extends Partial<Pick<SelectedQuestionItem,
     matrix_topic?: unknown;
     programme_row?: unknown;
     programme_match?: unknown;
+    spec_line?: unknown;
     question_text?: string;
     question_images?: StudyImage[];
     solution_images?: StudyImage[];
@@ -642,6 +649,10 @@ const BlogList: React.FC<BlogListProps> = ({
                 outcomes,
                 programmeRow: programmeRow(question.programme_row)?.chapterId === chapter?.id ? String(question.programme_row) : undefined,
                 programmeMatch: readProgrammeMatch(question.programme_match),
+                lesson: lessonOfProgrammeRow(chapter?.id, question.programme_row),
+                specLines: question.type === 'dung_sai'
+                    ? (Array.isArray(question.statements) ? question.statements.map(statement => specLineOf(chapter?.id, (statement as { spec_line?: unknown }).spec_line)) : undefined)
+                    : [specLineOf(chapter?.id, question.spec_line)],
                 preview: () => JSON.stringify({ ...solution, data: { questions: [question] } }),
             }];
         });
