@@ -4,6 +4,8 @@
  * Mỗi bài có các dòng YCCĐ ở từng mức Biết, Hiểu, Vận dụng. Câu chữ là nguyên văn mục tiêu bài học trong SGV Vật lí 10
  * (Kết nối tri thức) hoặc vế nguyên văn YCCĐ của Chương trình GDPT 2018 (Thông tư 32), kể cả YCCĐ chương trước mà ý hỗ trợ
  * trong câu dùng tới. Dòng "Đề xuất" do người soạn viết cho phần SGV và Chương trình chưa có câu chữ ở đúng mức; giáo viên đã duyệt.
+ * Vế trích từ một câu YCCĐ dài được viết thành câu trọn: viết hoa chữ đầu, kết thúc bằng dấu chấm, không thêm bớt chữ;
+ * chữ cần thêm để vế đủ nghĩa (lấy từ chính câu YCCĐ đó) đặt trong ngoặc vuông.
  * Mức của từng câu, từng ý theo quy tắc: nhắc lại là Biết, định tính là Hiểu, có tính toán ra số là Vận dụng.
  * Câu (trắc nghiệm, trả lời ngắn) và từng ý Đúng/Sai trong kho được gắn vào dòng qua trường spec_line.
  */
@@ -51,29 +53,29 @@ const CHAPTER_III: LineSpec[] = [
     ["24-V1", 24, 3, "SGV", "", "Vận dụng được biểu thức liên hệ giữa công suất với lực và vận tốc vào một số tình huống cụ thể trong đời sống."],
     ["24-V2", 24, 3, "CT", "YCCĐ 9", "Vận dụng được mối liên hệ công suất (hay tốc độ thực hiện công) với tích của lực và vận tốc trong một số tình huống thực tế.", "24-V1"],
     ["25-B1", 25, 1, "SGV", "", "Phát biểu được định nghĩa, viết được công thức tính và biết được đơn vị đo của động năng, thế năng."],
-    ["25-B2", 25, 1, "CT", "YCCĐ 5, vế đầu", "Nêu được công thức tính thế năng trong trường trọng lực đều…"],
+    ["25-B2", 25, 1, "CT", "YCCĐ 5, vế đầu", "Nêu được công thức tính thế năng trong trường trọng lực đều."],
     ["25-H1", 25, 2, "SGV", "", "Hiểu được đơn vị đo của động năng và thế năng."],
     ["25-H2", 25, 2, "CT", "YCCĐ 4", "Từ phương trình chuyển động thẳng biến đổi đều với vận tốc ban đầu bằng không, rút ra được động năng của vật có giá trị bằng công của lực tác dụng lên vật."],
     ["25-V1", 25, 3, "SGV", "", "Vận dụng được biểu thức liên hệ giữa công thực hiện lên vật để vật có động năng, thế năng."],
-    ["25-V2", 25, 3, "CT", "YCCĐ 5, vế sau", "…vận dụng được trong một số trường hợp đơn giản."],
+    ["25-V2", 25, 3, "CT", "YCCĐ 5, vế sau", "Vận dụng được [công thức tính thế năng] trong một số trường hợp đơn giản."],
     ["26-B1", 26, 1, "SGV", "", "Phát biểu được định nghĩa cơ năng và đơn vị đo của cơ năng."],
     ["26-B2", 26, 1, "SGV", "", "Viết được công thức tính cơ năng của vật trong trường trọng lực."],
-    ["26-B3", 26, 1, "CT", "YCCĐ 7, vế giữa", "…phát biểu được định luật bảo toàn cơ năng…"],
+    ["26-B3", 26, 1, "CT", "YCCĐ 7, vế giữa", "Phát biểu được định luật bảo toàn cơ năng."],
     ["26-H1", 26, 2, "SGV", "", "Phân tích được sự chuyển hoá qua lại giữa động năng và thế năng."],
     ["26-H2", 26, 2, "CT", "YCCĐ 6", "Phân tích được sự chuyển hoá động năng và thế năng của vật trong một số trường hợp đơn giản.", "26-H1"],
     ["26-V1", 26, 3, "SGV", "", "Vận dụng được sự chuyển hoá qua lại giữa động năng, thế năng và định luật bảo toàn cơ năng vào một số tình huống thực tế."],
-    ["26-V2", 26, 3, "CT", "YCCĐ 7, vế cuối", "…vận dụng được định luật bảo toàn cơ năng trong một số trường hợp đơn giản."],
+    ["26-V2", 26, 3, "CT", "YCCĐ 7, vế cuối", "Vận dụng được định luật bảo toàn cơ năng trong một số trường hợp đơn giản."],
     ["27-B1", 27, 1, "SGV", "", "Nhận biết được năng lượng có ích và năng lượng hao phí trong các quá trình chuyển hoá năng lượng."],
-    ["27-B2", 27, 1, "CT", "YCCĐ 10, vế đầu", "Từ tình huống thực tế, thảo luận để nêu được định nghĩa hiệu suất…"],
+    ["27-B2", 27, 1, "CT", "YCCĐ 10, vế đầu", "Từ tình huống thực tế, thảo luận để nêu được định nghĩa hiệu suất."],
     ["27-H1", 27, 2, "SGV", "", "Hiểu được khái niệm hiệu suất."],
     ["27-V1", 27, 3, "SGV", "", "Vận dụng được khái niệm hiệu suất vào một số tình huống thực tế."],
-    ["27-V2", 27, 3, "CT", "YCCĐ 10, vế sau", "…vận dụng được hiệu suất trong một số trường hợp thực tế.", "27-V1"],
+    ["27-V2", 27, 3, "CT", "YCCĐ 10, vế sau", "Vận dụng được hiệu suất trong một số trường hợp thực tế.", "27-V1"],
     ["C1-15", 0, 3, "CTP", "Động học, YCCĐ 15", "Vận dụng được các công thức của chuyển động thẳng biến đổi đều."],
     ["C2-10", 0, 2, "CTP", "Động lực học, YCCĐ 10", "Mô tả được bằng ví dụ thực tiễn và biểu diễn được bằng hình vẽ: Trọng lực; Lực ma sát; Lực cản khi một vật chuyển động trong nước (hoặc trong không khí); Lực nâng (đẩy lên trên) của nước; Lực căng dây."],
     ["C2-03", 0, 2, "CTP", "Động lực học, YCCĐ 3", "Phát biểu định luật 1 Newton và minh hoạ được bằng ví dụ cụ thể."],
-    ["C2-01", 0, 2, "CTP", "Động lực học, YCCĐ 1", "…rút ra được biểu thức a = F/m hoặc F = ma (định luật 2 Newton)."],
-    ["C2-01V", 0, 3, "CTP", "Động lực học, YCCĐ 1", "…rút ra được biểu thức a = F/m hoặc F = ma (định luật 2 Newton)."],
-    ["C2-05", 0, 3, "CTP", "Động lực học, YCCĐ 5", "…trọng lượng của vật được tính bằng tích khối lượng của vật với gia tốc rơi tự do."],
+    ["C2-01", 0, 2, "CTP", "Động lực học, YCCĐ 1", "Rút ra được biểu thức a = F/m hoặc F = ma (định luật 2 Newton)."],
+    ["C2-01V", 0, 3, "CTP", "Động lực học, YCCĐ 1", "Rút ra được biểu thức a = F/m hoặc F = ma (định luật 2 Newton)."],
+    ["C2-05", 0, 3, "CTP", "Động lực học, YCCĐ 5", "Nêu được: trọng lượng của vật được tính bằng tích khối lượng của vật với gia tốc rơi tự do."],
     ["C1-16", 0, 3, "CTP", "Động học, YCCĐ 16", "Mô tả và giải thích được chuyển động khi vật có vận tốc không đổi theo một phương và có gia tốc không đổi theo phương vuông góc với phương này."],
     ["C1-07", 0, 3, "CTP", "Động học, YCCĐ 7", "Xác định được độ dịch chuyển tổng hợp, vận tốc tổng hợp."],
     ["P23-B1", 23, 1, "DX", "", "Nhận biết được các dạng năng lượng, tính chất chung của năng lượng; phát biểu được định luật bảo toàn năng lượng."],
