@@ -1,0 +1,5275 @@
+{
+ "schema": "physivault.detail-outcomes.draft.v1",
+ "chapter_id": "g10-ch3",
+ "source_export_id": "fdca853f-9293-4c00-9d39-5f832f66b477",
+ "rule": "Biết: nhắc lại định nghĩa, công thức, đơn vị, quy tắc. Hiểu: xác định, so sánh, giải thích định tính, biểu thức dạng chữ, không tính ra số. Vận dụng: có tính toán ra số (kể cả thay số một bước, đổi đơn vị).",
+ "rows": [
+  {
+   "id": "1.1",
+   "ct": 1,
+   "level": 1,
+   "text": "Nhận biết được các dạng năng lượng, nguồn gốc và tính chất chung của năng lượng."
+  },
+  {
+   "id": "1.2",
+   "ct": 1,
+   "level": 1,
+   "text": "Phát biểu được định luật bảo toàn năng lượng."
+  },
+  {
+   "id": "1.3",
+   "ct": 1,
+   "level": 2,
+   "text": "Xác định được sự chuyển hoá năng lượng trong hiện tượng, thiết bị cụ thể."
+  },
+  {
+   "id": "1.4",
+   "ct": 1,
+   "level": 2,
+   "text": "Giải thích được hiện tượng thực tế, sự hao phí năng lượng dựa vào định luật bảo toàn năng lượng."
+  },
+  {
+   "id": "2.1",
+   "ct": 2,
+   "level": 1,
+   "text": "Nêu được thực hiện công là một cách truyền năng lượng; công là số đo phần năng lượng được truyền hoặc chuyển hoá."
+  },
+  {
+   "id": "2.2",
+   "ct": 2,
+   "level": 2,
+   "text": "Xác định được ví dụ, tình huống năng lượng được truyền từ vật này sang vật khác bằng cách thực hiện công."
+  },
+  {
+   "id": "3.1",
+   "ct": 3,
+   "level": 1,
+   "text": "Nêu được biểu thức tính công A = F·d·cosα và ý nghĩa các đại lượng trong biểu thức."
+  },
+  {
+   "id": "3.2",
+   "ct": 3,
+   "level": 1,
+   "text": "Nêu được công là đại lượng vô hướng; đơn vị đo công là jun (1 J = 1 N·m) và các đơn vị khác của công, năng lượng (kWh, cal)."
+  },
+  {
+   "id": "3.3",
+   "ct": 3,
+   "level": 1,
+   "text": "Nêu được điều kiện để công dương (công phát động), công âm (công cản), công bằng không theo góc giữa lực và độ dịch chuyển."
+  },
+  {
+   "id": "3.4",
+   "ct": 3,
+   "level": 2,
+   "text": "Xác định được lực sinh công dương, công âm hay không sinh công trong tình huống cụ thể."
+  },
+  {
+   "id": "3.5",
+   "ct": 3,
+   "level": 2,
+   "text": "So sánh, giải thích được sự phụ thuộc của công vào lực, độ dịch chuyển và góc giữa chúng; xác định được biểu thức công trong tình huống cụ thể (dạng chữ, không tính số)."
+  },
+  {
+   "id": "3.6",
+   "ct": 3,
+   "level": 3,
+   "text": "Tính được công của lực không đổi, hoặc tính lực, độ dịch chuyển, góc từ A = F·d·cosα."
+  },
+  {
+   "id": "3.7",
+   "ct": 3,
+   "level": 3,
+   "text": "Tính được công của trọng lực theo độ chênh cao."
+  },
+  {
+   "id": "3.8",
+   "ct": 3,
+   "level": 3,
+   "text": "Kết hợp định luật Newton và động học để tính lực, rồi tính công của lực kéo, lực nâng, lực ma sát, lực cản."
+  },
+  {
+   "id": "3.9",
+   "ct": 3,
+   "level": 3,
+   "text": "Tính được công từ diện tích dưới đồ thị lực theo độ dịch chuyển."
+  },
+  {
+   "id": "3.10",
+   "ct": 3,
+   "level": 3,
+   "text": "Đổi được đơn vị công, năng lượng (kWh, cal sang J)."
+  },
+  {
+   "id": "4.1",
+   "ct": 4,
+   "level": 1,
+   "text": "Nêu được khái niệm động năng, biểu thức Wđ = ½mv², đơn vị và tính chất của động năng (vô hướng, không âm, phụ thuộc hệ quy chiếu)."
+  },
+  {
+   "id": "4.2",
+   "ct": 4,
+   "level": 1,
+   "text": "Phát biểu được định lí động năng: độ biến thiên động năng bằng tổng công của ngoại lực tác dụng lên vật."
+  },
+  {
+   "id": "4.3",
+   "ct": 4,
+   "level": 2,
+   "text": "Xác định được động năng tăng, giảm hay không đổi theo tốc độ và công của các lực; so sánh động năng, biểu thức động năng trong tình huống cụ thể (định tính, dạng chữ)."
+  },
+  {
+   "id": "4.4",
+   "ct": 4,
+   "level": 3,
+   "text": "Tính được động năng, hoặc khối lượng, tốc độ của vật từ động năng."
+  },
+  {
+   "id": "4.5",
+   "ct": 4,
+   "level": 3,
+   "text": "Vận dụng định lí động năng để tính công, lực, tốc độ, quãng đường."
+  },
+  {
+   "id": "4.6",
+   "ct": 4,
+   "level": 3,
+   "text": "Tính được động năng của vật trong các hệ quy chiếu khác nhau."
+  },
+  {
+   "id": "5.1",
+   "ct": 5,
+   "level": 1,
+   "text": "Nêu được khái niệm thế năng trọng trường, biểu thức Wt = mgh, đơn vị, tính chất (phụ thuộc mốc, có thể âm) và liên hệ giữa công của trọng lực với độ giảm thế năng."
+  },
+  {
+   "id": "5.2",
+   "ct": 5,
+   "level": 2,
+   "text": "Xác định được sự thay đổi, so sánh thế năng của vật và ảnh hưởng của việc chọn mốc thế năng (định tính)."
+  },
+  {
+   "id": "5.3",
+   "ct": 5,
+   "level": 3,
+   "text": "Tính được thế năng, độ cao, khối lượng của vật theo mốc thế năng đã chọn."
+  },
+  {
+   "id": "5.4",
+   "ct": 5,
+   "level": 3,
+   "text": "Tính được độ biến thiên thế năng và công của trọng lực tương ứng."
+  },
+  {
+   "id": "6.1",
+   "ct": 6,
+   "level": 2,
+   "text": "Phân tích được sự chuyển hoá động năng và thế năng, vị trí động năng, thế năng cực đại, cực tiểu trong chuyển động cụ thể (rơi, ném, con lắc, máng trượt)."
+  },
+  {
+   "id": "6.2",
+   "ct": 6,
+   "level": 3,
+   "text": "Tính được động năng, thế năng của vật tại các vị trí trong quá trình chuyển hoá."
+  },
+  {
+   "id": "7.1",
+   "ct": 7,
+   "level": 1,
+   "text": "Nêu được khái niệm cơ năng, biểu thức W = Wđ + Wt và đơn vị của cơ năng."
+  },
+  {
+   "id": "7.2",
+   "ct": 7,
+   "level": 1,
+   "text": "Phát biểu được định luật bảo toàn cơ năng và điều kiện áp dụng."
+  },
+  {
+   "id": "7.3",
+   "ct": 7,
+   "level": 2,
+   "text": "Xác định được cơ năng có được bảo toàn hay không, biểu thức cơ năng và sự thay đổi động năng, thế năng, cơ năng trong tình huống cụ thể (định tính, dạng chữ)."
+  },
+  {
+   "id": "7.4",
+   "ct": 7,
+   "level": 3,
+   "text": "Vận dụng định luật bảo toàn cơ năng để tính tốc độ, độ cao, vị trí của vật (kể cả khi Wđ = n·Wt, con lắc đơn)."
+  },
+  {
+   "id": "7.5",
+   "ct": 7,
+   "level": 3,
+   "text": "Tính được cơ năng của vật; độ biến thiên cơ năng khi có lực cản, ma sát."
+  },
+  {
+   "id": "8.1",
+   "ct": 8,
+   "level": 1,
+   "text": "Nêu được định nghĩa, ý nghĩa vật lí, biểu thức P = A/t và đơn vị của công suất (W, kW, mã lực)."
+  },
+  {
+   "id": "8.2",
+   "ct": 8,
+   "level": 2,
+   "text": "Xác định được biểu thức, so sánh, giải thích công suất trong tình huống cụ thể (định tính, dạng chữ, đồ thị)."
+  },
+  {
+   "id": "8.3",
+   "ct": 8,
+   "level": 3,
+   "text": "Tính được công suất, công, thời gian từ P = A/t (kể cả đổi đơn vị mã lực)."
+  },
+  {
+   "id": "9.1",
+   "ct": 9,
+   "level": 1,
+   "text": "Nêu được biểu thức công suất P = F·v."
+  },
+  {
+   "id": "9.2",
+   "ct": 9,
+   "level": 2,
+   "text": "Giải thích được mối liên hệ giữa lực phát động, tốc độ và công suất trong tình huống thực tế (định tính)."
+  },
+  {
+   "id": "9.3",
+   "ct": 9,
+   "level": 3,
+   "text": "Vận dụng P = F·v để tính công suất (cả công suất tức thời), lực kéo, tốc độ, hệ số ma sát."
+  },
+  {
+   "id": "10.1",
+   "ct": 10,
+   "level": 1,
+   "text": "Nêu được định nghĩa, biểu thức hiệu suất; năng lượng có ích, toàn phần, hao phí; hiệu suất luôn nhỏ hơn 1."
+  },
+  {
+   "id": "10.2",
+   "ct": 10,
+   "level": 2,
+   "text": "Xác định được năng lượng có ích, hao phí và so sánh hiệu suất trong tình huống cụ thể (định tính)."
+  },
+  {
+   "id": "10.3",
+   "ct": 10,
+   "level": 3,
+   "text": "Tính được hiệu suất, công (công suất) có ích, toàn phần, hao phí và các đại lượng liên quan."
+  },
+  {
+   "id": "N.1",
+   "ct": 0,
+   "level": 2,
+   "text": "Ý hỗ trợ (chương Động lực học): xác định các lực tác dụng, trạng thái chuyển động, viết định luật II Newton."
+  },
+  {
+   "id": "N.2",
+   "ct": 0,
+   "level": 3,
+   "text": "Ý hỗ trợ (chương Động học, Động lực học): tính trọng lượng, gia tốc, quãng đường, lực."
+  }
+ ],
+ "assignments": [
+  {
+   "question_id": "0642c449-674b-4202-8cc3-d1ad5d6cd737:0",
+   "no": "Câu 15",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "0642c449-674b-4202-8cc3-d1ad5d6cd737:1",
+   "no": "Câu 16",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "0642c449-674b-4202-8cc3-d1ad5d6cd737:2",
+   "no": "Câu 17",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "2.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "15b92b17-5acd-42dc-8780-d30c6c03642b:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "15b92b17-5acd-42dc-8780-d30c6c03642b:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "15b92b17-5acd-42dc-8780-d30c6c03642b:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "15b92b17-5acd-42dc-8780-d30c6c03642b:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "6cb372ca-29a4-4066-a4aa-03495b2948fc:0",
+   "no": "Câu 5",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "6cb372ca-29a4-4066-a4aa-03495b2948fc:1",
+   "no": "Câu 6",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "3.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "b2e5a49a-2253-4ad9-93c8-18cf0d397d5e:0",
+   "no": "Câu 12",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "b2e5a49a-2253-4ad9-93c8-18cf0d397d5e:1",
+   "no": "Câu 13",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "b2e5a49a-2253-4ad9-93c8-18cf0d397d5e:2",
+   "no": "Câu 14",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "dd00e3c6-124e-42f5-a8c9-5669aada5a07:0",
+   "no": "Câu 7",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "dd00e3c6-124e-42f5-a8c9-5669aada5a07:1",
+   "no": "Câu 8",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "2.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "dd00e3c6-124e-42f5-a8c9-5669aada5a07:2",
+   "no": "Câu 9",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "dd00e3c6-124e-42f5-a8c9-5669aada5a07:3",
+   "no": "Câu 10",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "dd00e3c6-124e-42f5-a8c9-5669aada5a07:4",
+   "no": "Câu 11",
+   "lesson": "BÀI 1.1: NĂNG LƯỢNG",
+   "type": "trac_nghiem",
+   "row": "1.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "1e1692d0-2faa-4674-8712-d27789fcd25f:0",
+   "no": "Câu 14",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.5",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "1e1692d0-2faa-4674-8712-d27789fcd25f:1",
+   "no": "Câu 15",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.5",
+   "old_level": 3,
+   "level": 2
+  },
+  {
+   "question_id": "3e06216b-35cb-4668-8917-9ab87bccc477:0",
+   "no": "Câu 11",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.5",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "3e06216b-35cb-4668-8917-9ab87bccc477:1",
+   "no": "Câu 12",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.5",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "3e06216b-35cb-4668-8917-9ab87bccc477:2",
+   "no": "Câu 13",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.5",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "54579bdc-a392-42a7-aac3-58d705690b18:0",
+   "no": "Câu 9",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "54579bdc-a392-42a7-aac3-58d705690b18:1",
+   "no": "Câu 10",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.5",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "677cf9a6-a47e-4040-975f-58335899cb2d:0",
+   "no": "Câu 24",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "677cf9a6-a47e-4040-975f-58335899cb2d:1",
+   "no": "Câu 25",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "677cf9a6-a47e-4040-975f-58335899cb2d:2",
+   "no": "Câu 26",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "677cf9a6-a47e-4040-975f-58335899cb2d:3",
+   "no": "Câu 27",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "677cf9a6-a47e-4040-975f-58335899cb2d:4",
+   "no": "Câu 28",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "7dcbb89f-47be-40bf-96e5-fc3f68340a46:0",
+   "no": "Câu 29",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "7dcbb89f-47be-40bf-96e5-fc3f68340a46:1",
+   "no": "Câu 30",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.5",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "82a1c0d6-d8fd-4615-9330-9cf5c175a327:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "82a1c0d6-d8fd-4615-9330-9cf5c175a327:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "82a1c0d6-d8fd-4615-9330-9cf5c175a327:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "4.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "82a1c0d6-d8fd-4615-9330-9cf5c175a327:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "1.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "8ef405ed-3b7f-4b78-9d01-9dda4ba1f322:0",
+   "no": "Câu 20",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "8ef405ed-3b7f-4b78-9d01-9dda4ba1f322:1",
+   "no": "Câu 21",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.3",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "8ef405ed-3b7f-4b78-9d01-9dda4ba1f322:2",
+   "no": "Câu 22",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "8ef405ed-3b7f-4b78-9d01-9dda4ba1f322:3",
+   "no": "Câu 23",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.4",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "a164718a-99ed-48f2-ae45-0370c97d926f:0",
+   "no": "Câu 5",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a164718a-99ed-48f2-ae45-0370c97d926f:1",
+   "no": "Câu 6",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a164718a-99ed-48f2-ae45-0370c97d926f:2",
+   "no": "Câu 7",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a164718a-99ed-48f2-ae45-0370c97d926f:3",
+   "no": "Câu 8",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "ee181066-745c-44d7-a431-ab0d504c361a:0",
+   "no": "Câu 16",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "ee181066-745c-44d7-a431-ab0d504c361a:1",
+   "no": "Câu 17",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.5",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "ee181066-745c-44d7-a431-ab0d504c361a:2",
+   "no": "Câu 18",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.3",
+   "old_level": 2,
+   "level": 1
+  },
+  {
+   "question_id": "ee181066-745c-44d7-a431-ab0d504c361a:3",
+   "no": "Câu 19",
+   "lesson": "BÀI 1.2: CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.3",
+   "old_level": 2,
+   "level": 1
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.10",
+   "old_level": 1,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.6",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:10",
+   "no": "Câu 11",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:11",
+   "no": "Câu 12",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:12",
+   "no": "Câu 13",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:13",
+   "no": "Câu 14",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.7",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:14",
+   "no": "Câu 15",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.7",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:15",
+   "no": "Câu 16",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.6",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.6",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.7",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.5",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:7",
+   "no": "Câu 8",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.7",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:8",
+   "no": "Câu 9",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.7",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a8f5bdb5-9d99-477f-97bd-70821baf3a82:9",
+   "no": "Câu 10",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "trac_nghiem",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "1.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "b",
+     "row": "2.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "c",
+     "row": "3.2",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "d",
+     "row": "2.1",
+     "old_level": 1,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.3",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "b",
+     "row": "3.3",
+     "old_level": 2,
+     "level": 1
+    },
+    {
+     "label": "c",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:10",
+   "no": "Câu 11",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "3.7",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:11",
+   "no": "Câu 12",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.7",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:12",
+   "no": "Câu 13",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:13",
+   "no": "Câu 14",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:14",
+   "no": "Câu 15",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:15",
+   "no": "Câu 16",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:16",
+   "no": "Câu 17",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:17",
+   "no": "Câu 18",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:18",
+   "no": "Câu 19",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.6",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:19",
+   "no": "Câu 20",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:20",
+   "no": "Câu 21",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "3.6",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:21",
+   "no": "Câu 22",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:22",
+   "no": "Câu 23",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:23",
+   "no": "Câu 24",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.5",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "3.5",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.6",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "3.6",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.5",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "3.5",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "3.2",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "c",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "3.6",
+     "old_level": 2,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "3.6",
+     "old_level": 2,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:7",
+   "no": "Câu 8",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.5",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "3.9",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.9",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.9",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:8",
+   "no": "Câu 9",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "3.7",
+     "old_level": 2,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "abdcd246-b64c-4f01-b672-d4cb4f7efd3f:9",
+   "no": "Câu 10",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "tu_luan",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "tu_luan",
+   "row": "3.7",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "tu_luan",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "tu_luan",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "tu_luan",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "tu_luan",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "tu_luan",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:7",
+   "no": "Câu 8",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "tu_luan",
+   "row": "3.8",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "cfd8e594-045a-4065-a852-2391d2ef62cc:8",
+   "no": "Câu 9",
+   "lesson": "BÀI 1: NĂNG LƯỢNG VÀ CÔNG CƠ HỌC",
+   "type": "tu_luan",
+   "row": "3.9",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "500a3940-d4c0-4e5c-9a79-3608afd527b1:0",
+   "no": "Câu 14",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": null,
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "500a3940-d4c0-4e5c-9a79-3608afd527b1:1",
+   "no": "Câu 15",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "9.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "500a3940-d4c0-4e5c-9a79-3608afd527b1:2",
+   "no": "Câu 16",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "9.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "663daf95-c38d-4d8c-b035-c6e9654591cb:0",
+   "no": "Câu 5",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "663daf95-c38d-4d8c-b035-c6e9654591cb:1",
+   "no": "Câu 6",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "663daf95-c38d-4d8c-b035-c6e9654591cb:2",
+   "no": "Câu 7",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:0",
+   "no": "Câu 8",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:1",
+   "no": "Câu 9",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:2",
+   "no": "Câu 10",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:3",
+   "no": "Câu 11",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:4",
+   "no": "Câu 12",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "3.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "67f9691b-f749-4f9e-9203-1bd36f1dafe3:5",
+   "no": "Câu 13",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "8b574036-82b7-4f49-a287-3c9df70b69b9:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "8b574036-82b7-4f49-a287-3c9df70b69b9:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "8b574036-82b7-4f49-a287-3c9df70b69b9:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "8b574036-82b7-4f49-a287-3c9df70b69b9:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "tu_luan",
+   "row": "8.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "tu_luan",
+   "row": "9.3",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "tu_luan",
+   "row": "9.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "tu_luan",
+   "row": "9.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "tu_luan",
+   "row": "9.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "tu_luan",
+   "row": "9.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "adcb7a1b-1385-4261-8e30-e6c805542f12:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "tu_luan",
+   "row": "9.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "3.10",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.3",
+   "old_level": 1,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:10",
+   "no": "Câu 11",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:11",
+   "no": "Câu 12",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "9.3",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:12",
+   "no": "Câu 13",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:13",
+   "no": "Câu 14",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:14",
+   "no": "Câu 15",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "9.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.3",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "9.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:7",
+   "no": "Câu 8",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:8",
+   "no": "Câu 9",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "9.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "b6155eea-8bb9-4c42-b7ba-7b3a38766bdd:9",
+   "no": "Câu 10",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "trac_nghiem",
+   "row": "9.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "8.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "b",
+     "row": "8.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "c",
+     "row": "8.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "d",
+     "row": "9.1",
+     "old_level": 1,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "8.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "b",
+     "row": "8.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "c",
+     "row": "8.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "d",
+     "row": "8.1",
+     "old_level": 1,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:10",
+   "no": "Câu 11",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "3.7",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "9.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:11",
+   "no": "Câu 12",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "9.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.7",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "9.2",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:12",
+   "no": "Câu 13",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "9.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "9.2",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:13",
+   "no": "Câu 14",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "3.8",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:14",
+   "no": "Câu 15",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "9.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:15",
+   "no": "Câu 16",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:16",
+   "no": "Câu 17",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "9.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:17",
+   "no": "Câu 18",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:18",
+   "no": "Câu 19",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "9.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "9.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "b",
+     "row": "8.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "3.5",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "3.2",
+     "old_level": 1,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "9.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "9.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "9.2",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "8.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "8.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "8.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "9.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "9.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "9.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "9.2",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "9.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "9.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "9.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "9.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:7",
+   "no": "Câu 8",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.6",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:8",
+   "no": "Câu 9",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.6",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.6",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "dacc91b1-2b6b-44b5-9842-76e462c1bea3:9",
+   "no": "Câu 10",
+   "lesson": "BÀI 2: CÔNG SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "1.3",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "4.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "4.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "4.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "4.3",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "4.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "4.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "4.3",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "4.4",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "4.4",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "4.4",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "4.5",
+     "old_level": 2,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "4.4",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "4.4",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "4.5",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "4.5",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "4.4",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "4.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:7",
+   "no": "Câu 8",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "4.4",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:8",
+   "no": "Câu 9",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "4.6",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "4.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "4.3",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "1159105b-acd2-4b8c-a6df-2964b0c43751:9",
+   "no": "Câu 10",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "4.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "3.6",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "4.6",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "4.5",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:0",
+   "no": "Câu 11",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:1",
+   "no": "Câu 12",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:2",
+   "no": "Câu 13",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:3",
+   "no": "Câu 14",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "2112ea86-a2c1-44d3-bdf5-ea08961c4d3a:4",
+   "no": "Câu 15",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "2dc3401c-cf6e-4722-bff9-ae6888b53e0c:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "2dc3401c-cf6e-4722-bff9-ae6888b53e0c:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "2dc3401c-cf6e-4722-bff9-ae6888b53e0c:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "2dc3401c-cf6e-4722-bff9-ae6888b53e0c:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "2dc3401c-cf6e-4722-bff9-ae6888b53e0c:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "72568568-723b-483b-a3f0-98e3ab2aa832:0",
+   "no": "Câu 6",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "72568568-723b-483b-a3f0-98e3ab2aa832:1",
+   "no": "Câu 7",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "72568568-723b-483b-a3f0-98e3ab2aa832:2",
+   "no": "Câu 8",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "72568568-723b-483b-a3f0-98e3ab2aa832:3",
+   "no": "Câu 9",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "72568568-723b-483b-a3f0-98e3ab2aa832:4",
+   "no": "Câu 10",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.3",
+   "old_level": 3,
+   "level": 2
+  },
+  {
+   "question_id": "c8c4ab27-6429-463e-88d5-4f0c5bc7d000:0",
+   "no": "Câu 16",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "c8c4ab27-6429-463e-88d5-4f0c5bc7d000:1",
+   "no": "Câu 17",
+   "lesson": "BÀI 3.1: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "45276f9b-aa92-4139-a541-51af7b979257:0",
+   "no": "Câu 7",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "45276f9b-aa92-4139-a541-51af7b979257:1",
+   "no": "Câu 8",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "45276f9b-aa92-4139-a541-51af7b979257:2",
+   "no": "Câu 9",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "45276f9b-aa92-4139-a541-51af7b979257:3",
+   "no": "Câu 10",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "45276f9b-aa92-4139-a541-51af7b979257:4",
+   "no": "Câu 11",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:0",
+   "no": "Câu 12",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "2.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:1",
+   "no": "Câu 13",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:2",
+   "no": "Câu 14",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:3",
+   "no": "Câu 15",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "59ab98b1-d2ba-4e9f-bae7-92f7dafc5b02:4",
+   "no": "Câu 16",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": null,
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "5a75d578-d195-4b82-8443-5ea415c3834d:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "5a75d578-d195-4b82-8443-5ea415c3834d:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "5a75d578-d195-4b82-8443-5ea415c3834d:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "5a75d578-d195-4b82-8443-5ea415c3834d:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "5a75d578-d195-4b82-8443-5ea415c3834d:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "5a75d578-d195-4b82-8443-5ea415c3834d:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "5.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "b",
+     "row": "2.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "c",
+     "row": "5.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "d",
+     "row": "5.1",
+     "old_level": 1,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "5.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "5.2",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "8.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "5.4",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "5.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "5.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "5.4",
+     "old_level": 2,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "5.4",
+     "old_level": 2,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "6.2",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:7",
+   "no": "Câu 8",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "7.4",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:8",
+   "no": "Câu 9",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "3.7",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "4.5",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "4.5",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "8fa12aa0-5d00-4933-9942-ec082788f777:9",
+   "no": "Câu 10",
+   "lesson": "BÀI 3.2: THẾ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "5.4",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "4.5",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "4.5",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "97452387-ee30-43a2-aff6-0ce33beea9b7:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "tu_luan",
+   "row": "4.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "97452387-ee30-43a2-aff6-0ce33beea9b7:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "tu_luan",
+   "row": "4.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "97452387-ee30-43a2-aff6-0ce33beea9b7:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "tu_luan",
+   "row": "4.5",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.4",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.4",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.4",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.4",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:7",
+   "no": "Câu 8",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.5",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:8",
+   "no": "Câu 9",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "ca696803-2aaf-414e-af9c-603948fd2ef6:9",
+   "no": "Câu 10",
+   "lesson": "BÀI 3: ĐỘNG NĂNG",
+   "type": "trac_nghiem",
+   "row": "4.3",
+   "old_level": 3,
+   "level": 2
+  },
+  {
+   "question_id": "a6f96b32-dcdd-477e-b5ae-bfa3be5e72c5:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 4.1: CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a6f96b32-dcdd-477e-b5ae-bfa3be5e72c5:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 4.1: CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a6f96b32-dcdd-477e-b5ae-bfa3be5e72c5:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 4.1: CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a6f96b32-dcdd-477e-b5ae-bfa3be5e72c5:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 4.1: CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.1",
+   "old_level": 2,
+   "level": 1
+  },
+  {
+   "question_id": "a6f96b32-dcdd-477e-b5ae-bfa3be5e72c5:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 4.1: CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a6f96b32-dcdd-477e-b5ae-bfa3be5e72c5:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 4.1: CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "dfb56aac-d998-4af6-b93a-0c1361cb2a1c:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 4.1: CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "dfb56aac-d998-4af6-b93a-0c1361cb2a1c:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 4.1: CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "2.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "dfb56aac-d998-4af6-b93a-0c1361cb2a1c:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 4.1: CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "5.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "2.2",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "dfb56aac-d998-4af6-b93a-0c1361cb2a1c:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 4.1: CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "1.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "1.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "1.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "1.3",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "56abf59c-88a7-41ec-b086-155099a52d12:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 4.1: CƠ NĂNG - ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "tu_luan",
+   "row": "6.1",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "56abf59c-88a7-41ec-b086-155099a52d12:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 4.1: CƠ NĂNG - ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "tu_luan",
+   "row": "6.1",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "56abf59c-88a7-41ec-b086-155099a52d12:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 4.1: CƠ NĂNG - ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "tu_luan",
+   "row": "7.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "56abf59c-88a7-41ec-b086-155099a52d12:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 4.1: CƠ NĂNG - ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "tu_luan",
+   "row": "7.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a92aa410-3cfc-4f73-b837-77cf04b16707:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 4.1: CƠ NĂNG - ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.5",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "a92aa410-3cfc-4f73-b837-77cf04b16707:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 4.1: CƠ NĂNG - ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a92aa410-3cfc-4f73-b837-77cf04b16707:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 4.1: CƠ NĂNG - ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "16a8769a-26c5-44e5-99ed-e111a90aa802:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 4.2: CON LẮC ĐƠN",
+   "type": "trac_nghiem",
+   "row": "7.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "16a8769a-26c5-44e5-99ed-e111a90aa802:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 4.2: CON LẮC ĐƠN",
+   "type": "trac_nghiem",
+   "row": "7.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "16a8769a-26c5-44e5-99ed-e111a90aa802:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 4.2: CON LẮC ĐƠN",
+   "type": "trac_nghiem",
+   "row": "7.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "16a8769a-26c5-44e5-99ed-e111a90aa802:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 4.2: CON LẮC ĐƠN",
+   "type": "trac_nghiem",
+   "row": "7.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "336f8444-4c72-459d-b487-e9756d556fd9:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 4.2: CON LẮC ĐƠN",
+   "type": "tu_luan",
+   "row": "7.5",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "336f8444-4c72-459d-b487-e9756d556fd9:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 4.2: CON LẮC ĐƠN",
+   "type": "tu_luan",
+   "row": "7.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "7ff7c123-e30d-47c6-9112-6b91bf8f92b4:0",
+   "no": "Câu 6",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "7ff7c123-e30d-47c6-9112-6b91bf8f92b4:1",
+   "no": "Câu 7",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "7ff7c123-e30d-47c6-9112-6b91bf8f92b4:2",
+   "no": "Câu 8",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "6.1",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "7ff7c123-e30d-47c6-9112-6b91bf8f92b4:3",
+   "no": "Câu 9",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "6.1",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "7ff7c123-e30d-47c6-9112-6b91bf8f92b4:4",
+   "no": "Câu 10",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a817af31-bebd-44ac-9059-bc96d03504d8:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "6.1",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "a817af31-bebd-44ac-9059-bc96d03504d8:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "6.1",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "a817af31-bebd-44ac-9059-bc96d03504d8:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "6.1",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "a817af31-bebd-44ac-9059-bc96d03504d8:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "6.1",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "a817af31-bebd-44ac-9059-bc96d03504d8:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "6.1",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "b0b8b4d1-f690-49c6-9a83-630f13ed07c1:0",
+   "no": "Câu 16",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.3",
+   "old_level": 3,
+   "level": 2
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:0",
+   "no": "Câu 11",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:1",
+   "no": "Câu 12",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.2",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:2",
+   "no": "Câu 13",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:3",
+   "no": "Câu 14",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.3",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "df99c5e3-ad20-4910-a4f2-4ee7574e5fc3:4",
+   "no": "Câu 15",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "trac_nghiem",
+   "row": "7.3",
+   "old_level": 3,
+   "level": 2
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "3.4",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:10",
+   "no": "Câu 11",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "7.5",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:11",
+   "no": "Câu 12",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "7.5",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:12",
+   "no": "Câu 13",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "7.5",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:13",
+   "no": "Câu 14",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:14",
+   "no": "Câu 15",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "7.5",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:15",
+   "no": "Câu 16",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "7.5",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:16",
+   "no": "Câu 17",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "7.5",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:17",
+   "no": "Câu 18",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "5.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "7.5",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "7.3",
+     "old_level": 3,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "5.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "7.4",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 2,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:7",
+   "no": "Câu 8",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "7.5",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:8",
+   "no": "Câu 9",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "7.5",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "f1d46516-d426-4276-9089-c13bb9a6eb66:9",
+   "no": "Câu 10",
+   "lesson": "BÀI 4.2: ĐỊNH LUẬT BẢO TOÀN CƠ NĂNG",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "6.1",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "c",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "7.4",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "0e0b05d1-4b6f-4bce-8b42-1490518a7982:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 4: THẾ NĂNG",
+   "type": "tu_luan",
+   "row": "5.3",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "0e0b05d1-4b6f-4bce-8b42-1490518a7982:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 4: THẾ NĂNG",
+   "type": "tu_luan",
+   "row": "5.3",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 4: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.3",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 4: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.3",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 4: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.3",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 4: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.3",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 4: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.3",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 4: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.4",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "d257f192-ee7e-47f4-8e67-0d251a04ff12:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 4: THẾ NĂNG",
+   "type": "trac_nghiem",
+   "row": "5.4",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "05c1e089-bca5-4f21-a6d4-c0c95c7bc2db:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "tu_luan",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "05c1e089-bca5-4f21-a6d4-c0c95c7bc2db:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "tu_luan",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "05c1e089-bca5-4f21-a6d4-c0c95c7bc2db:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "tu_luan",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "05c1e089-bca5-4f21-a6d4-c0c95c7bc2db:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "tu_luan",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "10.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "b",
+     "row": "10.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "c",
+     "row": "10.1",
+     "old_level": 1,
+     "level": 1
+    },
+    {
+     "label": "d",
+     "row": "10.1",
+     "old_level": 1,
+     "level": 1
+    }
+   ]
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "7.5",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "7.5",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "7.3",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "d",
+     "row": "10.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "10.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "8.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "10.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "10.2",
+     "old_level": 2,
+     "level": 2
+    }
+   ]
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "9.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "3.6",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "10.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "10.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "5.2",
+     "old_level": 2,
+     "level": 2
+    },
+    {
+     "label": "b",
+     "row": "3.6",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "10.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "10.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "N.2",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "10.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "10.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "10.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "8.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "8.3",
+     "old_level": 2,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "10.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "10.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "155716e7-3b61-4af4-a994-cfb6e1df6ef8:7",
+   "no": "Câu 8",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "dung_sai",
+   "statements": [
+    {
+     "label": "a",
+     "row": "3.8",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "b",
+     "row": "10.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "c",
+     "row": "10.3",
+     "old_level": 3,
+     "level": 3
+    },
+    {
+     "label": "d",
+     "row": "10.3",
+     "old_level": 3,
+     "level": 3
+    }
+   ]
+  },
+  {
+   "question_id": "6812e3f5-249f-44b9-8c54-1ac3b75349eb:0",
+   "no": "Câu 8",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:10",
+   "no": "Câu 11",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:11",
+   "no": "Câu 12",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:12",
+   "no": "Câu 13",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:7",
+   "no": "Câu 8",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:8",
+   "no": "Câu 9",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.3",
+   "old_level": 3,
+   "level": 3
+  },
+  {
+   "question_id": "a2d89376-5bdc-410e-82df-10fadc897e3c:9",
+   "no": "Câu 10",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "8.3",
+   "old_level": 2,
+   "level": 3
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:0",
+   "no": "Câu 1",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.2",
+   "old_level": 2,
+   "level": 2
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:1",
+   "no": "Câu 2",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:2",
+   "no": "Câu 3",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:3",
+   "no": "Câu 4",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:4",
+   "no": "Câu 5",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:5",
+   "no": "Câu 6",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.1",
+   "old_level": 1,
+   "level": 1
+  },
+  {
+   "question_id": "a781bfc8-701b-4c10-b799-4b64267623fb:6",
+   "no": "Câu 7",
+   "lesson": "BÀI 5: HIỆU SUẤT",
+   "type": "trac_nghiem",
+   "row": "10.1",
+   "old_level": 1,
+   "level": 1
+  }
+ ]
+}
