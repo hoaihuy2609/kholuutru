@@ -134,6 +134,7 @@ export default function LessonSpecification({ allocations, topics, candidates, o
             <ul className="list-disc space-y-1 pl-5 text-xs leading-relaxed text-stone-600">
                 <li>Yêu cầu cần đạt lấy nguyên văn mục tiêu bài học SGV Vật lí 10 (Kết nối tri thức). Chỗ SGV mỏng, dòng là vế nguyên văn YCCĐ của {PHYSICS_10_CURRICULUM_SOURCE}</li>
                 <li>Một số dòng là YCCĐ của chương trước mà ý hỗ trợ trong câu dùng tới, hoặc do người soạn viết (giáo viên đã duyệt) cho phần SGV và Chương trình chưa có câu chữ ở đúng mức. Bản in ghi nguồn sau mỗi dòng.</li>
+                <li>Vế trích từ một câu YCCĐ dài được viết thành câu trọn, giữ nguyên chữ; chữ trong ngoặc vuông [ ] lấy từ chính câu YCCĐ đó để vế đủ nghĩa.</li>
                 <li>Mức của câu, ý: nhắc lại là Nhận biết; định tính, không tính ra số là Thông hiểu; có tính toán ra số là Vận dụng.</li>
                 {unassigned > 0 && <li>{unassigned} câu của chương chưa gắn dòng YCCĐ theo bài hoặc nằm ngoài chương trình nên không hiện ở đây.</li>}
                 {written > 0 && <li>Ma trận có {written} câu tự luận; kho chưa có câu tự luận nên cần soạn riêng.</li>}
