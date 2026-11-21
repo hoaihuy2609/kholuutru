@@ -34,6 +34,19 @@ describe('matrix and specification export', () => {
         expect(selections[0].item.questionNo).toBe('Câu 90');
     });
 
+    it('takes true-false entered as whole questions and counts their statements at their own levels', () => {
+        const allocations = [{ ...allocation, type: 'dung_sai' as const, level: 0, count: 2 }];
+        const slots = matrixPlanSlots(allocations);
+        expect(slots.map(slot => [slot.type, slot.canChoose, slot.statementBudget])).toEqual([['dung_sai', true, undefined], ['dung_sai', true, undefined]]);
+        const selections = makeSelections(allocations).map(selection => ({ ...selection, statementOutcomes: ['A', 'B', 'C', 'D'] }));
+        const result = buildMatrixExport(allocations, selections, { ...defaultMatrixExportSettings(), targetScore: 2 });
+        expect(result.issues).toEqual([]);
+        expect(result.topics[0].actual.dung_sai).toEqual([0, 4, 2, 2]);
+        expect(result.units.map(unit => unit.outcome).slice(0, 4)).toEqual(['A', 'B', 'C', 'D']);
+        const short = buildMatrixExport(allocations, selections.slice(0, 1), { ...defaultMatrixExportSettings(), targetScore: 1 });
+        expect(short.issues).toContain('Phần II - C2: chưa chọn câu.');
+    });
+
     it('uses the actual statement order for mixed levels and requires a separate reviewed outcome for every statement', () => {
         const allocations = [
             { ...allocation, type: 'dung_sai' as const, level: 1, count: 2 },

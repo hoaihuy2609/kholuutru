@@ -36,9 +36,11 @@ describe('lesson lines', () => {
 });
 
 describe('specification by lesson', () => {
-    it('uses lessons only when every content is a lesson with lines', () => {
-        expect(lessonTopics([allocation(23, 'trac_nghiem', 1, 2)])?.[0]).toMatchObject({ lesson: { id: 23 }, need: { trac_nghiem: [2, 0, 0] } });
+    it('uses lessons only when every content is a lesson with lines, counting true-false by question', () => {
+        expect(lessonTopics([allocation(23, 'trac_nghiem', 1, 2), allocation(23, 'dung_sai', 0, 3)])?.[0])
+            .toMatchObject({ lesson: { id: 23 }, need: { trac_nghiem: [2, 0, 0] }, trueFalse: 3 });
         expect(lessonTopics([allocation(23, 'trac_nghiem', 1, 2), { ...allocation(23, 'trac_nghiem', 1, 1), topicId: 'work' }])).toBeUndefined();
+        expect(lessonTopics([allocation(23, 'dung_sai', 2, 4)])).toBeUndefined();
     });
 
     it('suggests questions spread over lines, true-false statements matching the matrix, and exports each statement at its own line', () => {
@@ -50,8 +52,7 @@ describe('specification by lesson', () => {
             question(23, 'dung_sai', [1, 1, 1, 1], ['23-B1', '23-B1', '23-B1', '23-B1']),
             question(24, 'trac_nghiem', 1, '24-B1'),
         ];
-        const allocations = [allocation(23, 'trac_nghiem', 1, 2), allocation(23, 'tu_luan', 3, 1),
-            allocation(23, 'dung_sai', 1, 2), allocation(23, 'dung_sai', 2, 3), allocation(23, 'dung_sai', 3, 3)];
+        const allocations = [allocation(23, 'trac_nghiem', 1, 2), allocation(23, 'tu_luan', 3, 1), allocation(23, 'dung_sai', 0, 2)];
         const topics = lessonTopics(allocations)!;
         const pool = lessonPool(bank, [chapter]);
         const { chosen, notes } = suggestLessons(topics, pool, () => 0.5);
@@ -60,7 +61,10 @@ describe('specification by lesson', () => {
         const lines = picked.filter(item => item.item.type === 'trac_nghiem').map(item => item.specLines![0]);
         expect(new Set(lines).size).toBe(2);
         expect(lines).not.toContain(undefined);
-        expect(picked.filter(item => item.item.type === 'dung_sai').map(item => item.item.id)).toEqual([bank[5].item.id, bank[6].item.id]);
+        // Đúng/Sai lấy đủ số câu của bài; ở đây giáo viên đổi sang hai câu có ý thuộc bài khác và chương trước.
+        expect(picked.filter(item => item.item.type === 'dung_sai')).toHaveLength(2);
+        for (const item of bank.filter(item => item.item.type === 'dung_sai')) chosen.delete(item.item.id);
+        for (const item of [bank[5], bank[6]]) chosen.add(item.item.id);
         expect(lessonStatus(topics[0], chosen, pool.byId)).toMatchObject({ done: true, questions: 5 });
         expect(lessonIssues(topics, chosen, pool.byId)).toEqual([]);
 
@@ -76,12 +80,25 @@ describe('specification by lesson', () => {
         expect(doc.units.every(unit => unit.outcome)).toBe(true);
     });
 
+    it('suggests true-false questions whose statements all have a line first', () => {
+        const loose = question(26, 'dung_sai', [2, 2, 3, 3], ['26-H1', undefined, '26-V2', '26-V2']);
+        const lined = question(26, 'dung_sai', [1, 2, 2, 3], ['26-B1', '26-H1', '26-H1', '26-V1']);
+        const topics = lessonTopics([allocation(26, 'dung_sai', 0, 1)])!;
+        for (const rng of [() => 0.1, () => 0.9]) {
+            expect([...suggestLessons(topics, lessonPool([loose, lined], [chapter]), rng).chosen]).toEqual([lined.item.id]);
+        }
+        expect(suggestLessons(lessonTopics([allocation(26, 'dung_sai', 0, 3)])!, lessonPool([loose, lined], [chapter])).notes)
+            .toEqual(['Bài 26. Cơ năng và định luật bảo toàn cơ năng · Đúng/Sai: kho thiếu 1 câu.']);
+    });
+
     it('reports what is missing or over for a lesson', () => {
         const bank = [question(25, 'trac_nghiem', 2, '25-H2'), question(25, 'trac_nghiem', 2, '25-H2')];
         const topics = lessonTopics([allocation(25, 'trac_nghiem', 2, 1)])!;
         const pool = lessonPool(bank, [chapter]);
         const status = lessonStatus(topics[0], new Set(bank.map(item => item.item.id)), pool.byId);
         expect(status).toMatchObject({ done: false, missing: [], over: ['1 câu Nhiều lựa chọn Thông hiểu'] });
-        expect(lessonStatus(topics[0], new Set(), pool.byId).missing).toEqual(['1 câu Nhiều lựa chọn Thông hiểu']);
+        expect(lessonStatus(topics[0], new Set(), pool.byId)).toMatchObject({ missing: ['1 câu Nhiều lựa chọn Thông hiểu'], questions: 0, needed: 1 });
+        const trueFalse = lessonTopics([allocation(25, 'dung_sai', 0, 1)])!;
+        expect(lessonStatus(trueFalse[0], new Set(), pool.byId).missing).toEqual(['1 câu Đúng/Sai']);
     });
 });

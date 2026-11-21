@@ -50,7 +50,8 @@ export function fitsCounts(budget: StatementCounts, counts: StatementCounts) {
 export function matrixPlanSlots(allocations: MatrixAllocation[]): MatrixPlanSlot[] {
     const numbers = { trac_nghiem: 0, dung_sai: 0, tu_luan: 0, written: 0 };
     const budgets = new Map<string, [number, number, number]>();
-    for (const entry of allocations.filter(row => row.type === 'dung_sai')) {
+    // Đúng/Sai nhập theo ý từng mức (level 1–3) thì ghép theo tổng ý của nội dung; nhập theo câu (level 0) thì mỗi câu một vị trí.
+    for (const entry of allocations.filter(row => row.type === 'dung_sai' && row.level)) {
         const key = trueFalseGroup(entry);
         const budget = budgets.get(key) ?? [0, 0, 0];
         const level = readCognitiveLevel(entry.level);
@@ -59,7 +60,7 @@ export function matrixPlanSlots(allocations: MatrixAllocation[]): MatrixPlanSlot
     }
     const visited = new Set<string>();
     return allocations.flatMap(({ count, ...entry }) => {
-        if (entry.type === 'dung_sai') {
+        if (entry.type === 'dung_sai' && entry.level) {
             const groupId = trueFalseGroup(entry);
             if (visited.has(groupId)) return [];
             visited.add(groupId);
@@ -89,9 +90,8 @@ export function statementCountsLabel(counts: StatementCounts) {
 }
 
 export function matrixPlanLevelLabel(slot: MatrixPlanSlot) {
-    return slot.statementBudget
-        ? 'ghép theo cả nội dung: ' + statementCountsLabel(slot.statementBudget)
-        : COGNITIVE_LEVELS[readCognitiveLevel(slot.level)];
+    if (slot.statementBudget) return 'ghép theo cả nội dung: ' + statementCountsLabel(slot.statementBudget);
+    return slot.type === 'dung_sai' ? 'nguyên câu, ý theo mức của câu' : COGNITIVE_LEVELS[readCognitiveLevel(slot.level)];
 }
 
 type PlanCandidate = {
@@ -121,6 +121,8 @@ export function matchesMatrixPlanSlot(slot: MatrixPlanSlot, candidate: PlanCandi
     if (slot.statementBudget) {
         const counts = trueFalseCounts(candidate.item);
         if (!counts || !fitsCounts(slot.statementBudget, counts)) return false;
+    } else if (slot.type === 'dung_sai') {
+        if (!trueFalseCounts(candidate.item)) return false;
     } else if (readCognitiveLevel(slot.level) !== readCognitiveLevel(candidate.item.level)) return false;
     if (slot.chapterId === ENERGY_MATRIX_CHAPTER_ID) {
         // Bài SGK của ma trận theo bài; câu chưa biết bài thì so theo nội dung cũ chứa bài đó.
