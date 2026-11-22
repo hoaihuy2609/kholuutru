@@ -79,9 +79,14 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
     compact?: boolean;
 }) {
     const formats = withWritten ? allFormats : allFormats.filter(format => format.value !== 'written');
-    const columns = withWritten ? allColumns : allColumns.filter(column => column.type !== 'written');
     const id = useId();
     const chapters = useMemo(() => chapterIds ? allChapters.filter(chapter => chapterIds.includes(chapter.id)) : allChapters, [chapterIds]);
+    /** Mọi chương đều có bản đặc tả theo bài: Trả lời ngắn chỉ còn cột Vận dụng. */
+    const shortAnswerApplyOnly = chapters.every(chapter => specLessons(chapter.id).length > 0);
+    const levelsFor = (type: typeof allFormats[number]['value']) =>
+        type === 'tu_luan' && shortAnswerApplyOnly ? levels.filter(level => level.value === 3) : levelsOf(type);
+    const columns = allColumns.filter(column => (withWritten || column.type !== 'written')
+        && !(shortAnswerApplyOnly && column.type === 'tu_luan' && column.levelValue !== 3));
     const [showContents, setShowContents] = useState(true);
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set(chapterIds));
     const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
@@ -210,14 +215,14 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
                             <col className="w-[14%]" />
                         </colgroup>
                         {formats.map(format => <colgroup key={format.value}>
-                            {levelsOf(format.value).map(level => <col key={level.value} className={format.value === 'dung_sai' ? 'w-[9%]' : withWritten ? 'w-[7.0833%]' : 'w-[11.1667%]'} />)}
+                            {levelsFor(format.value).map(level => <col key={level.value} className={format.value === 'dung_sai' ? 'w-[9%]' : withWritten ? 'w-[7.0833%]' : 'w-[11.1667%]'} />)}
                         </colgroup>)}
                         <thead className="bg-stone-100 text-stone-800">
                             <tr>
                                 <th scope="col" rowSpan={2} className={cell + ' text-left'}>Chương</th>
                                 <th scope="col" rowSpan={2} className={cell + ' text-left'}>Nội dung</th>
                                 {formats.map(format => (
-                                    <th key={format.value} scope="colgroup" colSpan={levelsOf(format.value).length}
+                                    <th key={format.value} scope="colgroup" colSpan={levelsFor(format.value).length}
                                         className={cell + ' font-semibold text-white ' + formatColors[format.value].header}>
                                         {format.label}
                                     </th>
@@ -298,9 +303,9 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
                             <tr>
                                 <th scope="row" colSpan={2} className={cell + ' text-left'}>Tổng theo loại</th>
                                 {formats.map(format => (
-                                    <td key={format.value} colSpan={levelsOf(format.value).length} className={cell + ' ' + formatColors[format.value].band}>
-                                        {levelsOf(format.value).reduce((sum, level) => sum + totals[format.value + ':' + level.value], 0)} câu
-                                        {' · '}{pointText(levelsOf(format.value).reduce((sum, level) => sum + columnScore(format.value + ':' + level.value, format.value), 0))} điểm
+                                    <td key={format.value} colSpan={levelsFor(format.value).length} className={cell + ' ' + formatColors[format.value].band}>
+                                        {levelsFor(format.value).reduce((sum, level) => sum + totals[format.value + ':' + level.value], 0)} câu
+                                        {' · '}{pointText(levelsFor(format.value).reduce((sum, level) => sum + columnScore(format.value + ':' + level.value, format.value), 0))} điểm
                                     </td>
                                 ))}
                             </tr>
