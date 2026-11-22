@@ -68,8 +68,8 @@ export default function MatrixExportDialog({ allocations, selections }: {
     const set = <K extends keyof MatrixExportSettings>(key: K, value: MatrixExportSettings[K]) =>
         setSettings(previous => ({ ...previous, [key]: value }));
 
-    async function print(draft: boolean) {
-        if (document.invalidSettings || (!draft && document.issues.length)) return;
+    async function print() {
+        if (document.invalidSettings) return;
         const popup = window.open('', '_blank');
         if (!popup) { setError('Trình duyệt đang chặn cửa sổ in. Cho phép cửa sổ bật lên rồi thử lại.'); return; }
         setPrinting(true);
@@ -77,7 +77,7 @@ export default function MatrixExportDialog({ allocations, selections }: {
         try {
             popup.opener = null;
             popup.document.open();
-            popup.document.write(matrixExportHtml(document, draft));
+            popup.document.write(matrixExportHtml(document));
             popup.document.close();
             await popup.document.fonts.ready;
             // Allow the table layout and font substitutions to settle before pagination.
@@ -100,15 +100,13 @@ export default function MatrixExportDialog({ allocations, selections }: {
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white p-3">
                     <p className="text-sm font-semibold tabular-nums">{document.questionCount} câu · {document.unitCount} câu/ý · {matrixExportNumber(document.totalScore)}/{matrixExportNumber(settings.targetScore)} điểm</p>
                     <div className="flex flex-wrap gap-2">
-                        {document.issues.length > 0 && <button type="button" className={button} disabled={printing || document.invalidSettings}
-                            onClick={() => void print(true)}>In bản nháp</button>}
-                        <button type="button" className={primary} disabled={printing || document.issues.length > 0}
-                            onClick={() => void print(false)}><Printer className="size-4" aria-hidden="true" />{printing ? 'Đang mở trang in…' : 'In / Lưu PDF'}</button>
+                        <button type="button" className={primary} disabled={printing || document.invalidSettings}
+                            onClick={() => void print()}><Printer className="size-4" aria-hidden="true" />{printing ? 'Đang mở trang in…' : 'In / Lưu PDF'}</button>
                     </div>
                 </div>
                 {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
                 {document.issues.length > 0 ? <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-                    <p className="font-semibold">Nút "In / Lưu PDF" sẽ bật khi xử lí xong {missingOutcomes.length && otherIssues.length ? 'các mục' : 'mục'} dưới đây. Muốn xem trước ngay thì dùng "In bản nháp".</p>
+                    <p className="font-semibold">Vẫn in được ngay. Nên rà lại {missingOutcomes.length && otherIssues.length ? 'các mục' : 'mục'} dưới đây trước khi nộp.</p>
                     <ul className="max-h-48 list-disc space-y-1.5 overflow-auto pl-5">
                         {missingOutcomes.length > 0 && <li>
                             <span className="font-semibold">{missingOutcomes.length} câu/ý chưa có YCCĐ</span>: {missingOutcomes.join(', ')}.
