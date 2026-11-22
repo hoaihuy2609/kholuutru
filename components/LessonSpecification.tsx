@@ -216,7 +216,9 @@ function LineList({ topic, level, chosen, pool, code, onOpen }: {
     code: (candidate: MatrixCandidate) => string | undefined; onOpen: (open: Open) => void;
 }) {
     const units = levelUnits(pool, topic, level);
-    const own = LESSON_LINES.filter(line => line.chapterId === topic.chapterId && line.lesson === topic.lesson.id && line.level === level && !line.alias);
+    // Chỉ hiện dòng có câu trắc nghiệm; ý Đúng/Sai của các dòng khác vẫn chọn ở mục Đúng/Sai của bài.
+    const own = LESSON_LINES.filter(line => line.chapterId === topic.chapterId && line.lesson === topic.lesson.id && line.level === level && !line.alias
+        && units.some(unit => unit.line?.id === line.id));
     const extra = LESSON_LINES.filter(line => line.chapterId === topic.chapterId && line.lesson !== topic.lesson.id && line.level === level
         && units.some(unit => unit.line?.id === line.id));
     const others = units.filter(unit => !unit.line);
@@ -232,9 +234,8 @@ function LineList({ topic, level, chosen, pool, code, onOpen }: {
             <span className="flex flex-wrap gap-1">{taken.map(unit => <span key={unit.candidate.item.id}
                 className={'rounded px-1.5 py-px font-mono text-[11px] font-semibold ' + codeColor[unit.candidate.item.type]}>
                 {code(unit.candidate) ?? '·'}</span>)}</span>
-            {mine.length ? <button type="button" className={button} aria-haspopup="dialog" onClick={() => onOpen({ topic, level, line })}>
+            <button type="button" className={button} aria-haspopup="dialog" onClick={() => onOpen({ topic, level, line })}>
                 Chọn câu <span className="font-normal text-stone-500">({mine.length})</span></button>
-                : <span className="text-xs text-stone-500">kho chưa có câu</span>}
         </li>;
     };
     return <div>
@@ -242,7 +243,7 @@ function LineList({ topic, level, chosen, pool, code, onOpen }: {
             {own.map(row)}
             {extra.length > 0 && <li className="border-b border-stone-200 bg-stone-50 px-4 py-2 text-xs font-semibold text-stone-600">Câu của bài này đo YCCĐ bài khác hoặc chương trước</li>}
             {extra.map(row)}
-            {!own.length && !extra.length && <li className="px-4 py-3 text-sm text-stone-600">Bài này không có yêu cầu cần đạt ở mức {COGNITIVE_LEVELS[level]}.</li>}
+            {!own.length && !extra.length && <li className="px-4 py-3 text-sm text-stone-600">Kho chưa có câu trắc nghiệm ở mức {COGNITIVE_LEVELS[level]} của bài này.</li>}
         </ul>
         {others.length > 0 && <p className="px-4 py-2.5 text-sm">
             <button type="button" className="font-semibold text-amber-900 underline-offset-2 hover:underline" aria-haspopup="dialog"

@@ -1,0 +1,547 @@
+{
+ "schema": "physivault.questions.create.v1",
+ "chapter_id": "g10-ch3",
+ "import_id": "cau-bo-sung-chuong-3-dot-2",
+ "source_note": "Câu do AI hỗ trợ biên soạn",
+ "groups": [
+  {
+   "lesson_title": "Câu bổ sung · Bài 23",
+   "type": "trac_nghiem",
+   "questions": [
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một người kéo một chiếc vali trượt đều trên sàn nằm ngang bằng lực $30\\ \\text{N}$ theo phương ngang, trên quãng đường $12\\ \\text{m}$. Phần năng lượng chuyển hoá thành nhiệt do ma sát là",
+     "solution": "Vali trượt đều nên công của lực kéo chuyển hết thành nhiệt: $Q = Fs = 30\\cdot 12 = 360\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-23-V1",
+     "learning_outcomes": [
+      "Vận dụng để xác định được một quá trình chuyển hoá năng lượng thông qua thực hiện công, truyền nhiệt."
+     ],
+     "choices": [
+      "$3600\\ \\text{J}$.",
+      "$360\\ \\text{J}$.",
+      "$2{,}5\\ \\text{J}$.",
+      "$42\\ \\text{J}$."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Cọ xát một miếng kim loại trên mặt bàn: lực ma sát trung bình $15\\ \\text{N}$, mỗi lần miếng kim loại trượt $0{,}4\\ \\text{m}$, cọ xát $20$ lần. Nhiệt năng miếng kim loại và mặt bàn nhận được là",
+     "solution": "$Q = F_{ms}\\,s = 15\\cdot (0{,}4\\cdot 20) = 120\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-23-V1",
+     "learning_outcomes": [
+      "Vận dụng để xác định được một quá trình chuyển hoá năng lượng thông qua thực hiện công, truyền nhiệt."
+     ],
+     "choices": [
+      "$120\\ \\text{J}$.",
+      "$6\\ \\text{J}$.",
+      "$300\\ \\text{J}$.",
+      "$1200\\ \\text{J}$."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một người kéo đều một thùng hàng khối lượng $20\\ \\text{kg}$ lên cao $5\\ \\text{m}$. Lấy $g = 10\\ \\text{m/s}^2$. Năng lượng người đã truyền cho thùng bằng cách thực hiện công là",
+     "solution": "Kéo đều nên lực kéo bằng trọng lượng: $A = Fs = mgh = 20\\cdot 10\\cdot 5 = 1000\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-23-V1",
+     "learning_outcomes": [
+      "Vận dụng để xác định được một quá trình chuyển hoá năng lượng thông qua thực hiện công, truyền nhiệt."
+     ],
+     "choices": [
+      "$100\\ \\text{J}$.",
+      "$200\\ \\text{J}$.",
+      "$10000\\ \\text{J}$.",
+      "$1000\\ \\text{J}$."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một ô tô hãm phanh, lực hãm trung bình $4000\\ \\text{N}$, xe đi thêm $25\\ \\text{m}$ thì dừng lại. Nhiệt lượng toả ra ở bộ phận phanh và mặt đường là",
+     "solution": "Năng lượng chuyển thành nhiệt bằng độ lớn công của lực hãm: $Q = Fs = 4000\\cdot 25 = 100\\,000\\ \\text{J} = 100\\ \\text{kJ}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-23-V1",
+     "learning_outcomes": [
+      "Vận dụng để xác định được một quá trình chuyển hoá năng lượng thông qua thực hiện công, truyền nhiệt."
+     ],
+     "choices": [
+      "$10\\ \\text{kJ}$.",
+      "$1000\\ \\text{kJ}$.",
+      "$100\\ \\text{kJ}$.",
+      "$160\\ \\text{kJ}$."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một vật trượt xuống một con dốc dài $10\\ \\text{m}$; lực ma sát giữa vật và mặt dốc có độ lớn $6\\ \\text{N}$. Phần năng lượng của vật chuyển hoá thành nhiệt do ma sát là",
+     "solution": "$Q = F_{ms}\\,s = 6\\cdot 10 = 60\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-23-V1",
+     "learning_outcomes": [
+      "Vận dụng để xác định được một quá trình chuyển hoá năng lượng thông qua thực hiện công, truyền nhiệt."
+     ],
+     "choices": [
+      "$600\\ \\text{J}$.",
+      "$60\\ \\text{J}$.",
+      "$16\\ \\text{J}$.",
+      "$0{,}6\\ \\text{J}$."
+     ],
+     "correctChoice": "B"
+    }
+   ]
+  },
+  {
+   "lesson_title": "Câu bổ sung · Bài 24",
+   "type": "trac_nghiem",
+   "questions": [
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một ô tô chạy với công suất động cơ không đổi. Khi lên dốc, người lái thường chuyển về số nhỏ để",
+     "solution": "Với công suất $P = Fv$ không đổi, giảm tốc độ $v$ thì lực phát động $F$ tăng, giúp xe đủ lực lên dốc.",
+     "programme_row": "g10-ch3-yc09",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-P24-H",
+     "learning_outcomes": [
+      "Giải thích được mối liên hệ giữa lực phát động, tốc độ và công suất (định tính)."
+     ],
+     "choices": [
+      "tăng công suất của động cơ.",
+      "giảm tốc độ, nhờ đó tăng lực phát động của xe.",
+      "tăng tốc độ, nhờ đó tăng lực phát động của xe.",
+      "giảm công suất của động cơ."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một động cơ hoạt động với công suất không đổi. Nếu lực kéo của động cơ tăng gấp đôi thì tốc độ chuyển động của vật",
+     "solution": "Từ $P = Fv$ với $P$ không đổi, $F$ và $v$ tỉ lệ nghịch: $F$ tăng gấp đôi thì $v$ giảm một nửa.",
+     "programme_row": "g10-ch3-yc09",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-P24-H",
+     "learning_outcomes": [
+      "Giải thích được mối liên hệ giữa lực phát động, tốc độ và công suất (định tính)."
+     ],
+     "choices": [
+      "giảm một nửa.",
+      "tăng gấp đôi.",
+      "không đổi.",
+      "tăng gấp bốn."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Hai xe có động cơ cùng công suất, chuyển động thẳng đều trên cùng một đoạn đường; xe (1) chạy nhanh hơn xe (2). Nhận xét nào sau đây đúng?",
+     "solution": "Cùng công suất, xe có tốc độ nhỏ hơn thì lực phát động lớn hơn ($F = P/v$).",
+     "programme_row": "g10-ch3-yc09",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-P24-H",
+     "learning_outcomes": [
+      "Giải thích được mối liên hệ giữa lực phát động, tốc độ và công suất (định tính)."
+     ],
+     "choices": [
+      "Lực phát động của xe (1) lớn hơn của xe (2).",
+      "Lực phát động của hai xe bằng nhau.",
+      "Xe (1) có công suất lớn hơn xe (2).",
+      "Lực phát động của xe (2) lớn hơn của xe (1)."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Khi cần kéo một vật rất nặng, máy kéo thường chạy chậm. Lí do là",
+     "solution": "Công suất của máy có giới hạn; theo $P = Fv$, muốn lực kéo lớn thì phải giảm tốc độ.",
+     "programme_row": "g10-ch3-yc09",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-P24-H",
+     "learning_outcomes": [
+      "Giải thích được mối liên hệ giữa lực phát động, tốc độ và công suất (định tính)."
+     ],
+     "choices": [
+      "chạy chậm thì công suất của máy tăng lên.",
+      "chạy chậm thì lực ma sát lên vật giảm.",
+      "với công suất có giới hạn, giảm tốc độ thì lực kéo của máy tăng.",
+      "chạy chậm thì máy tiêu thụ ít năng lượng hơn."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một ô tô chạy đều trên đường nằm ngang. Nếu giữ nguyên lực phát động mà tốc độ của xe tăng lên thì công suất của động cơ",
+     "solution": "Với $F$ không đổi, công suất $P = Fv$ tăng khi $v$ tăng.",
+     "programme_row": "g10-ch3-yc09",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-P24-H",
+     "learning_outcomes": [
+      "Giải thích được mối liên hệ giữa lực phát động, tốc độ và công suất (định tính)."
+     ],
+     "choices": [
+      "bằng 0.",
+      "tăng.",
+      "giảm.",
+      "không đổi."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một ô tô chạy trên đường bằng với công suất cực đại của động cơ; xe đạt tốc độ lớn nhất khi lực phát động cân bằng với lực cản. Khi xe đi vào đoạn đường xấu, lực cản lớn hơn, thì tốc độ lớn nhất xe có thể đạt được",
+     "solution": "Lực phát động phải lớn hơn để cân bằng lực cản lớn hơn; công suất cực đại không đổi nên tốc độ lớn nhất $v = P/F$ giảm.",
+     "programme_row": "g10-ch3-yc09",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-P24-H",
+     "learning_outcomes": [
+      "Giải thích được mối liên hệ giữa lực phát động, tốc độ và công suất (định tính)."
+     ],
+     "choices": [
+      "giảm.",
+      "tăng.",
+      "không đổi.",
+      "bằng 0."
+     ],
+     "correctChoice": "A"
+    }
+   ]
+  },
+  {
+   "lesson_title": "Câu bổ sung · Bài 25",
+   "type": "trac_nghiem",
+   "questions": [
+    {
+     "type": "trac_nghiem",
+     "question_text": "Thế năng trọng trường của một vật khối lượng $m$ ở độ cao $h$ so với mốc thế năng, trong trọng trường đều có gia tốc rơi tự do $g$, là",
+     "solution": "Thế năng trọng trường: $W_t = mgh$.",
+     "programme_row": "g10-ch3-yc05a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-25-B2",
+     "learning_outcomes": [
+      "Nêu được công thức tính thế năng trong trường trọng lực đều."
+     ],
+     "choices": [
+      "$W_t = mgh$.",
+      "$W_t = \\dfrac{1}{2}mgh$.",
+      "$W_t = \\dfrac{mg}{h}$.",
+      "$W_t = \\dfrac{1}{2}mv^2$."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Trong biểu thức thế năng trọng trường $W_t = mgh$, đại lượng $g$ là",
+     "solution": "$g$ là gia tốc rơi tự do (gia tốc trọng trường).",
+     "programme_row": "g10-ch3-yc05a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-25-B2",
+     "learning_outcomes": [
+      "Nêu được công thức tính thế năng trong trường trọng lực đều."
+     ],
+     "choices": [
+      "gia tốc của vật.",
+      "trọng lượng của vật.",
+      "khối lượng của vật.",
+      "gia tốc rơi tự do."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Theo biểu thức $W_t = mgh$, thế năng trọng trường của một vật phụ thuộc vào",
+     "solution": "$W_t = mgh$ phụ thuộc $m$ và $h$ (với $g$ đã cho).",
+     "programme_row": "g10-ch3-yc05a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-25-B2",
+     "learning_outcomes": [
+      "Nêu được công thức tính thế năng trong trường trọng lực đều."
+     ],
+     "choices": [
+      "khối lượng và vận tốc của vật.",
+      "quãng đường vật đã đi được.",
+      "khối lượng của vật và độ cao của vật so với mốc thế năng.",
+      "vận tốc của vật."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Biểu thức $W_t = mgh$ dùng để tính thế năng của vật trong trường hợp",
+     "solution": "Biểu thức áp dụng cho trường trọng lực đều, tức là gần mặt đất, nơi $g$ coi như không đổi.",
+     "programme_row": "g10-ch3-yc05a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-25-B2",
+     "learning_outcomes": [
+      "Nêu được công thức tính thế năng trong trường trọng lực đều."
+     ],
+     "choices": [
+      "vật chịu tác dụng của lực ma sát.",
+      "vật ở gần mặt đất, trong trường trọng lực đều.",
+      "vật chuyển động thẳng đều.",
+      "vật ở rất xa Trái Đất."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Gọi $P$ là trọng lượng của vật. Thế năng trọng trường của vật ở độ cao $h$ so với mốc thế năng có thể viết là",
+     "solution": "Vì $P = mg$ nên $W_t = mgh = Ph$.",
+     "programme_row": "g10-ch3-yc05a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-25-B2",
+     "learning_outcomes": [
+      "Nêu được công thức tính thế năng trong trường trọng lực đều."
+     ],
+     "choices": [
+      "$W_t = Ph$.",
+      "$W_t = \\dfrac{P}{h}$.",
+      "$W_t = \\dfrac{1}{2}Ph$.",
+      "$W_t = Ph^2$."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Theo định lí động năng, nếu tổng công của các ngoại lực tác dụng lên vật bằng 0 thì",
+     "solution": "$W_{đ2} - W_{đ1} = A = 0$ nên động năng không đổi.",
+     "programme_row": "g10-ch3-yc04",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-P25-B",
+     "learning_outcomes": [
+      "Nêu được định lí động năng: độ biến thiên động năng bằng tổng công của ngoại lực."
+     ],
+     "choices": [
+      "động năng của vật tăng.",
+      "động năng của vật giảm.",
+      "động năng của vật bằng 0.",
+      "động năng của vật không đổi."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Khi tổng công của các ngoại lực tác dụng lên vật có giá trị âm thì động năng của vật",
+     "solution": "$W_{đ2} - W_{đ1} = A < 0$ nên động năng giảm.",
+     "programme_row": "g10-ch3-yc04",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-P25-B",
+     "learning_outcomes": [
+      "Nêu được định lí động năng: độ biến thiên động năng bằng tổng công của ngoại lực."
+     ],
+     "choices": [
+      "không đổi.",
+      "bằng 0.",
+      "giảm.",
+      "tăng."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Phát biểu nào sau đây đúng với định lí động năng?",
+     "solution": "Đúng với nội dung định lí động năng.",
+     "programme_row": "g10-ch3-yc04",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-P25-B",
+     "learning_outcomes": [
+      "Nêu được định lí động năng: độ biến thiên động năng bằng tổng công của ngoại lực."
+     ],
+     "choices": [
+      "Độ biến thiên động năng của vật chỉ bằng công của trọng lực.",
+      "Độ biến thiên động năng của vật trong một quá trình bằng tổng công của các ngoại lực tác dụng lên vật trong quá trình đó.",
+      "Động năng của vật luôn bằng công của ngoại lực tác dụng lên vật.",
+      "Độ biến thiên động năng của vật bằng độ biến thiên thế năng của vật."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Định lí động năng cho biết mối liên hệ giữa",
+     "solution": "Định lí động năng liên hệ độ biến thiên động năng với công của ngoại lực.",
+     "programme_row": "g10-ch3-yc04",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-P25-B",
+     "learning_outcomes": [
+      "Nêu được định lí động năng: độ biến thiên động năng bằng tổng công của ngoại lực."
+     ],
+     "choices": [
+      "độ biến thiên động năng của vật và công của các ngoại lực tác dụng lên vật.",
+      "động năng và thế năng của vật.",
+      "công và công suất.",
+      "động năng và vận tốc của vật."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Trong biểu thức của định lí động năng $W_{đ2} - W_{đ1} = A$, đại lượng $A$ là",
+     "solution": "$A$ là tổng công của các ngoại lực tác dụng lên vật.",
+     "programme_row": "g10-ch3-yc04",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-P25-B",
+     "learning_outcomes": [
+      "Nêu được định lí động năng: độ biến thiên động năng bằng tổng công của ngoại lực."
+     ],
+     "choices": [
+      "công của trọng lực.",
+      "công của lực ma sát.",
+      "công suất của lực kéo.",
+      "tổng công của tất cả các ngoại lực tác dụng lên vật."
+     ],
+     "correctChoice": "D"
+    }
+   ]
+  },
+  {
+   "lesson_title": "Câu bổ sung · Bài 26",
+   "type": "trac_nghiem",
+   "questions": [
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một quả bóng khối lượng $0{,}5\\ \\text{kg}$ được thả rơi từ độ cao $5\\ \\text{m}$ so với mặt đất. Bỏ qua lực cản của không khí, lấy $g = 10\\ \\text{m/s}^2$. Tốc độ của quả bóng ngay trước khi chạm đất là",
+     "solution": "Bảo toàn cơ năng: $mgh = \\dfrac{1}{2}mv^2 \\Rightarrow v = \\sqrt{2gh} = \\sqrt{2\\cdot 10\\cdot 5} = 10\\ \\text{m/s}$.",
+     "programme_row": "g10-ch3-yc07b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-26-V1",
+     "learning_outcomes": [
+      "Vận dụng được sự chuyển hoá qua lại giữa động năng, thế năng và định luật bảo toàn cơ năng vào một số tình huống thực tế."
+     ],
+     "choices": [
+      "$20\\ \\text{m/s}$.",
+      "$100\\ \\text{m/s}$.",
+      "$10\\ \\text{m/s}$.",
+      "$5\\ \\text{m/s}$."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một vận động viên nhảy cầu khối lượng $60\\ \\text{kg}$ rơi từ độ cao $10\\ \\text{m}$ so với mặt nước, tốc độ ban đầu không đáng kể. Bỏ qua lực cản, lấy $g = 10\\ \\text{m/s}^2$. Động năng của vận động viên ngay trước khi chạm nước là",
+     "solution": "Thế năng chuyển hết thành động năng: $W_đ = mgh = 60\\cdot 10\\cdot 10 = 6000\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc07b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-26-V1",
+     "learning_outcomes": [
+      "Vận dụng được sự chuyển hoá qua lại giữa động năng, thế năng và định luật bảo toàn cơ năng vào một số tình huống thực tế."
+     ],
+     "choices": [
+      "$60000\\ \\text{J}$.",
+      "$6000\\ \\text{J}$.",
+      "$600\\ \\text{J}$.",
+      "$3000\\ \\text{J}$."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một toa tàu lượn bắt đầu chuyển động không vận tốc đầu từ điểm A ở độ cao $20\\ \\text{m}$, đi xuống rồi lên đến điểm B ở độ cao $15\\ \\text{m}$ so với mặt đất như hình vẽ. Bỏ qua ma sát và lực cản, lấy $g = 10\\ \\text{m/s}^2$. Tốc độ của toa tại B là",
+     "solution": "Bảo toàn cơ năng: $mgh_A = mgh_B + \\dfrac{1}{2}mv_B^2 \\Rightarrow v_B = \\sqrt{2g(h_A - h_B)} = \\sqrt{2\\cdot 10\\cdot 5} = 10\\ \\text{m/s}$.",
+     "programme_row": "g10-ch3-yc07b",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 170\" width=\"300\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.6\"><defs><marker id=\"at\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <line x1=\"10\" y1=\"150\" x2=\"290\" y2=\"150\"/><line x1=\"22\" y1=\"150\" x2=\"14\" y2=\"158\" stroke-width=\"1\"/><line x1=\"42\" y1=\"150\" x2=\"34\" y2=\"158\" stroke-width=\"1\"/><line x1=\"62\" y1=\"150\" x2=\"54\" y2=\"158\" stroke-width=\"1\"/><line x1=\"82\" y1=\"150\" x2=\"74\" y2=\"158\" stroke-width=\"1\"/><line x1=\"102\" y1=\"150\" x2=\"94\" y2=\"158\" stroke-width=\"1\"/><line x1=\"122\" y1=\"150\" x2=\"114\" y2=\"158\" stroke-width=\"1\"/><line x1=\"142\" y1=\"150\" x2=\"134\" y2=\"158\" stroke-width=\"1\"/><line x1=\"162\" y1=\"150\" x2=\"154\" y2=\"158\" stroke-width=\"1\"/><line x1=\"182\" y1=\"150\" x2=\"174\" y2=\"158\" stroke-width=\"1\"/><line x1=\"202\" y1=\"150\" x2=\"194\" y2=\"158\" stroke-width=\"1\"/><line x1=\"222\" y1=\"150\" x2=\"214\" y2=\"158\" stroke-width=\"1\"/><line x1=\"242\" y1=\"150\" x2=\"234\" y2=\"158\" stroke-width=\"1\"/><line x1=\"262\" y1=\"150\" x2=\"254\" y2=\"158\" stroke-width=\"1\"/><line x1=\"282\" y1=\"150\" x2=\"274\" y2=\"158\" stroke-width=\"1\"/> <path d=\"M30 50 C 90 50, 110 135, 160 135 S 240 75, 270 75\" stroke-width=\"2\"/> <circle cx=\"30\" cy=\"50\" r=\"5\"/><circle cx=\"270\" cy=\"75\" r=\"5\"/> <line x1=\"30\" y1=\"56\" x2=\"30\" y2=\"148\" stroke-dasharray=\"4 4\" stroke-width=\"1\"/><line x1=\"270\" y1=\"81\" x2=\"270\" y2=\"148\" stroke-dasharray=\"4 4\" stroke-width=\"1\"/> <g stroke=\"none\"><text x=\"22\" y=\"40\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" >A</text><text x=\"274\" y=\"66\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" >B</text><text x=\"36\" y=\"105\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">20 m</text><text x=\"222\" y=\"118\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">15 m</text></g></svg>",
+     "image_layout": "auto",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-26-V1",
+     "learning_outcomes": [
+      "Vận dụng được sự chuyển hoá qua lại giữa động năng, thế năng và định luật bảo toàn cơ năng vào một số tình huống thực tế."
+     ],
+     "choices": [
+      "$10\\ \\text{m/s}$.",
+      "$20\\ \\text{m/s}$.",
+      "$17{,}3\\ \\text{m/s}$.",
+      "$5\\ \\text{m/s}$."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Ném một vật thẳng đứng lên cao từ mặt đất với tốc độ $8\\ \\text{m/s}$. Bỏ qua lực cản, lấy $g = 10\\ \\text{m/s}^2$. Độ cao cực đại vật đạt được là",
+     "solution": "$\\dfrac{1}{2}mv^2 = mgh_{max} \\Rightarrow h_{max} = \\dfrac{v^2}{2g} = \\dfrac{64}{20} = 3{,}2\\ \\text{m}$.",
+     "programme_row": "g10-ch3-yc07b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-26-V1",
+     "learning_outcomes": [
+      "Vận dụng được sự chuyển hoá qua lại giữa động năng, thế năng và định luật bảo toàn cơ năng vào một số tình huống thực tế."
+     ],
+     "choices": [
+      "$6{,}4\\ \\text{m}$.",
+      "$0{,}8\\ \\text{m}$.",
+      "$1{,}6\\ \\text{m}$.",
+      "$3{,}2\\ \\text{m}$."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một em bé chơi xích đu. Ở vị trí cao nhất, ghế xích đu cao hơn vị trí thấp nhất $0{,}45\\ \\text{m}$ và em bé được thả nhẹ từ đó. Bỏ qua lực cản, lấy $g = 10\\ \\text{m/s}^2$. Tốc độ của em bé khi đi qua vị trí thấp nhất là",
+     "solution": "$v = \\sqrt{2gh} = \\sqrt{2\\cdot 10\\cdot 0{,}45} = 3\\ \\text{m/s}$.",
+     "programme_row": "g10-ch3-yc07b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-26-V1",
+     "learning_outcomes": [
+      "Vận dụng được sự chuyển hoá qua lại giữa động năng, thế năng và định luật bảo toàn cơ năng vào một số tình huống thực tế."
+     ],
+     "choices": [
+      "$4{,}5\\ \\text{m/s}$.",
+      "$9\\ \\text{m/s}$.",
+      "$3\\ \\text{m/s}$.",
+      "$0{,}9\\ \\text{m/s}$."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một viên bi khối lượng $100\\ \\text{g}$ được ném lên từ độ cao $2\\ \\text{m}$ so với mặt đất với tốc độ $4\\ \\text{m/s}$. Bỏ qua lực cản, lấy $g = 10\\ \\text{m/s}^2$. Tốc độ của viên bi khi chạm đất là (làm tròn đến hàng phần mười)",
+     "solution": "Chọn mốc thế năng tại mặt đất: $W = \\dfrac{1}{2}mv_0^2 + mgh = 0{,}8 + 2 = 2{,}8\\ \\text{J}$. Khi chạm đất: $\\dfrac{1}{2}mv^2 = 2{,}8 \\Rightarrow v = \\sqrt{56} \\approx 7{,}5\\ \\text{m/s}$.",
+     "programme_row": "g10-ch3-yc07b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-26-V1",
+     "learning_outcomes": [
+      "Vận dụng được sự chuyển hoá qua lại giữa động năng, thế năng và định luật bảo toàn cơ năng vào một số tình huống thực tế."
+     ],
+     "choices": [
+      "$8{,}9\\ \\text{m/s}$.",
+      "$7{,}5\\ \\text{m/s}$.",
+      "$6{,}0\\ \\text{m/s}$.",
+      "$4{,}0\\ \\text{m/s}$."
+     ],
+     "correctChoice": "B"
+    }
+   ]
+  }
+ ]
+}
