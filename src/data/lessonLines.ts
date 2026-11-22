@@ -4,8 +4,8 @@
  * Mỗi bài có các dòng YCCĐ ở từng mức Biết, Hiểu, Vận dụng. Câu chữ là nguyên văn mục tiêu bài học trong SGV Vật lí 10
  * (Kết nối tri thức) hoặc vế nguyên văn YCCĐ của Chương trình GDPT 2018 (Thông tư 32), kể cả YCCĐ chương trước mà ý hỗ trợ
  * trong câu dùng tới. Dòng "Đề xuất" do người soạn viết cho phần SGV và Chương trình chưa có câu chữ ở đúng mức; giáo viên đã duyệt.
- * Vế trích từ một câu YCCĐ dài được viết thành câu trọn: viết hoa chữ đầu, kết thúc bằng dấu chấm, không thêm bớt chữ;
- * chữ cần thêm để vế đủ nghĩa (lấy từ chính câu YCCĐ đó) đặt trong ngoặc vuông.
+ * Vế trích từ một câu YCCĐ dài được viết thành câu trọn: viết hoa chữ đầu, kết thúc bằng dấu chấm; chữ cần thêm
+ * để vế đủ nghĩa lấy từ chính câu YCCĐ đó (vế sau của YCCĐ 5 mượn "công thức tính thế năng" của vế đầu).
  * Mức của từng câu, từng ý theo quy tắc: nhắc lại là Biết, định tính là Hiểu, có tính toán ra số là Vận dụng.
  * Câu (trắc nghiệm, trả lời ngắn) và từng ý Đúng/Sai trong kho được gắn vào dòng qua trường spec_line.
  */
@@ -57,7 +57,7 @@ const CHAPTER_III: LineSpec[] = [
     ["25-H1", 25, 2, "SGV", "", "Hiểu được đơn vị đo của động năng và thế năng."],
     ["25-H2", 25, 2, "CT", "YCCĐ 4", "Từ phương trình chuyển động thẳng biến đổi đều với vận tốc ban đầu bằng không, rút ra được động năng của vật có giá trị bằng công của lực tác dụng lên vật."],
     ["25-V1", 25, 3, "SGV", "", "Vận dụng được biểu thức liên hệ giữa công thực hiện lên vật để vật có động năng, thế năng."],
-    ["25-V2", 25, 3, "CT", "YCCĐ 5, vế sau", "Vận dụng được [công thức tính thế năng] trong một số trường hợp đơn giản."],
+    ["25-V2", 25, 3, "CT", "YCCĐ 5, vế sau", "Vận dụng được công thức tính thế năng trong một số trường hợp đơn giản."],
     ["26-B1", 26, 1, "SGV", "", "Phát biểu được định nghĩa cơ năng và đơn vị đo của cơ năng."],
     ["26-B2", 26, 1, "SGV", "", "Viết được công thức tính cơ năng của vật trong trường trọng lực."],
     ["26-B3", 26, 1, "CT", "YCCĐ 7, vế giữa", "Phát biểu được định luật bảo toàn cơ năng."],
