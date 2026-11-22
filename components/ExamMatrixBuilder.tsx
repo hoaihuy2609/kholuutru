@@ -84,7 +84,8 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
     const [rows, setRows] = useState(() => [emptyRow()]);
     const [grade, setGrade] = useState(0);
     const [reviewing, setReviewing] = useState(true);
-    const [planning, setPlanning] = useState(false);
+    // Mở sẵn phần lập ma trận mới; nạp PDF / bản đặc tả là lựa chọn thứ hai.
+    const [planning, setPlanning] = useState(true);
     const [source, setSource] = useState<File>();
     const [busy, setBusy] = useState(false);
     const [notice, setNotice] = useState('');
