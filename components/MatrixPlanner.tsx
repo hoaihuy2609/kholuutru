@@ -310,7 +310,6 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
                                                 className="min-h-9 rounded-md border border-stone-300 bg-white px-2.5 text-xs font-semibold text-stone-700 hover:bg-stone-100 disabled:opacity-50">Chia lại {pointText(scale)} điểm</button>
                                         </span>
                                     </div>
-                                    <p className="mt-1 text-xs text-stone-600">Web tự chia điểm mỗi câu thành số tròn 0,25 (ưu tiên câu Vận dụng). Đúng/Sai 1 điểm/câu, chấm theo số ý đúng theo quy định của Bộ GD&ĐT. Sửa ô "Điểm mỗi câu" nếu muốn đổi.</p>
                                 </td>
                             </tr>
                         </tfoot>
