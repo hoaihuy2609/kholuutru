@@ -64,13 +64,15 @@ const cell = 'border-b border-r border-stone-200 px-2 py-2';
 const check = 'size-4 shrink-0 accent-amber-800';
 const maxCount = 99;
 
-export default function MatrixPlanner({ candidates, onCompose, chapterIds, withWritten = true }: {
+export default function MatrixPlanner({ candidates, onCompose, chapterIds, withWritten = true, compact = false }: {
     candidates: MatrixCandidate[];
     onCompose: (questions: SelectedQuestionItem[]) => void;
     /** Chỉ hiện các chương này (mở sẵn); bỏ trống để hiện mọi chương. */
     chapterIds?: readonly string[];
     /** Hiện cột Tự luận (kho chưa có câu tự luận). */
     withWritten?: boolean;
+    /** Bản đặc tả gọn, không có phần giới thiệu và tiến độ. */
+    compact?: boolean;
 }) {
     const formats = withWritten ? allFormats : allFormats.filter(format => format.value !== 'written');
     const columns = withWritten ? allColumns : allColumns.filter(column => column.type !== 'written');
@@ -263,7 +265,7 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
             </section>
         </div>
         {lessons
-            ? <LessonSpecification key={lessons.map(topic => topic.key).join('|')} allocations={allocations} topics={lessons} candidates={candidates} onCompose={onCompose} />
+            ? <LessonSpecification key={lessons.map(topic => topic.key).join('|')} allocations={allocations} topics={lessons} candidates={candidates} onCompose={onCompose} compact={compact} />
             : <>
                 {lessonsWithoutLines && <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
                     Câu của chương này chưa được gắn vào dòng YCCĐ theo bài, nên bản đặc tả dùng cách chọn theo vị trí câu. Nạp file gắn dòng YCCĐ ở mục Rà YCCĐ → Nhập mức độ để dùng bản đặc tả theo bài.
