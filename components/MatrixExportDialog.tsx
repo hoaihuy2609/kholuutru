@@ -191,7 +191,7 @@ export default function MatrixExportDialog({ allocations, selections, scale = 10
     useEffect(() => {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ settings, outcomes })); } catch { /* bộ nhớ trình duyệt bị chặn: vẫn dùng được, chỉ không lưu */ }
     }, [settings, outcomes]);
-    const document = useMemo(() => buildMatrixExport(allocations, selections, { ...settings, targetScore: scale }, outcomes),
+    const document = useMemo(() => buildMatrixExport(allocations, selections, { ...settings, periods: {}, targetScore: scale }, outcomes),
         [allocations, selections, settings, scale, outcomes]);
     const edited = useMemo(() => new Set(document.units.filter(unit => outcomes[unit.key] !== undefined).map(unit => unit.key)), [document, outcomes]);
     const html = useMemo(() => open ? matrixExportHtml(document, false, { editable: true, edited }) : '', [open, document, edited]);
@@ -324,19 +324,6 @@ export default function MatrixExportDialog({ allocations, selections, scale = 10
                             <label className="text-sm font-semibold sm:col-span-2">Phạm vi kiến thức<textarea className={field + ' mt-1'} rows={2} placeholder="Để trống để lấy tên các chương đã chọn" value={settings.scope} onChange={event => set('scope', event.target.value)} /></label>
                         </div>
                         <p className="rounded-lg bg-stone-50 p-3 text-sm text-stone-700">Điểm mỗi câu và thang điểm lấy theo ma trận đề. Muốn đổi điểm, chỉnh ở bảng ma trận phía trên. Tổng hiện tại: <strong className="tabular-nums">{matrixExportNumber(document.totalScore)} / {matrixExportNumber(document.settings.targetScore)} điểm</strong>.</p>
-                        <fieldset className="rounded-lg border border-stone-200 bg-white p-3">
-                            <legend className="px-1 text-sm font-bold">Số tiết từng nội dung (tùy chọn)</legend>
-                            <div className="space-y-2">{document.topics.map(topic => <label key={topic.key} className="flex items-center justify-between gap-3 text-sm">
-                                <span>{topic.chapter} · <strong>{topic.topic}</strong></span>
-                                <input aria-label={'Số tiết ' + topic.topic} type="number" min={0} max={999} step={1} className={field + ' max-w-24'} value={settings.periods[topic.key] ?? ''}
-                                    onChange={event => {
-                                        const periods = { ...settings.periods };
-                                        if (event.target.value === '') delete periods[topic.key];
-                                        else periods[topic.key] = event.target.valueAsNumber;
-                                        set('periods', periods);
-                                    }} />
-                            </label>)}</div>
-                        </fieldset>
                         <p className="text-xs leading-relaxed text-stone-600">Mã câu theo thứ tự đề đã chọn, đánh số lại trong từng phần I, II, III. Khi xuất đề, giữ chế độ tiêu đề từng phần để mã câu khớp bản đặc tả. Nếu đổi thứ tự hoặc đổi câu, cần rà và xuất lại.</p>
                     </div> : <SpecFrame html={html} pick={pick} onEditRow={editRow} onPick={pickFromSpec} />}
                 </section>

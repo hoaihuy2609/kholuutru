@@ -1,6 +1,5 @@
 import katex from 'katex';
 import katexStyles from 'katex/dist/katex.min.css?inline';
-import { MATRIX_LEVELS } from './examMatrix';
 import { matrixSpecificationRows, type MatrixExportDocument, type MatrixExportType } from './matrixExport';
 
 const escape = (text: string) => text.replace(/[&<>"']/g, char =>
@@ -19,6 +18,8 @@ const n = matrixExportNumber;
 const pct = (number: number) => Number.isFinite(number)
     ? new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(number) : '-';
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+/** Tên mức theo mẫu Công văn 7991. */
+const LEVELS = ['', 'Biết', 'Hiểu', 'Vận dụng'];
 const colors: Record<MatrixExportType, string> = {
     trac_nghiem: 'blue', dung_sai: 'violet', tu_luan: 'amber', written: 'green',
 };
@@ -37,14 +38,17 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false, 
     const blueprintRows: string[] = [];
     const chapterIds = [...new Set(topics.map(topic => topic.chapterId))];
     const orderedTopics = chapterIds.flatMap(chapterId => topics.filter(topic => topic.chapterId === chapterId));
+    const percent = (points: number) => pct(document.totalScore ? points / document.totalScore * 100 : 0);
     for (const [chapterIndex, chapterId] of chapterIds.entries()) {
         const chapterTopics = orderedTopics.filter(topic => topic.chapterId === chapterId);
         for (const [index, topic] of chapterTopics.entries()) {
+            const levelTotal = (level: number) => sum(formats.map(({ type }) => topic.actual[type][level]));
             blueprintRows.push(`<tr>${index === 0 ? `<td rowspan="${chapterTopics.length}">${chapterIndex + 1}</td>
                 <th class="left chapter" rowspan="${chapterTopics.length}">${text(topic.chapter)}</th>` : ''}
-                <th class="left">${text(topic.topic)}</th><td>${topic.periods === undefined ? '-' : n(topic.periods)}</td>
-                ${formats.map(({ type }) => [1, 2, 3].map(level => `<td class="${colors[type]}">${topic.actual[type][level] || '-'}</td>`).join('')).join('')}
-                <td>${sum(Object.values(topic.actual).flat())}</td></tr>`);
+                <th class="left">${text(topic.topic)}</th>
+                ${formats.map(({ type }) => [1, 2, 3].map(level => `<td class="${colors[type]}">${topic.actual[type][level] || ''}</td>`).join('')).join('')}
+                ${[1, 2, 3].map(level => `<td>${levelTotal(level) || ''}</td>`).join('')}
+                <td>${percent(sum(topic.units.map(unit => unit.points)))}</td></tr>`);
         }
     }
     const totals = formats.map(({ type }) => [1, 2, 3].map(level => units.filter(unit => unit.type === type && unit.level === level).length));
@@ -54,9 +58,7 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false, 
     let topicNumber = 0;
     for (const chapterId of chapterIds) {
         const chapterTopics = orderedTopics.filter(topic => topic.chapterId === chapterId);
-        const totalPeriods = sum(chapterTopics.map(topic => topic.periods ?? 0));
-        const periodsComplete = chapterTopics.every(topic => topic.periods !== undefined);
-        specification.push(`<tr class="chapter-band"><th colspan="${widthCount}" class="left">${text(chapterTopics[0].chapter)}${periodsComplete ? ' - ' + n(totalPeriods) + ' tiết' : ''}</th></tr>`);
+        specification.push(`<tr class="chapter-band"><th colspan="${widthCount}" class="left">${text(chapterTopics[0].chapter)}</th></tr>`);
         for (const topic of chapterTopics) {
             topicNumber++;
             const rows = matrixSpecificationRows(topic.units);
@@ -72,7 +74,7 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false, 
             for (const row of rows) {
                 // Each level has its own heading row; its requirements follow, one per row.
                 if (row.level !== previousLevel) {
-                    specification.push(`<tr class="level-row">${frame()}<td class="left"><strong>${text(MATRIX_LEVELS[row.level])}:</strong></td>
+                    specification.push(`<tr class="level-row">${frame()}<td class="left"><strong>${text(LEVELS[row.level])}:</strong></td>
                         ${formats.map(() => '<td></td><td></td>').join('')}</tr>`);
                     previousLevel = row.level;
                 }
@@ -103,27 +105,17 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false, 
             ${settings.assessmentTime.trim() ? `<p>Thời điểm kiểm tra: ${text(settings.assessmentTime)}</p>` : ''}
             <p>Nội dung/phạm vi kiểm tra: ${text(scope)}</p>
             <p>Cấu trúc: ${document.questionCount} câu${hasStatements ? ', ' + document.unitCount + ' câu/ý được đánh giá' : ''}; ${n(document.totalScore)} điểm.</p>
-            <p>Mức độ: ${[1, 2, 3].map(level => text(MATRIX_LEVELS[level]) + ' ' + pct(document.totalScore ? document.levelScores[level] / document.totalScore * 100 : 0) + '%').join('; ')}.</p></div>
-            <table class="blueprint"><colgroup><col style="width:3%"><col style="width:14%"><col style="width:20%"><col style="width:4%">
-            ${formats.map(() => [1, 2, 3].map(() => `<col style="width:${53 / (formats.length * 3)}%">`).join('')).join('')}<col style="width:6%"></colgroup>
-            <thead><tr><th rowspan="3">TT</th><th rowspan="3">Chương/<br>chủ đề</th><th rowspan="3">Nội dung/<br>đơn vị kiến thức</th><th rowspan="3">Số<br>tiết</th><th colspan="${formats.length * 3}">Số câu hỏi/ý ở các mức độ đánh giá</th><th rowspan="3">Tổng<br>câu/ý</th></tr>
-            <tr>${formats.map(({ type, label, part }) => `<th colspan="3" class="type-head ${colors[type]}">${text(label)}${type === 'dung_sai' ? ' (ý)' : ''}</th>`).join('')}</tr>
-            <tr>${formats.map(({ type }) => [1, 2, 3].map(level => `<th class="${colors[type]}">${text(MATRIX_LEVELS[level])}</th>`).join('')).join('')}</tr></thead>
+            <p>Mức độ: ${[1, 2, 3].map(level => text(LEVELS[level]) + ' ' + pct(document.totalScore ? document.levelScores[level] / document.totalScore * 100 : 0) + '%').join('; ')}.</p></div>
+            <table class="blueprint"><colgroup><col style="width:3%"><col style="width:12%"><col style="width:17%">
+            ${Array.from({ length: formats.length * 3 + 3 }, () => `<col style="width:${62 / (formats.length * 3 + 3)}%">`).join('')}<col style="width:6%"></colgroup>
+            <thead><tr><th rowspan="3">TT</th><th rowspan="3">Chủ đề/<br>Chương</th><th rowspan="3">Nội dung/<br>đơn vị kiến thức</th><th colspan="${formats.length * 3}">Mức độ đánh giá</th><th colspan="3" rowspan="2">Tổng</th><th rowspan="3">Tỷ lệ<br>%<br>điểm</th></tr>
+            <tr>${formats.map(({ type, label }) => `<th colspan="3" class="type-head ${colors[type]}">${text(label)}</th>`).join('')}</tr>
+            <tr>${formats.map(({ type }) => [1, 2, 3].map(level => `<th class="${colors[type]}">${LEVELS[level]}</th>`).join('')).join('')}${[1, 2, 3].map(level => `<th>${LEVELS[level]}</th>`).join('')}</tr></thead>
             <tbody>${blueprintRows.join('')}</tbody><tbody class="totals">
-            <tr><th colspan="4" class="left">Tổng số câu/ý theo mức độ</th>${totals.map((counts, index) => counts.map(count => `<td class="${colors[formats[index].type]}">${count}</td>`).join('')).join('')}<td>${document.unitCount}</td></tr>
-            <tr><th colspan="4" class="left">Tổng theo loại câu</th>${formats.map(({ type }) => `<td colspan="3">${document.typeQuestionCounts[type]} câu${type === 'dung_sai' ? ' / ' + units.filter(unit => unit.type === type).length + ' ý' : ''}</td>`).join('')}<td>${document.questionCount} câu</td></tr>
-            <tr><th colspan="4" class="left">Tổng điểm</th>${points.map(point => `<td colspan="3">${n(point)}</td>`).join('')}<td>${n(document.totalScore)}</td></tr>
-            </tbody></table>
-            <table class="level-summary"><thead><tr><th>Cấp độ nhận thức</th>${[1, 2, 3].map(level => `<th>${text(MATRIX_LEVELS[level])}</th>`).join('')}<th>Tổng</th></tr></thead>
-            <tbody><tr><th class="left">Số câu/ý</th>${[1, 2, 3].map(level => `<td>${document.levelCounts[level]}</td>`).join('')}<td>${document.unitCount}</td></tr>
-            <tr><th class="left">Số điểm</th>${[1, 2, 3].map(level => `<td>${n(document.levelScores[level])}</td>`).join('')}<td>${n(document.totalScore)}</td></tr>
-            <tr><th class="left">Tỉ lệ điểm (%)</th>${[1, 2, 3].map(level => `<td>${pct(document.totalScore ? document.levelScores[level] / document.totalScore * 100 : 0)}</td>`).join('')}<td>${document.totalScore ? '100' : '0'}</td></tr></tbody></table>
-            <p class="note">${formats.map(({ type, label }) => {
-                const scores = [...units.filter(unit => unit.type === type).reduce((map, unit) => map.set(unit.questionId, (map.get(unit.questionId) ?? 0) + unit.points), new Map<string, number>()).values()];
-                const low = scores.length ? Math.min(...scores) : settings.points[type], high = scores.length ? Math.max(...scores) : settings.points[type];
-                return text(label) + ': ' + n(low) + (Math.abs(high - low) > 1e-9 ? '–' + n(high) : '') + ' điểm/câu';
-            }).join('; ')}.
-            ${hasStatements ? 'Điểm Đúng/Sai được phân bổ đều cho 4 ý để tính tỉ lệ mức độ trong ma trận; khi chấm, mỗi câu Đúng/Sai tính theo số ý đúng: 1 ý 0,1 điểm; 2 ý 0,25 điểm; 3 ý 0,5 điểm; 4 ý 1 điểm.' : ''}</p>${warnings}
+            <tr><th colspan="3" class="right">Tổng số câu/lệnh hỏi</th>${totals.map((counts, index) => counts.map(count => `<td class="${colors[formats[index].type]}">${count}</td>`).join('')).join('')}${[1, 2, 3].map(level => `<td>${document.levelCounts[level]}</td>`).join('')}<td class="blank"></td></tr>
+            <tr><th colspan="3" class="right">Tổng số điểm</th>${points.map(point => `<td colspan="3">${n(point)}</td>`).join('')}${[1, 2, 3].map(level => `<td>${n(document.levelScores[level])}</td>`).join('')}<td></td></tr>
+            <tr><th colspan="3" class="right">Tỷ lệ %</th>${points.map(point => `<td colspan="3">${percent(point)}</td>`).join('')}${[1, 2, 3].map(level => `<td>${percent(document.levelScores[level])}</td>`).join('')}<td></td></tr>
+            </tbody></table>${warnings}
         </section>
         <section class="specification-section"><h2>II. BẢN ĐẶC TẢ ĐỀ KIỂM TRA</h2>
             <table class="specification"><colgroup><col style="width:4%"><col style="width:17%"><col style="width:40%">
@@ -150,6 +142,8 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false, 
         thead { display: table-header-group; background: #e0f2f1; }
         tr { break-inside: avoid; }
         .left { text-align: left; }
+        .right { text-align: right; }
+        .blank { background: #d9d9d9; }
         .merged { border-top-style: hidden; }
         .chapter { background: #f3f6fa; }
         .chapter-band { background: #e9e7f5; break-after: avoid; }
