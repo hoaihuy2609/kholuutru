@@ -74,7 +74,7 @@ describe('specification by lesson', () => {
         const first = doc.units.filter(unit => unit.questionId === bank[5].item.id);
         expect(first.map(unit => unit.reference)).toEqual(['C1a', 'C1b', 'C1c', 'C1d'].map(ref => ref.replace('1', codes.get(bank[5].item.id)!.slice(1))));
         expect(first[0].outcome).toBe('Phát biểu được định nghĩa, viết được công thức tính công và đơn vị đo của công.');
-        expect(first[3].outcome).toBe('(YCCĐ Bài 26) ' + lessonLine('g10-ch3-26-V1')!.text);
+        expect(first[3].outcome).toBe(lessonLine('g10-ch3-26-V1')!.text);
         const second = doc.units.filter(unit => unit.questionId === bank[6].item.id);
         expect(second[3].outcome).toBe(lessonLine('g10-ch3-C1-15')!.text);
         expect(doc.units.every(unit => unit.outcome)).toBe(true);
