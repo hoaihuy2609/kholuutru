@@ -86,6 +86,8 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
     /** Thang điểm và điểm mỗi câu giáo viên sửa tay theo ô (dạng × mức); ô không sửa lấy theo cách chia tự động. */
     const [scale, setScale] = useState(10);
     const [pointEdits, setPointEdits] = useState<Record<string, number>>({});
+    // Chữ giáo viên đang gõ trong ô điểm (cho phép dấu phẩy, gõ dở như "0,"); bỏ đi khi rời ô.
+    const [pointDrafts, setPointDrafts] = useState<Record<string, string>>({});
 
     const selectedChapters = useMemo(() => chapters.map(chapter => ({
         ...chapter, topics: chapter.topics.filter(([topicId]) => selected.has(topicId)),
@@ -107,7 +109,7 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
     const totalScore = columns.reduce((sum, { key, type }) => sum + columnScore(key, type), 0);
     const levelScore = (level: number) => columns.filter(column => column.levelValue === level).reduce((sum, { key, type }) => sum + columnScore(key, type), 0);
     const trueFalseScore = columns.filter(column => column.type === 'dung_sai').reduce((sum, { key, type }) => sum + columnScore(key, type), 0);
-    const pointText = (value: number) => String(Math.round(value * 100) / 100).replace('.', ',');
+    const pointText = (value: number) => String(Math.round(value * 10000) / 10000).replace('.', ',');
     /** Bản đặc tả theo bài khi mọi nội dung đã chọn là bài có dòng YCCĐ và kho đã gắn câu vào các dòng đó. */
     const lessonRows = useMemo(() => lessonTopics(allocations), [allocations]);
     const hasAssignments = useMemo(() => {
@@ -268,18 +270,19 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
                                 <th scope="row" colSpan={2} className={cell + ' text-left'}>Điểm mỗi câu</th>
                                 {columns.map(({ key, type, format, level, colors }) => <td key={key} className={cell + ' ' + colors.body}>
                                     {type === 'dung_sai' ? <span title="Theo quy định của Bộ GD&ĐT: chấm theo số ý đúng">{pointText(TRUE_FALSE_POINTS)}</span>
-                                        : <input type="number" min={POINT_STEP} step={POINT_STEP} aria-label={'Điểm mỗi câu · ' + format + ' · ' + level}
+                                        : <input type="text" inputMode="decimal" aria-label={'Điểm mỗi câu · ' + format + ' · ' + level}
                                             className={'h-9 w-full min-w-0 rounded-md border bg-white px-1 text-center tabular-nums focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700 '
                                                 + (pointEdits[key] !== undefined ? 'border-amber-600' : 'border-stone-300')}
-                                            disabled={!totals[key]} value={totals[key] ? pointOf(key, type) : ''}
+                                            disabled={!totals[key]}
+                                            value={!totals[key] ? '' : pointDrafts[key] ?? pointText(pointOf(key, type))}
                                             onChange={event => {
-                                                const value = event.currentTarget.valueAsNumber;
-                                                setPointEdits(previous => {
-                                                    const next = { ...previous };
-                                                    if (Number.isFinite(value) && value > 0) next[key] = value; else delete next[key];
-                                                    return next;
-                                                });
-                                            }} />}
+                                                const text = event.currentTarget.value;
+                                                if (!/^\d*[.,]?\d*$/.test(text)) return;
+                                                setPointDrafts(previous => ({ ...previous, [key]: text }));
+                                                const value = Number(text.replace(',', '.'));
+                                                if (text && Number.isFinite(value) && value > 0) setPointEdits(previous => ({ ...previous, [key]: value }));
+                                            }}
+                                            onBlur={() => setPointDrafts(previous => { const next = { ...previous }; delete next[key]; return next; })} />}
                                 </td>)}
                             </tr>
                             <tr>
@@ -298,7 +301,7 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
                             <tr>
                                 <td colSpan={columns.length + 2} className="border-b border-stone-200 bg-white px-3 py-2.5 text-left text-sm font-normal">
                                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                                        {[1, 2, 3].map(level => <span key={level}>{MATRIX_LEVELS[level]}: <strong>{pointText(levelScore(level))}</strong> điểm{totalScore ? ' (' + pointText(levelScore(level) / totalScore * 100) + '%)' : ''}</span>)}
+                                        {[1, 2, 3].map(level => <span key={level}>{MATRIX_LEVELS[level]}: <strong>{pointText(levelScore(level))}</strong> điểm{totalScore ? ' (' + pointText(Math.round(levelScore(level) / totalScore * 1000) / 10) + '%)' : ''}</span>)}
                                         {trueFalseScore > 0 && <span className="text-stone-600">Đúng/Sai: <strong>{pointText(trueFalseScore)}</strong> điểm (mức theo ý của câu được chọn)</span>}
                                         <span className="ml-auto inline-flex flex-wrap items-center gap-2">
                                             <span className={'font-semibold ' + (Math.abs(totalScore - scale) < 1e-9 ? 'text-emerald-800' : 'text-amber-800')}>Tổng: {pointText(totalScore)} /</span>
