@@ -33,7 +33,7 @@ interface Props {
     onCompose: (questions: SelectedQuestionItem[]) => void;
     onCreateQuestion?: (draft: MatrixQuestionDraft) => void;
     recentQuestion?: { slotId: string; candidateId: string };
-    /** Chỉ lập ma trận mới: ẩn lựa chọn nạp PDF / bản đặc tả. */
+    /** Chỉ lập ma trận mới: ẩn nút quay lại, tiêu đề và lựa chọn nạp PDF / bản đặc tả. */
     planOnly?: boolean;
 }
 
@@ -275,19 +275,19 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
 
     return (
         <main className="mx-auto max-w-[1720px] space-y-5 p-4 text-stone-900 md:p-8">
-            <button className={button} onClick={onClose}><ChevronLeft className="size-4" /> Góc Học Tập</button>
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            {!planOnly && <button className={button} onClick={onClose}><ChevronLeft className="size-4" /> Góc Học Tập</button>}
+            {planOnly ? <h1 className="sr-only">Soạn đề theo ma trận</h1> : <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-bold">Soạn đề theo ma trận</h1>
                     <p className="mt-1 text-sm text-stone-600">{planning
                         ? 'Chọn nội dung kiểm tra và phân bổ số câu.'
                         : 'Rà bản đặc tả, rồi chọn câu trong kho cho từng vị trí.'}</p>
                 </div>
-                {!reviewing && !planOnly && <button className={button} onClick={() => {
+                {!reviewing && <button className={button} onClick={() => {
                     setReviewTarget(undefined);
                     setReviewing(true);
                 }}>Rà lại ma trận</button>}
-            </div>
+            </div>}
 
             {reviewing && !planOnly && <div className="flex flex-wrap gap-2" role="group" aria-label="Cách chuẩn bị ma trận">
                 <button type="button" aria-pressed={planning} className={planning ? primary : button}
