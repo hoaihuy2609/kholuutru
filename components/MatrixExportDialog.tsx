@@ -242,7 +242,7 @@ export default function MatrixExportDialog({ allocations, selections, scale = 10
     });
     function pickFromSpec(id: string) {
         setPick({ id, from: 'spec' });
-        if (!wide()) setView('exam');
+        setView(current => !wide() ? 'exam' : current === 'settings' ? 'spec' : current);
         requestAnimationFrame(() => examList.current?.querySelector(`[data-question="${CSS.escape(id)}"]`)
             ?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     }
@@ -300,7 +300,7 @@ export default function MatrixExportDialog({ allocations, selections, scale = 10
                     </ul>
                 </details>}
             </div>}
-            <div className="grid min-h-0 flex-1 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+            <div className={'grid min-h-0 flex-1 gap-3 p-3 sm:p-4 ' + (view === 'settings' ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]' : 'lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]')}>
                 <section className={'min-h-0 flex-col gap-2 ' + (view === 'exam' ? 'hidden lg:flex' : 'flex')} aria-label="Ma trận và bản đặc tả">
                     <div className="flex flex-wrap gap-2" role="group" aria-label="Nội dung bên trái">
                         <button type="button" aria-pressed={view !== 'settings'} className={view !== 'settings' ? primary : button}
@@ -314,6 +314,7 @@ export default function MatrixExportDialog({ allocations, selections, scale = 10
                             Bỏ {edited.size} chỗ đã sửa tay</button>}
                     </div>
                     {view === 'settings' ? <div className="min-h-0 flex-1 space-y-4 overflow-auto">
+                        <button type="button" className={button + ' w-full lg:hidden'} onClick={() => setView('spec')}>Xem bản in ma trận & đặc tả</button>
                         <div className="grid gap-3 rounded-lg border border-stone-200 bg-white p-3 sm:grid-cols-2">
                             <label className="text-sm font-semibold sm:col-span-2">Tên bài kiểm tra<input className={field + ' mt-1'} value={settings.title} onChange={event => set('title', event.target.value)} /></label>
                             <label className="text-sm font-semibold">Trường / đơn vị (tùy chọn)<input className={field + ' mt-1'} value={settings.school} onChange={event => set('school', event.target.value)} /></label>
@@ -339,7 +340,10 @@ export default function MatrixExportDialog({ allocations, selections, scale = 10
                         <p className="text-xs leading-relaxed text-stone-600">Mã câu theo thứ tự đề đã chọn, đánh số lại trong từng phần I, II, III. Khi xuất đề, giữ chế độ tiêu đề từng phần để mã câu khớp bản đặc tả. Nếu đổi thứ tự hoặc đổi câu, cần rà và xuất lại.</p>
                     </div> : <SpecFrame html={html} pick={pick} onEditRow={editRow} onPick={pickFromSpec} />}
                 </section>
-                <section className={'min-h-0 flex-col gap-2 ' + (view === 'exam' ? 'flex' : 'hidden lg:flex')} aria-label="Đề bài">
+                {view === 'settings' ? <section className="hidden min-h-0 flex-col gap-2 lg:flex" aria-label="Bản in ma trận và đặc tả">
+                    <h3 className="font-bold">Bản in · cập nhật theo thông tin đang nhập</h3>
+                    <SpecFrame html={html} pick={pick} onEditRow={editRow} onPick={pickFromSpec} />
+                </section> : <section className={'min-h-0 flex-col gap-2 ' + (view === 'exam' ? 'flex' : 'hidden lg:flex')} aria-label="Đề bài">
                     <div className="flex flex-wrap items-center gap-2">
                         <button type="button" className={button + ' lg:hidden'} onClick={() => setView('spec')}>← Ma trận & đặc tả</button>
                         <h3 className="font-bold">Đề bài · {questions.length} câu</h3>
@@ -357,7 +361,7 @@ export default function MatrixExportDialog({ allocations, selections, scale = 10
                         })}
                         {!questions.length && <p className="rounded-lg bg-white p-4 text-sm text-stone-600">Chưa chọn câu nào.</p>}
                     </div>
-                </section>
+                </section>}
             </div>
         </MatrixDialog>}
     </>;
