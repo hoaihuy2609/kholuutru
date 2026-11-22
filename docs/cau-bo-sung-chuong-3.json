@@ -1,0 +1,1338 @@
+{
+ "schema": "physivault.questions.create.v1",
+ "chapter_id": "g10-ch3",
+ "import_id": "cau-bo-sung-chuong-3-dot-1",
+ "source_note": "Câu do AI hỗ trợ biên soạn",
+ "groups": [
+  {
+   "lesson_title": "Câu bổ sung · Bài 23",
+   "type": "dung_sai",
+   "questions": [
+    {
+     "type": "dung_sai",
+     "question_text": "Một học sinh đẩy một thùng sách trượt đều trên sàn nằm ngang một đoạn $3\\ \\text{m}$ bằng lực đẩy $60\\ \\text{N}$ theo phương ngang.",
+     "solution": "a) Đúng: lực đẩy làm thùng dịch chuyển, học sinh truyền năng lượng cho thùng bằng cách thực hiện công. b) Đúng: thùng chuyển động đều nên hợp lực bằng 0, $F_{ms} = F = 60\\ \\text{N}$. c) Đúng: $A = F\\,s = 60\\cdot 3 = 180\\ \\text{J}$. d) Sai: công của lực đẩy chuyển hết thành nhiệt, $Q = 180\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "statements": [
+      {
+       "label": "a",
+       "claim": "Trong quá trình này, học sinh đã truyền năng lượng cho thùng bằng cách thực hiện công.",
+       "verdict": true,
+       "cognitive_level": 1,
+       "spec_line": "g10-ch3-P23-B2"
+      },
+      {
+       "label": "b",
+       "claim": "Vì thùng chuyển động đều nên lực ma sát tác dụng lên thùng có độ lớn $60\\ \\text{N}$.",
+       "verdict": true,
+       "cognitive_level": 2,
+       "spec_line": "g10-ch3-C2-03"
+      },
+      {
+       "label": "c",
+       "claim": "Công của lực đẩy là $180\\ \\text{J}$.",
+       "verdict": true,
+       "cognitive_level": 3,
+       "spec_line": "g10-ch3-23-V2"
+      },
+      {
+       "label": "d",
+       "claim": "Nhiệt lượng toả ra do ma sát giữa thùng và sàn là $60\\ \\text{J}$.",
+       "verdict": false,
+       "cognitive_level": 3,
+       "spec_line": "g10-ch3-23-V1"
+      }
+     ]
+    },
+    {
+     "type": "dung_sai",
+     "question_text": "Một vật trượt xuống trên mặt phẳng nghiêng có ma sát. Các lực tác dụng lên vật được biểu diễn như hình vẽ.",
+     "solution": "a) Đúng: trọng lực có thành phần cùng chiều chuyển động. b) Đúng: lực ma sát ngược chiều chuyển động. c) Đúng: công của lực ma sát chuyển một phần năng lượng thành nhiệt. d) Sai: $\\vec N$ vuông góc với phương chuyển động nên không sinh công.",
+     "programme_row": "g10-ch3-yc02",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 260 165\" width=\"260\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.6\"><defs><marker id=\"ae\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <path d=\"M20 145 H240 V35 Z\"/> <g transform=\"translate(123.5 82.1) rotate(-26.57)\"><rect x=\"-22\" y=\"-10\" width=\"44\" height=\"20\"/></g> <line x1=\"123.5\" y1=\"82.1\" x2=\"123.5\" y2=\"138\" stroke-width=\"2\" marker-end=\"url(#ae)\"/> <line x1=\"123.5\" y1=\"82.1\" x2=\"105.6\" y2=\"46.3\" stroke-width=\"2\" marker-end=\"url(#ae)\"/> <line x1=\"123.5\" y1=\"82.1\" x2=\"159.3\" y2=\"64.2\" stroke-width=\"2\" marker-end=\"url(#ae)\"/> <g stroke=\"none\"><text x=\"128\" y=\"140\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" ><tspan font-style=\"italic\" font-weight=\"600\">P</tspan></text><text x=\"90\" y=\"46\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" ><tspan font-style=\"italic\" font-weight=\"600\">N</tspan></text><text x=\"150\" y=\"56\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" ><tspan font-style=\"italic\" font-weight=\"600\">F</tspan><tspan font-size=\"10\" dy=\"3\">ms</tspan></text></g></svg>",
+     "image_layout": "auto",
+     "statements": [
+      {
+       "label": "a",
+       "claim": "Trọng lực $\\vec P$ sinh công dương (công phát động).",
+       "verdict": true,
+       "cognitive_level": 2,
+       "spec_line": "g10-ch3-23-H2"
+      },
+      {
+       "label": "b",
+       "claim": "Lực ma sát $\\vec F_{ms}$ sinh công âm (công cản).",
+       "verdict": true,
+       "cognitive_level": 2,
+       "spec_line": "g10-ch3-23-H2"
+      },
+      {
+       "label": "c",
+       "claim": "Trong quá trình trượt, một phần năng lượng của vật chuyển hoá thành nhiệt năng thông qua công của lực ma sát.",
+       "verdict": true,
+       "cognitive_level": 2,
+       "spec_line": "g10-ch3-23-H3"
+      },
+      {
+       "label": "d",
+       "claim": "Phản lực $\\vec N$ của mặt phẳng nghiêng sinh công dương.",
+       "verdict": false,
+       "cognitive_level": 2,
+       "spec_line": "g10-ch3-23-H2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "lesson_title": "Câu bổ sung · Bài 23",
+   "type": "trac_nghiem",
+   "questions": [
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một người kéo một thùng hàng trượt đều trên sàn nằm ngang một đoạn $5\\ \\text{m}$. Lực ma sát giữa thùng và sàn có độ lớn $120\\ \\text{N}$. Phần năng lượng chuyển hoá thành nhiệt (làm nóng thùng và sàn) do ma sát trong quá trình này là",
+     "solution": "Năng lượng chuyển thành nhiệt bằng độ lớn công của lực ma sát: $Q = F_{ms}\\,s = 120\\cdot 5 = 600\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-23-V1",
+     "learning_outcomes": [
+      "Vận dụng để xác định được một quá trình chuyển hoá năng lượng thông qua thực hiện công, truyền nhiệt."
+     ],
+     "choices": [
+      "$125\\ \\text{J}$.",
+      "$600\\ \\text{J}$.",
+      "$6000\\ \\text{J}$.",
+      "$24\\ \\text{J}$."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Trong một thí nghiệm, vật nặng khối lượng $10\\ \\text{kg}$ rơi chậm đều xuống $2\\ \\text{m}$, kéo dây làm quay cánh khuấy trong bình nước (hình vẽ). Coi toàn bộ công của trọng lực chuyển thành nhiệt năng của nước. Lấy $g = 10\\ \\text{m/s}^2$. Nhiệt lượng nước nhận được là",
+     "solution": "Công của trọng lực: $A = P\\,h = mgh = 10\\cdot 10\\cdot 2 = 200\\ \\text{J}$, chuyển hết thành nhiệt năng của nước: $Q = 200\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 280 175\" width=\"280\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.6\"><defs><marker id=\"aj\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <path d=\"M20 60 V160 H140 V60\"/><path d=\"M24 80 q8 -5 16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t8 0\" stroke-width=\"1\"/> <line x1=\"80\" y1=\"34\" x2=\"80\" y2=\"140\"/><path d=\"M58 120 H102 M62 132 H98\" stroke-width=\"2.4\"/> <circle cx=\"80\" cy=\"30\" r=\"7\"/><line x1=\"80\" y1=\"23\" x2=\"214\" y2=\"23\"/><circle cx=\"222\" cy=\"31\" r=\"9\"/> <line x1=\"231\" y1=\"31\" x2=\"231\" y2=\"98\"/><rect x=\"216\" y=\"98\" width=\"30\" height=\"30\"/> <line x1=\"262\" y1=\"100\" x2=\"262\" y2=\"160\" stroke-width=\"1.2\" marker-end=\"url(#aj)\"/> <g stroke=\"none\"><text x=\"226\" y=\"119\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-style=\"italic\">m</text><text x=\"266\" y=\"136\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-style=\"italic\">h</text><text x=\"48\" y=\"152\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">nước</text></g></svg>",
+     "image_layout": "auto",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-23-V1",
+     "learning_outcomes": [
+      "Vận dụng để xác định được một quá trình chuyển hoá năng lượng thông qua thực hiện công, truyền nhiệt."
+     ],
+     "choices": [
+      "$200\\ \\text{J}$.",
+      "$2000\\ \\text{J}$.",
+      "$20\\ \\text{J}$.",
+      "$100\\ \\text{J}$."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Hai cách làm thay đổi năng lượng của một vật là",
+     "solution": "Năng lượng được truyền cho vật bằng cách thực hiện công hoặc truyền nhiệt.",
+     "programme_row": "g10-ch3-yc02",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-P23-B2",
+     "learning_outcomes": [
+      "Nêu được thực hiện công là một cách truyền năng lượng."
+     ],
+     "choices": [
+      "tăng vận tốc và tăng độ cao.",
+      "thực hiện công và truyền nhiệt.",
+      "thực hiện công và tăng khối lượng.",
+      "truyền nhiệt và giảm thể tích."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Trường hợp nào sau đây năng lượng được truyền bằng cách thực hiện công?",
+     "solution": "Lực kéo của người làm xe dịch chuyển, tức là thực hiện công. Ba trường hợp còn lại là truyền nhiệt.",
+     "programme_row": "g10-ch3-yc02",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-P23-B2",
+     "learning_outcomes": [
+      "Nêu được thực hiện công là một cách truyền năng lượng."
+     ],
+     "choices": [
+      "Người kéo xe làm xe chuyển động.",
+      "Thả cục nước đá vào cốc nước.",
+      "Đun nóng nước bằng bếp gas.",
+      "Phơi quần áo dưới nắng."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Trường hợp nào sau đây năng lượng được truyền bằng cách truyền nhiệt?",
+     "solution": "Thìa nóng lên do nhận nhiệt từ nước nóng, không có lực làm vật dịch chuyển.",
+     "programme_row": "g10-ch3-yc02",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-P23-B2",
+     "learning_outcomes": [
+      "Nêu được thực hiện công là một cách truyền năng lượng."
+     ],
+     "choices": [
+      "Dùng búa đập nhiều lần lên đinh.",
+      "Dùng bơm để bơm xe đạp.",
+      "Cọ xát miếng kim loại lên mặt bàn.",
+      "Đặt thìa kim loại vào cốc nước nóng."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Khi một lực tác dụng lên vật làm vật dịch chuyển theo phương của lực thì",
+     "solution": "Lực làm vật dịch chuyển theo phương của lực thì thực hiện công, đó là một cách truyền năng lượng cho vật.",
+     "programme_row": "g10-ch3-yc02",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-P23-B2",
+     "learning_outcomes": [
+      "Nêu được thực hiện công là một cách truyền năng lượng."
+     ],
+     "choices": [
+      "lực đó không thực hiện công.",
+      "vật chỉ nhận nhiệt lượng.",
+      "lực đó thực hiện công, truyền năng lượng cho vật.",
+      "năng lượng của vật luôn giảm."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Phát biểu nào sau đây đúng?",
+     "solution": "Đúng với định nghĩa: thực hiện công là một cách truyền năng lượng.",
+     "programme_row": "g10-ch3-yc02",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-P23-B2",
+     "learning_outcomes": [
+      "Nêu được thực hiện công là một cách truyền năng lượng."
+     ],
+     "choices": [
+      "Thực hiện công không làm thay đổi năng lượng của vật.",
+      "Thực hiện công là một cách truyền năng lượng từ vật này sang vật khác, thông qua lực làm vật dịch chuyển.",
+      "Thực hiện công chỉ làm thay đổi nhiệt độ của vật.",
+      "Truyền nhiệt luôn cần có lực tác dụng lên vật."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Khi một người nâng quả tạ lên cao, năng lượng được chuyển hoá như thế nào?",
+     "solution": "Người sinh công nâng tạ: hoá năng trong cơ thể chuyển một phần thành thế năng của tạ.",
+     "programme_row": "g10-ch3-yc02",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-23-H3",
+     "learning_outcomes": [
+      "Hiểu được rằng sinh công là một trong số các cách chuyển hoá năng lượng."
+     ],
+     "choices": [
+      "Thế năng của quả tạ chuyển hoá thành hoá năng.",
+      "Nhiệt năng chuyển hoá thành động năng của quả tạ.",
+      "Không có sự chuyển hoá năng lượng.",
+      "Hoá năng trong cơ thể người chuyển hoá một phần thành thế năng của quả tạ, thông qua việc thực hiện công."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Khi động cơ ô tô kéo xe chạy, năng lượng được chuyển hoá theo trình tự nào?",
+     "solution": "Nhiên liệu cháy toả nhiệt, động cơ sinh công làm xe chuyển động.",
+     "programme_row": "g10-ch3-yc02",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-23-H3",
+     "learning_outcomes": [
+      "Hiểu được rằng sinh công là một trong số các cách chuyển hoá năng lượng."
+     ],
+     "choices": [
+      "Điện năng → quang năng.",
+      "Thế năng → hoá năng.",
+      "Hoá năng của nhiên liệu → nhiệt năng → động năng của xe, thông qua công của lực kéo.",
+      "Động năng của xe → hoá năng của nhiên liệu."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Trường hợp nào sau đây có sự chuyển hoá năng lượng thông qua việc sinh công?",
+     "solution": "Chỉ trường hợp quả bóng rơi có lực sinh công. Các trường hợp còn lại là truyền nhiệt.",
+     "programme_row": "g10-ch3-yc02",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-23-H3",
+     "learning_outcomes": [
+      "Hiểu được rằng sinh công là một trong số các cách chuyển hoá năng lượng."
+     ],
+     "choices": [
+      "Thỏi sắt nóng đặt trên nền nhà nguội dần.",
+      "Quả bóng rơi, trọng lực sinh công làm thế năng chuyển thành động năng.",
+      "Cốc nước nóng nguội dần trên bàn.",
+      "Ánh nắng làm nóng mái tôn."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Khi phanh xe đạp, lực ma sát sinh công cản làm",
+     "solution": "Công của lực ma sát chuyển động năng của xe thành nhiệt năng ở má phanh và vành xe.",
+     "programme_row": "g10-ch3-yc02",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-23-H3",
+     "learning_outcomes": [
+      "Hiểu được rằng sinh công là một trong số các cách chuyển hoá năng lượng."
+     ],
+     "choices": [
+      "động năng của xe chuyển hoá thành nhiệt năng.",
+      "nhiệt năng chuyển hoá thành động năng.",
+      "thế năng của xe tăng lên.",
+      "năng lượng của xe mất đi."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Phát biểu nào sau đây đúng?",
+     "solution": "Sinh công là một cách chuyển hoá (và truyền) năng lượng.",
+     "programme_row": "g10-ch3-yc02",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-23-H3",
+     "learning_outcomes": [
+      "Hiểu được rằng sinh công là một trong số các cách chuyển hoá năng lượng."
+     ],
+     "choices": [
+      "Khi một lực sinh công, năng lượng mất đi.",
+      "Công không liên quan đến năng lượng.",
+      "Chỉ có truyền nhiệt mới làm chuyển hoá năng lượng.",
+      "Khi một lực sinh công, năng lượng được chuyển hoá từ dạng này sang dạng khác hoặc truyền từ vật này sang vật khác."
+     ],
+     "correctChoice": "D"
+    }
+   ]
+  },
+  {
+   "lesson_title": "Câu bổ sung · Bài 23",
+   "type": "tu_luan",
+   "questions": [
+    {
+     "type": "tu_luan",
+     "question_text": "Một khúc gỗ được kéo trượt đều trên mặt bàn nằm ngang bằng lực $8\\ \\text{N}$ theo phương ngang, trên quãng đường $2{,}5\\ \\text{m}$. Toàn bộ công của lực kéo chuyển thành nhiệt do ma sát. Nhiệt lượng toả ra bằng bao nhiêu jun?",
+     "solution": "$Q = A = F\\,s = 8\\cdot 2{,}5 = 20\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-23-V1",
+     "learning_outcomes": [
+      "Vận dụng để xác định được một quá trình chuyển hoá năng lượng thông qua thực hiện công, truyền nhiệt."
+     ],
+     "short_answer": "20"
+    },
+    {
+     "type": "tu_luan",
+     "question_text": "Khi khoan một lỗ trên tấm gỗ, lực ma sát trung bình giữa mũi khoan và thành lỗ là $50\\ \\text{N}$. Mỗi vòng quay, điểm tiếp xúc trên mũi khoan đi được $0{,}03\\ \\text{m}$. Sau $2000$ vòng quay, nhiệt lượng toả ra do ma sát là bao nhiêu jun?",
+     "solution": "Quãng đường điểm tiếp xúc đi được: $s = 0{,}03\\cdot 2000 = 60\\ \\text{m}$. Nhiệt lượng: $Q = F_{ms}\\,s = 50\\cdot 60 = 3000\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-23-V1",
+     "learning_outcomes": [
+      "Vận dụng để xác định được một quá trình chuyển hoá năng lượng thông qua thực hiện công, truyền nhiệt."
+     ],
+     "short_answer": "3000"
+    },
+    {
+     "type": "tu_luan",
+     "question_text": "Một bạn xoa hai bàn tay vào nhau để làm ấm tay. Lực ma sát trung bình giữa hai bàn tay là $4\\ \\text{N}$, mỗi lần xoa tay trượt được $0{,}1\\ \\text{m}$. Sau $50$ lần xoa, phần nhiệt năng hai bàn tay nhận được là bao nhiêu jun (bỏ qua nhiệt truyền ra ngoài)?",
+     "solution": "$Q = F_{ms}\\,s = 4\\cdot (0{,}1\\cdot 50) = 20\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-23-V1",
+     "learning_outcomes": [
+      "Vận dụng để xác định được một quá trình chuyển hoá năng lượng thông qua thực hiện công, truyền nhiệt."
+     ],
+     "short_answer": "20"
+    },
+    {
+     "type": "tu_luan",
+     "question_text": "Một vật được kéo chuyển động thẳng đều trên mặt sàn nằm ngang bằng lực $50\\ \\text{N}$ hợp với phương ngang góc $60^\\circ$ (hình vẽ), trên quãng đường $4\\ \\text{m}$. Công của lực kéo chuyển hết thành nhiệt do ma sát. Nhiệt lượng toả ra là bao nhiêu jun?",
+     "solution": "$Q = A = F\\,s\\cos 60^\\circ = 50\\cdot 4\\cdot 0{,}5 = 100\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 270 125\" width=\"270\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.6\"><defs><marker id=\"a60\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <line x1=\"10\" y1=\"100\" x2=\"260\" y2=\"100\"/><line x1=\"20\" y1=\"100\" x2=\"12\" y2=\"108\" stroke-width=\"1\"/><line x1=\"40\" y1=\"100\" x2=\"32\" y2=\"108\" stroke-width=\"1\"/><line x1=\"60\" y1=\"100\" x2=\"52\" y2=\"108\" stroke-width=\"1\"/><line x1=\"80\" y1=\"100\" x2=\"72\" y2=\"108\" stroke-width=\"1\"/><line x1=\"100\" y1=\"100\" x2=\"92\" y2=\"108\" stroke-width=\"1\"/><line x1=\"120\" y1=\"100\" x2=\"112\" y2=\"108\" stroke-width=\"1\"/><line x1=\"140\" y1=\"100\" x2=\"132\" y2=\"108\" stroke-width=\"1\"/><line x1=\"160\" y1=\"100\" x2=\"152\" y2=\"108\" stroke-width=\"1\"/><line x1=\"180\" y1=\"100\" x2=\"172\" y2=\"108\" stroke-width=\"1\"/><line x1=\"200\" y1=\"100\" x2=\"192\" y2=\"108\" stroke-width=\"1\"/><line x1=\"220\" y1=\"100\" x2=\"212\" y2=\"108\" stroke-width=\"1\"/><line x1=\"240\" y1=\"100\" x2=\"232\" y2=\"108\" stroke-width=\"1\"/> <rect x=\"70\" y=\"60\" width=\"60\" height=\"40\"/> <line x1=\"130\" y1=\"80\" x2=\"225\" y2=\"80\" stroke-dasharray=\"4 4\" stroke-width=\"1\"/> <line x1=\"130\" y1=\"80\" x2=\"172.5\" y2=\"6.4\" stroke-width=\"2\" marker-end=\"url(#a60)\"/> <path d=\"M158 80 A28 28 0 0 0 144.0 55.8\" stroke-width=\"1.2\"/> <g stroke=\"none\"><text x=\"178.5\" y=\"10.387840678322718\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" ><tspan font-style=\"italic\" font-weight=\"600\">F</tspan></text><text x=\"162\" y=\"68\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">60°</text></g></svg>",
+     "image_layout": "auto",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-23-V1",
+     "learning_outcomes": [
+      "Vận dụng để xác định được một quá trình chuyển hoá năng lượng thông qua thực hiện công, truyền nhiệt."
+     ],
+     "short_answer": "100"
+    },
+    {
+     "type": "tu_luan",
+     "question_text": "Một thùng hàng được kéo chuyển động thẳng đều trên sàn nằm ngang bằng lực $40\\ \\text{N}$ hợp với phương ngang góc $30^\\circ$ như hình vẽ, trên quãng đường $5\\ \\text{m}$. Công của lực kéo chuyển hết thành nhiệt do ma sát. Nhiệt lượng toả ra là bao nhiêu jun (làm tròn đến hàng đơn vị)?",
+     "solution": "$Q = A = F\\,s\\cos 30^\\circ = 40\\cdot 5\\cdot \\dfrac{\\sqrt3}{2} \\approx 173\\ \\text{J}$.",
+     "programme_row": "g10-ch3-yc03b",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 270 125\" width=\"270\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.6\"><defs><marker id=\"a30\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <line x1=\"10\" y1=\"100\" x2=\"260\" y2=\"100\"/><line x1=\"20\" y1=\"100\" x2=\"12\" y2=\"108\" stroke-width=\"1\"/><line x1=\"40\" y1=\"100\" x2=\"32\" y2=\"108\" stroke-width=\"1\"/><line x1=\"60\" y1=\"100\" x2=\"52\" y2=\"108\" stroke-width=\"1\"/><line x1=\"80\" y1=\"100\" x2=\"72\" y2=\"108\" stroke-width=\"1\"/><line x1=\"100\" y1=\"100\" x2=\"92\" y2=\"108\" stroke-width=\"1\"/><line x1=\"120\" y1=\"100\" x2=\"112\" y2=\"108\" stroke-width=\"1\"/><line x1=\"140\" y1=\"100\" x2=\"132\" y2=\"108\" stroke-width=\"1\"/><line x1=\"160\" y1=\"100\" x2=\"152\" y2=\"108\" stroke-width=\"1\"/><line x1=\"180\" y1=\"100\" x2=\"172\" y2=\"108\" stroke-width=\"1\"/><line x1=\"200\" y1=\"100\" x2=\"192\" y2=\"108\" stroke-width=\"1\"/><line x1=\"220\" y1=\"100\" x2=\"212\" y2=\"108\" stroke-width=\"1\"/><line x1=\"240\" y1=\"100\" x2=\"232\" y2=\"108\" stroke-width=\"1\"/> <rect x=\"70\" y=\"60\" width=\"60\" height=\"40\"/> <line x1=\"130\" y1=\"80\" x2=\"225\" y2=\"80\" stroke-dasharray=\"4 4\" stroke-width=\"1\"/> <line x1=\"130\" y1=\"80\" x2=\"203.6\" y2=\"37.5\" stroke-width=\"2\" marker-end=\"url(#a30)\"/> <path d=\"M158 80 A28 28 0 0 0 154.2 66.0\" stroke-width=\"1.2\"/> <g stroke=\"none\"><text x=\"209.6121593216773\" y=\"41.50000000000001\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" ><tspan font-style=\"italic\" font-weight=\"600\">F</tspan></text><text x=\"162\" y=\"74\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">30°</text></g></svg>",
+     "image_layout": "auto",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-23-V1",
+     "learning_outcomes": [
+      "Vận dụng để xác định được một quá trình chuyển hoá năng lượng thông qua thực hiện công, truyền nhiệt."
+     ],
+     "short_answer": "173"
+    }
+   ]
+  },
+  {
+   "lesson_title": "Câu bổ sung · Bài 24",
+   "type": "trac_nghiem",
+   "questions": [
+    {
+     "type": "trac_nghiem",
+     "question_text": "Máy A có công suất lớn hơn máy B. Điều đó có nghĩa là",
+     "solution": "Công suất là công thực hiện trong một đơn vị thời gian.",
+     "programme_row": "g10-ch3-yc08",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-24-H1",
+     "learning_outcomes": [
+      "Hiểu được ý nghĩa vật lí của công suất chính là tốc độ sinh công."
+     ],
+     "choices": [
+      "máy A có khối lượng lớn hơn.",
+      "trong cùng một khoảng thời gian, máy A thực hiện được công lớn hơn.",
+      "máy A luôn thực hiện công lớn hơn máy B.",
+      "máy A có hiệu suất cao hơn."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Hai người kéo hai thùng nước giống nhau lên cùng một độ cao; người thứ nhất mất $20\\ \\text{s}$, người thứ hai mất $30\\ \\text{s}$. Nhận xét nào đúng?",
+     "solution": "Cùng công nhưng người thứ nhất làm nhanh hơn nên công suất lớn hơn.",
+     "programme_row": "g10-ch3-yc08",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-24-H1",
+     "learning_outcomes": [
+      "Hiểu được ý nghĩa vật lí của công suất chính là tốc độ sinh công."
+     ],
+     "choices": [
+      "Hai người thực hiện công như nhau, người thứ nhất có công suất lớn hơn.",
+      "Người thứ nhất thực hiện công lớn hơn.",
+      "Hai người có công suất bằng nhau.",
+      "Người thứ hai có công suất lớn hơn."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Trên một máy có ghi $1000\\ \\text{W}$. Con số này cho biết",
+     "solution": "$1\\ \\text{W} = 1\\ \\text{J/s}$: công suất là công thực hiện trong mỗi giây.",
+     "programme_row": "g10-ch3-yc08",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-24-H1",
+     "learning_outcomes": [
+      "Hiểu được ý nghĩa vật lí của công suất chính là tốc độ sinh công."
+     ],
+     "choices": [
+      "máy thực hiện được tổng cộng $1000\\ \\text{J}$.",
+      "máy cần $1000\\ \\text{s}$ để hoạt động.",
+      "máy tạo ra lực $1000\\ \\text{N}$.",
+      "khi hoạt động bình thường, mỗi giây máy thực hiện được công $1000\\ \\text{J}$."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Theo nghĩa vật lí, câu \"máy A làm việc nhanh hơn máy B\" có nghĩa là",
+     "solution": "Làm việc nhanh hơn là sinh công nhanh hơn, tức là công suất lớn hơn.",
+     "programme_row": "g10-ch3-yc08",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-24-H1",
+     "learning_outcomes": [
+      "Hiểu được ý nghĩa vật lí của công suất chính là tốc độ sinh công."
+     ],
+     "choices": [
+      "lực của máy A lớn hơn.",
+      "hiệu suất của máy A lớn hơn.",
+      "công suất của máy A lớn hơn.",
+      "máy A thực hiện công lớn hơn."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Nếu thời gian thực hiện cùng một công tăng gấp đôi thì công suất",
+     "solution": "Công suất tỉ lệ nghịch với thời gian thực hiện cùng một công.",
+     "programme_row": "g10-ch3-yc08",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-24-H1",
+     "learning_outcomes": [
+      "Hiểu được ý nghĩa vật lí của công suất chính là tốc độ sinh công."
+     ],
+     "choices": [
+      "tăng gấp bốn.",
+      "giảm một nửa.",
+      "tăng gấp đôi.",
+      "không đổi."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Đồ thị hình bên biểu diễn công $A$ mà hai máy (1) và (2) thực hiện được theo thời gian $t$. Nhận xét nào sau đây đúng?",
+     "solution": "Công suất là tốc độ sinh công, bằng độ dốc của đồ thị $A$ theo $t$. Đường (1) dốc hơn nên máy (1) có công suất lớn hơn; mỗi đường là đoạn thẳng nên công suất mỗi máy không đổi.",
+     "programme_row": "g10-ch3-yc08",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 260 175\" width=\"260\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.6\"><defs><marker id=\"ab\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <line x1=\"40\" y1=\"150\" x2=\"245\" y2=\"150\" marker-end=\"url(#ab)\"/><line x1=\"40\" y1=\"150\" x2=\"40\" y2=\"15\" marker-end=\"url(#ab)\"/> <line x1=\"40\" y1=\"150\" x2=\"185\" y2=\"35\" stroke-width=\"2\"/><line x1=\"40\" y1=\"150\" x2=\"225\" y2=\"95\" stroke-width=\"2\"/> <g stroke=\"none\"><text x=\"48\" y=\"22\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"13\"><tspan font-style=\"italic\">A</tspan> (J)</text><text x=\"222\" y=\"168\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"13\"><tspan font-style=\"italic\">t</tspan> (s)</text><text x=\"26\" y=\"166\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" >O</text><text x=\"190\" y=\"36\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" >(1)</text><text x=\"228\" y=\"96\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" >(2)</text></g></svg>",
+     "image_layout": "auto",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-24-H1",
+     "learning_outcomes": [
+      "Hiểu được ý nghĩa vật lí của công suất chính là tốc độ sinh công."
+     ],
+     "choices": [
+      "Máy (1) có công suất lớn hơn máy (2).",
+      "Máy (2) có công suất lớn hơn máy (1).",
+      "Hai máy có công suất bằng nhau.",
+      "Công suất của hai máy tăng dần theo thời gian."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Đồ thị hình bên biểu diễn công $A$ mà một động cơ thực hiện theo thời gian $t$. Nhận xét nào sau đây đúng?",
+     "solution": "Đoạn từ $0$ đến $t_1$ dốc hơn nên công tăng nhanh hơn, tức công suất lớn hơn. Sau $t_1$ công vẫn tăng nhưng chậm hơn.",
+     "programme_row": "g10-ch3-yc08",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 260 175\" width=\"260\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.6\"><defs><marker id=\"ac\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <line x1=\"40\" y1=\"150\" x2=\"245\" y2=\"150\" marker-end=\"url(#ac)\"/><line x1=\"40\" y1=\"150\" x2=\"40\" y2=\"15\" marker-end=\"url(#ac)\"/> <polyline points=\"40,150 115,70 225,50\" stroke-width=\"2\"/> <line x1=\"115\" y1=\"70\" x2=\"115\" y2=\"150\" stroke-dasharray=\"4 4\" stroke-width=\"1\"/> <g stroke=\"none\"><text x=\"48\" y=\"22\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"13\"><tspan font-style=\"italic\">A</tspan> (J)</text><text x=\"222\" y=\"168\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"13\"><tspan font-style=\"italic\">t</tspan> (s)</text><text x=\"26\" y=\"166\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" >O</text><text x=\"108\" y=\"168\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" ><tspan font-style=\"italic\">t</tspan><tspan font-size=\"10\" dy=\"3\">1</tspan></text></g></svg>",
+     "image_layout": "auto",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-24-H1",
+     "learning_outcomes": [
+      "Hiểu được ý nghĩa vật lí của công suất chính là tốc độ sinh công."
+     ],
+     "choices": [
+      "Sau thời điểm $t_1$, động cơ hoạt động với công suất lớn hơn.",
+      "Công suất của động cơ không đổi trong suốt quá trình.",
+      "Sau thời điểm $t_1$, động cơ ngừng thực hiện công.",
+      "Từ $0$ đến $t_1$, động cơ hoạt động với công suất lớn hơn sau thời điểm $t_1$."
+     ],
+     "correctChoice": "D"
+    }
+   ]
+  },
+  {
+   "lesson_title": "Câu bổ sung · Bài 25",
+   "type": "trac_nghiem",
+   "questions": [
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một kilôjun ($1\\ \\text{kJ}$) động năng bằng",
+     "solution": "$1\\ \\text{kJ} = 1000\\ \\text{J}$ và $1\\ \\text{J} = 1\\ \\text{N}\\cdot\\text{m}$. $\\text{W}$ là đơn vị công suất, $\\text{kg}\\cdot\\text{m/s}^2$ là đơn vị lực.",
+     "programme_row": "g10-ch3-yc05a",
+     "programme_match": "extended",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-25-H1",
+     "learning_outcomes": [
+      "Hiểu được đơn vị đo của động năng và thế năng."
+     ],
+     "choices": [
+      "$1000\\ \\text{W}$.",
+      "$1000\\ \\text{kg}\\cdot\\text{m/s}^2$.",
+      "$100\\ \\text{J}$.",
+      "$1000\\ \\text{N}\\cdot\\text{m}$."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Từ biểu thức $W_đ = \\dfrac{1}{2}mv^2$, đơn vị jun được biểu diễn theo các đơn vị cơ bản của hệ SI là",
+     "solution": "Đơn vị của $mv^2$ là $\\text{kg}\\cdot(\\text{m/s})^2 = \\text{kg}\\cdot\\text{m}^2/\\text{s}^2 = \\text{J}$.",
+     "programme_row": "g10-ch3-yc05a",
+     "programme_match": "extended",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-25-H1",
+     "learning_outcomes": [
+      "Hiểu được đơn vị đo của động năng và thế năng."
+     ],
+     "choices": [
+      "$\\text{kg}^2\\cdot\\text{m/s}$.",
+      "$\\text{kg}\\cdot\\text{m/s}$.",
+      "$\\text{kg}\\cdot\\text{m}^2/\\text{s}^2$.",
+      "$\\text{kg}\\cdot\\text{m/s}^2$."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Động năng và thế năng có cùng đơn vị đo vì",
+     "solution": "Động năng và thế năng đều là các dạng năng lượng (cơ năng), chuyển hoá qua lại cho nhau thông qua công, nên có cùng đơn vị jun.",
+     "programme_row": "g10-ch3-yc05a",
+     "programme_match": "extended",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-25-H1",
+     "learning_outcomes": [
+      "Hiểu được đơn vị đo của động năng và thế năng."
+     ],
+     "choices": [
+      "cả hai luôn có giá trị dương.",
+      "cả hai đều là năng lượng, có thể chuyển hoá cho nhau và được đo bằng công.",
+      "cả hai đều phụ thuộc vào vận tốc của vật.",
+      "cả hai đều phụ thuộc vào độ cao của vật."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Trong biểu thức $W_t = mgh$, nếu $m$ tính bằng $\\text{kg}$, $g$ tính bằng $\\text{m/s}^2$ và $h$ tính bằng $\\text{m}$ thì $W_t$ có đơn vị là",
+     "solution": "$\\text{kg}\\cdot\\text{m/s}^2\\cdot\\text{m} = \\text{N}\\cdot\\text{m} = \\text{J}$.",
+     "programme_row": "g10-ch3-yc05a",
+     "programme_match": "extended",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-25-H1",
+     "learning_outcomes": [
+      "Hiểu được đơn vị đo của động năng và thế năng."
+     ],
+     "choices": [
+      "jun ($\\text{J}$).",
+      "$\\text{kg}\\cdot\\text{m/s}$.",
+      "niutơn ($\\text{N}$).",
+      "oát ($\\text{W}$)."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Đại lượng nào sau đây có cùng đơn vị đo với thế năng?",
+     "solution": "Thế năng và công đều đo bằng jun. Công suất đo bằng oát, lực đo bằng niutơn.",
+     "programme_row": "g10-ch3-yc05a",
+     "programme_match": "extended",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-25-H1",
+     "learning_outcomes": [
+      "Hiểu được đơn vị đo của động năng và thế năng."
+     ],
+     "choices": [
+      "Công suất.",
+      "Lực.",
+      "Vận tốc.",
+      "Công."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Số đếm trên công tơ điện được tính bằng kilôoát giờ ($\\text{kW}\\cdot\\text{h}$). Đây là đơn vị của",
+     "solution": "$\\text{kW}\\cdot\\text{h}$ là tích công suất với thời gian, tức là đơn vị năng lượng, quy đổi được ra jun như động năng, thế năng.",
+     "programme_row": "g10-ch3-yc05a",
+     "programme_match": "extended",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-25-H1",
+     "learning_outcomes": [
+      "Hiểu được đơn vị đo của động năng và thế năng."
+     ],
+     "choices": [
+      "thời gian.",
+      "công suất.",
+      "năng lượng, cùng loại đơn vị với động năng, thế năng.",
+      "lực."
+     ],
+     "correctChoice": "C"
+    }
+   ]
+  },
+  {
+   "lesson_title": "Câu bổ sung · Bài 26",
+   "type": "dung_sai",
+   "questions": [
+    {
+     "type": "dung_sai",
+     "question_text": "Một quả táo rơi từ cành cây ở vị trí A, qua vị trí B rồi chạm đất ở vị trí C như hình vẽ.",
+     "solution": "a), b) Đúng: độ cao giảm nên thế năng giảm, tốc độ tăng nên động năng tăng và lớn nhất ngay trước khi chạm đất. c) Đúng theo định luật bảo toàn cơ năng. d) Sai: lực cản làm cơ năng giảm.",
+     "programme_row": "g10-ch3-yc07a",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 175\" width=\"240\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.6\"> <path d=\"M20 30 Q70 22 130 32\" stroke-width=\"3\"/><path d=\"M100 30 Q104 18 112 14\" stroke-width=\"1.2\"/> <line x1=\"120\" y1=\"38\" x2=\"120\" y2=\"150\" stroke-dasharray=\"4 4\" stroke-width=\"1\"/> <circle cx=\"120\" cy=\"46\" r=\"8\"/><circle cx=\"120\" cy=\"98\" r=\"8\" stroke-dasharray=\"3 2\"/><circle cx=\"120\" cy=\"142\" r=\"8\" stroke-dasharray=\"3 2\"/> <line x1=\"20\" y1=\"150\" x2=\"220\" y2=\"150\"/><line x1=\"32\" y1=\"150\" x2=\"24\" y2=\"158\" stroke-width=\"1\"/><line x1=\"52\" y1=\"150\" x2=\"44\" y2=\"158\" stroke-width=\"1\"/><line x1=\"72\" y1=\"150\" x2=\"64\" y2=\"158\" stroke-width=\"1\"/><line x1=\"92\" y1=\"150\" x2=\"84\" y2=\"158\" stroke-width=\"1\"/><line x1=\"112\" y1=\"150\" x2=\"104\" y2=\"158\" stroke-width=\"1\"/><line x1=\"132\" y1=\"150\" x2=\"124\" y2=\"158\" stroke-width=\"1\"/><line x1=\"152\" y1=\"150\" x2=\"144\" y2=\"158\" stroke-width=\"1\"/><line x1=\"172\" y1=\"150\" x2=\"164\" y2=\"158\" stroke-width=\"1\"/><line x1=\"192\" y1=\"150\" x2=\"184\" y2=\"158\" stroke-width=\"1\"/><line x1=\"212\" y1=\"150\" x2=\"204\" y2=\"158\" stroke-width=\"1\"/> <g stroke=\"none\"><text x=\"134\" y=\"50\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" >A</text><text x=\"134\" y=\"102\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" >B</text><text x=\"134\" y=\"144\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" >C</text></g></svg>",
+     "image_layout": "auto",
+     "statements": [
+      {
+       "label": "a",
+       "claim": "Trong khi rơi, thế năng của quả táo giảm còn động năng tăng.",
+       "verdict": true,
+       "cognitive_level": 2,
+       "spec_line": "g10-ch3-26-H1"
+      },
+      {
+       "label": "b",
+       "claim": "Ngay trước khi chạm đất tại C, động năng của quả táo lớn nhất.",
+       "verdict": true,
+       "cognitive_level": 2,
+       "spec_line": "g10-ch3-26-H1"
+      },
+      {
+       "label": "c",
+       "claim": "Nếu bỏ qua lực cản của không khí thì cơ năng của quả táo tại A bằng cơ năng tại B.",
+       "verdict": true,
+       "cognitive_level": 1,
+       "spec_line": "g10-ch3-26-B3"
+      },
+      {
+       "label": "d",
+       "claim": "Khi có lực cản của không khí, cơ năng của quả táo vẫn được bảo toàn.",
+       "verdict": false,
+       "cognitive_level": 1,
+       "spec_line": "g10-ch3-26-B3"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "lesson_title": "Câu bổ sung · Bài 26",
+   "type": "trac_nghiem",
+   "questions": [
+    {
+     "type": "trac_nghiem",
+     "question_text": "Hai vật cùng khối lượng $m$, cùng chuyển động với tốc độ $v$. Vật (1) ở độ cao $h$ so với mặt đất, vật (2) ở trên mặt đất. Chọn mốc thế năng tại mặt đất. Cơ năng của vật (1) và vật (2) lần lượt là",
+     "solution": "Vật (1) có cả động năng và thế năng: $W_1 = \\dfrac{1}{2}mv^2 + mgh$. Vật (2) ở mốc thế năng nên $W_2 = \\dfrac{1}{2}mv^2$.",
+     "programme_row": "g10-ch3-yc07a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-26-B2",
+     "learning_outcomes": [
+      "Viết được công thức tính cơ năng của vật trong trường trọng lực."
+     ],
+     "choices": [
+      "$\\dfrac{1}{2}mv^2 + mgh$ và $\\dfrac{1}{2}mv^2$.",
+      "$\\dfrac{1}{2}mv^2$ và $\\dfrac{1}{2}mv^2 + mgh$.",
+      "$mgh$ và $\\dfrac{1}{2}mv^2$.",
+      "$\\dfrac{1}{2}mv^2 + mgh$ và $\\dfrac{1}{2}mv^2 + mgh$."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Cơ năng của vật trong trường trọng lực được viết $W = W_đ + W_t$, trong đó thế năng $W_t$ bằng",
+     "solution": "Thế năng trọng trường: $W_t = mgh$.",
+     "programme_row": "g10-ch3-yc07a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-26-B2",
+     "learning_outcomes": [
+      "Viết được công thức tính cơ năng của vật trong trường trọng lực."
+     ],
+     "choices": [
+      "$\\dfrac{1}{2}mv^2$.",
+      "$\\dfrac{mg}{h}$.",
+      "$\\dfrac{1}{2}mgh^2$.",
+      "$mgh$."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Trong biểu thức cơ năng $W = \\dfrac{1}{2}mv^2 + mgh$, đại lượng $h$ là",
+     "solution": "$h$ là độ cao của vật so với mốc thế năng đã chọn.",
+     "programme_row": "g10-ch3-yc07a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-26-B2",
+     "learning_outcomes": [
+      "Viết được công thức tính cơ năng của vật trong trường trọng lực."
+     ],
+     "choices": [
+      "độ cao cực đại vật đạt được.",
+      "chiều cao của vật.",
+      "độ cao của vật so với mốc thế năng.",
+      "quãng đường vật đã đi được."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một vật khối lượng $m$ đứng yên ở độ cao $h$ so với mặt đất; chọn mốc thế năng tại mặt đất. Cơ năng của vật là",
+     "solution": "Vật đứng yên nên $W_đ = 0$, cơ năng bằng thế năng: $W = mgh$.",
+     "programme_row": "g10-ch3-yc07a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-26-B2",
+     "learning_outcomes": [
+      "Viết được công thức tính cơ năng của vật trong trường trọng lực."
+     ],
+     "choices": [
+      "$\\dfrac{1}{2}mgh$.",
+      "$mgh$.",
+      "$0$.",
+      "$\\dfrac{1}{2}mv^2$."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Chọn mốc thế năng tại mặt đất. Một vật khối lượng $m$ đang chuyển động trên mặt đất với tốc độ $v$ có cơ năng là",
+     "solution": "Vật ở mốc thế năng nên $W_t = 0$, cơ năng bằng động năng: $W = \\dfrac{1}{2}mv^2$.",
+     "programme_row": "g10-ch3-yc07a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-26-B2",
+     "learning_outcomes": [
+      "Viết được công thức tính cơ năng của vật trong trường trọng lực."
+     ],
+     "choices": [
+      "$\\dfrac{1}{2}mv^2$.",
+      "$mgh$.",
+      "$0$.",
+      "$mv^2$."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một vật khối lượng $m$ ở độ cao $h$ so với mặt đất, đang chuyển động với vận tốc $\\vec v$ như hình vẽ. Chọn mốc thế năng tại mặt đất. Cơ năng của vật là",
+     "solution": "Vật vừa có động năng $\\dfrac{1}{2}mv^2$ vừa có thế năng $mgh$, nên $W = \\dfrac{1}{2}mv^2 + mgh$.",
+     "programme_row": "g10-ch3-yc07a",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 250 170\" width=\"250\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.6\"><defs><marker id=\"ad\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <line x1=\"10\" y1=\"145\" x2=\"240\" y2=\"145\"/><line x1=\"22\" y1=\"145\" x2=\"14\" y2=\"153\" stroke-width=\"1\"/><line x1=\"42\" y1=\"145\" x2=\"34\" y2=\"153\" stroke-width=\"1\"/><line x1=\"62\" y1=\"145\" x2=\"54\" y2=\"153\" stroke-width=\"1\"/><line x1=\"82\" y1=\"145\" x2=\"74\" y2=\"153\" stroke-width=\"1\"/><line x1=\"102\" y1=\"145\" x2=\"94\" y2=\"153\" stroke-width=\"1\"/><line x1=\"122\" y1=\"145\" x2=\"114\" y2=\"153\" stroke-width=\"1\"/><line x1=\"142\" y1=\"145\" x2=\"134\" y2=\"153\" stroke-width=\"1\"/><line x1=\"162\" y1=\"145\" x2=\"154\" y2=\"153\" stroke-width=\"1\"/><line x1=\"182\" y1=\"145\" x2=\"174\" y2=\"153\" stroke-width=\"1\"/><line x1=\"202\" y1=\"145\" x2=\"194\" y2=\"153\" stroke-width=\"1\"/><line x1=\"222\" y1=\"145\" x2=\"214\" y2=\"153\" stroke-width=\"1\"/> <circle cx=\"110\" cy=\"45\" r=\"13\"/><line x1=\"125\" y1=\"45\" x2=\"190\" y2=\"45\" stroke-width=\"2\" marker-end=\"url(#ad)\"/> <line x1=\"60\" y1=\"45\" x2=\"60\" y2=\"143\" stroke-width=\"1.2\" marker-start=\"url(#ad)\" marker-end=\"url(#ad)\"/><line x1=\"56\" y1=\"45\" x2=\"96\" y2=\"45\" stroke-dasharray=\"3 3\" stroke-width=\"1\"/> <g stroke=\"none\"><text x=\"104\" y=\"50\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-style=\"italic\" font-size=\"12\">m</text><text x=\"194\" y=\"50\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" ><tspan font-style=\"italic\" font-weight=\"600\">v</tspan></text><text x=\"44\" y=\"100\" font-size=\"14\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-style=\"italic\">h</text><text x=\"238\" y=\"166\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\" text-anchor=\"end\">mốc thế năng (mặt đất)</text></g></svg>",
+     "image_layout": "auto",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-26-B2",
+     "learning_outcomes": [
+      "Viết được công thức tính cơ năng của vật trong trường trọng lực."
+     ],
+     "choices": [
+      "$W = \\dfrac{1}{2}mv^2$.",
+      "$W = mgh$.",
+      "$W = \\dfrac{1}{2}mv^2 - mgh$.",
+      "$W = \\dfrac{1}{2}mv^2 + mgh$."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Khi một vật chuyển động trong trọng trường và chỉ chịu tác dụng của trọng lực thì",
+     "solution": "Đó là nội dung định luật bảo toàn cơ năng.",
+     "programme_row": "g10-ch3-yc07a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-26-B3",
+     "learning_outcomes": [
+      "Phát biểu được định luật bảo toàn cơ năng."
+     ],
+     "choices": [
+      "cơ năng của vật được bảo toàn.",
+      "động năng của vật không đổi.",
+      "thế năng của vật không đổi.",
+      "cơ năng của vật luôn tăng."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Theo định luật bảo toàn cơ năng, khi vật chuyển động trong trọng trường và chỉ chịu tác dụng của trọng lực thì đại lượng nào sau đây không đổi?",
+     "solution": "Cơ năng $W = W_đ + W_t$ không đổi; còn động năng, thế năng và vận tốc có thể thay đổi.",
+     "programme_row": "g10-ch3-yc07a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-26-B3",
+     "learning_outcomes": [
+      "Phát biểu được định luật bảo toàn cơ năng."
+     ],
+     "choices": [
+      "Động năng của vật.",
+      "Thế năng của vật.",
+      "Vận tốc của vật.",
+      "Tổng động năng và thế năng của vật."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Khi cơ năng của vật được bảo toàn thì",
+     "solution": "Tổng $W_đ + W_t$ không đổi nên phần tăng của dạng này bằng phần giảm của dạng kia.",
+     "programme_row": "g10-ch3-yc07a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-26-B3",
+     "learning_outcomes": [
+      "Phát biểu được định luật bảo toàn cơ năng."
+     ],
+     "choices": [
+      "động năng và thế năng cùng giảm.",
+      "động năng luôn bằng thế năng.",
+      "động năng tăng bao nhiêu thì thế năng giảm bấy nhiêu.",
+      "động năng và thế năng cùng tăng."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một vật được ném thẳng đứng lên cao. Nếu bỏ qua lực cản của không khí thì trong quá trình vật chuyển động",
+     "solution": "Vật chỉ chịu tác dụng của trọng lực nên cơ năng được bảo toàn; động năng và thế năng chuyển hoá cho nhau.",
+     "programme_row": "g10-ch3-yc07a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-26-B3",
+     "learning_outcomes": [
+      "Phát biểu được định luật bảo toàn cơ năng."
+     ],
+     "choices": [
+      "cơ năng của vật tăng dần khi vật lên cao.",
+      "cơ năng của vật không đổi.",
+      "động năng của vật không đổi.",
+      "thế năng của vật không đổi."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Biểu thức của định luật bảo toàn cơ năng là",
+     "solution": "Cơ năng, tức tổng động năng và thế năng, không đổi trong quá trình chuyển động.",
+     "programme_row": "g10-ch3-yc07a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-26-B3",
+     "learning_outcomes": [
+      "Phát biểu được định luật bảo toàn cơ năng."
+     ],
+     "choices": [
+      "$W = W_đ + W_t = \\text{hằng số}$.",
+      "$W_đ = W_t$.",
+      "$W_đ - W_t = \\text{hằng số}$.",
+      "$W_đ\\cdot W_t = \\text{hằng số}$."
+     ],
+     "correctChoice": "A"
+    }
+   ]
+  },
+  {
+   "lesson_title": "Câu bổ sung · Bài 27",
+   "type": "dung_sai",
+   "questions": [
+    {
+     "type": "dung_sai",
+     "question_text": "Một máy sấy tóc đang hoạt động: máy thổi ra luồng gió nóng, phát ra tiếng ồn và vỏ máy hơi ấm lên.",
+     "solution": "a), b) Đúng: máy sấy dùng để thổi gió nóng, tiếng ồn là hao phí. c) Đúng: hao phí ít hơn thì năng lượng có ích chiếm tỉ lệ lớn hơn. d) Sai: với máy sấy, bàn là, nồi cơm điện… nhiệt năng chính là năng lượng có ích.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "statements": [
+      {
+       "label": "a",
+       "claim": "Năng lượng có ích của máy sấy gồm nhiệt năng làm nóng luồng gió và động năng của luồng gió.",
+       "verdict": true,
+       "cognitive_level": 1,
+       "spec_line": "g10-ch3-27-B1"
+      },
+      {
+       "label": "b",
+       "claim": "Năng lượng âm thanh của tiếng ồn là năng lượng hao phí.",
+       "verdict": true,
+       "cognitive_level": 1,
+       "spec_line": "g10-ch3-27-B1"
+      },
+      {
+       "label": "c",
+       "claim": "Với cùng lượng điện năng tiêu thụ, máy nào ít ồn và vỏ ít nóng hơn thì có hiệu suất cao hơn.",
+       "verdict": true,
+       "cognitive_level": 2,
+       "spec_line": "g10-ch3-27-H2"
+      },
+      {
+       "label": "d",
+       "claim": "Vì toả nhiệt nên với mọi thiết bị, nhiệt năng luôn là năng lượng hao phí.",
+       "verdict": false,
+       "cognitive_level": 2,
+       "spec_line": "g10-ch3-27-H2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "lesson_title": "Câu bổ sung · Bài 27",
+   "type": "trac_nghiem",
+   "questions": [
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một bóng đèn sợi đốt và một bóng đèn LED phát sáng như nhau, nhưng bóng sợi đốt nóng hơn nhiều. Nhận xét nào sau đây đúng?",
+     "solution": "Cùng năng lượng có ích (ánh sáng) nhưng bóng sợi đốt hao phí nhiều nhiệt hơn, nên tỉ lệ năng lượng có ích trên năng lượng toàn phần của bóng LED lớn hơn.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-27-H2",
+     "learning_outcomes": [
+      "Từ tình huống thực tế, thảo luận để nêu được định nghĩa hiệu suất."
+     ],
+     "choices": [
+      "Hai bóng có hiệu suất bằng nhau vì phát sáng như nhau.",
+      "Không so sánh được hiệu suất vì hai bóng khác loại.",
+      "Bóng LED có hiệu suất cao hơn vì phần năng lượng hao phí dưới dạng nhiệt ít hơn.",
+      "Bóng sợi đốt có hiệu suất cao hơn vì toả ra nhiều năng lượng hơn."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Hai động cơ cùng nhận vào một lượng điện năng như nhau. Động cơ (1) sinh ra công có ích nhiều hơn động cơ (2). Kết luận nào đúng?",
+     "solution": "Cùng năng lượng toàn phần, động cơ nào cho năng lượng có ích lớn hơn thì hiệu suất lớn hơn.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-27-H2",
+     "learning_outcomes": [
+      "Từ tình huống thực tế, thảo luận để nêu được định nghĩa hiệu suất."
+     ],
+     "choices": [
+      "Chưa đủ dữ kiện để so sánh hiệu suất.",
+      "Động cơ (1) có hiệu suất lớn hơn.",
+      "Động cơ (2) có hiệu suất lớn hơn.",
+      "Hai động cơ có hiệu suất bằng nhau."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Người ta tra dầu vào xích và trục bánh xe đạp để",
+     "solution": "Dầu làm giảm ma sát, phần năng lượng hao phí giảm nên tỉ lệ năng lượng có ích tăng, hiệu suất tăng.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-27-H2",
+     "learning_outcomes": [
+      "Từ tình huống thực tế, thảo luận để nêu được định nghĩa hiệu suất."
+     ],
+     "choices": [
+      "giảm năng lượng hao phí do ma sát, làm tăng hiệu suất.",
+      "tăng lực ma sát để xe chạy chắc hơn.",
+      "giảm năng lượng có ích của xe.",
+      "tăng năng lượng toàn phần người đạp cung cấp."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một ấm điện và một bếp gas cùng đun sôi một lượng nước như nhau; bếp gas làm nóng cả không khí xung quanh nhiều hơn. Đại lượng dùng để so sánh mức độ sử dụng năng lượng hiệu quả của hai thiết bị là",
+     "solution": "Hiệu suất cho biết phần năng lượng có ích chiếm bao nhiêu trong năng lượng toàn phần, nên dùng để so sánh mức độ sử dụng năng lượng hiệu quả.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-27-H2",
+     "learning_outcomes": [
+      "Từ tình huống thực tế, thảo luận để nêu được định nghĩa hiệu suất."
+     ],
+     "choices": [
+      "nhiệt lượng toàn phần.",
+      "thời gian đun.",
+      "công suất.",
+      "hiệu suất."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Vì sao hiệu suất của các máy và động cơ trong thực tế luôn nhỏ hơn $100\\%$?",
+     "solution": "Năng lượng toàn phần bằng năng lượng có ích cộng năng lượng hao phí; trong thực tế hao phí luôn lớn hơn 0 nên hiệu suất nhỏ hơn 100%.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-27-H2",
+     "learning_outcomes": [
+      "Từ tình huống thực tế, thảo luận để nêu được định nghĩa hiệu suất."
+     ],
+     "choices": [
+      "Vì máy luôn hoạt động với công suất nhỏ.",
+      "Vì năng lượng không được bảo toàn.",
+      "Vì luôn có một phần năng lượng bị hao phí, do ma sát, toả nhiệt, phát ra âm thanh…",
+      "Vì năng lượng có ích luôn lớn hơn năng lượng toàn phần."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Hai sơ đồ hình bên biểu diễn sự chuyển hoá năng lượng của hai bóng đèn khi cùng tiêu thụ một lượng điện năng như nhau. Nhận xét nào sau đây đúng?",
+     "solution": "Cùng năng lượng toàn phần, đèn (2) cho năng lượng có ích (quang năng) nhiều hơn nên hiệu suất cao hơn.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 420 300\" width=\"420\" height=\"300\"><svg x=\"0\" y=\"0\" height=\"150\" viewBox=\"0 0 420 150\" width=\"420\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.4\"> <defs><marker id=\"skn1\" viewBox=\"0 0 10 10\" refX=\"8\" refY=\"5\" markerWidth=\"5\" markerHeight=\"5\" orient=\"auto\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <line x1=\"10\" y1=\"75\" x2=\"132\" y2=\"75\" stroke-width=\"10\" stroke-opacity=\".35\"/><line x1=\"10\" y1=\"75\" x2=\"136\" y2=\"75\" stroke-width=\"1.4\" marker-end=\"url(#skn1)\"/> <rect x=\"140\" y=\"55\" width=\"90\" height=\"40\" rx=\"5\"/> <path d=\"M230 68 H258 V28 H290\" stroke-width=\"2\" stroke-opacity=\".35\"/><path d=\"M230 68 H258 V28 H296\" marker-end=\"url(#skn1)\"/> <path d=\"M230 82 H258 V122 H290\" stroke-width=\"10\" stroke-opacity=\".35\"/><path d=\"M230 82 H258 V122 H296\" marker-end=\"url(#skn1)\"/> <g stroke=\"none\"><text x=\"10\" y=\"60\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Điện năng 100 J</text><text x=\"185\" y=\"80\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\" text-anchor=\"middle\">Đèn (1)</text><text x=\"302\" y=\"26\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Quang năng 10 J</text><text x=\"302\" y=\"41\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\">(có ích)</text><text x=\"302\" y=\"120\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Nhiệt năng 90 J</text><text x=\"302\" y=\"135\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\">(hao phí)</text></g></svg><svg x=\"0\" y=\"150\" height=\"150\" viewBox=\"0 0 420 150\" width=\"420\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.4\"> <defs><marker id=\"skn2\" viewBox=\"0 0 10 10\" refX=\"8\" refY=\"5\" markerWidth=\"5\" markerHeight=\"5\" orient=\"auto\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <line x1=\"10\" y1=\"75\" x2=\"132\" y2=\"75\" stroke-width=\"10\" stroke-opacity=\".35\"/><line x1=\"10\" y1=\"75\" x2=\"136\" y2=\"75\" stroke-width=\"1.4\" marker-end=\"url(#skn2)\"/> <rect x=\"140\" y=\"55\" width=\"90\" height=\"40\" rx=\"5\"/> <path d=\"M230 68 H258 V28 H290\" stroke-width=\"5\" stroke-opacity=\".35\"/><path d=\"M230 68 H258 V28 H296\" marker-end=\"url(#skn2)\"/> <path d=\"M230 82 H258 V122 H290\" stroke-width=\"7\" stroke-opacity=\".35\"/><path d=\"M230 82 H258 V122 H296\" marker-end=\"url(#skn2)\"/> <g stroke=\"none\"><text x=\"10\" y=\"60\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Điện năng 100 J</text><text x=\"185\" y=\"80\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\" text-anchor=\"middle\">Đèn (2)</text><text x=\"302\" y=\"26\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Quang năng 40 J</text><text x=\"302\" y=\"41\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\">(có ích)</text><text x=\"302\" y=\"120\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Nhiệt năng 60 J</text><text x=\"302\" y=\"135\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\">(hao phí)</text></g></svg></svg>",
+     "image_layout": "bottom",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-27-H2",
+     "learning_outcomes": [
+      "Từ tình huống thực tế, thảo luận để nêu được định nghĩa hiệu suất."
+     ],
+     "choices": [
+      "Đèn (2) có hiệu suất cao hơn vì cho nhiều quang năng hơn từ cùng lượng điện năng.",
+      "Đèn (1) có hiệu suất cao hơn vì toả nhiều nhiệt hơn.",
+      "Hai đèn có hiệu suất như nhau vì nhận cùng lượng điện năng.",
+      "Không so sánh được vì năng lượng hao phí của hai đèn khác nhau."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Khi máy bơm nước hoạt động để đưa nước lên bể, năng lượng có ích là",
+     "solution": "Mục đích của máy bơm là đưa nước lên cao, nên đó là năng lượng có ích.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-27-B1",
+     "learning_outcomes": [
+      "Nhận biết được năng lượng có ích và năng lượng hao phí trong các quá trình chuyển hoá năng lượng."
+     ],
+     "choices": [
+      "năng lượng âm thanh máy phát ra.",
+      "điện năng máy nhận vào.",
+      "nhiệt năng làm nóng động cơ.",
+      "năng lượng dùng để đưa nước lên cao."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Đối với bóng đèn sợi đốt, năng lượng hao phí là",
+     "solution": "Đèn dùng để chiếu sáng, phần nhiệt năng toả ra là hao phí.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-27-B1",
+     "learning_outcomes": [
+      "Nhận biết được năng lượng có ích và năng lượng hao phí trong các quá trình chuyển hoá năng lượng."
+     ],
+     "choices": [
+      "hoá năng.",
+      "quang năng.",
+      "nhiệt năng toả ra môi trường.",
+      "điện năng."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Khi ô tô chạy, năng lượng có ích của động cơ là",
+     "solution": "Động cơ dùng để làm xe chuyển động; các phần còn lại là hao phí.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-27-B1",
+     "learning_outcomes": [
+      "Nhận biết được năng lượng có ích và năng lượng hao phí trong các quá trình chuyển hoá năng lượng."
+     ],
+     "choices": [
+      "nhiệt năng làm nóng máy.",
+      "năng lượng làm xe chuyển động.",
+      "năng lượng âm thanh của tiếng máy.",
+      "năng lượng theo khí thải ra ngoài."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Trong nồi cơm điện, năng lượng có ích là",
+     "solution": "Nồi cơm điện dùng để nấu chín cơm, nên nhiệt năng làm chín cơm là có ích.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-27-B1",
+     "learning_outcomes": [
+      "Nhận biết được năng lượng có ích và năng lượng hao phí trong các quá trình chuyển hoá năng lượng."
+     ],
+     "choices": [
+      "nhiệt năng làm chín cơm.",
+      "nhiệt năng làm nóng vỏ nồi và không khí xung quanh.",
+      "quang năng của đèn báo.",
+      "điện năng tiêu thụ."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Năng lượng toàn phần mà một thiết bị nhận vào bằng",
+     "solution": "$W_{tp} = W_{ci} + W_{hp}$.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-27-B1",
+     "learning_outcomes": [
+      "Nhận biết được năng lượng có ích và năng lượng hao phí trong các quá trình chuyển hoá năng lượng."
+     ],
+     "choices": [
+      "hiệu năng lượng có ích và năng lượng hao phí.",
+      "năng lượng có ích.",
+      "năng lượng hao phí.",
+      "tổng năng lượng có ích và năng lượng hao phí."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Sơ đồ hình bên biểu diễn sự chuyển hoá năng lượng của một bóng đèn trong một khoảng thời gian. Năng lượng có ích của bóng đèn là",
+     "solution": "Bóng đèn dùng để chiếu sáng nên quang năng là năng lượng có ích; nhiệt năng là hao phí.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 420 150\" width=\"420\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.4\"> <defs><marker id=\"skBngn\" viewBox=\"0 0 10 10\" refX=\"8\" refY=\"5\" markerWidth=\"5\" markerHeight=\"5\" orient=\"auto\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <line x1=\"10\" y1=\"75\" x2=\"132\" y2=\"75\" stroke-width=\"10\" stroke-opacity=\".35\"/><line x1=\"10\" y1=\"75\" x2=\"136\" y2=\"75\" stroke-width=\"1.4\" marker-end=\"url(#skBngn)\"/> <rect x=\"140\" y=\"55\" width=\"90\" height=\"40\" rx=\"5\"/> <path d=\"M230 68 H258 V28 H290\" stroke-width=\"2\" stroke-opacity=\".35\"/><path d=\"M230 68 H258 V28 H296\" marker-end=\"url(#skBngn)\"/> <path d=\"M230 82 H258 V122 H290\" stroke-width=\"10\" stroke-opacity=\".35\"/><path d=\"M230 82 H258 V122 H296\" marker-end=\"url(#skBngn)\"/> <g stroke=\"none\"><text x=\"10\" y=\"60\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Điện năng 100 J</text><text x=\"185\" y=\"80\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\" text-anchor=\"middle\">Bóng đèn</text><text x=\"302\" y=\"26\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Quang năng 10 J</text><text x=\"302\" y=\"41\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\">(có ích)</text><text x=\"302\" y=\"120\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Nhiệt năng 90 J</text><text x=\"302\" y=\"135\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\">(hao phí)</text></g></svg>",
+     "image_layout": "bottom",
+     "cognitive_level": 1,
+     "spec_line": "g10-ch3-27-B1",
+     "learning_outcomes": [
+      "Nhận biết được năng lượng có ích và năng lượng hao phí trong các quá trình chuyển hoá năng lượng."
+     ],
+     "choices": [
+      "tổng quang năng và nhiệt năng.",
+      "điện năng.",
+      "quang năng.",
+      "nhiệt năng."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Một động cơ có hiệu suất $80\\%$. Điều đó có nghĩa là",
+     "solution": "Hiệu suất là tỉ số năng lượng có ích trên năng lượng toàn phần.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-27-H1",
+     "learning_outcomes": [
+      "Hiểu được khái niệm hiệu suất."
+     ],
+     "choices": [
+      "$80\\%$ năng lượng nhận vào bị hao phí.",
+      "động cơ có công suất $80\\ \\text{W}$.",
+      "$80\\%$ năng lượng toàn phần động cơ nhận vào được chuyển thành năng lượng có ích.",
+      "động cơ hoạt động $80\\%$ thời gian."
+     ],
+     "correctChoice": "C"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Nếu giảm năng lượng hao phí trong khi giữ nguyên năng lượng toàn phần thì hiệu suất của thiết bị",
+     "solution": "Hao phí giảm thì năng lượng có ích tăng, tỉ số có ích trên toàn phần tăng.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-27-H1",
+     "learning_outcomes": [
+      "Hiểu được khái niệm hiệu suất."
+     ],
+     "choices": [
+      "bằng 0.",
+      "tăng.",
+      "giảm.",
+      "không đổi."
+     ],
+     "correctChoice": "B"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Phát biểu nào sau đây SAI?",
+     "solution": "Hiệu suất phụ thuộc tỉ lệ năng lượng có ích trên năng lượng toàn phần, không phụ thuộc máy tiêu thụ nhiều hay ít năng lượng.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-27-H1",
+     "learning_outcomes": [
+      "Hiểu được khái niệm hiệu suất."
+     ],
+     "choices": [
+      "Máy tiêu thụ càng nhiều năng lượng thì hiệu suất càng lớn.",
+      "Hiệu suất không có đơn vị.",
+      "Hiệu suất của máy trong thực tế luôn nhỏ hơn $100\\%$.",
+      "Hiệu suất càng cao thì tỉ lệ năng lượng hao phí so với năng lượng toàn phần càng nhỏ."
+     ],
+     "correctChoice": "A"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Hai máy A và B có hiệu suất lần lượt là $60\\%$ và $75\\%$. Khi cùng nhận vào một lượng năng lượng như nhau thì",
+     "solution": "Cùng năng lượng toàn phần, máy có hiệu suất lớn hơn cho năng lượng có ích nhiều hơn.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-27-H1",
+     "learning_outcomes": [
+      "Hiểu được khái niệm hiệu suất."
+     ],
+     "choices": [
+      "máy A cho năng lượng có ích nhiều hơn.",
+      "hai máy cho năng lượng có ích như nhau.",
+      "máy A hao phí ít năng lượng hơn.",
+      "máy B cho năng lượng có ích nhiều hơn."
+     ],
+     "correctChoice": "D"
+    },
+    {
+     "type": "trac_nghiem",
+     "question_text": "Hiệu suất của động cơ nhiệt thường thấp hơn nhiều so với động cơ điện. Điều này có nghĩa là",
+     "solution": "Hiệu suất thấp tức là phần năng lượng có ích chiếm tỉ lệ nhỏ, phần lớn năng lượng bị hao phí.",
+     "programme_row": "g10-ch3-yc10a",
+     "programme_match": "direct",
+     "cognitive_level": 2,
+     "spec_line": "g10-ch3-27-H1",
+     "learning_outcomes": [
+      "Hiểu được khái niệm hiệu suất."
+     ],
+     "choices": [
+      "động cơ nhiệt nhận ít năng lượng hơn.",
+      "động cơ nhiệt chạy chậm hơn.",
+      "động cơ nhiệt hao phí phần lớn năng lượng nhận vào, chủ yếu dưới dạng nhiệt.",
+      "động cơ nhiệt có công suất nhỏ hơn."
+     ],
+     "correctChoice": "C"
+    }
+   ]
+  },
+  {
+   "lesson_title": "Câu bổ sung · Bài 27",
+   "type": "tu_luan",
+   "questions": [
+    {
+     "type": "tu_luan",
+     "question_text": "Sơ đồ hình bên biểu diễn sự chuyển hoá năng lượng của một bóng đèn. Hiệu suất của bóng đèn là bao nhiêu phần trăm?",
+     "solution": "$H = \\dfrac{W_{ci}}{W_{tp}} = \\dfrac{10}{100} = 10\\%$.",
+     "programme_row": "g10-ch3-yc10b",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 420 150\" width=\"420\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.4\"> <defs><marker id=\"skBngn\" viewBox=\"0 0 10 10\" refX=\"8\" refY=\"5\" markerWidth=\"5\" markerHeight=\"5\" orient=\"auto\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <line x1=\"10\" y1=\"75\" x2=\"132\" y2=\"75\" stroke-width=\"10\" stroke-opacity=\".35\"/><line x1=\"10\" y1=\"75\" x2=\"136\" y2=\"75\" stroke-width=\"1.4\" marker-end=\"url(#skBngn)\"/> <rect x=\"140\" y=\"55\" width=\"90\" height=\"40\" rx=\"5\"/> <path d=\"M230 68 H258 V28 H290\" stroke-width=\"2\" stroke-opacity=\".35\"/><path d=\"M230 68 H258 V28 H296\" marker-end=\"url(#skBngn)\"/> <path d=\"M230 82 H258 V122 H290\" stroke-width=\"10\" stroke-opacity=\".35\"/><path d=\"M230 82 H258 V122 H296\" marker-end=\"url(#skBngn)\"/> <g stroke=\"none\"><text x=\"10\" y=\"60\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Điện năng 100 J</text><text x=\"185\" y=\"80\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\" text-anchor=\"middle\">Bóng đèn</text><text x=\"302\" y=\"26\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Quang năng 10 J</text><text x=\"302\" y=\"41\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\">(có ích)</text><text x=\"302\" y=\"120\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Nhiệt năng 90 J</text><text x=\"302\" y=\"135\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\">(hao phí)</text></g></svg>",
+     "image_layout": "bottom",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-27-V1",
+     "learning_outcomes": [
+      "Vận dụng được khái niệm hiệu suất vào một số tình huống thực tế."
+     ],
+     "short_answer": "10"
+    },
+    {
+     "type": "tu_luan",
+     "question_text": "Hai sơ đồ hình bên biểu diễn sự chuyển hoá năng lượng của hai bóng đèn. Hiệu suất của đèn (2) lớn gấp bao nhiêu lần hiệu suất của đèn (1)?",
+     "solution": "$H_1 = 10\\%$, $H_2 = 40\\%$, nên $H_2 = 4H_1$.",
+     "programme_row": "g10-ch3-yc10b",
+     "programme_match": "direct",
+     "image_svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 420 300\" width=\"420\" height=\"300\"><svg x=\"0\" y=\"0\" height=\"150\" viewBox=\"0 0 420 150\" width=\"420\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.4\"> <defs><marker id=\"skn1\" viewBox=\"0 0 10 10\" refX=\"8\" refY=\"5\" markerWidth=\"5\" markerHeight=\"5\" orient=\"auto\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <line x1=\"10\" y1=\"75\" x2=\"132\" y2=\"75\" stroke-width=\"10\" stroke-opacity=\".35\"/><line x1=\"10\" y1=\"75\" x2=\"136\" y2=\"75\" stroke-width=\"1.4\" marker-end=\"url(#skn1)\"/> <rect x=\"140\" y=\"55\" width=\"90\" height=\"40\" rx=\"5\"/> <path d=\"M230 68 H258 V28 H290\" stroke-width=\"2\" stroke-opacity=\".35\"/><path d=\"M230 68 H258 V28 H296\" marker-end=\"url(#skn1)\"/> <path d=\"M230 82 H258 V122 H290\" stroke-width=\"10\" stroke-opacity=\".35\"/><path d=\"M230 82 H258 V122 H296\" marker-end=\"url(#skn1)\"/> <g stroke=\"none\"><text x=\"10\" y=\"60\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Điện năng 100 J</text><text x=\"185\" y=\"80\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\" text-anchor=\"middle\">Đèn (1)</text><text x=\"302\" y=\"26\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Quang năng 10 J</text><text x=\"302\" y=\"41\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\">(có ích)</text><text x=\"302\" y=\"120\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Nhiệt năng 90 J</text><text x=\"302\" y=\"135\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\">(hao phí)</text></g></svg><svg x=\"0\" y=\"150\" height=\"150\" viewBox=\"0 0 420 150\" width=\"420\" fill=\"none\" stroke=\"#1f5f58\" stroke-width=\"1.4\"> <defs><marker id=\"skn2\" viewBox=\"0 0 10 10\" refX=\"8\" refY=\"5\" markerWidth=\"5\" markerHeight=\"5\" orient=\"auto\"><path d=\"M0 0L10 5L0 10z\" fill=\"#1f5f58\"/></marker></defs> <line x1=\"10\" y1=\"75\" x2=\"132\" y2=\"75\" stroke-width=\"10\" stroke-opacity=\".35\"/><line x1=\"10\" y1=\"75\" x2=\"136\" y2=\"75\" stroke-width=\"1.4\" marker-end=\"url(#skn2)\"/> <rect x=\"140\" y=\"55\" width=\"90\" height=\"40\" rx=\"5\"/> <path d=\"M230 68 H258 V28 H290\" stroke-width=\"5\" stroke-opacity=\".35\"/><path d=\"M230 68 H258 V28 H296\" marker-end=\"url(#skn2)\"/> <path d=\"M230 82 H258 V122 H290\" stroke-width=\"7\" stroke-opacity=\".35\"/><path d=\"M230 82 H258 V122 H296\" marker-end=\"url(#skn2)\"/> <g stroke=\"none\"><text x=\"10\" y=\"60\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Điện năng 100 J</text><text x=\"185\" y=\"80\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\" text-anchor=\"middle\">Đèn (2)</text><text x=\"302\" y=\"26\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Quang năng 40 J</text><text x=\"302\" y=\"41\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\">(có ích)</text><text x=\"302\" y=\"120\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"12\">Nhiệt năng 60 J</text><text x=\"302\" y=\"135\" fill=\"#1f5f58\" font-family=\"Noto Serif, serif\" font-size=\"11\">(hao phí)</text></g></svg></svg>",
+     "image_layout": "bottom",
+     "cognitive_level": 3,
+     "spec_line": "g10-ch3-27-V1",
+     "learning_outcomes": [
+      "Vận dụng được khái niệm hiệu suất vào một số tình huống thực tế."
+     ],
+     "short_answer": "4"
+    }
+   ]
+  }
+ ]
+}

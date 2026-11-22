@@ -7,6 +7,7 @@ import { makeOutcomeExport, parseOutcomeResult, patchOutcomeBlogs, previewOutcom
 import { parseQuestionCorrections, patchQuestionCorrections, previewQuestionCorrections,
   type QuestionCorrection, type QuestionCorrectionFile } from '../utils/questionCorrections';
 import { parseCognitiveResult, previewCognitiveResult, type CognitiveResult } from '../utils/cognitiveExchange';
+import { parseQuestionCreateFile, planQuestionCreate, undoQuestionCreate, type QuestionCreateBatch, type QuestionCreateFile } from '../utils/questionCreation';
 
 const BLOGS = 'physivault_blogs_local';
 const EXPORTS = 'pv_outcome_exports_v1';
@@ -295,6 +296,60 @@ export async function undoChapterCognitive(chapterId: string, batchId: string) {
     return {
       [BLOGS]: records.map(record => isBlog(record) ? patched.get(record.id)! : record),
       [COGNITIVE_HISTORY]: history.map(item => item.id === batch.id ? { ...item, undone_at: new Date().toISOString() } : item),
+      [OUTCOME_SYNC_KEY]: crypto.randomUUID(),
+    };
+  });
+  void syncBlogs();
+}
+
+const CREATE_HISTORY = 'pv_question_create_v1';
+
+/** Kiểm tra file câu mới và cho biết sẽ thêm những bài, câu nào; chưa lưu gì. */
+export async function reviewQuestionCreate(chapterId: string, text: string) {
+  const file = parseQuestionCreateFile(text);
+  if (file.chapter_id !== chapterId) throw new Error('File thuộc chương khác chương đang mở.');
+  await freshLibrary();
+  const records: RecordItem[] = await dbGet(BLOGS) ?? [];
+  const plan = planQuestionCreate(records, file, await dbGet(CREATE_HISTORY) ?? []);
+  return { file, plan };
+}
+
+export async function getQuestionCreateHistory(chapterId: string): Promise<QuestionCreateBatch[]> {
+  const history: QuestionCreateBatch[] = await dbGet(CREATE_HISTORY) ?? [];
+  return history.filter(batch => batch.chapter_id === chapterId).reverse();
+}
+
+export async function applyQuestionCreate(chapterId: string, file: QuestionCreateFile) {
+  if (file.chapter_id !== chapterId) throw new Error('File thuộc chương khác chương đang mở.');
+  await freshLibrary();
+  let count = 0;
+  await dbUpdateBatch([BLOGS, CREATE_HISTORY, OUTCOME_SYNC_KEY], values => {
+    const records: RecordItem[] = values[BLOGS] ?? [];
+    const history: QuestionCreateBatch[] = values[CREATE_HISTORY] ?? [];
+    const now = new Date().toISOString();
+    const plan = planQuestionCreate(records, file, history, now);
+    count = plan.groups.reduce((sum, group) => sum + group.questions.length, 0);
+    const batch: QuestionCreateBatch = { id: crypto.randomUUID(), import_id: file.import_id, chapter_id: chapterId, created_at: now,
+      blog_ids: plan.blogs.map(blog => blog.id), lesson_ids: plan.lessons.map(lesson => lesson.id), count };
+    return {
+      [BLOGS]: [...plan.blogs, ...records, ...plan.lessons],
+      [CREATE_HISTORY]: [...history, batch],
+      [OUTCOME_SYNC_KEY]: batch.id,
+    };
+  });
+  void syncBlogs();
+  return count;
+}
+
+export async function undoQuestionCreateBatch(chapterId: string, batchId: string) {
+  await freshLibrary();
+  await dbUpdateBatch([BLOGS, CREATE_HISTORY, OUTCOME_SYNC_KEY], values => {
+    const history: QuestionCreateBatch[] = values[CREATE_HISTORY] ?? [];
+    const batch = history.find(item => item.chapter_id === chapterId && item.id === batchId && !item.undone_at);
+    if (!batch) throw new Error('Không tìm thấy đợt câu mới còn có thể hoàn tác.');
+    return {
+      [BLOGS]: undoQuestionCreate(values[BLOGS] ?? [], batch),
+      [CREATE_HISTORY]: history.map(item => item.id === batch.id ? { ...item, undone_at: new Date().toISOString() } : item),
       [OUTCOME_SYNC_KEY]: crypto.randomUUID(),
     };
   });
