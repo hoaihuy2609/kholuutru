@@ -9,7 +9,7 @@ import LessonSpecification from './LessonSpecification';
 import { lessonPool, lessonTopics } from '../src/utils/lessonSpec';
 import { lessonTopicId, specLessons } from '../src/data/lessonLines';
 
-const chapters: readonly { id: string; name: string; topics: readonly (readonly [id: string, name: string])[] }[] = [
+const allChapters: readonly { id: string; name: string; topics: readonly (readonly [id: string, name: string])[] }[] = [
     { id: 'g10-ch0', name: 'Mở đầu', topics: [
         ['introduction', 'Giới thiệu mục đích học tập môn Vật lí'],
     ] },
@@ -64,19 +64,22 @@ const cell = 'border-b border-r border-stone-200 px-2 py-2';
 const check = 'size-4 shrink-0 accent-amber-800';
 const maxCount = 99;
 
-export default function MatrixPlanner({ candidates, onCompose }: {
+export default function MatrixPlanner({ candidates, onCompose, chapterIds }: {
     candidates: MatrixCandidate[];
     onCompose: (questions: SelectedQuestionItem[]) => void;
+    /** Chỉ hiện các chương này (mở sẵn); bỏ trống để hiện mọi chương. */
+    chapterIds?: readonly string[];
 }) {
     const id = useId();
+    const chapters = useMemo(() => chapterIds ? allChapters.filter(chapter => chapterIds.includes(chapter.id)) : allChapters, [chapterIds]);
     const [showContents, setShowContents] = useState(true);
-    const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
+    const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set(chapterIds));
     const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
     const [counts, setCounts] = useState<Record<string, Record<string, number>>>({});
 
     const selectedChapters = useMemo(() => chapters.map(chapter => ({
         ...chapter, topics: chapter.topics.filter(([topicId]) => selected.has(topicId)),
-    })).filter(chapter => chapter.topics.length > 0), [selected]);
+    })).filter(chapter => chapter.topics.length > 0), [chapters, selected]);
     const selectedTopics = selectedChapters.flatMap(chapter => chapter.topics);
     const totals = Object.fromEntries(columns.map(({ key }) =>
         [key, selectedTopics.reduce((sum, [topicId]) => sum + (counts[topicId]?.[key] ?? 0), 0)]));
