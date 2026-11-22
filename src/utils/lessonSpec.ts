@@ -204,9 +204,9 @@ export function suggestLessons<C extends LessonCandidate>(topics: readonly Lesso
     return { chosen, notes };
 }
 
-/** Chữ của dòng ghi vào bản đặc tả (không kèm nguồn); dòng của bài khác ghi rõ bài. */
-export function lessonOutcome(line: LessonLine, lesson: number) {
-    return (line.lesson && line.lesson !== lesson ? '(YCCĐ Bài ' + line.lesson + ') ' : '') + line.text;
+/** Chữ của dòng ghi vào bản đặc tả: đúng câu chữ YCCĐ, không kèm nguồn hay tên bài. */
+export function lessonOutcome(line: LessonLine) {
+    return line.text;
 }
 
 /**
@@ -236,8 +236,7 @@ export function lessonSelections(allocations: readonly MatrixAllocation[], topic
         const candidate = queues.get(key)?.shift();
         if (!candidate) continue;
         codes.set(candidate.item.id, 'C' + number);
-        const lesson = candidate.lesson!;
-        const outcomes = lessonUnits(candidate).map(unit => unit.line ? lessonOutcome(unit.line, lesson)
+        const outcomes = lessonUnits(candidate).map(unit => unit.line ? lessonOutcome(unit.line)
             : candidate.item.type === 'dung_sai' ? '' : candidate.outcomes?.[0] ?? '');
         const sources = [...new Set(lessonUnits(candidate).flatMap(unit => unit.line ? [lessonLineSource(unit.line)] : []))];
         selections.push({ slot, item: candidate.item, outcome: outcomes[0], fixedOutcome: true,

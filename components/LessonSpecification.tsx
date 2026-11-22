@@ -178,11 +178,11 @@ function chosenUnits(units: readonly LessonUnit<MatrixCandidate>[] | undefined, 
 }
 
 /** Dòng YCCĐ theo bài của câu (Đúng/Sai: của từng ý), đúng chữ sẽ in ra bản đặc tả. */
-function Requirements({ candidate, lesson }: { candidate: MatrixCandidate; lesson: number }) {
+function Requirements({ candidate }: { candidate: MatrixCandidate }) {
     return <ul className="space-y-1">
         {lessonUnits(candidate).map(unit => <li key={unit.index} className="leading-snug">
             {unit.label && <span className="font-semibold">{unit.label}) {COGNITIVE_LEVELS[unit.level]}: </span>}
-            {unit.line ? <>{unit.line.lesson && unit.line.lesson !== lesson ? '(YCCĐ Bài ' + unit.line.lesson + ') ' : ''}{unit.line.text}</>
+            {unit.line ? unit.line.text
                 : <span className="text-stone-500">chưa gắn dòng yêu cầu cần đạt</span>}
         </li>)}
     </ul>;
@@ -329,7 +329,7 @@ function TrueFalsePicker({ topic, chosen, pool, code, onToggle, onClose }: {
                     const counts = trueFalseCounts(candidate.item);
                     const loose = lessonUnits(candidate).filter(unit => !unit.line).map(unit => unit.label);
                     return <MatrixQuestionCard key={candidate.item.id} candidate={candidate} score={0} evidence={[]} showOutcomes
-                        selected={chosen.has(candidate.item.id)} used={false} requirements={<Requirements candidate={candidate} lesson={topic.lesson.id} />}
+                        selected={chosen.has(candidate.item.id)} used={false} requirements={<Requirements candidate={candidate} />}
                         blockedLabel={chosen.has(candidate.item.id) || taken < topic.trueFalse ? undefined
                             : topic.trueFalse ? 'Bài đã đủ ' + topic.trueFalse + ' câu Đúng/Sai' : 'Ma trận không cần câu Đúng/Sai'}
                         badges={<>
@@ -407,7 +407,7 @@ function ShortAnswerPicker({ topic, chosen, pool, code, onToggle, onClose }: {
             {list.length ? <div className="grid items-start gap-3 lg:grid-cols-2">
                 {list.map(candidate => <MatrixQuestionCard key={candidate.item.id} candidate={candidate} score={0} evidence={[]} showOutcomes
                     selected={chosen.has(candidate.item.id)} used={false} blockedLabel={blocked(candidate)}
-                    requirements={<Requirements candidate={candidate} lesson={topic.lesson.id} />}
+                    requirements={<Requirements candidate={candidate} />}
                     badges={code(candidate) && <span className="rounded bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-900">{code(candidate)} trong đề</span>}
                     onPreview={() => setPreview(candidate)} onChoose={() => onToggle(candidate.item.id)} />)}
             </div> : <p className="rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-600">Kho chưa có câu trả lời ngắn ở mức này.</p>}
@@ -433,7 +433,7 @@ function LinePicker({ open, chosen, pool, code, onToggle, onClose }: {
         return totals.trac_nghiem[level - 1] < need ? undefined : need ? 'Bài đã đủ ' + need + ' câu ' + COGNITIVE_LEVELS[level] : 'Ma trận không cần câu này';
     };
     const title = topic.lesson.name.replace(/\..*$/, '') + ' · ' + COGNITIVE_LEVELS[level];
-    const subtitle = line ? (line.lesson && line.lesson !== topic.lesson.id ? '(YCCĐ Bài ' + line.lesson + ') ' : '') + line.text
+    const subtitle = line ? line.text
         : 'Câu cùng mức nhưng chưa gắn dòng yêu cầu cần đạt nào.';
     return <MatrixDialog title={title} subtitle={subtitle} closeLabel="Đóng chọn câu" onClose={onClose}>
         <div className="space-y-3">
@@ -444,7 +444,7 @@ function LinePicker({ open, chosen, pool, code, onToggle, onClose }: {
             {list.length ? <div className="grid items-start gap-3 lg:grid-cols-2">
                 {list.map(candidate => <MatrixQuestionCard key={candidate.item.id} candidate={candidate} score={0} evidence={[]} showOutcomes
                     selected={chosen.has(candidate.item.id)} used={false} blockedLabel={blocked(candidate)}
-                    requirements={<Requirements candidate={candidate} lesson={topic.lesson.id} />}
+                    requirements={<Requirements candidate={candidate} />}
                     badges={<>
                         {code(candidate) && <span className="rounded bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-900">{code(candidate)} trong đề</span>}
                     </>}
