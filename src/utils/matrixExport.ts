@@ -1,5 +1,6 @@
 import type { SelectedQuestionItem } from '../services/examLatexService';
 import { questionLevels } from './cognitiveLevels';
+import { TRUE_FALSE_POINTS } from './matrixPoints';
 import { fitsCounts, matrixPlanSlots, statementCountsLabel, trueFalseCounts, type MatrixAllocation, type MatrixPlanSlot, type StatementCounts } from './matrixPlan';
 
 export const MATRIX_EXPORT_FORMATS = [
@@ -19,15 +20,13 @@ export interface MatrixExportSettings {
     examCode: string;
     targetScore: number;
     points: Record<MatrixExportType, number>;
-    /** Điểm riêng của từng câu (theo mã câu trong kho); câu không có ở đây lấy điểm theo dạng. Đúng/Sai luôn 1 điểm theo quy định. */
-    questionPoints: Record<string, number>;
     periods: Record<string, number>;
 }
 
 export function defaultMatrixExportSettings(): MatrixExportSettings {
     return { title: 'KIỂM TRA ĐỊNH KÌ - VẬT LÍ 10', school: '', duration: 45,
         assessmentTime: '', scope: '', examCode: '', targetScore: 10,
-        points: { trac_nghiem: 0.25, dung_sai: 1, tu_luan: 0.25, written: 1 }, questionPoints: {}, periods: {} };
+        points: { trac_nghiem: 0.25, dung_sai: 1, tu_luan: 0.25, written: 1 }, periods: {} };
 }
 
 export interface MatrixExportSelection {
@@ -99,29 +98,6 @@ const emptyCounts = (): Record<MatrixExportType, number[]> => ({
 });
 export const matrixExportTopicKey = (chapterId: string, topicId: string) => chapterId + ':' + topicId;
 const round = (value: number) => Math.round((value + Number.EPSILON) * 10000) / 10000;
-/** Câu Đúng/Sai: 1 điểm, chấm theo số ý đúng (0,1 · 0,25 · 0,5 · 1) theo quy định của Bộ GD&ĐT. */
-export const TRUE_FALSE_POINTS = 1;
-/** Bước điểm khi chia tròn và khi giáo viên sửa điểm từng câu. */
-export const POINT_STEP = 0.25;
-
-/**
- * Chia thang điểm cho các câu đã chọn thành số tròn: Đúng/Sai giữ 1 điểm; phần còn lại chia đều cho trắc nghiệm và trả lời ngắn,
- * làm tròn xuống đến 0,25, phần dư cộng thêm 0,25 lần lượt cho câu Vận dụng, rồi Thông hiểu, rồi Nhận biết.
- * Trả undefined khi không chia được mỗi câu ít nhất 0,25 điểm.
- */
-export function evenQuestionPoints(questions: readonly { id: string; type: MatrixExportType; level: number }[], target: number) {
-    const others = questions.filter(question => question.type !== 'dung_sai');
-    const remaining = target - (questions.length - others.length) * TRUE_FALSE_POINTS;
-    if (!others.length) return {};
-    const base = Math.floor(remaining / others.length / POINT_STEP + 1e-9) * POINT_STEP;
-    if (base < POINT_STEP) return undefined;
-    const points = Object.fromEntries(others.map(question => [question.id, base]));
-    const order = others.map((question, index) => ({ question, index }))
-        .sort((a, b) => b.question.level - a.question.level || a.index - b.index).map(({ question }) => question.id);
-    let extra = Math.floor((remaining - base * others.length) / POINT_STEP + 1e-9);
-    for (let at = 0; extra > 0; at = (at + 1) % order.length, extra--) points[order[at]] = round(points[order[at]] + POINT_STEP);
-    return points;
-}
 
 /** One assessed unit has exactly one row assignment. Grouping never adds to the totals twice. */
 export function matrixSpecificationRows(units: MatrixExportUnit[]): MatrixSpecificationRow[] {
@@ -149,6 +125,7 @@ export function buildMatrixExport(allocations: MatrixAllocation[], selections: M
     }
     const validAllocations = allocations.filter(row => {
         const valid = Number.isInteger(row.count) && row.count > 0 && row.count <= 99
+            && (row.points === undefined || (Number.isFinite(row.points) && row.points > 0))
             && ([1, 2, 3].includes(row.level) || (row.type === 'dung_sai' && row.level === 0)) && MATRIX_EXPORT_FORMATS.some(format => format.type === row.type);
         if (!valid) issues.push('Phân bổ không hợp lệ: ' + row.topic + '.');
         return valid;
@@ -168,10 +145,6 @@ export function buildMatrixExport(allocations: MatrixAllocation[], selections: M
             invalidSettings = true;
             issues.push('Điểm mỗi câu ' + format.label + ' phải lớn hơn 0.');
         }
-    }
-    if (Object.values(settings.questionPoints ?? {}).some(value => !Number.isFinite(value) || value <= 0)) {
-        invalidSettings = true;
-        issues.push('Điểm của từng câu phải lớn hơn 0.');
     }
     for (const topic of topics.values()) {
         if (topic.periods !== undefined && (!Number.isInteger(topic.periods) || topic.periods < 0 || topic.periods > 999)) {
@@ -218,7 +191,8 @@ export function buildMatrixExport(allocations: MatrixAllocation[], selections: M
             // A question-level outcome does not establish what each true-false statement assesses.
             const outcome = (outcomes[key] ?? selection.statementOutcomes?.[index]
                 ?? (slot.type === 'dung_sai' && !selection.fixedOutcome ? '' : selection.outcome)).trim();
-            const questionScore = slot.type === 'dung_sai' ? TRUE_FALSE_POINTS : settings.questionPoints?.[item.id] ?? settings.points[slot.type];
+            // Điểm mỗi câu đặt trên ma trận cho từng ô; Đúng/Sai luôn 1 điểm theo quy định.
+            const questionScore = slot.type === 'dung_sai' ? TRUE_FALSE_POINTS : slot.points ?? settings.points[slot.type];
             const rawPoints = questionScore / levels.length;
             const unit: MatrixExportUnit = { key, slotId: slot.id, questionId: item.id,
                 chapterId: slot.chapterId, chapter: slot.chapter, topicId: slot.topicId, topic: slot.topic,

@@ -22,13 +22,15 @@ const codeColor: Record<LessonType, string> = { trac_nghiem: 'bg-blue-50 text-bl
 /** Mở chọn câu cho một dòng YCCĐ (hoặc các câu chưa khớp dòng nào, line = undefined) của một bài, ở một mức; level 0 là Đúng/Sai của bài. */
 type Open = { topic: LessonTopic; level: number; line?: LessonLine } | { topic: LessonTopic; kind: 'dung_sai' | 'tu_luan' };
 
-export default function LessonSpecification({ allocations, topics, candidates, onCompose, compact = false }: {
+export default function LessonSpecification({ allocations, topics, candidates, onCompose, compact = false, scale }: {
     allocations: MatrixAllocation[];
     topics: LessonTopic[];
     candidates: MatrixCandidate[];
     onCompose: (questions: SelectedQuestionItem[]) => void;
     /** Gọn: ẩn phần giới thiệu, các bước, tiến độ và ghi chú; chỉ giữ nút gợi ý và xóa. */
     compact?: boolean;
+    /** Thang điểm đặt trên ma trận. */
+    scale?: number;
 }) {
     const id = useId();
     const chapterIds = useMemo(() => [...new Set(topics.map(topic => topic.chapterId))], [topics]);
@@ -156,7 +158,7 @@ export default function LessonSpecification({ allocations, topics, candidates, o
             <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-200 pt-4">
                 <p className="text-sm text-stone-700">{issues.length ? 'Đã chọn ' + selections.length + ' câu. Có thể xuất bản nháp để xem trước.' : 'Đã chọn đủ câu. Bước tiếp: xuất ma trận, bản đặc tả và biên soạn đề.'}</p>
                 <div className="flex flex-wrap gap-2">
-                    <MatrixExportDialog allocations={allocations} selections={selections} />
+                    <MatrixExportDialog allocations={allocations} selections={selections} scale={scale} />
                     <button type="button" className={issues.length ? button : primary} disabled={!selections.length}
                         onClick={() => onCompose(selections.map(selection => selection.item))}>Biên soạn đề ({selections.length} câu)</button>
                 </div>

@@ -6,6 +6,7 @@ import { STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import MatrixPlanSpecification from './MatrixPlanSpecification';
 import LessonSpecification from './LessonSpecification';
+import { POINT_STEP, splitColumnPoints, TRUE_FALSE_POINTS } from '../src/utils/matrixPoints';
 import { lessonPool, lessonTopics } from '../src/utils/lessonSpec';
 import { lessonTopicId, specLessons } from '../src/data/lessonLines';
 
@@ -82,6 +83,9 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set(chapterIds));
     const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
     const [counts, setCounts] = useState<Record<string, Record<string, number>>>({});
+    /** Thang điểm và điểm mỗi câu giáo viên sửa tay theo ô (dạng × mức); ô không sửa lấy theo cách chia tự động. */
+    const [scale, setScale] = useState(10);
+    const [pointEdits, setPointEdits] = useState<Record<string, number>>({});
 
     const selectedChapters = useMemo(() => chapters.map(chapter => ({
         ...chapter, topics: chapter.topics.filter(([topicId]) => selected.has(topicId)),
@@ -89,12 +93,21 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
     const selectedTopics = selectedChapters.flatMap(chapter => chapter.topics);
     const totals = Object.fromEntries(columns.map(({ key }) =>
         [key, selectedTopics.reduce((sum, [topicId]) => sum + (counts[topicId]?.[key] ?? 0), 0)]));
+    const autoPoints = splitColumnPoints(columns.map(({ key, type, levelValue }) => ({ key, type, level: levelValue, count: totals[key] })), scale);
+    const pointOf = (key: string, type: string) => type === 'dung_sai' ? TRUE_FALSE_POINTS : pointEdits[key] ?? autoPoints[key] ?? POINT_STEP;
+    const pointKey = columns.map(({ key, type }) => key + '=' + pointOf(key, type)).join('|');
     const allocations = useMemo(() => selectedChapters.flatMap(chapter =>
         chapter.topics.flatMap(([topicId, topic]) => columns.flatMap(({ key, type, levelValue }) => {
             const count = counts[topicId]?.[key];
-            return count ? [{ chapterId: chapter.id, chapter: chapter.name, topicId, topic, type, level: levelValue, count }] : [];
+            return count ? [{ chapterId: chapter.id, chapter: chapter.name, topicId, topic, type, level: levelValue, count,
+                ...(type === 'dung_sai' ? {} : { points: pointOf(key, type) }) }] : [];
         }))
-    ), [selectedChapters, counts]);
+    ), [selectedChapters, counts, pointKey]);
+    const columnScore = (key: string, type: string) => totals[key] * pointOf(key, type);
+    const totalScore = columns.reduce((sum, { key, type }) => sum + columnScore(key, type), 0);
+    const levelScore = (level: number) => columns.filter(column => column.levelValue === level).reduce((sum, { key, type }) => sum + columnScore(key, type), 0);
+    const trueFalseScore = columns.filter(column => column.type === 'dung_sai').reduce((sum, { key, type }) => sum + columnScore(key, type), 0);
+    const pointText = (value: number) => String(Math.round(value * 100) / 100).replace('.', ',');
     /** Bản đặc tả theo bài khi mọi nội dung đã chọn là bài có dòng YCCĐ và kho đã gắn câu vào các dòng đó. */
     const lessonRows = useMemo(() => lessonTopics(allocations), [allocations]);
     const hasAssignments = useMemo(() => {
@@ -252,12 +265,53 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
                                 {columns.map(({ key, colors }) => <td key={key} className={cell + ' ' + colors.body}>{totals[key]}</td>)}
                             </tr>
                             <tr>
+                                <th scope="row" colSpan={2} className={cell + ' text-left'}>Điểm mỗi câu</th>
+                                {columns.map(({ key, type, format, level, colors }) => <td key={key} className={cell + ' ' + colors.body}>
+                                    {type === 'dung_sai' ? <span title="Theo quy định của Bộ GD&ĐT: chấm theo số ý đúng">{pointText(TRUE_FALSE_POINTS)}</span>
+                                        : <input type="number" min={POINT_STEP} step={POINT_STEP} aria-label={'Điểm mỗi câu · ' + format + ' · ' + level}
+                                            className={'h-9 w-full min-w-0 rounded-md border bg-white px-1 text-center tabular-nums focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700 '
+                                                + (pointEdits[key] !== undefined ? 'border-amber-600' : 'border-stone-300')}
+                                            disabled={!totals[key]} value={totals[key] ? pointOf(key, type) : ''}
+                                            onChange={event => {
+                                                const value = event.currentTarget.valueAsNumber;
+                                                setPointEdits(previous => {
+                                                    const next = { ...previous };
+                                                    if (Number.isFinite(value) && value > 0) next[key] = value; else delete next[key];
+                                                    return next;
+                                                });
+                                            }} />}
+                                </td>)}
+                            </tr>
+                            <tr>
+                                <th scope="row" colSpan={2} className={cell + ' text-left'}>Tổng điểm theo mức độ</th>
+                                {columns.map(({ key, type, colors }) => <td key={key} className={cell + ' ' + colors.body}>{totals[key] ? pointText(columnScore(key, type)) : 0}</td>)}
+                            </tr>
+                            <tr>
                                 <th scope="row" colSpan={2} className={cell + ' text-left'}>Tổng theo loại</th>
                                 {formats.map(format => (
                                     <td key={format.value} colSpan={levelsOf(format.value).length} className={cell + ' ' + formatColors[format.value].band}>
                                         {levelsOf(format.value).reduce((sum, level) => sum + totals[format.value + ':' + level.value], 0)} câu
+                                        {' · '}{pointText(levelsOf(format.value).reduce((sum, level) => sum + columnScore(format.value + ':' + level.value, format.value), 0))} điểm
                                     </td>
                                 ))}
+                            </tr>
+                            <tr>
+                                <td colSpan={columns.length + 2} className="border-b border-stone-200 bg-white px-3 py-2.5 text-left text-sm font-normal">
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                                        {[1, 2, 3].map(level => <span key={level}>{MATRIX_LEVELS[level]}: <strong>{pointText(levelScore(level))}</strong> điểm{totalScore ? ' (' + pointText(levelScore(level) / totalScore * 100) + '%)' : ''}</span>)}
+                                        {trueFalseScore > 0 && <span className="text-stone-600">Đúng/Sai: <strong>{pointText(trueFalseScore)}</strong> điểm (mức theo ý của câu được chọn)</span>}
+                                        <span className="ml-auto inline-flex flex-wrap items-center gap-2">
+                                            <span className={'font-semibold ' + (Math.abs(totalScore - scale) < 1e-9 ? 'text-emerald-800' : 'text-amber-800')}>Tổng: {pointText(totalScore)} /</span>
+                                            <input type="number" min={1} step={0.5} aria-label="Thang điểm" value={scale}
+                                                className="h-9 w-16 rounded-md border border-stone-300 bg-white px-1 text-center font-semibold tabular-nums focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700"
+                                                onChange={event => { const value = event.currentTarget.valueAsNumber; if (Number.isFinite(value) && value > 0) setScale(value); }} />
+                                            <span>điểm</span>
+                                            <button type="button" disabled={!Object.keys(pointEdits).length} onClick={() => setPointEdits({})}
+                                                className="min-h-9 rounded-md border border-stone-300 bg-white px-2.5 text-xs font-semibold text-stone-700 hover:bg-stone-100 disabled:opacity-50">Chia lại {pointText(scale)} điểm</button>
+                                        </span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-stone-600">Web tự chia điểm mỗi câu thành số tròn 0,25 (ưu tiên câu Vận dụng). Đúng/Sai 1 điểm/câu, chấm theo số ý đúng theo quy định của Bộ GD&ĐT. Sửa ô "Điểm mỗi câu" nếu muốn đổi.</p>
+                                </td>
                             </tr>
                         </tfoot>
                     </table>
@@ -265,12 +319,12 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
             </section>
         </div>
         {lessons
-            ? <LessonSpecification key={lessons.map(topic => topic.key).join('|')} allocations={allocations} topics={lessons} candidates={candidates} onCompose={onCompose} compact={compact} />
+            ? <LessonSpecification key={lessons.map(topic => topic.key).join('|')} allocations={allocations} topics={lessons} candidates={candidates} onCompose={onCompose} compact={compact} scale={scale} />
             : <>
                 {lessonsWithoutLines && <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
                     Câu của chương này chưa được gắn vào dòng YCCĐ theo bài, nên bản đặc tả dùng cách chọn theo vị trí câu. Nạp file gắn dòng YCCĐ ở mục Rà YCCĐ → Nhập mức độ để dùng bản đặc tả theo bài.
                 </p>}
-                <MatrixPlanSpecification allocations={allocations} candidates={candidates} onCompose={onCompose} />
+                <MatrixPlanSpecification allocations={allocations} candidates={candidates} onCompose={onCompose} scale={scale} />
             </>}
     </>;
 }
