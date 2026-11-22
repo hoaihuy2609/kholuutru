@@ -1,14 +1,15 @@
 import React, { useDeferredValue, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   X, RotateCcw, Palette, Droplets, Sliders, Layout,
-  Layers, CheckSquare, ChevronDown, Download, Printer
+  Layers, CheckSquare, ChevronDown, Download, Printer, Shuffle
 } from 'lucide-react';
+import { examVariantsSheetHtml, MAX_EXAM_VARIANTS, SHUFFLE_PARTS, shuffleExam, type ShufflePartType } from '../src/utils/examShuffle';
 import { applyExamImageWidths, examImageKey, examImageWidth, type ExamImageWidths } from '../src/utils/examImageSizes';
 import { MAX_QUESTION_IMAGE_WIDTH, MIN_QUESTION_IMAGE_WIDTH } from '../src/utils/questionImage';
 import {
   ExamStyleConfig, DEFAULT_EXAM_STYLE, SelectedQuestionItem,
   formatExamSectionNote, generateExamLatex, downloadTexFile,
-  examPrintDocument, printExamDirectlyToPdf, renderExamPrintBody
+  examPrintDocument, printExamDirectlyToPdf, printExamVariantsToPdf, renderExamPrintBody
 } from '../src/services/examLatexService';
 
 interface ExamStyleModalProps {
@@ -22,18 +23,20 @@ const previewFrameWidth = 210 * 96 / 25.4 + 18; // A4 plus room for the scrollba
 /** Hình đang chỉnh cỡ trong bản xem trước. */
 type PickedImage = { questionId: string; src: string; label: string };
 
-function ExamPrintPreview({ questions, config, picked, onPickImage }: {
+function ExamPrintPreview({ questions, config, picked, onPickImage, html }: {
   questions: SelectedQuestionItem[];
   config: ExamStyleConfig;
   picked?: PickedImage;
   onPickImage: (image: PickedImage) => void;
+  /** Nội dung xem trước thay cho đề (ví dụ bảng đáp án các mã đề). */
+  html?: string;
 }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const deferredConfig = useDeferredValue(config);
   const frameHtml = useMemo(() => examPrintDocument(), []);
-  const bodyHtml = useMemo(() => renderExamPrintBody(questions, deferredConfig), [questions, deferredConfig]);
+  const bodyHtml = useMemo(() => html ?? renderExamPrintBody(questions, deferredConfig), [html, questions, deferredConfig]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -125,6 +128,17 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
   const [imageWidths, setImageWidths] = useState<ExamImageWidths>({});
   const [picked, setPicked] = useState<PickedImage>();
   const sizedQuestions = useMemo(() => applyExamImageWidths(questions, imageWidths), [questions, imageWidths]);
+  /** Trộn đề: nhiều mã đề từ đề gốc. Hạt giống cố định trong lần mở này, "Trộn lại" đổi hạt giống. */
+  const [shuffle, setShuffle] = useState(() => ({ enabled: false, count: 4, questions: true, choices: true, statements: false, sheet: true,
+    seed: Math.floor(Math.random() * 1e9), keep: {} as Partial<Record<ShufflePartType, string>> }));
+  const [previewCode, setPreviewCode] = useState('');
+  const variants = useMemo(() => shuffle.enabled ? shuffleExam(sizedQuestions, { ...shuffle, firstCode: config.examCode,
+    keep: Object.fromEntries(Object.entries(shuffle.keep).map(([type, text]) => [type,
+      (text ?? '').split(/[^\d]+/).filter(Boolean).map(Number)])) }) : [], [shuffle, sizedQuestions, config.examCode]);
+  const sheetHtml = useMemo(() => shuffle.enabled && shuffle.sheet ? examVariantsSheetHtml(variants,
+    { continuous: !config.enableSectionTitles, color: config.isCustomColor ? config.customColor : config.themeColor }) : '',
+    [variants, shuffle.enabled, shuffle.sheet, config.enableSectionTitles, config.isCustomColor, config.customColor, config.themeColor]);
+  const previewVariant = variants.find(variant => variant.code === previewCode) ?? variants[0];
   const titleId = useId();
   const sectionTitlesId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -155,11 +169,31 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
     }
   };
 
-  // 1. Tải file .tex (mã nguồn cho ai cần)
-  const handleDownloadTex = () => {
-    const tex = generateExamLatex(sizedQuestions, config);
-    downloadTexFile(tex, `De_Thi_${config.subject}_Ma_${config.examCode}.tex`);
+  const updateShuffle = (patch: Partial<typeof shuffle>) => setShuffle(previous => ({ ...previous, ...patch }));
+  const partCounts = Object.fromEntries(SHUFFLE_PARTS.map(({ type }) => [type, sizedQuestions.filter(question => question.type === type).length]));
+
+  // 1. Tải file .tex (mã nguồn cho ai cần); trộn đề thì mỗi mã một file, gói trong .zip.
+  const handleDownloadTex = async () => {
+    if (!variants.length) {
+      const tex = generateExamLatex(sizedQuestions, config);
+      downloadTexFile(tex, `De_Thi_${config.subject}_Ma_${config.examCode}.tex`);
+      return;
+    }
+    const { default: JSZip } = await import('jszip');
+    const zip = new JSZip();
+    for (const variant of variants) zip.file(`De_Thi_${config.subject}_Ma_${variant.code}.tex`, generateExamLatex(variant.questions, { ...config, examCode: variant.code }));
+    const url = URL.createObjectURL(await zip.generateAsync({ type: 'blob' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `De_Thi_${config.subject}_${variants.length}_ma_de.zip`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
+  const handlePrint = () => variants.length
+    ? printExamVariantsToPdf(variants, config, sheetHtml)
+    : printExamDirectlyToPdf(sizedQuestions, config);
 
   return (
     <dialog ref={dialogRef} aria-labelledby={titleId}
@@ -200,15 +234,15 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             >
               <RotateCcw aria-hidden="true" className="size-4" /> <span className="hidden sm:inline">Mặc định</span>
             </button>
-            <button type="button" onClick={handleDownloadTex} aria-label="Tải mã nguồn .tex"
+            <button type="button" onClick={() => void handleDownloadTex()} aria-label={variants.length ? 'Tải mã nguồn .tex các mã đề (.zip)' : 'Tải mã nguồn .tex'}
               className="inline-flex min-h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2 text-xs font-semibold text-stone-700 hover:bg-stone-100">
               <Download aria-hidden="true" className="hidden size-4 sm:block" />
-              <span className="hidden sm:inline">Mã nguồn</span> .tex
+              <span className="hidden sm:inline">Mã nguồn</span> .tex{variants.length ? ' (.zip)' : ''}
             </button>
-            <button type="button" onClick={() => printExamDirectlyToPdf(sizedQuestions, config)} aria-label="Xuất đề thi ra PDF"
+            <button type="button" onClick={handlePrint} aria-label={variants.length ? `Xuất ${variants.length} mã đề ra PDF` : 'Xuất đề thi ra PDF'}
               className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md bg-amber-800 px-2.5 text-xs font-semibold text-white hover:bg-amber-900 sm:px-3">
               <Printer aria-hidden="true" className="hidden size-4 sm:block" />
-              <span><span className="hidden sm:inline">Xuất </span>PDF</span>
+              <span><span className="hidden sm:inline">Xuất </span>PDF{variants.length ? ` (${variants.length} mã đề)` : ''}</span>
             </button>
             <button
               type="button"
@@ -439,10 +473,63 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             )}
           </div>
 
-          {/* ═══ MỤC 4. Nội dung xuất kèm ═══ */}
+          {/* ═══ MỤC 4. Trộn đề ═══ */}
+          <div className="space-y-3 py-3">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+                <Shuffle aria-hidden="true" className="size-4" /> 4. Trộn đề
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={shuffle.enabled} aria-label="Trộn thành nhiều mã đề"
+                  onChange={e => { updateShuffle({ enabled: e.target.checked }); setPreviewCode(''); }} />
+                <div className="w-9 h-5 bg-stone-200 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-700 peer-focus-visible:ring-offset-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-800" />
+              </label>
+            </div>
+            {!shuffle.enabled ? <p className="text-[11px] text-stone-600">Bật để tạo nhiều mã đề từ đề này: đổi thứ tự câu trong từng phần và đổi chỗ phương án A–D.</p> : <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block text-xs font-semibold text-stone-600">Số mã đề
+                  <input type="number" min={1} max={MAX_EXAM_VARIANTS} step={1} value={shuffle.count}
+                    onChange={e => { const value = e.currentTarget.valueAsNumber; if (Number.isFinite(value)) updateShuffle({ count: Math.max(1, Math.min(MAX_EXAM_VARIANTS, Math.round(value))) }); }}
+                    className="mt-1 w-full p-2.5 rounded-lg border border-stone-200 text-xs font-medium outline-none focus:border-amber-700" />
+                </label>
+                <label className="block text-xs font-semibold text-stone-600">Mã đề đầu tiên
+                  <input type="text" value={config.examCode} onChange={e => updateConfig('examCode', e.target.value)} placeholder="101"
+                    className="mt-1 w-full p-2.5 rounded-lg border border-stone-200 text-xs font-medium outline-none focus:border-amber-700" />
+                </label>
+              </div>
+              <p className="text-[11px] text-stone-600">Các mã: {variants.map(variant => variant.code).join(', ')}.</p>
+              <div className="space-y-1.5 text-xs">
+                {([['questions', 'Đổi thứ tự câu trong từng phần', 'Phần I, II, III giữ nguyên thứ tự phần'],
+                  ['choices', 'Đổi chỗ phương án A, B, C, D', 'Câu có phương án kiểu "Cả A và B", "Tất cả đều đúng" được giữ nguyên'],
+                  ['statements', 'Đổi chỗ ý a, b, c, d của câu Đúng/Sai', 'Chỉ bật khi các ý không dùng kết quả của nhau'],
+                  ['sheet', 'Kèm bảng đáp án và bảng đối chiếu', 'In ở cuối file, sau tất cả mã đề']] as const).map(([key, label, hint]) =>
+                  <label key={key} className="flex items-start gap-2">
+                    <input type="checkbox" className="mt-0.5 accent-amber-800" checked={shuffle[key]} onChange={e => updateShuffle({ [key]: e.target.checked })} />
+                    <span><span className="font-semibold text-stone-900">{label}</span><br /><span className="text-[11px] text-stone-600">{hint}</span></span>
+                  </label>)}
+              </div>
+              {shuffle.questions && <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-stone-600">Câu giữ nguyên vị trí (tùy chọn)</p>
+                {SHUFFLE_PARTS.filter(({ type }) => partCounts[type] > 1).map(({ type, part }) => <label key={type} className="flex items-center gap-2 text-xs">
+                  <span className="w-16 shrink-0">Phần {part}</span>
+                  <input type="text" inputMode="numeric" value={shuffle.keep[type] ?? ''} placeholder={'Ví dụ: 1, ' + partCounts[type]}
+                    aria-label={'Câu giữ nguyên vị trí ở Phần ' + part}
+                    onChange={e => updateShuffle({ keep: { ...shuffle.keep, [type]: e.target.value } })}
+                    className="min-w-0 flex-1 p-2 rounded-lg border border-stone-200 text-xs outline-none focus:border-amber-700" />
+                </label>)}
+              </div>}
+              <button type="button" onClick={() => updateShuffle({ seed: Math.floor(Math.random() * 1e9) })}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-3 text-xs font-semibold text-stone-800 hover:bg-stone-100">
+                <Shuffle aria-hidden="true" className="size-3.5" /> Trộn lại
+              </button>
+              <p className="text-[11px] text-stone-600">Ma trận và bản đặc tả vẫn tính theo đề gốc. Bảng đối chiếu cho biết mỗi câu của từng mã đề là câu số mấy trong đề gốc.</p>
+            </div>}
+          </div>
+
+          {/* ═══ MỤC 5. Nội dung xuất kèm ═══ */}
           <div className="space-y-2 py-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-amber-950">
-              <CheckSquare className="w-4 h-4" /> 4. Nội dung xuất kèm
+              <CheckSquare className="w-4 h-4" /> 5. Nội dung xuất kèm
             </div>
 
             <div className="divide-y divide-stone-100">
@@ -490,7 +577,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
               <button type="button" aria-expanded={sectionTitlesExpanded && config.enableSectionTitles} aria-controls={sectionTitlesId}
                 onClick={() => setSectionTitlesExpanded(expanded => !expanded)} disabled={!config.enableSectionTitles}
                 className="flex min-h-8 items-center gap-2 rounded text-sm font-semibold text-amber-950 hover:text-amber-800 disabled:opacity-60">
-                <Layers aria-hidden="true" className="size-4" /> 5. Tiêu đề phần thi
+                <Layers aria-hidden="true" className="size-4" /> 6. Tiêu đề phần thi
                 <ChevronDown aria-hidden="true" className={'size-3.5 ' + (sectionTitlesExpanded && config.enableSectionTitles ? 'rotate-180' : '')} />
               </button>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -564,8 +651,21 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
         </div>
         <section aria-label="Bản xem trước" className={(mobilePane === 'preview' ? 'flex ' : 'hidden lg:flex ')
           + 'h-full min-h-0 min-w-0 flex-col bg-stone-100 lg:border-l lg:border-stone-200'}>
+          {variants.length > 0 && <div className="flex shrink-0 flex-wrap items-center gap-2 px-2 pt-2 text-xs sm:px-3">
+            <label className="flex items-center gap-2 font-semibold text-stone-700"><span aria-hidden="true">Xem trước</span>
+              <select aria-label="Xem trước mã đề" value={previewCode === 'sheet' && sheetHtml ? 'sheet' : previewVariant?.code} onChange={e => setPreviewCode(e.target.value)}
+                className="rounded-md border border-stone-300 bg-white px-2 py-1.5 text-xs font-semibold outline-none focus:border-amber-700">
+                {variants.map(variant => <option key={variant.code} value={variant.code}>Mã đề {variant.code}</option>)}
+                {sheetHtml && <option value="sheet">Bảng đáp án và đối chiếu</option>}
+              </select>
+            </label>
+            <span className="text-stone-600">Xuất PDF sẽ in liền {variants.length} mã đề{sheetHtml ? ', kèm bảng đáp án ở cuối' : ''}.</span>
+          </div>}
           <div className="min-h-0 flex-1 px-1 sm:px-3">
-            <ExamPrintPreview questions={sizedQuestions} config={config} picked={picked} onPickImage={image => { setPicked(image); setMobilePane('preview'); }} />
+            <ExamPrintPreview questions={previewVariant?.questions ?? sizedQuestions}
+              config={previewVariant ? { ...config, examCode: previewVariant.code, exportAnswerTable: false } : config}
+              html={previewCode === 'sheet' && sheetHtml ? sheetHtml : undefined}
+              picked={picked} onPickImage={image => { setPicked(image); setMobilePane('preview'); }} />
           </div>
         </section>
         </div>
