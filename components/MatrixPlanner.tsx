@@ -62,6 +62,9 @@ const allColumns = allFormats.flatMap(format => levelsOf(format.value).map(level
     colors: formatColors[format.value],
 })));
 const cell = 'border-b border-r border-stone-200 px-2 py-2';
+/** Chương có bản đặc tả theo bài: câu Trả lời ngắn là bài tập tính toán nên chỉ có mức Vận dụng. */
+const shortAnswerLocked = (chapterId: string, type: string, level: number) =>
+    type === 'tu_luan' && level !== 3 && specLessons(chapterId).length > 0;
 const check = 'size-4 shrink-0 accent-amber-800';
 const maxCount = 99;
 
@@ -238,9 +241,12 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
                                     <th scope="row" className={cell + ' text-left font-medium group-hover:bg-stone-50'}>
                                         {name}
                                     </th>
-                                    {columns.map(({ key, format, level, colors }) => (
+                                    {columns.map(({ key, format, level, levelValue, type, colors }) => (
                                         <td key={key} className={cell + ' ' + colors.body}>
-                                            <input type="number" min={0} max={maxCount} step={1}
+                                            {shortAnswerLocked(chapter.id, type, levelValue)
+                                                ? <span className="grid h-9 place-items-center rounded-md bg-stone-100 text-stone-400" title="Câu trả lời ngắn chỉ có mức Vận dụng"
+                                                    aria-label={name + ' · ' + format + ' · ' + level + ': không dùng (Trả lời ngắn chỉ có mức Vận dụng)'}>–</span>
+                                                : <input type="number" min={0} max={maxCount} step={1}
                                                 aria-label={name + ' · ' + format + ' · ' + level}
                                                 className="h-9 w-full min-w-0 rounded-md border border-stone-300 bg-white px-1 text-center tabular-nums focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700"
                                                 value={counts[topicId]?.[key] || ''}
@@ -250,7 +256,7 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
                                                         ...previous,
                                                         [topicId]: { ...previous[topicId], [key]: count },
                                                     }));
-                                                }} />
+                                                }} />}
                                         </td>
                                     ))}
                                 </tr>
