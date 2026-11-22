@@ -204,9 +204,9 @@ export function suggestLessons<C extends LessonCandidate>(topics: readonly Lesso
     return { chosen, notes };
 }
 
-/** Chữ của dòng ghi vào bản đặc tả, kèm nguồn; dòng của bài khác ghi rõ bài. */
+/** Chữ của dòng ghi vào bản đặc tả (không kèm nguồn); dòng của bài khác ghi rõ bài. */
 export function lessonOutcome(line: LessonLine, lesson: number) {
-    return (line.lesson && line.lesson !== lesson ? '(YCCĐ Bài ' + line.lesson + ') ' : '') + line.text + ' (' + lessonLineSource(line) + ')';
+    return (line.lesson && line.lesson !== lesson ? '(YCCĐ Bài ' + line.lesson + ') ' : '') + line.text;
 }
 
 /**
