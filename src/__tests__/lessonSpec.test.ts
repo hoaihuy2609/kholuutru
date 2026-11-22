@@ -32,6 +32,7 @@ describe('lesson lines', () => {
     it('drops a line whose level differs from the unit and counts alias lines under the SGV line', () => {
         const units = lessonUnits(question(24, 'dung_sai', [1, 3, 2, 3], ['24-B2', '24-V2', '24-V1', undefined]));
         expect(units.map(unit => unit.line?.id)).toEqual(['g10-ch3-24-B1', 'g10-ch3-24-V1', undefined, undefined]);
+        expect(lessonUnits(question(25, 'tu_luan', 3, '25-V2'))[0].line?.id).toBe('g10-ch3-25-V1');
     });
 });
 

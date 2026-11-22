@@ -57,7 +57,7 @@ const CHAPTER_III: LineSpec[] = [
     ["25-H1", 25, 2, "SGV", "", "Hiểu được đơn vị đo của động năng và thế năng."],
     ["25-H2", 25, 2, "CT", "YCCĐ 4", "Từ phương trình chuyển động thẳng biến đổi đều với vận tốc ban đầu bằng không, rút ra được động năng của vật có giá trị bằng công của lực tác dụng lên vật."],
     ["25-V1", 25, 3, "SGV", "", "Vận dụng được biểu thức liên hệ giữa công thực hiện lên vật để vật có động năng, thế năng."],
-    ["25-V2", 25, 3, "CT", "YCCĐ 5, vế sau", "Vận dụng được công thức tính thế năng trong một số trường hợp đơn giản."],
+    ["25-V2", 25, 3, "CT", "YCCĐ 5, vế sau", "Vận dụng được công thức tính thế năng trong một số trường hợp đơn giản.", "25-V1"],
     ["26-B1", 26, 1, "SGV", "", "Phát biểu được định nghĩa cơ năng và đơn vị đo của cơ năng."],
     ["26-B2", 26, 1, "SGV", "", "Viết được công thức tính cơ năng của vật trong trường trọng lực."],
     ["26-B3", 26, 1, "CT", "YCCĐ 7, vế giữa", "Phát biểu được định luật bảo toàn cơ năng."],
