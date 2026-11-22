@@ -1,10 +1,12 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { Printer, Table2 } from 'lucide-react';
 import { MatrixDialog } from './MatrixQuestionCard';
-import { normalizeMatrixText } from '../src/utils/examMatrix';
+import { MATRIX_LEVELS, normalizeMatrixText } from '../src/utils/examMatrix';
 import type { MatrixAllocation } from '../src/utils/matrixPlan';
-import { buildMatrixExport, defaultMatrixExportSettings, type MatrixExportSelection, type MatrixExportSettings } from '../src/utils/matrixExport';
+import { buildMatrixExport, defaultMatrixExportSettings, evenQuestionPoints, POINT_STEP, TRUE_FALSE_POINTS, type MatrixExportSelection, type MatrixExportSettings, type MatrixExportType } from '../src/utils/matrixExport';
 import { matrixExportHtml, matrixExportNumber } from '../src/utils/matrixExportPrint';
+
+const round2 = (value: number) => Math.round(value * 100) / 100;
 
 const field = 'block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700';
 const button = 'inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-stone-100 disabled:opacity-50';
@@ -54,6 +56,17 @@ export default function MatrixExportDialog({ allocations, selections }: {
         const score = (option: string) => normalizeMatrixText(option).split(' ').filter(word => words.has(word)).length;
         return options.reduce((best, option) => score(option) > score(best) ? option : best, options[0]);
     }
+    /** Câu đã chọn theo thứ tự trong đề, kèm điểm đang dùng (để chia điểm và sửa từng câu). */
+    const questions = useMemo(() => {
+        const map = new Map<string, { id: string; type: MatrixExportType; level: number; reference: string; points: number }>();
+        for (const unit of document.units) {
+            const entry = map.get(unit.questionId) ?? { id: unit.questionId, type: unit.type, level: unit.level,
+                reference: unit.fullReference.replace(/[a-d]$/, ''), points: 0 };
+            entry.points += unit.points;
+            map.set(unit.questionId, entry);
+        }
+        return [...map.values()];
+    }, [document.units]);
     const fillableStatements = document.units.filter(unit => unit.type === 'dung_sai' && !unit.outcome && suggestOutcome(unit)).length;
     function fillTrueFalse() {
         setOutcomes(previous => {
@@ -133,13 +146,42 @@ export default function MatrixExportDialog({ allocations, selections }: {
                         <label className="text-sm font-semibold sm:col-span-2">Thời điểm kiểm tra (tùy chọn)<input className={field + ' mt-1'} placeholder="Ví dụ: Giữa học kì II, năm học 2026–2027" value={settings.assessmentTime} onChange={event => set('assessmentTime', event.target.value)} /></label>
                         <label className="text-sm font-semibold sm:col-span-2">Phạm vi kiến thức<textarea className={field + ' mt-1'} rows={2} placeholder="Để trống để lấy tên các chương đã chọn" value={settings.scope} onChange={event => set('scope', event.target.value)} /></label>
                     </div>
-                    <fieldset className="rounded-lg border border-stone-200 bg-white p-3">
-                        <legend className="px-1 text-sm font-bold">Điểm phân bổ trong ma trận</legend>
-                        <div className="grid gap-3 sm:grid-cols-2">{document.formats.map(({ type, label }) => <label key={type} className="text-sm font-semibold">{label} · điểm/câu
-                            <input type="number" min={0.01} step="any" className={field + ' mt-1'} value={Number.isNaN(settings.points[type]) ? '' : settings.points[type]}
+                    <fieldset className="space-y-3 rounded-lg border border-stone-200 bg-white p-3">
+                        <legend className="px-1 text-sm font-bold">Điểm từng câu</legend>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button type="button" className={button} disabled={!questions.length} onClick={() => {
+                                const even = evenQuestionPoints(questions, settings.targetScore);
+                                if (!even) { setError('Có quá nhiều câu để mỗi câu được ít nhất 0,25 điểm. Hãy bớt câu hoặc tự nhập điểm từng câu.'); return; }
+                                setError(''); set('questionPoints', even);
+                            }}>Chia đều {matrixExportNumber(settings.targetScore)} điểm (làm tròn 0,25)</button>
+                            <button type="button" className={button} onClick={() => { setError(''); set('questionPoints', {}); }}>Điểm theo dạng câu</button>
+                            <span className={'ml-auto text-sm font-semibold tabular-nums ' + (Math.abs(document.totalScore - settings.targetScore) < 1e-9 ? 'text-emerald-800' : 'text-amber-800')}>
+                                Tổng: {matrixExportNumber(document.totalScore)} / {matrixExportNumber(settings.targetScore)} điểm</span>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">{document.formats.filter(({ type }) => type !== 'dung_sai').map(({ type, label }) => <label key={type} className="text-sm font-semibold">{label} · điểm mặc định/câu
+                            <input type="number" min={POINT_STEP} step={POINT_STEP} className={field + ' mt-1'} value={Number.isNaN(settings.points[type]) ? '' : settings.points[type]}
                                 onChange={event => set('points', { ...settings.points, [type]: event.target.valueAsNumber })} />
                         </label>)}</div>
-                        {document.formats.some(format => format.type === 'dung_sai') && <p className="mt-2 text-xs leading-relaxed text-stone-600">Điểm mỗi câu Đúng/Sai được phân bổ đều cho 4 ý để tính tỉ lệ mức độ trong ma trận. Đây không phải quy tắc chấm theo số ý đúng.</p>}
+                        {document.formats.some(format => format.type === 'dung_sai') && <p className="text-xs leading-relaxed text-stone-600">Đúng/Sai: {TRUE_FALSE_POINTS} điểm/câu, chấm theo số ý đúng (1 ý 0,1; 2 ý 0,25; 3 ý 0,5; 4 ý 1 điểm) theo quy định của Bộ GD&ĐT. Trong ma trận, điểm câu Đúng/Sai chia đều cho 4 ý để tính tỉ lệ mức độ.</p>}
+                        {questions.length > 0 && <div className="max-h-72 overflow-auto rounded-lg border border-stone-200">
+                            <table className="w-full text-sm">
+                                <thead className="sticky top-0 bg-stone-50 text-left text-xs text-stone-600"><tr><th className="px-2 py-1.5">Câu</th><th className="px-2 py-1.5">Mức</th><th className="px-2 py-1.5 text-right">Điểm</th></tr></thead>
+                                <tbody>{questions.map(question => <tr key={question.id} className="border-t border-stone-100">
+                                    <td className="px-2 py-1">{question.reference}</td>
+                                    <td className="px-2 py-1 text-stone-600">{question.type === 'dung_sai' ? '4 ý' : MATRIX_LEVELS[question.level]}</td>
+                                    <td className="px-2 py-1 text-right">{question.type === 'dung_sai'
+                                        ? <span className="inline-block w-20 pr-2 tabular-nums text-stone-600">{matrixExportNumber(TRUE_FALSE_POINTS)}</span>
+                                        : <input type="number" min={POINT_STEP} step={POINT_STEP} aria-label={'Điểm ' + question.reference}
+                                            className="w-20 rounded-md border border-stone-300 bg-white px-2 py-1 text-right text-sm tabular-nums focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700" value={round2(question.points)}
+                                            onChange={event => {
+                                                const value = event.target.valueAsNumber;
+                                                const next = { ...settings.questionPoints };
+                                                if (Number.isFinite(value)) next[question.id] = value; else delete next[question.id];
+                                                set('questionPoints', next);
+                                            }} />}</td>
+                                </tr>)}</tbody>
+                            </table>
+                        </div>}
                     </fieldset>
                     <fieldset className="rounded-lg border border-stone-200 bg-white p-3">
                         <legend className="px-1 text-sm font-bold">Số tiết từng nội dung (tùy chọn)</legend>

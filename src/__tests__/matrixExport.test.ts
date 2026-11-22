@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildMatrixExport, defaultMatrixExportSettings, matrixSpecificationRows, type MatrixExportSelection } from '../utils/matrixExport';
+import { buildMatrixExport, defaultMatrixExportSettings, evenQuestionPoints, matrixSpecificationRows, type MatrixExportSelection } from '../utils/matrixExport';
 import { matrixExportHtml } from '../utils/matrixExportPrint';
 import { matrixPlanSlots, type MatrixAllocation } from '../utils/matrixPlan';
 
@@ -32,6 +32,32 @@ describe('matrix and specification export', () => {
         expect(rows[0].references).toEqual({ trac_nghiem: ['C1', 'C2'], dung_sai: [], tu_luan: ['C1'], written: [] });
         expect(result.units.map(unit => unit.fullReference)).toEqual(['Phần I - C1', 'Phần I - C2', 'Phần III - C1']);
         expect(selections[0].item.questionNo).toBe('Câu 90');
+    });
+
+    it('splits the scale into round points: true-false keeps 1 point, extra quarter points go to harder questions first', () => {
+        const make = (type: 'trac_nghiem' | 'dung_sai' | 'tu_luan', n: number, level: number, prefix: string) =>
+            Array.from({ length: n }, (_, i) => ({ id: prefix + i, type, level }));
+        const national = [...make('trac_nghiem', 18, 1, 'tn'), ...make('dung_sai', 4, 0, 'ds'), ...make('tu_luan', 6, 3, 'tl')];
+        const points = evenQuestionPoints(national, 10)!;
+        expect(Object.keys(points)).toHaveLength(24);
+        expect(new Set(Object.values(points))).toEqual(new Set([0.25]));
+        const mixed = [...make('trac_nghiem', 10, 1, 'b'), ...make('trac_nghiem', 10, 2, 'h'), ...make('trac_nghiem', 8, 3, 'v')];
+        const split = evenQuestionPoints(mixed, 10)!;
+        expect(Object.values(split).reduce((a, b) => a + b, 0)).toBeCloseTo(10);
+        expect(Object.values(split).every(value => value % 0.25 === 0)).toBe(true);
+        expect(split.v0).toBe(0.5); expect(split.h3).toBe(0.5); expect(split.h4).toBe(0.25); expect(split.b0).toBe(0.25);
+        expect(evenQuestionPoints(make('trac_nghiem', 41, 1, 'x'), 10)).toBeUndefined();
+    });
+
+    it('scores each question by its own points and true-false at 1 point whatever the type setting', () => {
+        const allocations = [{ ...allocation, count: 2 }, { ...allocation, type: 'dung_sai' as const, level: 0, count: 1 }];
+        const selections = makeSelections(allocations);
+        const settings = { ...defaultMatrixExportSettings(), targetScore: 2, points: { ...defaultMatrixExportSettings().points, dung_sai: 3 },
+            questionPoints: { 'question-0': 0.75 } };
+        const result = buildMatrixExport(allocations, selections, settings);
+        expect(result.totalScore).toBe(2);
+        expect(result.issues.some(issue => issue.includes('Tổng điểm'))).toBe(false);
+        expect(buildMatrixExport(allocations, selections, { ...settings, questionPoints: { 'question-0': 0 } }).invalidSettings).toBe(true);
     });
 
     it('takes true-false entered as whole questions and counts their statements at their own levels', () => {
