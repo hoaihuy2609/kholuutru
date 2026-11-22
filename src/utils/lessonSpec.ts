@@ -31,6 +31,8 @@ export interface LessonCandidate {
     lesson?: number;
     specLines?: readonly (string | undefined)[];
     outcomes?: readonly string[];
+    /** Nội dung câu để xem trước (JSON physics_solution). */
+    preview?: () => string;
 }
 
 export interface LessonTopic {
@@ -241,7 +243,7 @@ export function lessonSelections(allocations: readonly MatrixAllocation[], topic
         const sources = [...new Set(lessonUnits(candidate).flatMap(unit => unit.line ? [lessonLineSource(unit.line)] : []))];
         selections.push({ slot, item: candidate.item, outcome: outcomes[0], fixedOutcome: true,
             statementOutcomes: candidate.item.type === 'dung_sai' ? outcomes : undefined,
-            curriculumSource: sources.join('; ') || undefined });
+            curriculumSource: sources.join('; ') || undefined, preview: candidate.preview });
     }
     return { selections, codes };
 }

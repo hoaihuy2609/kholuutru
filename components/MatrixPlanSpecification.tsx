@@ -334,7 +334,7 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                 <div className="flex flex-wrap gap-2">
                     <MatrixExportDialog allocations={allocations} scale={scale} selections={selectedSlots.map(({ slot, candidate }) => {
                         const outcome = outcomeFor(slot.id, candidate);
-                        return { slot, item: candidate.item, outcome, outcomeOptions: candidate.outcomes, curriculumSource: programmeSource(slot, outcome) };
+                        return { slot, item: candidate.item, outcome, outcomeOptions: candidate.outcomes, curriculumSource: programmeSource(slot, outcome), preview: candidate.preview };
                     })} />
                     <button type="button" className={complete ? primary : button} disabled={!selectedSlots.length}
                         onClick={() => onCompose(selectedSlots.map(({ candidate }) => candidate.item))}>Biên soạn đề ({selectedSlots.length} câu)</button>

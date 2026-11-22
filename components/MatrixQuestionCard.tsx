@@ -110,12 +110,16 @@ export function MatrixQuestionCard({ candidate, score, evidence, selected, used,
     );
 }
 
-export function MatrixDialog({ title, subtitle, closeLabel = 'Đóng', children, onClose }: {
+export function MatrixDialog({ title, subtitle, closeLabel = 'Đóng', children, onClose, full = false, actions }: {
     title: string;
     subtitle?: string;
     closeLabel?: string;
     children: ReactNode;
     onClose: () => void;
+    /** Toàn màn hình; phần thân tự lo cuộn (không thêm padding, không cuộn chung). */
+    full?: boolean;
+    /** Nút đặt trên thanh tiêu đề, cạnh nút đóng. */
+    actions?: ReactNode;
 }) {
     const dialog = useRef<HTMLDialogElement>(null);
     const titleId = useId();
@@ -136,17 +140,23 @@ export function MatrixDialog({ title, subtitle, closeLabel = 'Đóng', children,
         <dialog ref={dialog} aria-labelledby={titleId}
             onCancel={event => { event.preventDefault(); onClose(); }}
             onClick={event => { if (event.target === event.currentTarget) onClose(); }}
-            className="fixed inset-auto left-1/2 top-1/2 m-0 h-[94dvh] max-h-none w-[min(96vw,1100px)] max-w-none -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-stone-200 bg-stone-50 p-0 shadow-xl backdrop:bg-black/25 open:flex open:flex-col sm:h-[min(90dvh,900px)]">
+            className={full
+                ? 'fixed inset-0 m-0 h-[100dvh] max-h-none w-screen max-w-none overflow-hidden border-0 bg-stone-50 p-0 backdrop:bg-black/25 open:flex open:flex-col'
+                : 'fixed inset-auto left-1/2 top-1/2 m-0 h-[94dvh] max-h-none w-[min(96vw,1100px)] max-w-none -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-stone-200 bg-stone-50 p-0 shadow-xl backdrop:bg-black/25 open:flex open:flex-col sm:h-[min(90dvh,900px)]'}>
             <header className="flex items-center justify-between gap-3 border-b border-stone-200 bg-white px-4 py-3">
                 <div>
                     <h2 id={titleId} className="font-bold">{title}</h2>
                     {subtitle && <p className="mt-0.5 text-sm text-stone-600">{subtitle}</p>}
                 </div>
-                <button type="button" aria-label={closeLabel} className={action} onClick={onClose}><X aria-hidden="true" className="size-4" /></button>
+                <div className="flex shrink-0 items-center gap-2">
+                    {actions}
+                    <button type="button" aria-label={closeLabel} className={action} onClick={onClose}><X aria-hidden="true" className="size-4" /></button>
+                </div>
             </header>
-            <div className="min-h-0 flex-1 overflow-auto overscroll-contain p-3 sm:p-4">
-                {children}
-            </div>
+            {full ? <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+                : <div className="min-h-0 flex-1 overflow-auto overscroll-contain p-3 sm:p-4">
+                    {children}
+                </div>}
         </dialog>
     );
 }

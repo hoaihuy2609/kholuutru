@@ -138,6 +138,26 @@ describe('matrix and specification export', () => {
         expect(html).not.toContain('BẢN NHÁP');
     });
 
+    it('splits one question into its own requirement row when its outcome is typed differently, and merges it back on equal text', () => {
+        const selections = makeSelections([allocation]);
+        const settings = { ...defaultMatrixExportSettings(), targetScore: 0.5 };
+        const shared = buildMatrixExport([allocation], selections, settings);
+        expect(matrixSpecificationRows(shared.units)).toHaveLength(1);
+        const second = shared.units[1].key;
+        const split = buildMatrixExport([allocation], selections, settings, { [second]: 'Yêu cầu riêng của câu 2' });
+        const rows = matrixSpecificationRows(split.units);
+        expect(rows.map(row => row.references.trac_nghiem)).toEqual([['C1'], ['C2']]);
+        expect(rows[1].units.map(unit => unit.key)).toEqual([second]);
+        const merged = buildMatrixExport([allocation], selections, settings, { [second]: 'Nêu được đơn vị đo công.' });
+        expect(matrixSpecificationRows(merged.units)).toHaveLength(1);
+        // Only the on-screen review is editable; the printed document is plain.
+        const editable = matrixExportHtml(split, false, { editable: true, edited: new Set([second]) });
+        expect(editable).toContain('contenteditable="true"');
+        expect(editable).toContain('class="edited"');
+        expect(editable).toContain('data-question="question-1"');
+        expect(matrixExportHtml(split)).not.toContain('contenteditable');
+    });
+
     it('accepts true-false questions with different level mixes when together they match the content', () => {
         const allocations = [
             { ...allocation, type: 'dung_sai' as const, level: 2, count: 6 },

@@ -15,12 +15,23 @@ const text = (value: string) => value.split(/(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$|\\\(
 export const matrixExportNumber = (number: number) => Number.isFinite(number)
     ? new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 4 }).format(number) : '-';
 const n = matrixExportNumber;
+/** Tỉ lệ phần trăm, 1 chữ số thập phân. */
+const pct = (number: number) => Number.isFinite(number)
+    ? new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(number) : '-';
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
 const colors: Record<MatrixExportType, string> = {
     trac_nghiem: 'blue', dung_sai: 'violet', tu_luan: 'amber', written: 'green',
 };
 
-export function matrixExportHtml(document: MatrixExportDocument, draft = false) {
+export interface MatrixExportHtmlOptions {
+    /** Bản rà soát trên màn hình: ô YCCĐ gõ sửa được, mã câu bấm được. Không dùng khi in. */
+    editable?: boolean;
+    /** Khóa câu/ý đã được giáo viên sửa YCCĐ tay (đánh dấu trên màn hình). */
+    edited?: ReadonlySet<string>;
+}
+
+export function matrixExportHtml(document: MatrixExportDocument, draft = false, options: MatrixExportHtmlOptions = {}) {
+    const { editable = false, edited } = options;
     const { settings, formats, topics, units } = document;
     const hasStatements = formats.some(format => format.type === 'dung_sai');
     const blueprintRows: string[] = [];
@@ -65,9 +76,15 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false) 
                         ${formats.map(() => '<td></td><td></td>').join('')}</tr>`);
                     previousLevel = row.level;
                 }
-                specification.push(`<tr>${frame()}<td class="left outcome">${text(row.outcome || 'Chưa xác định YCCĐ')}</td>
+                const editedRow = editable && row.units.some(unit => edited?.has(unit.key));
+                const cellAttributes = editable ? ` contenteditable="true" spellcheck="false" title="Bấm để sửa YCCĐ của cả dòng"`
+                    + ` data-keys="${escape(row.units.map(unit => unit.key).join('\n'))}" data-raw="${escape(row.outcome)}"` : '';
+                const references = (type: MatrixExportType) => editable
+                    ? row.units.filter(unit => unit.type === type).map(unit => `<span class="ref" data-question="${escape(unit.questionId)}" title="Xem câu này trong đề">${escape(unit.reference)}</span>`).join(', ')
+                    : row.references[type].map(escape).join(', ');
+                specification.push(`<tr${editedRow ? ' class="edited"' : ''}>${frame()}<td class="left outcome"${cellAttributes}>${text(row.outcome || 'Chưa xác định YCCĐ')}</td>
                     ${formats.map(({ type }) => `<td>${row.references[type].length || '-'}</td>`).join('')}
-                    ${formats.map(({ type }) => `<td class="references">${row.references[type].map(escape).join(', ') || '-'}</td>`).join('')}</tr>`);
+                    ${formats.map(({ type }) => `<td class="references">${references(type) || '-'}</td>`).join('')}</tr>`);
             }
             if (!rows.length) specification.push(`<tr><td>${topicNumber}</td><th class="left">${text(topic.topic)}</th><td class="left">Chưa chọn câu.</td>${formats.map(() => '<td>-</td><td>-</td>').join('')}</tr>`);
         }
@@ -86,7 +103,7 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false) 
             ${settings.assessmentTime.trim() ? `<p>Thời điểm kiểm tra: ${text(settings.assessmentTime)}</p>` : ''}
             <p>Nội dung/phạm vi kiểm tra: ${text(scope)}</p>
             <p>Cấu trúc: ${document.questionCount} câu${hasStatements ? ', ' + document.unitCount + ' câu/ý được đánh giá' : ''}; ${n(document.totalScore)} điểm.</p>
-            <p>Mức độ: ${[1, 2, 3].map(level => text(MATRIX_LEVELS[level]) + ' ' + n(document.totalScore ? document.levelScores[level] / document.totalScore * 100 : 0) + '%').join('; ')}.</p></div>
+            <p>Mức độ: ${[1, 2, 3].map(level => text(MATRIX_LEVELS[level]) + ' ' + pct(document.totalScore ? document.levelScores[level] / document.totalScore * 100 : 0) + '%').join('; ')}.</p></div>
             <table class="blueprint"><colgroup><col style="width:3%"><col style="width:14%"><col style="width:20%"><col style="width:4%">
             ${formats.map(() => [1, 2, 3].map(() => `<col style="width:${53 / (formats.length * 3)}%">`).join('')).join('')}<col style="width:6%"></colgroup>
             <thead><tr><th rowspan="3">TT</th><th rowspan="3">Chương/<br>chủ đề</th><th rowspan="3">Nội dung/<br>đơn vị kiến thức</th><th rowspan="3">Số<br>tiết</th><th colspan="${formats.length * 3}">Số câu hỏi/ý ở các mức độ đánh giá</th><th rowspan="3">Tổng<br>câu/ý</th></tr>
@@ -100,7 +117,7 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false) 
             <table class="level-summary"><thead><tr><th>Cấp độ nhận thức</th>${[1, 2, 3].map(level => `<th>${text(MATRIX_LEVELS[level])}</th>`).join('')}<th>Tổng</th></tr></thead>
             <tbody><tr><th class="left">Số câu/ý</th>${[1, 2, 3].map(level => `<td>${document.levelCounts[level]}</td>`).join('')}<td>${document.unitCount}</td></tr>
             <tr><th class="left">Số điểm</th>${[1, 2, 3].map(level => `<td>${n(document.levelScores[level])}</td>`).join('')}<td>${n(document.totalScore)}</td></tr>
-            <tr><th class="left">Tỉ lệ điểm (%)</th>${[1, 2, 3].map(level => `<td>${n(document.totalScore ? document.levelScores[level] / document.totalScore * 100 : 0)}</td>`).join('')}<td>${document.totalScore ? '100' : '0'}</td></tr></tbody></table>
+            <tr><th class="left">Tỉ lệ điểm (%)</th>${[1, 2, 3].map(level => `<td>${pct(document.totalScore ? document.levelScores[level] / document.totalScore * 100 : 0)}</td>`).join('')}<td>${document.totalScore ? '100' : '0'}</td></tr></tbody></table>
             <p class="note">${formats.map(({ type, label }) => {
                 const scores = [...units.filter(unit => unit.type === type).reduce((map, unit) => map.set(unit.questionId, (map.get(unit.questionId) ?? 0) + unit.points), new Map<string, number>()).values()];
                 const low = scores.length ? Math.min(...scores) : settings.points[type], high = scores.length ? Math.max(...scores) : settings.points[type];
@@ -151,6 +168,16 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false) 
         .specification-section { break-before: page; }
         .katex { font-size: 1em; } .katex-display { margin: 1mm 0; }
         @media screen { body { width: 297mm; min-height: 210mm; padding: 12mm 10mm 14mm; } .specification-section { margin-top: 12mm; border-top: 1px dashed #aaa; padding-top: 3mm; } }
+        ${editable ? `@media screen {
+            .outcome[contenteditable] { cursor: text; outline: 1px dashed #d6b37a; outline-offset: -2px; }
+            .outcome[contenteditable]:hover { background: #fffbeb; }
+            .outcome[contenteditable]:focus { outline: 2px solid #b45309; background: #fff; }
+            tr.edited > .outcome { box-shadow: inset 4px 0 0 #d97706; }
+            .ref { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+            .ref:hover { color: #92400e; }
+            .hl { background: #fde68a !important; }
+            tr.hl-row > td, tr.hl-row > th { background: #fef3c7 !important; }
+        }` : ''}
         @media print { * { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
     </style></head><body>${body}</body></html>`;
 }
