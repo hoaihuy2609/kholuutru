@@ -110,9 +110,6 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false) 
             <thead><tr><th rowspan="2">STT</th><th rowspan="2">Nội dung/<br>đơn vị kiến thức</th><th rowspan="2">Mức độ đánh giá / Yêu cầu cần đạt</th><th colspan="${formats.length}">Số câu/ý</th><th colspan="${formats.length}">Mã câu/ý trong đề</th></tr>
             <tr>${[0, 1].map(() => formats.map(({ type, part }) => `<th class="${colors[type]}">Phần ${part}</th>`).join('')).join('')}</tr></thead>
             <tbody>${specification.join('')}</tbody><tbody class="totals"><tr><th colspan="3" class="left">Tổng số câu/ý</th>${formats.map(({ type }) => `<td>${units.filter(unit => unit.type === type).length}</td>`).join('')}<td colspan="${formats.length}">${document.questionCount} câu / ${document.unitCount} câu, ý</td></tr></tbody></table>
-            <p class="note">${formats.map(({ label, part }) => 'Phần ' + part + ': ' + text(label)).join('; ')}.
-            Mã câu được đánh số lại từ 1 trong từng phần theo thứ tự câu đã chọn, không dùng số câu trong kho.
-            ${hasStatements ? 'Các hậu tố a, b, c, d là ý tương ứng trong câu Đúng/Sai.' : ''}</p>
         </section>`;
     return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>${escape(settings.title)} - Ma trận và đặc tả${draft ? ' - Bản nháp' : ''}</title><style>
         ${katexStyles}
