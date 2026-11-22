@@ -37,6 +37,8 @@ export default function LessonSpecification({ allocations, topics, candidates, o
     const [note, setNote] = useState('');
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set(topics.slice(0, 1).map(topic => topic.key)));
     const [levels, setLevels] = useState<Record<string, number>>({});
+    /** Bài đang mở phần trắc nghiệm (mặc định thu gọn). */
+    const [choiceOpen, setChoiceOpen] = useState<ReadonlySet<string>>(() => new Set());
     const [open, setOpen] = useState<Open>();
     const byId = pool.byId;
     const issues = lessonIssues(topics, chosen, byId);
@@ -98,7 +100,7 @@ export default function LessonSpecification({ allocations, topics, candidates, o
                 {topics.map(topic => {
                     const status = lessonStatus(topic, chosen, byId);
                     const isOpen = expanded.has(topic.key);
-                    const level = levels[topic.key] ?? 1;
+                    const level = levels[topic.key] ?? (LEVELS.find(value => topic.need.trac_nghiem[value - 1]) ?? 1);
                     const panelId = id + '-' + topic.key;
                     return <section key={topic.key} className="overflow-hidden rounded-xl border border-stone-200">
                         <h3>
@@ -120,8 +122,16 @@ export default function LessonSpecification({ allocations, topics, candidates, o
                             </button>
                         </h3>
                         <div id={panelId} hidden={!isOpen} className="border-t border-stone-200">
-                            <LevelTabs topic={topic} level={level} chosen={chosen} pool={pool} onSelect={value => setLevels(previous => ({ ...previous, [topic.key]: value }))} />
-                            <LineList topic={topic} level={level} chosen={chosen} pool={pool} code={code} onOpen={setOpen} />
+                            <ChoiceRow topic={topic} chosen={chosen} pool={pool} code={code} open={choiceOpen.has(topic.key)} panelId={panelId + '-tn'}
+                                onToggle={() => setChoiceOpen(previous => {
+                                    const next = new Set(previous);
+                                    if (next.has(topic.key)) next.delete(topic.key); else next.add(topic.key);
+                                    return next;
+                                })} />
+                            <div id={panelId + '-tn'} hidden={!choiceOpen.has(topic.key)} className="border-t border-blue-100">
+                                <LevelTabs topic={topic} level={level} chosen={chosen} pool={pool} onSelect={value => setLevels(previous => ({ ...previous, [topic.key]: value }))} />
+                                <LineList topic={topic} level={level} chosen={chosen} pool={pool} code={code} onOpen={setOpen} />
+                            </div>
                             <TrueFalseRow topic={topic} chosen={chosen} pool={pool} code={code} onOpen={() => setOpen({ topic, kind: 'dung_sai' })} />
                             <ShortAnswerRow topic={topic} chosen={chosen} pool={pool} code={code} onOpen={() => setOpen({ topic, kind: 'tu_luan' })} />
                         </div>
@@ -240,6 +250,33 @@ function LineList({ topic, level, chosen, pool, code, onOpen }: {
     </div>;
 }
 
+/** Mục Trắc nghiệm 4 đáp án của bài: bấm để mở các mức và dòng yêu cầu. */
+function ChoiceRow({ topic, chosen, pool, code, open, panelId, onToggle }: {
+    topic: LessonTopic; chosen: ReadonlySet<string>; pool: LessonPool<MatrixCandidate>;
+    code: (candidate: MatrixCandidate) => string | undefined; open: boolean; panelId: string; onToggle: () => void;
+}) {
+    const totals = lessonTotals(topic.lesson.id, chosen, pool.byId).trac_nghiem;
+    const need = topic.need.trac_nghiem.reduce((a, b) => a + b, 0);
+    const got = totals.reduce((a, b) => a + b, 0);
+    const taken = [...new Map((pool.units.get(topic.lesson.id) ?? []).filter(unit => unit.candidate.item.type === 'trac_nghiem'
+        && chosen.has(unit.candidate.item.id)).map(unit => [unit.candidate.item.id, unit.candidate])).values()];
+    const levels = LEVELS.filter(level => topic.need.trac_nghiem[level - 1] || totals[level - 1])
+        .map(level => COGNITIVE_LEVELS[level] + ' ' + totals[level - 1] + '/' + topic.need.trac_nghiem[level - 1]).join(' · ');
+    return <div className="grid gap-2 bg-blue-50/40 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+        <p className="text-sm">
+            <span className="font-bold">Trắc nghiệm 4 đáp án của bài</span>
+            <span className={'ml-2 tabular-nums ' + (got && got !== need ? 'font-semibold text-amber-800' : 'text-stone-600')}>đã chọn {got}/{need} câu</span>
+            {levels && <span className="block text-xs text-stone-600">{levels}</span>}
+        </p>
+        <span className="flex flex-wrap gap-1">{taken.map(candidate => <span key={candidate.item.id}
+            className={'rounded px-1.5 py-px font-mono text-[11px] font-semibold ' + codeColor.trac_nghiem}>{code(candidate) ?? '·'}</span>)}</span>
+        <button type="button" className={button} aria-expanded={open} aria-controls={panelId} onClick={onToggle}>
+            {open ? 'Thu gọn' : 'Chọn câu trắc nghiệm'}
+            <ChevronDown aria-hidden="true" className={'size-4 ' + (open ? 'rotate-180' : '')} />
+        </button>
+    </div>;
+}
+
 /** Dòng Đúng/Sai của bài: chọn nguyên câu, đủ số câu của ma trận. */
 function TrueFalseRow({ topic, chosen, pool, code, onOpen }: {
     topic: LessonTopic; chosen: ReadonlySet<string>; pool: LessonPool<MatrixCandidate>;
@@ -248,7 +285,7 @@ function TrueFalseRow({ topic, chosen, pool, code, onOpen }: {
     const all = trueFalseOf(pool, topic);
     const taken = all.filter(candidate => chosen.has(candidate.item.id));
     if (!topic.trueFalse && !taken.length) return null;
-    return <div className="grid gap-2 border-t-4 border-violet-100 bg-violet-50/40 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+    return <div className="grid gap-2 border-t border-stone-200 bg-violet-50/40 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
         <p className="text-sm">
             <span className="font-bold">Đúng/Sai của bài</span>
             <span className={'ml-2 tabular-nums ' + (taken.length && taken.length !== topic.trueFalse ? 'font-semibold text-amber-800' : 'text-stone-600')}>
@@ -318,7 +355,7 @@ function ShortAnswerRow({ topic, chosen, pool, code, onOpen }: {
     const totals = lessonTotals(topic.lesson.id, chosen, pool.byId).tu_luan;
     const levels = LEVELS.filter(level => topic.need.tu_luan[level - 1] || totals[level - 1])
         .map(level => COGNITIVE_LEVELS[level] + ' ' + totals[level - 1] + '/' + topic.need.tu_luan[level - 1]).join(' · ');
-    return <div className="grid gap-2 border-t-4 border-amber-100 bg-amber-50/40 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+    return <div className="grid gap-2 border-t border-stone-200 bg-amber-50/40 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
         <p className="text-sm">
             <span className="font-bold">Trả lời ngắn của bài</span>
             <span className={'ml-2 tabular-nums ' + (taken.length && taken.length !== need ? 'font-semibold text-amber-800' : 'text-stone-600')}>
