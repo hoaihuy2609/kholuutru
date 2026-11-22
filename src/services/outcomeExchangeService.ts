@@ -7,6 +7,7 @@ import { makeOutcomeExport, parseOutcomeResult, patchOutcomeBlogs, previewOutcom
 import { parseQuestionCorrections, patchQuestionCorrections, previewQuestionCorrections,
   type QuestionCorrection, type QuestionCorrectionFile } from '../utils/questionCorrections';
 import { parseCognitiveResult, previewCognitiveResult, type CognitiveResult } from '../utils/cognitiveExchange';
+import { chapterDrafts, setPublished, type PublishBatch } from '../utils/draftPublishing';
 import { parseQuestionCreateFile, planQuestionCreate, undoQuestionCreate, type QuestionCreateBatch, type QuestionCreateFile } from '../utils/questionCreation';
 
 const BLOGS = 'physivault_blogs_local';
@@ -350,6 +351,56 @@ export async function undoQuestionCreateBatch(chapterId: string, batchId: string
     return {
       [BLOGS]: undoQuestionCreate(values[BLOGS] ?? [], batch),
       [CREATE_HISTORY]: history.map(item => item.id === batch.id ? { ...item, undone_at: new Date().toISOString() } : item),
+      [OUTCOME_SYNC_KEY]: crypto.randomUUID(),
+    };
+  });
+  void syncBlogs();
+}
+
+const PUBLISH_HISTORY = 'pv_publish_history_v1';
+
+export async function reviewChapterDrafts(chapterId: string) {
+  await freshLibrary();
+  return chapterDrafts(await dbGet(BLOGS) ?? [], chapterId);
+}
+
+export async function getPublishHistory(chapterId: string): Promise<PublishBatch[]> {
+  const history: PublishBatch[] = await dbGet(PUBLISH_HISTORY) ?? [];
+  return history.filter(batch => batch.chapter_id === chapterId).reverse();
+}
+
+/** Công khai mọi bài nháp của chương đã xem trong danh sách (trừ bài còn ảnh đang tải lên). */
+export async function publishChapterDrafts(chapterId: string, reviewedIds: readonly string[]) {
+  await freshLibrary();
+  let count = 0;
+  await dbUpdateBatch([BLOGS, PUBLISH_HISTORY, OUTCOME_SYNC_KEY], values => {
+    const records: RecordItem[] = values[BLOGS] ?? [];
+    const reviewed = new Set(reviewedIds);
+    const drafts = chapterDrafts(records, chapterId).filter(draft => reviewed.has(draft.id) && !draft.pendingImages);
+    if (!drafts.length) throw new Error('Chương không còn bài nháp nào để công khai.');
+    count = drafts.reduce((sum, draft) => sum + draft.count, 0);
+    const now = new Date().toISOString();
+    const batch: PublishBatch = { id: crypto.randomUUID(), chapter_id: chapterId, created_at: now, blog_ids: drafts.map(draft => draft.id), count };
+    return {
+      [BLOGS]: setPublished(records, new Set(batch.blog_ids), true, now),
+      [PUBLISH_HISTORY]: [...(values[PUBLISH_HISTORY] ?? []), batch],
+      [OUTCOME_SYNC_KEY]: batch.id,
+    };
+  });
+  void syncBlogs();
+  return count;
+}
+
+export async function undoPublishChapterDrafts(chapterId: string, batchId: string) {
+  await freshLibrary();
+  await dbUpdateBatch([BLOGS, PUBLISH_HISTORY, OUTCOME_SYNC_KEY], values => {
+    const history: PublishBatch[] = values[PUBLISH_HISTORY] ?? [];
+    const batch = history.find(item => item.chapter_id === chapterId && item.id === batchId && !item.undone_at);
+    if (!batch) throw new Error('Không tìm thấy đợt công khai còn có thể hoàn tác.');
+    const now = new Date().toISOString();
+    return {
+      [BLOGS]: setPublished(values[BLOGS] ?? [], new Set(batch.blog_ids), false, now),
+      [PUBLISH_HISTORY]: history.map(item => item.id === batch.id ? { ...item, undone_at: now } : item),
       [OUTCOME_SYNC_KEY]: crypto.randomUUID(),
     };
   });
