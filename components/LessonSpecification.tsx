@@ -5,8 +5,8 @@ import { PHYSICS_10_CURRICULUM_SOURCE } from '../src/data/physics10Curriculum';
 import { LESSON_LINES, type LessonLine } from '../src/data/lessonLines';
 import { COGNITIVE_LEVELS } from '../src/utils/cognitiveLevels';
 import { statementCountsLabel, trueFalseCounts, type MatrixAllocation, type StatementCounts } from '../src/utils/matrixPlan';
-import { LESSON_TYPE_LABELS, LEVEL_TYPES, lessonIssues, lessonPool, lessonSelections, lessonStatus, lessonTotals, lessonUnits, suggestLessons,
-    type LessonPool, type LessonTopic, type LessonType, type LessonUnit, type LevelType } from '../src/utils/lessonSpec';
+import { LESSON_TYPE_LABELS, lessonIssues, lessonPool, lessonSelections, lessonStatus, lessonTotals, lessonUnits, suggestLessons,
+    type LessonPool, type LessonTopic, type LessonType, type LessonUnit } from '../src/utils/lessonSpec';
 import type { MatrixCandidate } from './ExamMatrixBuilder';
 import { MatrixDialog, MatrixQuestionCard, MatrixSolutionDialog } from './MatrixQuestionCard';
 import MatrixExportDialog from './MatrixExportDialog';
@@ -20,7 +20,7 @@ const levelTab = ['', 'aria-pressed:border-sky-600 aria-pressed:bg-sky-50 aria-p
 const codeColor: Record<LessonType, string> = { trac_nghiem: 'bg-blue-50 text-blue-900', dung_sai: 'bg-violet-50 text-violet-900', tu_luan: 'bg-amber-50 text-amber-950' };
 
 /** Mở chọn câu cho một dòng YCCĐ (hoặc các câu chưa khớp dòng nào, line = undefined) của một bài, ở một mức; level 0 là Đúng/Sai của bài. */
-type Open = { topic: LessonTopic; level: number; line?: LessonLine };
+type Open = { topic: LessonTopic; level: number; line?: LessonLine } | { topic: LessonTopic; kind: 'dung_sai' | 'tu_luan' };
 
 export default function LessonSpecification({ allocations, topics, candidates, onCompose }: {
     allocations: MatrixAllocation[];
@@ -66,7 +66,7 @@ export default function LessonSpecification({ allocations, topics, candidates, o
         <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-4 sm:p-5" aria-labelledby={id}>
             <header className="space-y-2">
                 <h2 id={id} className="text-lg font-bold">Bản đặc tả theo bài</h2>
-                <p className="max-w-3xl text-sm text-stone-600">Mỗi bài có yêu cầu cần đạt ở ba mức. Câu nào thuộc mức nào thì nằm ở mức đó. Bấm vào bài, chọn mức, rồi bấm "Chọn câu" ở dòng yêu cầu để xem và chọn câu trong kho.</p>
+                <p className="max-w-3xl text-sm text-stone-600">Mỗi bài có yêu cầu cần đạt ở ba mức. Câu nào thuộc mức nào thì nằm ở mức đó. Trắc nghiệm: bấm vào bài, chọn mức, rồi bấm "Chọn câu" ở dòng yêu cầu. Đúng/Sai và Trả lời ngắn chọn trong mục riêng ở cuối mỗi bài.</p>
                 <ol className="flex flex-wrap gap-2 text-sm">
                     {['Mở bài và chọn mức', 'Chọn câu theo từng dòng yêu cầu', 'Xuất ma trận và bản đặc tả'].map((step, index) =>
                         <li key={step} className="inline-flex items-center gap-2 rounded-full border border-stone-200 px-3 py-1">
@@ -120,7 +120,8 @@ export default function LessonSpecification({ allocations, topics, candidates, o
                         <div id={panelId} hidden={!isOpen} className="border-t border-stone-200">
                             <LevelTabs topic={topic} level={level} chosen={chosen} pool={pool} onSelect={value => setLevels(previous => ({ ...previous, [topic.key]: value }))} />
                             <LineList topic={topic} level={level} chosen={chosen} pool={pool} code={code} onOpen={setOpen} />
-                            <TrueFalseRow topic={topic} chosen={chosen} pool={pool} code={code} onOpen={() => setOpen({ topic, level: 0 })} />
+                            <TrueFalseRow topic={topic} chosen={chosen} pool={pool} code={code} onOpen={() => setOpen({ topic, kind: 'dung_sai' })} />
+                            <ShortAnswerRow topic={topic} chosen={chosen} pool={pool} code={code} onOpen={() => setOpen({ topic, kind: 'tu_luan' })} />
                         </div>
                     </section>;
                 })}
@@ -149,9 +150,11 @@ export default function LessonSpecification({ allocations, topics, candidates, o
                 </div>
             </footer>
 
-            {open && (open.level
+            {open && ('level' in open
                 ? <LinePicker open={open} chosen={chosen} pool={pool} code={code} onToggle={toggle} onClose={() => setOpen(undefined)} />
-                : <TrueFalsePicker topic={open.topic} chosen={chosen} pool={pool} code={code} onToggle={toggle} onClose={() => setOpen(undefined)} />)}
+                : open.kind === 'dung_sai'
+                    ? <TrueFalsePicker topic={open.topic} chosen={chosen} pool={pool} code={code} onToggle={toggle} onClose={() => setOpen(undefined)} />
+                    : <ShortAnswerPicker topic={open.topic} chosen={chosen} pool={pool} code={code} onToggle={toggle} onClose={() => setOpen(undefined)} />)}
         </section>
     );
 }
@@ -177,8 +180,8 @@ function LevelTabs({ topic, level, chosen, pool, onSelect }: {
     const totals = lessonTotals(topic.lesson.id, chosen, pool.byId);
     return <div className="grid grid-cols-3 gap-2 p-3" role="group" aria-label={'Mức độ của ' + topic.lesson.name}>
         {LEVELS.map(value => {
-            const need = LEVEL_TYPES.reduce((sum, type) => sum + topic.need[type][value - 1], 0);
-            const got = LEVEL_TYPES.reduce((sum, type) => sum + totals[type][value - 1], 0);
+            const need = topic.need.trac_nghiem[value - 1];
+            const got = totals.trac_nghiem[value - 1];
             return <button key={value} type="button" aria-pressed={level === value} onClick={() => onSelect(value)}
                 className={'min-h-12 rounded-lg border border-stone-200 bg-white px-3 py-2 text-left hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700 ' + levelTab[value]}>
                 <span className="block text-sm font-bold">{COGNITIVE_LEVELS[value]}</span>
@@ -190,9 +193,9 @@ function LevelTabs({ topic, level, chosen, pool, onSelect }: {
     </div>;
 }
 
-/** Trắc nghiệm, trả lời ngắn của bài ở một mức; Đúng/Sai chọn riêng theo câu. */
+/** Câu trắc nghiệm của bài ở một mức; Đúng/Sai và trả lời ngắn chọn trong mục riêng của bài. */
 const levelUnits = (pool: LessonPool<MatrixCandidate>, topic: LessonTopic, level: number) =>
-    (pool.units.get(topic.lesson.id) ?? []).filter(unit => unit.level === level && unit.candidate.item.type !== 'dung_sai');
+    (pool.units.get(topic.lesson.id) ?? []).filter(unit => unit.level === level && unit.candidate.item.type === 'trac_nghiem');
 
 function LineList({ topic, level, chosen, pool, code, onOpen }: {
     topic: LessonTopic; level: number; chosen: ReadonlySet<string>; pool: LessonPool<MatrixCandidate>;
@@ -301,24 +304,92 @@ function TrueFalsePicker({ topic, chosen, pool, code, onToggle, onClose }: {
     </MatrixDialog>;
 }
 
+/** Mục Trả lời ngắn của bài: chọn câu theo số câu từng mức của ma trận. */
+function ShortAnswerRow({ topic, chosen, pool, code, onOpen }: {
+    topic: LessonTopic; chosen: ReadonlySet<string>; pool: LessonPool<MatrixCandidate>;
+    code: (candidate: MatrixCandidate) => string | undefined; onOpen: () => void;
+}) {
+    const all = shortAnswerOf(pool, topic);
+    const taken = all.filter(candidate => chosen.has(candidate.item.id));
+    const need = topic.need.tu_luan.reduce((a, b) => a + b, 0);
+    if (!need && !taken.length) return null;
+    const totals = lessonTotals(topic.lesson.id, chosen, pool.byId).tu_luan;
+    const levels = LEVELS.filter(level => topic.need.tu_luan[level - 1] || totals[level - 1])
+        .map(level => COGNITIVE_LEVELS[level] + ' ' + totals[level - 1] + '/' + topic.need.tu_luan[level - 1]).join(' · ');
+    return <div className="grid gap-2 border-t-4 border-amber-100 bg-amber-50/40 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+        <p className="text-sm">
+            <span className="font-bold">Trả lời ngắn của bài</span>
+            <span className={'ml-2 tabular-nums ' + (taken.length && taken.length !== need ? 'font-semibold text-amber-800' : 'text-stone-600')}>
+                đã chọn {taken.length}/{need} câu</span>
+            <span className="block text-xs text-stone-600">{levels}</span>
+        </p>
+        <span className="flex flex-wrap gap-1">{taken.map(candidate => <span key={candidate.item.id}
+            className={'rounded px-1.5 py-px font-mono text-[11px] font-semibold ' + codeColor.tu_luan}>{code(candidate) ?? '·'}</span>)}</span>
+        {all.length ? <button type="button" className={button} aria-haspopup="dialog" onClick={onOpen}>
+            Chọn câu Trả lời ngắn <span className="font-normal text-stone-500">({all.length})</span></button>
+            : <span className="text-xs text-stone-500">kho chưa có câu</span>}
+    </div>;
+}
+
+const shortAnswerOf = (pool: LessonPool<MatrixCandidate>, topic: LessonTopic) => (pool.units.get(topic.lesson.id) ?? [])
+    .filter(unit => unit.candidate.item.type === 'tu_luan').map(unit => unit.candidate);
+
+function ShortAnswerPicker({ topic, chosen, pool, code, onToggle, onClose }: {
+    topic: LessonTopic; chosen: ReadonlySet<string>; pool: LessonPool<MatrixCandidate>;
+    code: (candidate: MatrixCandidate) => string | undefined; onToggle: (questionId: string) => void; onClose: () => void;
+}) {
+    const [preview, setPreview] = useState<MatrixCandidate>();
+    const all = shortAnswerOf(pool, topic);
+    const levelOf = (candidate: MatrixCandidate) => lessonUnits(candidate)[0]?.level ?? 0;
+    const levels = LEVELS.filter(level => topic.need.tu_luan[level - 1] || all.some(candidate => levelOf(candidate) === level));
+    const [filter, setFilter] = useState<number>(0);
+    const totals = lessonTotals(topic.lesson.id, chosen, pool.byId).tu_luan;
+    const status = lessonStatus(topic, chosen, pool.byId);
+    const list = all.filter(candidate => !filter || levelOf(candidate) === filter)
+        .sort((a, b) => Number(chosen.has(b.item.id)) - Number(chosen.has(a.item.id)) || levelOf(a) - levelOf(b));
+    const blocked = (candidate: MatrixCandidate) => {
+        if (chosen.has(candidate.item.id)) return undefined;
+        const level = levelOf(candidate);
+        const need = topic.need.tu_luan[level - 1] ?? 0;
+        return totals[level - 1] < need ? undefined : need ? 'Bài đã đủ ' + need + ' câu ' + COGNITIVE_LEVELS[level] : 'Ma trận không cần câu ' + COGNITIVE_LEVELS[level];
+    };
+    return <MatrixDialog title={topic.lesson.name.replace(/\..*$/, '') + ' · Trả lời ngắn'} subtitle={topic.lesson.name} closeLabel="Đóng chọn câu" onClose={onClose}>
+        <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-stone-200 bg-white p-3 text-sm">
+                <span className={!status.questions ? 'text-stone-600' : status.done ? 'font-semibold text-emerald-800' : 'font-semibold text-red-700'}>{statusText(status)}</span>
+                <div className="ml-auto inline-flex flex-wrap gap-1" role="group" aria-label="Lọc theo mức">
+                    {[0, ...levels].map(level => <button key={level} type="button" aria-pressed={filter === level} onClick={() => setFilter(level)}
+                        className="min-h-9 rounded-lg border border-stone-200 px-3 text-sm font-semibold tabular-nums hover:bg-stone-100 aria-pressed:border-amber-700 aria-pressed:bg-amber-50 aria-pressed:text-amber-950">
+                        {level ? COGNITIVE_LEVELS[level] + ' ' + totals[level - 1] + '/' + topic.need.tu_luan[level - 1] : 'Tất cả (' + all.length + ')'}</button>)}
+                </div>
+            </div>
+            {list.length ? <div className="grid items-start gap-3 lg:grid-cols-2">
+                {list.map(candidate => <MatrixQuestionCard key={candidate.item.id} candidate={candidate} score={0} evidence={[]} showOutcomes
+                    selected={chosen.has(candidate.item.id)} used={false} blockedLabel={blocked(candidate)}
+                    requirements={<Requirements candidate={candidate} lesson={topic.lesson.id} />}
+                    badges={code(candidate) && <span className="rounded bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-900">{code(candidate)} trong đề</span>}
+                    onPreview={() => setPreview(candidate)} onChoose={() => onToggle(candidate.item.id)} />)}
+            </div> : <p className="rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-600">Kho chưa có câu trả lời ngắn ở mức này.</p>}
+        </div>
+        {preview && <MatrixSolutionDialog candidate={preview} onClose={() => setPreview(undefined)} />}
+    </MatrixDialog>;
+}
+
 function LinePicker({ open, chosen, pool, code, onToggle, onClose }: {
-    open: Open; chosen: ReadonlySet<string>; pool: LessonPool<MatrixCandidate>;
+    open: Extract<Open, { level: number }>; chosen: ReadonlySet<string>; pool: LessonPool<MatrixCandidate>;
     code: (candidate: MatrixCandidate) => string | undefined; onToggle: (questionId: string) => void; onClose: () => void;
 }) {
     const { topic, level, line } = open;
     const units = levelUnits(pool, topic, level).filter(unit => unit.line?.id === line?.id);
     const questions = units.map(unit => unit.candidate);
-    const available = LEVEL_TYPES.filter(type => questions.some(candidate => candidate.item.type === type));
-    const [type, setType] = useState<LevelType>(available[0] ?? 'trac_nghiem');
     const [preview, setPreview] = useState<MatrixCandidate>();
     const totals = lessonTotals(topic.lesson.id, chosen, pool.byId);
     const status = lessonStatus(topic, chosen, pool.byId);
-    const list = questions.filter(candidate => candidate.item.type === type)
-        .sort((a, b) => Number(chosen.has(b.item.id)) - Number(chosen.has(a.item.id)) || Number(!!code(a)) - Number(!!code(b)));
+    const list = [...questions].sort((a, b) => Number(chosen.has(b.item.id)) - Number(chosen.has(a.item.id)) || Number(!!code(a)) - Number(!!code(b)));
     const blocked = (candidate: MatrixCandidate) => {
-        if (chosen.has(candidate.item.id) || candidate.item.type === 'dung_sai') return undefined;
-        const need = topic.need[candidate.item.type][level - 1];
-        return totals[candidate.item.type][level - 1] < need ? undefined : need ? 'Bài đã đủ ' + need + ' câu ' + COGNITIVE_LEVELS[level] : 'Ma trận không cần câu này';
+        if (chosen.has(candidate.item.id)) return undefined;
+        const need = topic.need.trac_nghiem[level - 1];
+        return totals.trac_nghiem[level - 1] < need ? undefined : need ? 'Bài đã đủ ' + need + ' câu ' + COGNITIVE_LEVELS[level] : 'Ma trận không cần câu này';
     };
     const title = topic.lesson.name.replace(/\..*$/, '') + ' · ' + COGNITIVE_LEVELS[level];
     const subtitle = line ? (line.lesson && line.lesson !== topic.lesson.id ? '(YCCĐ Bài ' + line.lesson + ') ' : '') + line.text
@@ -326,12 +397,8 @@ function LinePicker({ open, chosen, pool, code, onToggle, onClose }: {
     return <MatrixDialog title={title} subtitle={subtitle} closeLabel="Đóng chọn câu" onClose={onClose}>
         <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-3 rounded-lg border border-stone-200 bg-white p-3 text-sm">
-                <span className={'font-semibold ' + (!status.questions ? 'text-stone-600' : status.done ? 'text-emerald-800' : 'text-red-700')}>{statusText(status)}</span>
-                {available.length > 1 && <div className="ml-auto inline-flex flex-wrap gap-1" role="group" aria-label="Dạng câu">
-                    {available.map(value => <button key={value} type="button" aria-pressed={type === value} onClick={() => setType(value)}
-                        className="min-h-9 rounded-lg border border-stone-200 px-3 text-sm font-semibold hover:bg-stone-100 aria-pressed:border-amber-700 aria-pressed:bg-amber-50 aria-pressed:text-amber-950">
-                        {LESSON_TYPE_LABELS[value]} ({questions.filter(candidate => candidate.item.type === value).length})</button>)}
-                </div>}
+                <span className="font-semibold tabular-nums">Trắc nghiệm {COGNITIVE_LEVELS[level]}: đã chọn {totals.trac_nghiem[level - 1]}/{topic.need.trac_nghiem[level - 1]} câu</span>
+                <span className={!status.questions ? 'text-stone-600' : status.done ? 'text-emerald-800' : 'text-red-700'}>{statusText(status)}</span>
             </div>
             {list.length ? <div className="grid items-start gap-3 lg:grid-cols-2">
                 {list.map(candidate => <MatrixQuestionCard key={candidate.item.id} candidate={candidate} score={0} evidence={[]} showOutcomes
