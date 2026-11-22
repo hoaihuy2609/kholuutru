@@ -39,11 +39,11 @@ const allChapters: readonly { id: string; name: string; topics: readonly (readon
     ] },
 ];
 
-const formats: { value: Exclude<MatrixQuestionType, ''>; label: string }[] = [
+const allFormats: { value: Exclude<MatrixQuestionType, ''>; label: string }[] = [
     ...STUDY_QUESTION_TYPES,
     { value: 'written', label: 'Tự luận' },
 ];
-const formatColors: Record<typeof formats[number]['value'], { header: string; band: string; body: string }> = {
+const formatColors: Record<typeof allFormats[number]['value'], { header: string; band: string; body: string }> = {
     trac_nghiem: { header: 'bg-blue-700', band: 'bg-blue-100 text-blue-950', body: 'bg-blue-50' },
     dung_sai: { header: 'bg-violet-700', band: 'bg-violet-100 text-violet-950', body: 'bg-violet-50' },
     tu_luan: { header: 'bg-amber-800', band: 'bg-amber-100 text-amber-950', body: 'bg-amber-50' },
@@ -51,8 +51,8 @@ const formatColors: Record<typeof formats[number]['value'], { header: string; ba
 };
 const levels = [1, 2, 3].map(value => ({ value, label: MATRIX_LEVELS[value] }));
 /** Đúng/Sai nhập số câu (một cột); các ý của câu đã chọn tự vào mức của chúng khi xuất. */
-const levelsOf = (type: typeof formats[number]['value']) => type === 'dung_sai' ? [{ value: 0, label: 'Số câu' }] : levels;
-const columns = formats.flatMap(format => levelsOf(format.value).map(level => ({
+const levelsOf = (type: typeof allFormats[number]['value']) => type === 'dung_sai' ? [{ value: 0, label: 'Số câu' }] : levels;
+const allColumns = allFormats.flatMap(format => levelsOf(format.value).map(level => ({
     key: format.value + ':' + level.value,
     format: format.label,
     type: format.value,
@@ -64,12 +64,16 @@ const cell = 'border-b border-r border-stone-200 px-2 py-2';
 const check = 'size-4 shrink-0 accent-amber-800';
 const maxCount = 99;
 
-export default function MatrixPlanner({ candidates, onCompose, chapterIds }: {
+export default function MatrixPlanner({ candidates, onCompose, chapterIds, withWritten = true }: {
     candidates: MatrixCandidate[];
     onCompose: (questions: SelectedQuestionItem[]) => void;
     /** Chỉ hiện các chương này (mở sẵn); bỏ trống để hiện mọi chương. */
     chapterIds?: readonly string[];
+    /** Hiện cột Tự luận (kho chưa có câu tự luận). */
+    withWritten?: boolean;
 }) {
+    const formats = withWritten ? allFormats : allFormats.filter(format => format.value !== 'written');
+    const columns = withWritten ? allColumns : allColumns.filter(column => column.type !== 'written');
     const id = useId();
     const chapters = useMemo(() => chapterIds ? allChapters.filter(chapter => chapterIds.includes(chapter.id)) : allChapters, [chapterIds]);
     const [showContents, setShowContents] = useState(true);
@@ -180,13 +184,13 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds }: {
                     <p className="text-sm text-stone-600">Chọn nội dung bên trái rồi nhập số câu theo từng mức độ. Riêng Đúng/Sai nhập số câu; các ý a, b, c, d của câu được chọn tự nằm ở mức của chúng.</p>
                 </div>
                 <div className="overflow-x-auto rounded-b-xl" tabIndex={0} role="region" aria-label="Bảng phân số câu theo mức độ">
-                    <table className="w-full min-w-[1080px] table-fixed border-separate border-spacing-0 text-sm">
+                    <table className={'w-full table-fixed border-separate border-spacing-0 text-sm ' + (withWritten ? 'min-w-[1080px]' : 'min-w-[840px]')}>
                         <colgroup>
                             <col className="w-[10%]" />
                             <col className="w-[14%]" />
                         </colgroup>
                         {formats.map(format => <colgroup key={format.value}>
-                            {levelsOf(format.value).map(level => <col key={level.value} className={format.value === 'dung_sai' ? 'w-[9%]' : 'w-[7.0833%]'} />)}
+                            {levelsOf(format.value).map(level => <col key={level.value} className={format.value === 'dung_sai' ? 'w-[9%]' : withWritten ? 'w-[7.0833%]' : 'w-[11.1667%]'} />)}
                         </colgroup>)}
                         <thead className="bg-stone-100 text-stone-800">
                             <tr>
