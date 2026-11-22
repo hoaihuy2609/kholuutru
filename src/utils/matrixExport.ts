@@ -4,8 +4,8 @@ import { TRUE_FALSE_POINTS } from './matrixPoints';
 import { fitsCounts, matrixPlanSlots, statementCountsLabel, trueFalseCounts, type MatrixAllocation, type MatrixPlanSlot, type StatementCounts } from './matrixPlan';
 
 export const MATRIX_EXPORT_FORMATS = [
-    { type: 'trac_nghiem', label: 'Trắc nghiệm 4 đáp án', part: 'I' },
-    { type: 'dung_sai', label: 'Đúng/Sai', part: 'II' },
+    { type: 'trac_nghiem', label: 'Nhiều lựa chọn', part: 'I' },
+    { type: 'dung_sai', label: '“Đúng – Sai”', part: 'II' },
     { type: 'tu_luan', label: 'Trả lời ngắn', part: 'III' },
     { type: 'written', label: 'Tự luận', part: 'IV' },
 ] as const;
