@@ -40,6 +40,8 @@ export interface MatrixExportSelection {
     fixedOutcome?: boolean;
     /** True-false only: the requirement line of each statement a, b, c, d (empty when the statement has none). */
     statementOutcomes?: readonly string[];
+    /** Nội dung câu (JSON physics_solution) để hiện đề bài cạnh bản đặc tả. */
+    preview?: () => string;
 }
 
 export interface MatrixExportUnit {
@@ -76,6 +78,8 @@ export interface MatrixSpecificationRow {
     level: number;
     outcome: string;
     references: Record<MatrixExportType, string[]>;
+    /** Các câu/ý thuộc dòng này, theo thứ tự mã câu. */
+    units: MatrixExportUnit[];
 }
 
 export interface MatrixExportDocument {
@@ -106,8 +110,9 @@ export function matrixSpecificationRows(units: MatrixExportUnit[]): MatrixSpecif
         // Preserve mathematical symbols: A > 0 and A < 0 must remain different requirements.
         const key = unit.level + ':' + unit.outcome.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi');
         const row = rows.get(key) ?? { level: unit.level, outcome: unit.outcome,
-            references: { trac_nghiem: [], dung_sai: [], tu_luan: [], written: [] } };
+            references: { trac_nghiem: [], dung_sai: [], tu_luan: [], written: [] }, units: [] };
         row.references[unit.type].push(unit.reference);
+        row.units.push(unit);
         rows.set(key, row);
     }
     return [...rows.values()].sort((a, b) => a.level - b.level);
@@ -222,7 +227,8 @@ export function buildMatrixExport(allocations: MatrixAllocation[], selections: M
     for (const unit of units) { levelCounts[unit.level]++; levelScores[unit.level] += unit.points; }
     const totalScore = round(units.reduce((sum, unit) => sum + unit.points, 0));
     if (Number.isFinite(settings.targetScore) && Math.abs(totalScore - settings.targetScore) > 0.0001) {
-        issues.push('Tổng điểm câu đã chọn là ' + totalScore + ', chưa bằng thang điểm ' + settings.targetScore + '.');
+        const comma = (value: number) => String(value).replace('.', ',');
+        issues.push('Tổng điểm câu đã chọn là ' + comma(totalScore) + ', chưa bằng thang điểm ' + comma(settings.targetScore) + '.');
     }
     // Match all allocation cells, rather than only the total number of selected questions. True-false entered as whole
     // questions (planned at level 0) matches by question count; its statements take the levels of the chosen questions.
