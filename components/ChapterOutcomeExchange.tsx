@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, FileJson, History, ListChecks, Pencil, Printer, Upload } from 'lucide-react';
+import { Download, FileJson, FilePlus, History, ListChecks, Pencil, Printer, Upload } from 'lucide-react';
 import OutcomeReviewPrint from './OutcomeReviewPrint';
 import ChapterQuestionCorrections, { displayChanges } from './ChapterQuestionCorrections';
 import ChapterCognitiveExchange from './ChapterCognitiveExchange';
+import ChapterQuestionCreate from './ChapterQuestionCreate';
 import LevelOutcomeReview from './LevelOutcomeReview';
 import type { StudyLibrary } from '../types';
 import { MatrixDialog } from './MatrixQuestionCard';
@@ -31,7 +32,7 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
   chapter: { id: string; name: string }; onChanged: (library: StudyLibrary) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<'export' | 'import' | 'history' | 'pdf' | 'corrections' | 'levels' | 'review'>('export');
+  const [tab, setTab] = useState<'export' | 'import' | 'history' | 'pdf' | 'corrections' | 'levels' | 'review' | 'create'>('export');
   const [levelText, setLevelText] = useState('');
   const [prepared, setPrepared] = useState<Awaited<ReturnType<typeof exportChapterOutcomes>>>();
   const [text, setText] = useState('');
@@ -83,7 +84,7 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
         </p>}
         <div className="flex flex-wrap gap-2" role="group" aria-label="Thao tác YCCĐ">
           {([['export', '1. Xuất để rà', Download], ['import', '2. Nhập kết quả', Upload], ['pdf', 'Xuất PDF rà câu', Printer],
-            ['corrections', 'Sửa nội dung hàng loạt', Pencil], ['review', 'Rà mức độ ↔ YCCĐ', ListChecks], ['levels', 'Nhập mức độ', FileJson],
+            ['corrections', 'Sửa nội dung hàng loạt', Pencil], ['review', 'Rà mức độ ↔ YCCĐ', ListChecks], ['levels', 'Nhập mức độ', FileJson], ['create', 'Nạp câu mới', FilePlus],
             ['history', 'Lịch sử / hoàn tác YCCĐ', History]] as const).map(([value, label, Icon]) =>
             <button type="button" key={value} disabled={busy} aria-pressed={tab === value} className={tab === value ? primary : button}
               onClick={() => changeTab(value)}><Icon className="size-4" />{label}</button>)}
@@ -101,6 +102,12 @@ export default function ChapterOutcomeExchange({ chapter, onChanged }: {
           onApplied={async count => {
             setPrepared(undefined); setLevelText('');
             setNotice(`Đã lưu thay đổi của ${count} câu trên máy. Theo dõi trạng thái Kho câu hỏi để biết khi đồng bộ xong.`);
+            onChanged(await getStudyLibrary(true));
+          }} />}
+        {tab === 'create' && <ChapterQuestionCreate key={chapter.id} chapterId={chapter.id} busy={busy} run={run}
+          onApplied={async (count, undone) => {
+            setPrepared(undefined);
+            setNotice(`Đã ${undone ? 'gỡ' : 'thêm'} ${count} câu ${undone ? 'khỏi' : 'vào'} kho trên máy. Theo dõi trạng thái Kho câu hỏi để biết khi đồng bộ xong.`);
             onChanged(await getStudyLibrary(true));
           }} />}
         {tab === 'corrections' && <ChapterQuestionCorrections key={chapter.id} chapterId={chapter.id} busy={busy} run={run}
