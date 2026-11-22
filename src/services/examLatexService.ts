@@ -773,19 +773,35 @@ export function examPrintDocument(body = '', title = 'Xem trước đề thi') {
 }
 
 export function printExamDirectlyToPdf(questions: SelectedQuestionItem[], config: ExamStyleConfig) {
+  printExamHtml(renderExamPrintBody(questions, config), config.examName + ' - Mã đề ' + config.examCode);
+}
+
+/** Một mã đề (câu đã trộn) để in liền nhiều mã trong một file. */
+export interface ExamPrintVariant { code: string; questions: SelectedQuestionItem[] }
+
+/** Thân trang in nhiều mã đề: mỗi mã sang trang mới; bảng đáp án riêng từng mã được thay bằng `sheet` ở cuối. */
+export function renderExamVariantsBody(variants: readonly ExamPrintVariant[], config: ExamStyleConfig, sheet = '') {
+  return variants.map((variant, index) => `<section class="exam-variant"${index ? ' style="page-break-before: always;"' : ''}>`
+    + renderExamPrintBody(variant.questions, { ...config, examCode: variant.code, exportAnswerTable: false }) + '</section>').join('') + sheet;
+}
+
+export function printExamVariantsToPdf(variants: readonly ExamPrintVariant[], config: ExamStyleConfig, sheet = '') {
+  printExamHtml(renderExamVariantsBody(variants, config, sheet), config.examName + ' - ' + variants.length + ' mã đề');
+}
+
+function printExamHtml(body: string, title: string) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     alert('Trình duyệt đang chặn cửa sổ in. Vui lòng cho phép mở cửa sổ để xuất PDF.');
     return;
   }
 
-  const body = renderExamPrintBody(questions, config);
   const printDocument = printWindow.document;
   printDocument.open();
   printWindow.addEventListener('load', async () => {
     await printDocument.fonts.ready;
     printWindow.print();
   }, { once: true });
-  printDocument.write(examPrintDocument(body, config.examName + ' - Mã đề ' + config.examCode));
+  printDocument.write(examPrintDocument(body, title));
   printDocument.close();
 }
