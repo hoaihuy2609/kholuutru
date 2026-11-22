@@ -837,7 +837,7 @@ const BlogList: React.FC<BlogListProps> = ({
         <div hidden={!!matrixDraft}>
             {loading ? <p className="p-6 text-sm text-stone-600" role="status">Đang tải kho câu hỏi…</p>
             : <React.Suspense fallback={<p className="p-6 text-sm text-stone-600">Đang mở ma trận…</p>}>
-                <ExamMatrixBuilder candidates={matrixCandidates} recentQuestion={recentMatrixQuestion}
+                <ExamMatrixBuilder candidates={matrixCandidates} recentQuestion={recentMatrixQuestion} planOnly={openMatrix}
                     onClose={() => {
                         setRecentMatrixQuestion(undefined);
                         setShowMatrix(false);

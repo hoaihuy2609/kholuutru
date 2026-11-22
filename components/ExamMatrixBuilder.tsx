@@ -33,6 +33,8 @@ interface Props {
     onCompose: (questions: SelectedQuestionItem[]) => void;
     onCreateQuestion?: (draft: MatrixQuestionDraft) => void;
     recentQuestion?: { slotId: string; candidateId: string };
+    /** Chỉ lập ma trận mới: ẩn lựa chọn nạp PDF / bản đặc tả. */
+    planOnly?: boolean;
 }
 
 const questionTypes = [
@@ -80,7 +82,7 @@ function reviewMatrixSections(rows: ReturnType<typeof editable>[]) {
         });
 }
 
-export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCreateQuestion, recentQuestion }: Props) {
+export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCreateQuestion, recentQuestion, planOnly = false }: Props) {
     const [rows, setRows] = useState(() => [emptyRow()]);
     const [grade, setGrade] = useState(0);
     const [reviewing, setReviewing] = useState(true);
@@ -278,16 +280,16 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
                 <div>
                     <h1 className="text-2xl font-bold">Soạn đề theo ma trận</h1>
                     <p className="mt-1 text-sm text-stone-600">{planning
-                        ? 'Chọn nội dung kiểm tra và phân bổ số câu, số ý.'
+                        ? 'Chọn nội dung kiểm tra và phân bổ số câu.'
                         : 'Rà bản đặc tả, rồi chọn câu trong kho cho từng vị trí.'}</p>
                 </div>
-                {!reviewing && <button className={button} onClick={() => {
+                {!reviewing && !planOnly && <button className={button} onClick={() => {
                     setReviewTarget(undefined);
                     setReviewing(true);
                 }}>Rà lại ma trận</button>}
             </div>
 
-            {reviewing && <div className="flex flex-wrap gap-2" role="group" aria-label="Cách chuẩn bị ma trận">
+            {reviewing && !planOnly && <div className="flex flex-wrap gap-2" role="group" aria-label="Cách chuẩn bị ma trận">
                 <button type="button" aria-pressed={planning} className={planning ? primary : button}
                     onClick={() => setPlanning(true)}>Lập ma trận mới</button>
                 <button type="button" aria-pressed={!planning} className={planning ? button : primary}
