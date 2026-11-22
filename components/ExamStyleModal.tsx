@@ -3,6 +3,8 @@ import {
   X, RotateCcw, Palette, Droplets, Sliders, Layout,
   Layers, CheckSquare, ChevronDown, Download, Printer
 } from 'lucide-react';
+import { applyExamImageWidths, examImageKey, examImageWidth, type ExamImageWidths } from '../src/utils/examImageSizes';
+import { MAX_QUESTION_IMAGE_WIDTH, MIN_QUESTION_IMAGE_WIDTH } from '../src/utils/questionImage';
 import {
   ExamStyleConfig, DEFAULT_EXAM_STYLE, SelectedQuestionItem,
   formatExamSectionNote, generateExamLatex, downloadTexFile,
@@ -17,9 +19,14 @@ interface ExamStyleModalProps {
 
 const previewFrameWidth = 210 * 96 / 25.4 + 18; // A4 plus room for the scrollbar.
 
-function ExamPrintPreview({ questions, config }: {
+/** Hình đang chỉnh cỡ trong bản xem trước. */
+type PickedImage = { questionId: string; src: string; label: string };
+
+function ExamPrintPreview({ questions, config, picked, onPickImage }: {
   questions: SelectedQuestionItem[];
   config: ExamStyleConfig;
+  picked?: PickedImage;
+  onPickImage: (image: PickedImage) => void;
 }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -40,11 +47,41 @@ function ExamPrintPreview({ questions, config }: {
     return () => observer.disconnect();
   }, []);
 
+  const pickRef = useRef(onPickImage);
+  pickRef.current = onPickImage;
   const updateFrame = () => {
-    const body = frameRef.current?.contentDocument?.body;
-    if (body) body.innerHTML = bodyHtml;
+    const doc = frameRef.current?.contentDocument;
+    if (!doc?.body) return;
+    doc.body.innerHTML = bodyHtml;
+    if (!doc.getElementById('pv-image-pick')) {
+      const style = doc.createElement('style');
+      style.id = 'pv-image-pick';
+      style.textContent = '[data-question-id] img { cursor: pointer; } [data-question-id] img:hover { outline: 2px dashed #b45309; outline-offset: 2px; }'
+        + ' img[data-picked] { outline: 3px solid #b45309 !important; outline-offset: 2px; }';
+      doc.head.appendChild(style);
+      // Bấm vào hình trong đề để chỉnh cỡ hình đó.
+      doc.addEventListener('click', event => {
+        const image = (event.target as Element | null)?.closest?.('img');
+        const block = image?.closest('[data-question-id]');
+        if (!image || !block) return;
+        event.preventDefault();
+        const label = block.querySelector('b')?.textContent?.replace(/:\s*$/, '').trim() || 'Câu';
+        pickRef.current({ questionId: block.getAttribute('data-question-id') ?? '', src: image.getAttribute('src') ?? '', label });
+      });
+    }
+    markPicked();
+  };
+  const markPicked = () => {
+    const doc = frameRef.current?.contentDocument;
+    doc?.querySelectorAll('img[data-picked]').forEach(image => image.removeAttribute('data-picked'));
+    if (!doc || !picked) return;
+    doc.querySelectorAll('[data-question-id]').forEach(block => {
+      if (block.getAttribute('data-question-id') !== picked.questionId) return;
+      block.querySelectorAll('img').forEach(image => { if (image.getAttribute('src') === picked.src) image.setAttribute('data-picked', ''); });
+    });
   };
   useEffect(updateFrame, [bodyHtml]);
+  useEffect(markPicked, [picked, bodyHtml]);
 
   return (
     <div ref={viewportRef} className="relative mx-auto h-full max-w-[812px] overflow-hidden bg-white">
@@ -84,6 +121,10 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
   const [config, setConfig] = useState<ExamStyleConfig>(DEFAULT_EXAM_STYLE);
   const [mobilePane, setMobilePane] = useState<'settings' | 'preview'>('settings');
   const [sectionTitlesExpanded, setSectionTitlesExpanded] = useState(false);
+  /** Cỡ hình chỉnh cho đề này (không lưu vào kho) và hình đang chỉnh. */
+  const [imageWidths, setImageWidths] = useState<ExamImageWidths>({});
+  const [picked, setPicked] = useState<PickedImage>();
+  const sizedQuestions = useMemo(() => applyExamImageWidths(questions, imageWidths), [questions, imageWidths]);
   const titleId = useId();
   const sectionTitlesId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -107,14 +148,16 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
   };
 
   const handleResetDefault = () => {
-    if (window.confirm('Khôi phục toàn bộ cấu hình về mặc định?')) {
+    if (window.confirm('Khôi phục toàn bộ cấu hình và cỡ hình về mặc định?')) {
       setConfig(DEFAULT_EXAM_STYLE);
+      setImageWidths({});
+      setPicked(undefined);
     }
   };
 
   // 1. Tải file .tex (mã nguồn cho ai cần)
   const handleDownloadTex = () => {
-    const tex = generateExamLatex(questions, config);
+    const tex = generateExamLatex(sizedQuestions, config);
     downloadTexFile(tex, `De_Thi_${config.subject}_Ma_${config.examCode}.tex`);
   };
 
@@ -130,6 +173,23 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             <h2 id={titleId} className="truncate text-sm font-bold leading-tight text-stone-900 sm:text-base">Tùy chỉnh đề thi</h2>
             <span className="hidden shrink-0 text-xs text-stone-600 md:inline">{questions.length} câu đã chọn</span>
           </div>
+          {(() => {
+            const question = picked && questions.find(item => item.id === picked.questionId);
+            if (!picked || !question) return <p className="hidden min-w-0 flex-1 truncate text-center text-xs text-stone-600 lg:block">
+              Mẹo: bấm vào hình trong đề (khung xem trước) để chỉnh kích thước hình.</p>;
+            const key = examImageKey(picked.questionId, picked.src);
+            const width = examImageWidth(question, picked.src, imageWidths) ?? MAX_QUESTION_IMAGE_WIDTH;
+            return <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2 rounded-lg bg-amber-50 px-2 py-1 text-xs" role="group" aria-label={'Kích thước hình ' + picked.label}>
+              <span className="font-semibold text-amber-950">Hình {picked.label}</span>
+              <input type="range" min={MIN_QUESTION_IMAGE_WIDTH} max={MAX_QUESTION_IMAGE_WIDTH} step={5} value={width}
+                aria-label={'Kích thước hình ' + picked.label + ' (%)'} className="w-32 accent-amber-800 sm:w-48"
+                onChange={event => { const value = Number(event.currentTarget.value); setImageWidths(previous => ({ ...previous, [key]: value })); }} />
+              <output className="w-10 font-semibold tabular-nums">{width}%</output>
+              <button type="button" className="rounded-md px-2 py-1 font-semibold text-stone-700 hover:bg-amber-100"
+                onClick={() => setImageWidths(previous => { const next = { ...previous }; delete next[key]; return next; })}>Cỡ gốc</button>
+              <button type="button" className="rounded-md bg-amber-800 px-2 py-1 font-semibold text-white hover:bg-amber-900" onClick={() => setPicked(undefined)}>Xong</button>
+            </div>;
+          })()}
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <button
               type="button"
@@ -145,7 +205,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
               <Download aria-hidden="true" className="hidden size-4 sm:block" />
               <span className="hidden sm:inline">Mã nguồn</span> .tex
             </button>
-            <button type="button" onClick={() => printExamDirectlyToPdf(questions, config)} aria-label="Xuất đề thi ra PDF"
+            <button type="button" onClick={() => printExamDirectlyToPdf(sizedQuestions, config)} aria-label="Xuất đề thi ra PDF"
               className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md bg-amber-800 px-2.5 text-xs font-semibold text-white hover:bg-amber-900 sm:px-3">
               <Printer aria-hidden="true" className="hidden size-4 sm:block" />
               <span><span className="hidden sm:inline">Xuất </span>PDF</span>
@@ -505,7 +565,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
         <section aria-label="Bản xem trước" className={(mobilePane === 'preview' ? 'flex ' : 'hidden lg:flex ')
           + 'h-full min-h-0 min-w-0 flex-col bg-stone-100 lg:border-l lg:border-stone-200'}>
           <div className="min-h-0 flex-1 px-1 sm:px-3">
-            <ExamPrintPreview questions={questions} config={config} />
+            <ExamPrintPreview questions={sizedQuestions} config={config} picked={picked} onPickImage={image => { setPicked(image); setMobilePane('preview'); }} />
           </div>
         </section>
         </div>

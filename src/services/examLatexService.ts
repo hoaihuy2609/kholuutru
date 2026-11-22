@@ -594,7 +594,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       const choiceLayout = header.wrapsImage ? '' : `display: grid; grid-template-columns: ${cols}; gap: 6px 16px;`;
 
       bodyHtml += `
-        <div class="exam-question" style="text-align: justify;">
+        <div class="exam-question" data-question-id="${escapeHtml(q.id)}" style="text-align: justify;">
           ${header.html}
           <div${header.wrapsImage ? ' class="exam-wrapped-choices"' : ''} style="margin-top: 8px; ${choiceLayout}">
             <div><b>A.</b> ${escapeHtml(choices[0] || '')}</div>
@@ -622,7 +622,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       const qNum = config.enableSectionTitles ? index + 1 : nextQuestionNumber++;
 
       bodyHtml += `
-        <div class="exam-question" style="text-align: justify;">
+        <div class="exam-question" data-question-id="${escapeHtml(q.id)}" style="text-align: justify;">
           ${renderQuestionHeaderPdf(q, qNum).html}
           <div class="exam-statements" style="margin-top: 6px; padding-left: 12px;">
             ${(q.statements || []).map(st => `<div><b>${escapeHtml(st.label)})</b> ${escapeHtml(st.claim || '')}</div>`).join('')}
@@ -647,7 +647,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       const qNum = config.enableSectionTitles ? index + 1 : nextQuestionNumber++;
 
       bodyHtml += `
-        <div class="exam-question" style="text-align: justify;">
+        <div class="exam-question" data-question-id="${escapeHtml(q.id)}" style="text-align: justify;">
           ${renderQuestionHeaderPdf(q, qNum).html}
         </div>
       `;
@@ -690,7 +690,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
     entries.forEach(({ question: q, number: qNum, sectionTitle }) => {
       if (sectionTitle) bodyHtml += `<h3 style="font-size: 11pt; color: ${primaryColor};">${escapeHtml(sectionTitle)}</h3>`;
       bodyHtml += `
-        <div style="margin-bottom: 18px; page-break-inside: avoid;">
+        <div data-question-id="${escapeHtml(q.id)}" style="margin-bottom: 18px; page-break-inside: avoid;">
           <div class="exam-question-text" style="margin-bottom: 6px;"><b>${escapeHtml(config.questionPrefix || 'Câu')} ${qNum}:</b> ${renderStudyImageText(q.qText || '', q.questionImages, 'Hình minh họa đề bài')}</div>
           ${renderQuestionTableHtml(q.questionTable)}
           <div style="text-align: center; color: #0000ff; font-weight: bold; margin: 6px 0 8px 0;">Lời giải:</div>
