@@ -134,10 +134,12 @@ function MatrixPlanPicker({ slot, lesson, remaining, candidates, selectedId, use
     );
 }
 
-export default function MatrixPlanSpecification({ allocations, candidates, onCompose }: {
+export default function MatrixPlanSpecification({ allocations, candidates, onCompose, scale }: {
     allocations: MatrixAllocation[];
     candidates: MatrixCandidate[];
     onCompose: (questions: SelectedQuestionItem[]) => void;
+    /** Thang điểm đặt trên ma trận. */
+    scale?: number;
 }) {
     const id = useId();
     const [choices, setChoices] = useState<Record<string, Choice>>({});
@@ -330,7 +332,7 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                         : 'Đã chọn ' + selectedSlots.length + '/' + selectableCount + ' câu. Có thể xuất bản nháp để xem trước.'}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                    <MatrixExportDialog allocations={allocations} selections={selectedSlots.map(({ slot, candidate }) => {
+                    <MatrixExportDialog allocations={allocations} scale={scale} selections={selectedSlots.map(({ slot, candidate }) => {
                         const outcome = outcomeFor(slot.id, candidate);
                         return { slot, item: candidate.item, outcome, outcomeOptions: candidate.outcomes, curriculumSource: programmeSource(slot, outcome) };
                     })} />

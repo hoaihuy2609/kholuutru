@@ -13,6 +13,8 @@ export interface MatrixAllocation {
     type: Exclude<MatrixQuestionType, ''>;
     level: number;
     count: number;
+    /** Điểm mỗi câu của ô này trên ma trận (Đúng/Sai không dùng: luôn 1 điểm). */
+    points?: number;
 }
 
 /** Statements per level for levels 1 (Nhận biết), 2 (Thông hiểu) and 3 (Vận dụng). */
