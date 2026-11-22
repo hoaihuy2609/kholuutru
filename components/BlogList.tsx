@@ -392,6 +392,8 @@ function QuestionCard({ blog, question, isAdmin, large = false, onEdit, onClick,
 interface BlogListProps {
     isAdmin: boolean;
     studyOnly?: boolean;
+    /** Mở thẳng phần soạn đề theo ma trận khi vào trang. */
+    openMatrix?: boolean;
     studentGrade?: number | null;
     onReadBlog: (blog: BlogPost, onNext?: () => void) => void;
     onEditBlog?: (blog: BlogPost, questionIndex?: number) => void;
@@ -507,7 +509,7 @@ function FilterGroup({ label, children }: { label: string; children: React.React
 }
 
 const BlogList: React.FC<BlogListProps> = ({
-    isAdmin, studyOnly = false, studentGrade, onReadBlog, onEditBlog, onCreateBlog, studyLessons,
+    isAdmin, studyOnly = false, openMatrix = false, studentGrade, onReadBlog, onEditBlog, onCreateBlog, studyLessons,
     onSaveLesson, onDeleteEmptyLesson, onLibraryLoaded, getStudyLibrary, renderMatrixEditor,
 }) => {
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
@@ -529,7 +531,7 @@ const BlogList: React.FC<BlogListProps> = ({
 
     const [selectedCardIndexes, setSelectedCardIndexes] = useState(() => new Map<string, Set<number>>());
     const [isExamModalOpen, setIsExamModalOpen] = useState(false);
-    const [showMatrix, setShowMatrix] = useState(false);
+    const [showMatrix, setShowMatrix] = useState(openMatrix);
     const [matrixDraft, setMatrixDraft] = useState<MatrixQuestionDraft>();
     const [recentMatrixQuestion, setRecentMatrixQuestion] = useState<{ slotId: string; candidateId: string }>();
     const matrixScrollTop = useRef<number | undefined>(undefined);
@@ -833,7 +835,8 @@ const BlogList: React.FC<BlogListProps> = ({
 
     if (canUseMatrix && showMatrix) return <>
         <div hidden={!!matrixDraft}>
-            <React.Suspense fallback={<p className="p-6 text-sm text-stone-600">Đang mở ma trận…</p>}>
+            {loading ? <p className="p-6 text-sm text-stone-600" role="status">Đang tải kho câu hỏi…</p>
+            : <React.Suspense fallback={<p className="p-6 text-sm text-stone-600">Đang mở ma trận…</p>}>
                 <ExamMatrixBuilder candidates={matrixCandidates} recentQuestion={recentMatrixQuestion}
                     onClose={() => {
                         setRecentMatrixQuestion(undefined);
@@ -843,7 +846,7 @@ const BlogList: React.FC<BlogListProps> = ({
                         matrixScrollTop.current = window.scrollY;
                         setMatrixDraft(draft);
                     } : undefined} />
-            </React.Suspense>
+            </React.Suspense>}
         </div>
         {matrixDraft && renderMatrixEditor?.(matrixDraft, blogs, () => setMatrixDraft(undefined), saved => {
             setBlogs(current => [saved, ...current.filter(blog => blog.id !== saved.id)]);

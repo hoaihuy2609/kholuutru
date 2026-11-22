@@ -444,7 +444,7 @@ function StudyOnlyApp() {
           setActiveBlog(null);
         }} onNextQuestion={nextQuestion} relatedBlogs={relatedStudyBlogs(activeBlog, library.blogs)} onReadRelated={openBlog} />}
         <div hidden={!!activeBlog}>
-          <BlogList studyOnly isAdmin={false} studyLessons={library.lessons} onReadBlog={openBlog}
+          <BlogList studyOnly openMatrix isAdmin={false} studyLessons={library.lessons} onReadBlog={openBlog}
             onLibraryLoaded={setLibrary} getStudyLibrary={getStudyLibrary} />
         </div>
       </Suspense></ErrorBoundary>
