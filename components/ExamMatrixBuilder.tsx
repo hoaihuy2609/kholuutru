@@ -299,7 +299,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
                     onClick={() => setPlanning(false)}>Nhập PDF / Bản đặc tả</button>
             </div>}
             <div hidden={!planning} className="space-y-4"><MatrixPlanner candidates={candidates} onCompose={onCompose}
-                chapterIds={planOnly ? PLAN_ONLY_CHAPTERS : undefined} withWritten={!planOnly} /></div>
+                chapterIds={planOnly ? PLAN_ONLY_CHAPTERS : undefined} withWritten={!planOnly} compact={planOnly} /></div>
 
             {planning ? null : reviewing ? <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-4">
                 <div className="flex flex-wrap items-center gap-3">

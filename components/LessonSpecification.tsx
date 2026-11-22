@@ -22,11 +22,13 @@ const codeColor: Record<LessonType, string> = { trac_nghiem: 'bg-blue-50 text-bl
 /** Mở chọn câu cho một dòng YCCĐ (hoặc các câu chưa khớp dòng nào, line = undefined) của một bài, ở một mức; level 0 là Đúng/Sai của bài. */
 type Open = { topic: LessonTopic; level: number; line?: LessonLine } | { topic: LessonTopic; kind: 'dung_sai' | 'tu_luan' };
 
-export default function LessonSpecification({ allocations, topics, candidates, onCompose }: {
+export default function LessonSpecification({ allocations, topics, candidates, onCompose, compact = false }: {
     allocations: MatrixAllocation[];
     topics: LessonTopic[];
     candidates: MatrixCandidate[];
     onCompose: (questions: SelectedQuestionItem[]) => void;
+    /** Gọn: ẩn phần giới thiệu, các bước và tiến độ, chỉ giữ nút gợi ý và xóa. */
+    compact?: boolean;
 }) {
     const id = useId();
     const chapterIds = useMemo(() => [...new Set(topics.map(topic => topic.chapterId))], [topics]);
@@ -64,7 +66,7 @@ export default function LessonSpecification({ allocations, topics, candidates, o
 
     return (
         <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-4 sm:p-5" aria-labelledby={id}>
-            <header className="space-y-2">
+            {compact ? <h2 id={id} className="sr-only">Bản đặc tả theo bài</h2> : <header className="space-y-2">
                 <h2 id={id} className="text-lg font-bold">Bản đặc tả theo bài</h2>
                 <p className="max-w-3xl text-sm text-stone-600">Mỗi bài có yêu cầu cần đạt ở ba mức. Câu nào thuộc mức nào thì nằm ở mức đó. Trắc nghiệm: bấm vào bài, chọn mức, rồi bấm "Chọn câu" ở dòng yêu cầu. Đúng/Sai và Trả lời ngắn chọn trong mục riêng ở cuối mỗi bài.</p>
                 <ol className="flex flex-wrap gap-2 text-sm">
@@ -73,17 +75,17 @@ export default function LessonSpecification({ allocations, topics, candidates, o
                             <span className="grid size-5 place-items-center rounded-full bg-amber-800 text-xs font-bold text-white">{index + 1}</span>{step}
                         </li>)}
                 </ol>
-            </header>
+            </header>}
 
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-stone-50 p-3">
-                <ul className="flex flex-wrap gap-2" aria-label="Tiến độ chọn câu">
+            <div className={'flex flex-wrap items-center gap-3 ' + (compact ? 'justify-end' : 'justify-between rounded-xl bg-stone-50 p-3')}>
+                {!compact && <ul className="flex flex-wrap gap-2" aria-label="Tiến độ chọn câu">
                     {parts.map(part => <li key={part.type} className={'rounded-full px-3 py-1 text-sm font-semibold tabular-nums '
                         + (part.done === part.need ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-950')}>
                         {LESSON_TYPE_LABELS[part.type]} {part.done}/{part.need} câu</li>)}
                     <li className={'rounded-full px-3 py-1 text-sm font-semibold ' + (!chosen.size ? 'bg-stone-200 text-stone-700'
                         : issues.length ? 'bg-red-100 text-red-900' : 'bg-emerald-100 text-emerald-900')}>
                         {!chosen.size ? 'Chưa chọn câu' : issues.length ? issues.length + ' mục chưa khớp ma trận' : 'Đã khớp ma trận'}</li>
-                </ul>
+                </ul>}
                 <div className="flex flex-wrap gap-2">
                     <button type="button" className={primary} onClick={suggest}>Gợi ý chọn câu</button>
                     <button type="button" className={button} disabled={!chosen.size}
