@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { Printer, Table2 } from 'lucide-react';
 import { MatrixDialog } from './MatrixQuestionCard';
-import { MATRIX_LEVELS, normalizeMatrixText } from '../src/utils/examMatrix';
+import { normalizeMatrixText } from '../src/utils/examMatrix';
 import type { MatrixAllocation } from '../src/utils/matrixPlan';
 import { buildMatrixExport, defaultMatrixExportSettings, type MatrixExportSelection, type MatrixExportSettings } from '../src/utils/matrixExport';
 import { matrixExportHtml, matrixExportNumber } from '../src/utils/matrixExportPrint';
@@ -35,13 +35,13 @@ export default function MatrixExportDialog({ allocations, selections }: {
     selections: MatrixExportSelection[];
 }) {
     const [open, setOpen] = useState(false);
-    const [tab, setTab] = useState<'settings' | 'outcomes' | 'preview'>('settings');
+    const [tab, setTab] = useState<'settings' | 'preview'>('settings');
     const [settings, setSettings] = useState(defaultMatrixExportSettings);
     const [outcomes, setOutcomes] = useState<Record<string, string>>({});
     const [error, setError] = useState('');
     const [printing, setPrinting] = useState(false);
     const document = useMemo(() => buildMatrixExport(allocations, selections, settings, outcomes), [allocations, selections, settings, outcomes]);
-    const html = useMemo(() => open ? matrixExportHtml(document, document.issues.length > 0) : '', [open, document]);
+    const html = useMemo(() => open ? matrixExportHtml(document) : '', [open, document]);
     const missingSuffix = ': chưa xác định YCCĐ cụ thể.';
     const missingOutcomes = document.issues.filter(issue => issue.endsWith(missingSuffix)).map(issue => issue.slice(0, -missingSuffix.length));
     const otherIssues = document.issues.filter(issue => !issue.endsWith(missingSuffix));
@@ -113,14 +113,13 @@ export default function MatrixExportDialog({ allocations, selections }: {
                             <span className="mt-1.5 flex flex-wrap gap-2">
                                 {fillableStatements > 0 && <button type="button" className={button} onClick={fillTrueFalse}>
                                     Gợi ý YCCĐ cho {fillableStatements} ý Đúng/Sai (rà lại sau)</button>}
-                                <button type="button" className={button} onClick={() => setTab('outcomes')}>Mở tab rà YCCĐ</button>
                             </span>
                         </li>}
                         {otherIssues.map(issue => <li key={issue}>{issue}</li>)}
                     </ul>
                 </div> : <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">Số câu/ý, mức độ và tổng điểm đã khớp phân bổ. YCCĐ đã điền đủ; giáo viên rà lại nội dung trước khi xuất.</p>}
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Nội dung rà soát bản xuất">
-                    {([{ key: 'settings', label: '1. Thông tin & điểm' }, { key: 'outcomes', label: '2. Rà YCCĐ từng câu/ý' }, { key: 'preview', label: '3. Xem bản xuất' }] as const).map(item =>
+                    {([{ key: 'settings', label: '1. Thông tin & điểm' }, { key: 'preview', label: '2. Xem bản xuất' }] as const).map(item =>
                         <button type="button" key={item.key} aria-pressed={tab === item.key} className={tab === item.key ? primary : button}
                             onClick={() => setTab(item.key)}>{item.label}</button>)}
                 </div>
@@ -156,33 +155,6 @@ export default function MatrixExportDialog({ allocations, selections }: {
                         </label>)}</div>
                     </fieldset>
                     <p className="text-xs leading-relaxed text-stone-600">Mã câu theo thứ tự đề đã chọn, đánh số lại trong từng phần I, II, III. Khi xuất đề, giữ chế độ tiêu đề từng phần để mã câu khớp bản đặc tả. Nếu đổi thứ tự hoặc đổi câu, cần rà và xuất lại.</p>
-                </div>}
-                {tab === 'outcomes' && <div className="space-y-3">
-                    <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-950">Viết đúng phần kiến thức mà câu/ý thực sự đánh giá. Các yêu cầu giống nhau trong cùng nội dung và mức độ sẽ tự gộp thành một dòng, kèm các mã câu. Chỉnh ở đây chỉ áp dụng cho bản xuất, không sửa câu trong kho.</p>
-                    {document.units.some(unit => unit.type === 'dung_sai' && !unit.outcome) && <button type="button"
-                        className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950 hover:bg-amber-100"
-                        onClick={fillTrueFalse}>Gợi ý YCCĐ cho các ý Đúng/Sai còn trống theo nội dung từng ý (rà lại sau)</button>}
-                    {!document.units.length && <p className="p-3 text-sm text-stone-600">Chọn câu trong bản đặc tả trước để rà YCCĐ.</p>}
-                    {document.units.map(unit => {
-                        const selection = selections.find(selection => selection.slot.id === unit.slotId);
-                        const common = selection?.outcome;
-                        const options = unit.type === 'dung_sai' ? (selection?.outcomeOptions ?? []).filter(option => option !== unit.outcome) : [];
-                        return <div key={unit.key} className="space-y-2 rounded-lg border border-stone-200 bg-white p-3">
-                            <p className="text-sm font-bold">{unit.fullReference} · {MATRIX_LEVELS[unit.level]}<span className="ml-2 font-normal text-stone-600">{unit.topic}</span></p>
-                            {unit.claim && <p className="whitespace-pre-wrap text-sm text-stone-600">{unit.claim}</p>}
-                            <textarea aria-label={'YCCĐ ' + unit.fullReference} rows={2} className={field} value={unit.outcome}
-                                placeholder="Nhập YCCĐ cụ thể của câu/ý này"
-                                onChange={event => setOutcomes(previous => ({ ...previous, [unit.key]: event.target.value }))} />
-                            {options.length > 1 && <div className="flex flex-wrap gap-1.5" role="group" aria-label={'YCCĐ của câu cho ' + unit.fullReference}>
-                                {options.map(option => <button key={option} type="button"
-                                    className="rounded-md border border-stone-200 bg-stone-50 px-2 py-1 text-left text-xs text-stone-800 hover:bg-amber-50"
-                                    onClick={() => setOutcomes(previous => ({ ...previous, [unit.key]: option }))}>{option}</button>)}
-                            </div>}
-                            {unit.type === 'dung_sai' && common && options.length <= 1 && <button type="button" className="text-xs font-semibold text-amber-900 underline"
-                                onClick={() => setOutcomes(previous => ({ ...previous, [unit.key]: common }))}>Lấy YCCĐ chung của câu rồi điều chỉnh</button>}
-                            {unit.curriculumSource && <details className="text-xs text-stone-600"><summary className="cursor-pointer">Đối chiếu YCCĐ chương trình</summary><p className="mt-1 leading-relaxed">{unit.curriculumSource}</p></details>}
-                        </div>;
-                    })}
                 </div>}
                 {tab === 'preview' && <><PrintPreview html={html} /><p className="text-xs text-stone-600">Trang in dùng A4 ngang, lặp tiêu đề bảng và đánh số trang. Chọn “Lưu dưới dạng PDF” trong hộp thoại in; tắt đầu trang/chân trang của trình duyệt để tránh in thêm URL.</p></>}
             </div>
