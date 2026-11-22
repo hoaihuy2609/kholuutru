@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, ChevronLeft, FileUp, Pencil, Plus, Table2, Trash2 } from 'lucide-react';
 import type { StudyQuestionGroup } from '../types';
 import { isStudyQuestionType, STUDY_GRADES, STUDY_QUESTION_TYPES } from '../src/utils/studyLibrary';
-import { energyMatrixTopic, isMatrixLevelHeading, MATRIX_LEVELS, matrixCandidateFit, matrixOutcomeOptions, matrixReferences, matrixSlots, normalizeMatrixText, type MatrixQuestionDraft, type MatrixQuestionType, type MatrixRow } from '../src/utils/examMatrix';
+import { ENERGY_MATRIX_CHAPTER_ID, energyMatrixTopic, isMatrixLevelHeading, MATRIX_LEVELS, matrixCandidateFit, matrixOutcomeOptions, matrixReferences, matrixSlots, normalizeMatrixText, type MatrixQuestionDraft, type MatrixQuestionType, type MatrixRow } from '../src/utils/examMatrix';
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
 import { MatrixQuestionCard, MatrixSolutionDialog } from './MatrixQuestionCard';
 import MatrixPlanner from './MatrixPlanner';
@@ -36,6 +36,9 @@ interface Props {
     /** Chỉ lập ma trận mới: ẩn nút quay lại, tiêu đề và lựa chọn nạp PDF / bản đặc tả. */
     planOnly?: boolean;
 }
+
+/** Trang chính chỉ lập ma trận cho chương đã có bản đặc tả theo bài. */
+const PLAN_ONLY_CHAPTERS = [ENERGY_MATRIX_CHAPTER_ID];
 
 const questionTypes = [
     { value: '', label: 'Chưa rõ loại' },
@@ -295,7 +298,8 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
                 <button type="button" aria-pressed={!planning} className={planning ? button : primary}
                     onClick={() => setPlanning(false)}>Nhập PDF / Bản đặc tả</button>
             </div>}
-            <div hidden={!planning} className="space-y-4"><MatrixPlanner candidates={candidates} onCompose={onCompose} /></div>
+            <div hidden={!planning} className="space-y-4"><MatrixPlanner candidates={candidates} onCompose={onCompose}
+                chapterIds={planOnly ? PLAN_ONLY_CHAPTERS : undefined} /></div>
 
             {planning ? null : reviewing ? <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-4">
                 <div className="flex flex-wrap items-center gap-3">
