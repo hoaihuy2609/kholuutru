@@ -281,13 +281,13 @@ export default function MatrixExportDialog({ allocations, selections, scale = 10
             <Table2 aria-hidden="true" className="size-4" />Xuất ma trận & đặc tả
         </button>
         {open && <MatrixDialog full title="Rà soát và xuất ma trận, bản đặc tả"
-            subtitle={`${document.questionCount} câu · ${document.unitCount} câu/ý · ${matrixExportNumber(document.totalScore)}/${matrixExportNumber(scale)} điểm`}
+            subtitle={`${document.questionCount} câu · ${document.unitCount} câu/ý · ${matrixExportNumber(document.totalScore)}/${matrixExportNumber(scale)} điểm${document.issues.length ? '' : ' · Đã khớp ma trận'}`}
             onClose={() => setOpen(false)} closeLabel="Đóng xuất ma trận và đặc tả"
             actions={<button type="button" className={primary} disabled={printing || document.invalidSettings}
                 onClick={() => void print()}><Printer className="size-4" aria-hidden="true" />{printing ? 'Đang mở trang in…' : 'In / Lưu PDF'}</button>}>
-            <div className="shrink-0 space-y-2 border-b border-stone-200 bg-white px-3 py-2 text-sm sm:px-4">
+            {(error || document.issues.length > 0) && <div className="shrink-0 space-y-2 border-b border-stone-200 bg-white px-3 py-2 text-sm sm:px-4">
                 {error && <p role="alert" className="rounded-lg bg-red-50 p-2 text-red-800">{error}</p>}
-                {document.issues.length > 0 ? <details className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950">
+                {document.issues.length > 0 && <details className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-950">
                     <summary className="cursor-pointer font-semibold">Vẫn in được ngay. Có {missingOutcomes.length ? otherIssues.length + 1 : otherIssues.length} mục nên rà lại trước khi nộp</summary>
                     <ul className="mt-2 max-h-40 list-disc space-y-1.5 overflow-auto pl-5">
                         {missingOutcomes.length > 0 && <li>
@@ -298,14 +298,8 @@ export default function MatrixExportDialog({ allocations, selections, scale = 10
                         </li>}
                         {otherIssues.map(issue => <li key={issue}>{issue}</li>)}
                     </ul>
-                </details> : <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 font-semibold text-emerald-900">Số câu/ý, mức độ và tổng điểm đã khớp ma trận.</p>}
-                <p className="text-xs text-stone-600">
-                    Bấm vào chữ YCCĐ trong bản đặc tả để sửa <strong>cả dòng</strong>. Sửa ô YCCĐ ở <strong>từng câu</strong> trong đề để tách câu đó ra dòng riêng (gõ trùng chữ dòng khác thì câu vào dòng đó). Bấm mã câu (C1, C2…) để xem câu. Phần đã sửa lưu tạm trên máy này, không đổi kho câu hỏi.
-                    {edited.size > 0 && <> <button type="button" className="font-semibold text-amber-900 underline-offset-2 hover:underline"
-                        onClick={() => setOutcomes(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => !edited.has(key))))}>
-                        Bỏ {edited.size} chỗ đã sửa tay</button></>}
-                </p>
-            </div>
+                </details>}
+            </div>}
             <div className="grid min-h-0 flex-1 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
                 <section className={'min-h-0 flex-col gap-2 ' + (view === 'exam' ? 'hidden lg:flex' : 'flex')} aria-label="Ma trận và bản đặc tả">
                     <div className="flex flex-wrap gap-2" role="group" aria-label="Nội dung bên trái">
@@ -314,6 +308,10 @@ export default function MatrixExportDialog({ allocations, selections, scale = 10
                         <button type="button" className={button + ' lg:hidden'} onClick={() => setView('exam')}>Đề bài</button>
                         <button type="button" aria-pressed={view === 'settings'} className={view === 'settings' ? primary : button}
                             onClick={() => setView('settings')}>Thông tin bài kiểm tra</button>
+                        <p className="ml-auto hidden self-center text-xs text-stone-600 xl:block">Bấm chữ YCCĐ để sửa cả dòng · sửa ô YCCĐ ở từng câu để tách câu ra dòng riêng</p>
+                        {edited.size > 0 && <button type="button" className="self-center text-xs font-semibold text-amber-900 underline-offset-2 hover:underline xl:ml-0 ml-auto"
+                            onClick={() => setOutcomes(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => !edited.has(key))))}>
+                            Bỏ {edited.size} chỗ đã sửa tay</button>}
                     </div>
                     {view === 'settings' ? <div className="min-h-0 flex-1 space-y-4 overflow-auto">
                         <div className="grid gap-3 rounded-lg border border-stone-200 bg-white p-3 sm:grid-cols-2">
