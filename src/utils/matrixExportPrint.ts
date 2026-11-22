@@ -107,7 +107,7 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false, 
             <table class="blueprint"><colgroup><col style="width:3%"><col style="width:14%"><col style="width:20%"><col style="width:4%">
             ${formats.map(() => [1, 2, 3].map(() => `<col style="width:${53 / (formats.length * 3)}%">`).join('')).join('')}<col style="width:6%"></colgroup>
             <thead><tr><th rowspan="3">TT</th><th rowspan="3">Chương/<br>chủ đề</th><th rowspan="3">Nội dung/<br>đơn vị kiến thức</th><th rowspan="3">Số<br>tiết</th><th colspan="${formats.length * 3}">Số câu hỏi/ý ở các mức độ đánh giá</th><th rowspan="3">Tổng<br>câu/ý</th></tr>
-            <tr>${formats.map(({ type, label, part }) => `<th colspan="3" class="${colors[type]}">Phần ${part}<br>${text(label)}${type === 'dung_sai' ? ' (ý)' : ''}</th>`).join('')}</tr>
+            <tr>${formats.map(({ type, label, part }) => `<th colspan="3" class="type-head ${colors[type]}">${text(label)}${type === 'dung_sai' ? ' (ý)' : ''}</th>`).join('')}</tr>
             <tr>${formats.map(({ type }) => [1, 2, 3].map(level => `<th class="${colors[type]}">${text(MATRIX_LEVELS[level])}</th>`).join('')).join('')}</tr></thead>
             <tbody>${blueprintRows.join('')}</tbody><tbody class="totals">
             <tr><th colspan="4" class="left">Tổng số câu/ý theo mức độ</th>${totals.map((counts, index) => counts.map(count => `<td class="${colors[formats[index].type]}">${count}</td>`).join('')).join('')}<td>${document.unitCount}</td></tr>
@@ -129,8 +129,9 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false, 
             <table class="specification"><colgroup><col style="width:4%"><col style="width:17%"><col style="width:40%">
             ${formats.map(() => `<col style="width:${countWidth}%">`).join('')}${formats.map(() => `<col style="width:${referenceWidth}%">`).join('')}</colgroup>
             <thead><tr><th rowspan="2">STT</th><th rowspan="2">Nội dung/<br>đơn vị kiến thức</th><th rowspan="2">Mức độ đánh giá / Yêu cầu cần đạt</th><th colspan="${formats.length}">Số câu/ý</th><th colspan="${formats.length}">Mã câu/ý trong đề</th></tr>
-            <tr>${[0, 1].map(() => formats.map(({ type, part }) => `<th class="${colors[type]}">Phần ${part}</th>`).join('')).join('')}</tr></thead>
+            <tr>${[0, 1].map(() => formats.map(({ type, label }) => `<th class="type-head ${colors[type]}">${text(label)}</th>`).join('')).join('')}</tr></thead>
             <tbody>${specification.join('')}</tbody><tbody class="totals"><tr><th colspan="3" class="left">Tổng số câu/ý</th>${formats.map(({ type }) => `<td>${units.filter(unit => unit.type === type).length}</td>`).join('')}<td colspan="${formats.length}">${document.questionCount} câu / ${document.unitCount} câu, ý</td></tr></tbody></table>
+            <p class="parts-note">Mã câu/ý đánh số theo từng phần của đề: ${formats.map(({ part, label }) => 'Phần ' + part + ' – ' + text(label)).join('; ')}.</p>
         </section>`;
     return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>${escape(settings.title)} - Ma trận và đặc tả${draft ? ' - Bản nháp' : ''}</title><style>
         ${katexStyles}
@@ -158,7 +159,9 @@ export function matrixExportHtml(document: MatrixExportDocument, draft = false, 
         .level-summary { width: 66%; margin-top: 3mm; break-inside: avoid; }
         .level-summary th:first-child { width: 38%; }
         .note { font-size: 9.5pt; margin-top: 2mm; }
-        .outcome { line-height: 1.3; }
+        td.outcome { line-height: 1.3; text-align: justify; }
+        .type-head { font-style: italic; font-weight: normal; }
+        .parts-note { font-size: 9.5pt; margin-top: 2mm; }
         .level-row td:nth-child(n+3) { background: #f7f5ee; }
         .level-row { break-after: avoid; }
         .references { font-weight: bold; }
