@@ -100,3 +100,23 @@ Kiến thức chương trước có thể cần gắn: vận dụng công thức
 | 1 | Duyệt, sửa hay bỏ các dòng ĐX 1–7? | — |
 | 2 | CT YCCĐ 6 đặt ở cả Bài 28 và Bài 29, hay chỉ một bài? | Cả hai (xung lượng ở Bài 28; súng giật, phản lực ở Bài 29) |
 | 3 | 34 câu giấy của Bài 30: giữ Bài 30 với 3 dòng giấy, hay gộp vào Bài 29? | Giữ Bài 30 |
+
+## Viết khóa luận — danh sách kiểm tra
+
+Áp dụng cho mọi văn bản nộp (khóa luận, báo cáo). Báo người phụ trách mọi rủi ro **trước** khi nộp, không đợi được hỏi.
+
+1. Tra từng tài liệu tham khảo trên mạng trước khi đưa vào (tác giả, năm, tên, tập/số, trang, DOI) và báo kết quả tra. Không đưa nguồn chưa xác minh.
+2. Cân đối nguồn: giữ nguồn kinh điển (công trình gốc của lí thuyết, công cụ), bổ sung nghiên cứu gần đây (khoảng 10 năm trở lại) và nghiên cứu trong nước.
+3. Trích nguyên văn (trong ngoặc kép) phải đối chiếu văn bản gốc và ghi số trang/điều; không đối chiếu được thì diễn đạt lại, bỏ ngoặc kép.
+4. Số liệu trong văn bản phải khớp với dữ liệu thật trên website (số câu, mức độ, số dòng YCCĐ).
+5. Kiểm tra trình bày theo QĐ 1923A-QĐ-ĐHAG (Times New Roman 13; lề 4/2,5/2,5/2,5 cm; giãn dòng 1,2, cách trên 6 pt; trích dẫn theo Điều 30; tài liệu tham khảo theo Phụ lục 9; bìa theo Phụ lục 2a, 2b) và chính tả trước khi xuất bản nộp.
+6. Sửa trên file Word bằng Track Changes để người phụ trách duyệt từng chỗ; không đổi nội dung ngoài phạm vi đã thống nhất.
+
+Nguồn mới đã tra, dự kiến bổ sung trong khóa luận:
+
+| Đi kèm | Nguồn đã xác minh |
+|---|---|
+| Black & Wiliam (1998) | Black, P., & Wiliam, D. (2009). Developing the theory of formative assessment. *Educational Assessment, Evaluation and Accountability, 21*(1), 5–31. https://doi.org/10.1007/s11092-008-9068-5 |
+| Brooke (1996), thang SUS | Lewis, J. R. (2018). The System Usability Scale: Past, present, and future. *International Journal of Human–Computer Interaction, 34*(7), 577–590. https://doi.org/10.1080/10447318.2018.1455307 |
+| Davis (1989), mô hình TAM | Granić, A., & Marangunić, N. (2019). Technology acceptance model in educational context: A systematic literature review. *British Journal of Educational Technology, 50*(5), 2572–2593. https://doi.org/10.1111/bjet.12864 |
+| Miller, Linn, & Gronlund (2009) | Dùng bản in lần 11: Miller, M. D., Linn, R. L., & Gronlund, N. E. (2013). *Measurement and assessment in teaching* (11th ed.). Pearson. |
