@@ -6,6 +6,7 @@ import { ENERGY_MATRIX_CHAPTER_ID, energyMatrixTopic, isMatrixLevelHeading, MATR
 import type { SelectedQuestionItem } from '../src/services/examLatexService';
 import { MatrixQuestionCard, MatrixSolutionDialog } from './MatrixQuestionCard';
 import MatrixPlanner from './MatrixPlanner';
+import MatrixTour from './MatrixTour';
 import type { ProgrammeMatch } from '../src/data/programmeRows';
 
 export interface MatrixCandidate {
@@ -279,6 +280,7 @@ export default function ExamMatrixBuilder({ candidates, onClose, onCompose, onCr
     return (
         <main className="mx-auto max-w-[1720px] space-y-5 p-4 text-stone-900 md:p-8">
             {!planOnly && <button className={button} onClick={onClose}><ChevronLeft className="size-4" /> Góc Học Tập</button>}
+            {planOnly && <MatrixTour />}
             {planOnly ? <h1 className="sr-only">Soạn đề theo ma trận</h1> : <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-bold">Soạn đề theo ma trận</h1>
