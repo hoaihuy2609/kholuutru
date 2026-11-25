@@ -152,7 +152,7 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
         <div className={'grid items-start gap-3 ' + (showContents
             ? 'lg:grid-cols-[minmax(235px,285px)_minmax(0,1fr)]'
             : 'lg:grid-cols-[auto_minmax(0,1fr)]')}>
-            <aside className="rounded-xl border border-stone-200 bg-white" aria-label="Nội dung Vật lí 10">
+            <aside className="rounded-xl border border-stone-200 bg-white" aria-label="Nội dung Vật lí 10" data-tour="contents">
                 <div className={'flex items-center justify-between gap-2 ' + (showContents
                     ? 'border-b border-stone-200 px-3 py-2'
                     : 'p-1')}>
@@ -208,7 +208,7 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
                     <h2 id={id + '-title'} className="font-bold">Ma trận đề kiểm tra</h2>
                     <p className="text-sm text-stone-600">Chọn nội dung bên trái rồi nhập số câu theo từng mức độ. Riêng Đúng/Sai nhập số câu; các ý a, b, c, d của câu được chọn tự nằm ở mức của chúng.</p>
                 </div>
-                <div className="overflow-x-auto rounded-b-xl" tabIndex={0} role="region" aria-label="Bảng phân số câu theo mức độ">
+                <div className="overflow-x-auto rounded-b-xl" tabIndex={0} role="region" aria-label="Bảng phân số câu theo mức độ" data-tour="matrix-table">
                     <table className={'w-full table-fixed border-separate border-spacing-0 text-sm ' + (withWritten ? 'min-w-[1080px]' : 'min-w-[840px]')}>
                         <colgroup>
                             <col className="w-[10%]" />
@@ -217,7 +217,7 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
                         {formats.map(format => <colgroup key={format.value}>
                             {levelsFor(format.value).map(level => <col key={level.value} className={format.value === 'dung_sai' ? 'w-[9%]' : withWritten ? 'w-[7.0833%]' : 'w-[11.1667%]'} />)}
                         </colgroup>)}
-                        <thead className="bg-stone-100 text-stone-800">
+                        <thead className="bg-stone-100 text-stone-800" data-tour="matrix-rows">
                             <tr>
                                 <th scope="col" rowSpan={2} className={cell + ' text-left'}>Chương</th>
                                 <th scope="col" rowSpan={2} className={cell + ' text-left'}>Nội dung</th>
@@ -234,7 +234,7 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
                                 ))}
                             </tr>
                         </thead>
-                        {selectedChapters.map(chapter => <tbody key={chapter.id}>
+                        {selectedChapters.map(chapter => <tbody key={chapter.id} data-tour="matrix-rows">
                             {chapter.topics.map(([topicId, name], index) => <Fragment key={topicId}>
                                 <tr className="group">
                                     {index === 0 && (
@@ -310,7 +310,7 @@ export default function MatrixPlanner({ candidates, onCompose, chapterIds, withW
                                 ))}
                             </tr>
                             <tr>
-                                <td colSpan={columns.length + 2} className="border-b border-stone-200 bg-white px-3 py-2.5 text-left text-sm font-normal">
+                                <td colSpan={columns.length + 2} className="border-b border-stone-200 bg-white px-3 py-2.5 text-left text-sm font-normal" data-tour="matrix-total">
                                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                                         {[1, 2, 3].map(level => <span key={level}>{MATRIX_LEVELS[level]}: <strong>{pointText(levelScore(level))}</strong> điểm{totalScore ? ' (' + pointText(Math.round(levelScore(level) / totalScore * 1000) / 10) + '%)' : ''}</span>)}
                                         {trueFalseScore > 0 && <span className="text-stone-600">Đúng/Sai: <strong>{pointText(trueFalseScore)}</strong> điểm (mức theo ý của câu được chọn)</span>}

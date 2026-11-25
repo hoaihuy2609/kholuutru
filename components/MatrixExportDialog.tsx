@@ -277,7 +277,7 @@ export default function MatrixExportDialog({ allocations, selections, scale = 10
     }
 
     return <>
-        <button type="button" className={button} onClick={() => { setOpen(true); setError(''); }}>
+        <button type="button" className={button} onClick={() => { setOpen(true); setError(''); }} data-tour="export">
             <Table2 aria-hidden="true" className="size-4" />Xuất ma trận & đặc tả
         </button>
         {open && <MatrixDialog full title="Rà soát và xuất ma trận, bản đặc tả"

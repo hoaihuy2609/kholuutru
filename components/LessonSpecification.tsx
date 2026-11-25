@@ -69,7 +69,7 @@ export default function LessonSpecification({ allocations, topics, candidates, o
     }
 
     return (
-        <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-4 sm:p-5" aria-labelledby={id}>
+        <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-4 sm:p-5" aria-labelledby={id} data-tour="spec">
             {compact ? <h2 id={id} className="sr-only">Bản đặc tả theo bài</h2> : <header className="space-y-2">
                 <h2 id={id} className="text-lg font-bold">Bản đặc tả theo bài</h2>
                 <p className="max-w-3xl text-sm text-stone-600">Mỗi bài có yêu cầu cần đạt ở ba mức. Câu nào thuộc mức nào thì nằm ở mức đó. Trắc nghiệm: bấm vào bài, chọn mức, rồi bấm "Chọn câu" ở dòng yêu cầu. Đúng/Sai và Trả lời ngắn chọn trong mục riêng ở cuối mỗi bài.</p>
@@ -91,7 +91,7 @@ export default function LessonSpecification({ allocations, topics, candidates, o
                         {!chosen.size ? 'Chưa chọn câu' : issues.length ? issues.length + ' mục chưa khớp ma trận' : 'Đã khớp ma trận'}</li>
                 </ul>}
                 <div className="flex flex-wrap gap-2">
-                    <button type="button" className={primary} onClick={suggest}>Gợi ý chọn câu</button>
+                    <button type="button" className={primary} onClick={suggest} data-tour="suggest">Gợi ý chọn câu</button>
                     <button type="button" className={button} disabled={!chosen.size}
                         onClick={() => { setChosen(new Set()); setNote('Đã xóa. Mở từng bài để tự chọn câu.'); }}>Xóa để tự chọn</button>
                 </div>
@@ -159,7 +159,7 @@ export default function LessonSpecification({ allocations, topics, candidates, o
                 <p className="text-sm text-stone-700">{issues.length ? 'Đã chọn ' + selections.length + ' câu. Có thể xuất bản nháp để xem trước.' : 'Đã chọn đủ câu. Bước tiếp: xuất ma trận, bản đặc tả và biên soạn đề.'}</p>
                 <div className="flex flex-wrap gap-2">
                     <MatrixExportDialog allocations={allocations} selections={selections} scale={scale} />
-                    <button type="button" className={issues.length ? button : primary} disabled={!selections.length}
+                    <button type="button" className={issues.length ? button : primary} disabled={!selections.length} data-tour="compose"
                         onClick={() => onCompose(selections.map(selection => selection.item))}>Biên soạn đề ({selections.length} câu)</button>
                 </div>
             </footer>

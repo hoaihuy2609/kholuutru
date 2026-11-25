@@ -240,7 +240,7 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
     const complete = !emptySlots.length && !leftovers.length;
 
     return (
-        <section className="space-y-5 rounded-xl border border-stone-200 bg-white p-4 sm:p-5" aria-labelledby={id}>
+        <section className="space-y-5 rounded-xl border border-stone-200 bg-white p-4 sm:p-5" aria-labelledby={id} data-tour="spec">
             <header className="space-y-1">
                 <h2 id={id} className="text-lg font-bold">Bản đặc tả</h2>
                 <p className="text-sm text-stone-600">Mỗi dòng dưới đây là một vị trí câu hỏi lấy từ ma trận. Chọn một câu trong kho cho từng vị trí; YCCĐ của câu sẽ được ghi vào bản đặc tả.</p>
@@ -336,7 +336,7 @@ export default function MatrixPlanSpecification({ allocations, candidates, onCom
                         const outcome = outcomeFor(slot.id, candidate);
                         return { slot, item: candidate.item, outcome, outcomeOptions: candidate.outcomes, curriculumSource: programmeSource(slot, outcome), preview: candidate.preview };
                     })} />
-                    <button type="button" className={complete ? primary : button} disabled={!selectedSlots.length}
+                    <button type="button" className={complete ? primary : button} disabled={!selectedSlots.length} data-tour="compose"
                         onClick={() => onCompose(selectedSlots.map(({ candidate }) => candidate.item))}>Biên soạn đề ({selectedSlots.length} câu)</button>
                 </div>
             </footer>
