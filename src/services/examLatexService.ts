@@ -805,6 +805,17 @@ export function printExamVariantsToPdf(variants: readonly ExamPrintVariant[], co
   printExamHtml(renderExamVariantsBody(variants, config, sheet), config.examName + ' - ' + variants.length + ' mã đề');
 }
 
+/** In riêng một mã đề (file PDF của mã đó, không kèm bảng đáp án); cùng cách dựng và in như đề gốc nên chữ, công thức giữ nét. */
+export function printExamVariantToPdf(variant: ExamPrintVariant, config: ExamStyleConfig) {
+  printExamHtml(renderExamPrintBody(variant.questions, { ...config, examCode: variant.code, exportAnswerTable: false }),
+    config.examName + ' - Mã đề ' + variant.code);
+}
+
+/** In riêng bảng đáp án và bảng đối chiếu các mã đề (file giáo viên giữ, tách khỏi đề phát cho học sinh). */
+export function printExamAnswerSheetToPdf(sheet: string, config: ExamStyleConfig) {
+  printExamHtml(sheet, config.examName + ' - Bảng đáp án các mã đề');
+}
+
 function printExamHtml(body: string, title: string) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
