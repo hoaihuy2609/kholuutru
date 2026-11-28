@@ -38,6 +38,8 @@ export interface ExamStyleConfig {
   // 4. Nội dung xuất kèm
   exportAnswerTable: boolean; // Xuất bảng đáp án ở cuối trang
   exportDetailedSolution: boolean; // Xuất lời giải chi tiết
+  /** Kẻ 4 ô dưới mỗi câu trả lời ngắn để học sinh ghi đáp số (mỗi ô một kí tự: chữ số, dấu trừ, dấu phẩy). */
+  shortAnswerBoxes: boolean;
 
   // 5. Tiêu đề phần thi
   enableSectionTitles: boolean;
@@ -78,6 +80,7 @@ export const DEFAULT_EXAM_STYLE: ExamStyleConfig = {
 
   exportAnswerTable: true,
   exportDetailedSolution: true,
+  shortAnswerBoxes: true,
 
   enableSectionTitles: true,
   choice4Title: 'PHẦN I. CÂU TRẮC NGHIỆM NHIỀU PHƯƠNG ÁN LỰA CHỌN',
@@ -89,6 +92,13 @@ export const DEFAULT_EXAM_STYLE: ExamStyleConfig = {
   essayTitle: 'PHẦN III. CÂU TRẮC NGHIỆM TRẢ LỜI NGẮN',
   essayNote: 'Thí sinh trả lời từ câu 1 đến câu n. Mỗi câu hỏi thí sinh điền kết quả vào ô tương ứng.',
 };
+
+/** Số ô ghi đáp số của câu trả lời ngắn: mỗi ô một kí tự (chữ số, dấu trừ, dấu phẩy), như phiếu trả lời thi tốt nghiệp THPT. */
+export const SHORT_ANSWER_BOX_COUNT = 4;
+const SHORT_ANSWER_BOXES_HTML = '<div class="exam-answer-boxes">Đáp án: <span>'
+  + '<i></i>'.repeat(SHORT_ANSWER_BOX_COUNT) + '</span></div>';
+const SHORT_ANSWER_BOXES_LATEX = '\\par\\vspace{1.5mm}\\noindent\\textbf{Đáp án:}\\ \\begin{tabular}{|' + 'p{5mm}|'.repeat(SHORT_ANSWER_BOX_COUNT)
+  + '}\\hline\\rule{0pt}{6mm}' + '&'.repeat(SHORT_ANSWER_BOX_COUNT - 1) + '\\\\\\hline\\end{tabular}\n';
 
 export interface SelectedQuestionItem {
   id: string;
@@ -326,6 +336,7 @@ export function generateExamLatex(questions: SelectedQuestionItem[], config: Exa
         out += `\\[ ${q.qFormula} \\]\n`;
       }
       out += renderQuestionTableLatex(q.questionTable);
+      if (config.shortAnswerBoxes) out += SHORT_ANSWER_BOXES_LATEX;
       out += `\\vspace{3mm}\n`;
     });
   }
@@ -649,6 +660,7 @@ export function renderExamPrintBody(questions: SelectedQuestionItem[], config: E
       bodyHtml += `
         <div class="exam-question" data-question-id="${escapeHtml(q.id)}" style="text-align: justify;">
           ${renderQuestionHeaderPdf(q, qNum).html}
+          ${config.shortAnswerBoxes ? SHORT_ANSWER_BOXES_HTML : ''}
         </div>
       `;
     });
@@ -757,6 +769,10 @@ export function examPrintDocument(body = '', title = 'Xem trước đề thi') {
     .exam-solution-with-image { display: grid; grid-template-columns: minmax(0, 1fr) 38%; gap: 12px; align-items: start; }
     .exam-statements > div + div { margin-top: 4px; }
     .exam-wrapped-choices > div + div { margin-top: 6px; }
+    .exam-answer-boxes { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-weight: 600; }
+    .exam-answer-boxes span { display: flex; }
+    .exam-answer-boxes i { display: block; width: 8mm; height: 8mm; border: 1px solid #1a1a1a; }
+    .exam-answer-boxes i + i { border-left: 0; }
     .exam-watermark {
       position: fixed; z-index: -1; inset: 45% 5% auto;
       transform: rotate(-30deg); text-align: center;
