@@ -685,7 +685,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
         </div>
         <section aria-label="Bản xem trước" className={(mobilePane === 'preview' ? 'flex ' : 'hidden lg:flex ')
           + 'h-full min-h-0 min-w-0 flex-col bg-stone-100 lg:border-l lg:border-stone-200'}>
-          {variants.length > 0 && <div className="flex shrink-0 flex-wrap items-center gap-2 px-2 pt-2 text-xs sm:px-3">
+          {variants.length > 0 && <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-2 border-b border-stone-200 bg-white px-3 py-2 text-xs shadow-sm">
             <label className="flex items-center gap-2 font-semibold text-stone-700"><span aria-hidden="true">Xem trước</span>
               <select aria-label="Xem trước mã đề" value={previewCode === 'sheet' && sheetHtml ? 'sheet' : previewVariant?.code} onChange={e => setPreviewCode(e.target.value)}
                 className="rounded-md border border-stone-300 bg-white px-2 py-1.5 text-xs font-semibold outline-none focus:border-amber-700">
@@ -695,7 +695,7 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
             </label>
             <span className="text-stone-600">Xuất PDF sẽ in liền {variants.length} mã đề{sheetHtml ? ', kèm bảng đáp án ở cuối' : ''}.</span>
           </div>}
-          <div className="min-h-0 flex-1 px-1 sm:px-3">
+          <div className={'min-h-0 flex-1 px-1 sm:px-3' + (variants.length > 0 ? ' pt-3' : '')}>
             <ExamPrintPreview questions={previewVariant?.questions ?? sizedQuestions}
               config={previewVariant ? { ...config, examCode: previewVariant.code, exportAnswerTable: false } : config}
               html={previewCode === 'sheet' && sheetHtml ? sheetHtml : undefined}
