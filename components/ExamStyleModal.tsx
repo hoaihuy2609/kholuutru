@@ -551,6 +551,24 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                 </label>
               </div>
 
+              {/* Ô ghi đáp số câu trả lời ngắn */}
+              <div className="flex items-center justify-between gap-3 py-2">
+                <div>
+                  <div className="font-semibold text-xs text-stone-900">Ô ghi đáp số (trả lời ngắn)</div>
+                  <div className="text-[11px] text-stone-600">Kẻ 4 ô dưới mỗi câu trả lời ngắn, mỗi ô một kí tự (chữ số, dấu trừ, dấu phẩy)</div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={config.shortAnswerBoxes}
+                    aria-label="Kẻ ô ghi đáp số cho câu trả lời ngắn"
+                    onChange={e => updateConfig('shortAnswerBoxes', e.target.checked)}
+                  />
+                  <div className="w-9 h-5 bg-stone-200 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-700 peer-focus-visible:ring-offset-2 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-800" />
+                </label>
+              </div>
+
               {/* Xuất lời giải chi tiết */}
               <div className="flex items-center justify-between gap-3 py-2">
                 <div>
