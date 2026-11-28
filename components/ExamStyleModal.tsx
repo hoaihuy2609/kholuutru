@@ -9,7 +9,7 @@ import { MAX_QUESTION_IMAGE_WIDTH, MIN_QUESTION_IMAGE_WIDTH } from '../src/utils
 import {
   ExamStyleConfig, DEFAULT_EXAM_STYLE, SelectedQuestionItem,
   formatExamSectionNote, generateExamLatex, downloadTexFile,
-  examPrintDocument, printExamDirectlyToPdf, printExamVariantsToPdf, renderExamPrintBody
+  examPrintDocument, printExamDirectlyToPdf, printExamVariantsToPdf, printExamVariantToPdf, printExamAnswerSheetToPdf, renderExamPrintBody
 } from '../src/services/examLatexService';
 
 interface ExamStyleModalProps {
@@ -135,9 +135,11 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
   const variants = useMemo(() => shuffle.enabled ? shuffleExam(sizedQuestions, { ...shuffle, firstCode: config.examCode,
     keep: Object.fromEntries(Object.entries(shuffle.keep).map(([type, text]) => [type,
       (text ?? '').split(/[^\d]+/).filter(Boolean).map(Number)])) }) : [], [shuffle, sizedQuestions, config.examCode]);
-  const sheetHtml = useMemo(() => shuffle.enabled && shuffle.sheet ? examVariantsSheetHtml(variants,
+  /** Bảng đáp án và bảng đối chiếu các mã đề: in riêng được, và in ở cuối file gộp khi bật "Kèm bảng đáp án". */
+  const answerSheetHtml = useMemo(() => variants.length ? examVariantsSheetHtml(variants,
     { continuous: !config.enableSectionTitles, color: config.isCustomColor ? config.customColor : config.themeColor }) : '',
-    [variants, shuffle.enabled, shuffle.sheet, config.enableSectionTitles, config.isCustomColor, config.customColor, config.themeColor]);
+    [variants, config.enableSectionTitles, config.isCustomColor, config.customColor, config.themeColor]);
+  const sheetHtml = shuffle.enabled && shuffle.sheet ? answerSheetHtml : '';
   const previewVariant = variants.find(variant => variant.code === previewCode) ?? variants[0];
   const titleId = useId();
   const sectionTitlesId = useId();
@@ -498,6 +500,20 @@ export const ExamStyleModal: React.FC<ExamStyleModalProps> = ({
                 </label>
               </div>
               <p className="text-[11px] text-stone-600">Các mã: {variants.map(variant => variant.code).join(', ')}.</p>
+              <div className="space-y-1.5 rounded-lg border border-stone-200 bg-white p-2.5">
+                <p className="text-xs font-semibold text-stone-900">Xuất từng mã đề thành file PDF riêng</p>
+                <p className="text-[11px] text-stone-600">Mỗi nút mở hộp thoại in, chọn “Lưu dưới dạng PDF”; tên file điền sẵn theo mã đề. Nút “Xuất PDF” ở trên in liền tất cả mã đề trong một file.</p>
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Xuất từng mã đề">
+                  {variants.map(variant => <button key={variant.code} type="button" onClick={() => printExamVariantToPdf(variant, config)}
+                    className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-stone-300 bg-white px-2.5 text-xs font-semibold text-stone-800 hover:bg-stone-100">
+                    <Printer aria-hidden="true" className="size-3.5" /> Mã {variant.code}
+                  </button>)}
+                  {answerSheetHtml && <button type="button" onClick={() => printExamAnswerSheetToPdf(answerSheetHtml, config)}
+                    className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-amber-700 bg-amber-50 px-2.5 text-xs font-semibold text-amber-950 hover:bg-amber-100">
+                    <Printer aria-hidden="true" className="size-3.5" /> Bảng đáp án
+                  </button>}
+                </div>
+              </div>
               <div className="space-y-1.5 text-xs">
                 {([['questions', 'Đổi thứ tự câu trong từng phần', 'Phần I, II, III giữ nguyên thứ tự phần'],
                   ['choices', 'Đổi chỗ phương án A, B, C, D', 'Câu có phương án kiểu "Cả A và B", "Tất cả đều đúng" được giữ nguyên'],
